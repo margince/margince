@@ -129,7 +129,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (141)
+## Census (142)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -247,6 +247,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `reportasof_test.go` | H2 | A report's answer is labelled with the instant it was COMPUTED at. |
 | `requiredbodyids_test.go` | H3 | Every contract request body that declares a required id must be accounted for. |
 | `restrictedreaders_test.go` | H2 | A record held under a statutory retention obligation is unavailable in EVERY ordinary read path (A165/ADR-0114 §2): lists, timelines, search, exports, embeddings, agent grounding. |
+| `retentionactionset_test.go` | H2 | One set of retention actions, spelled in three places. |
 | `rightscasewriters_test.go` | H2 | EVERY PROPOSAL A DATA SUBJECT SENDS OPENS A CASE SOMEBODY OWES AN ANSWER TO. |
 | `rlsclaimsprose_test.go` | H2 | The prose says what bounds a read, and it is not row-level security. |
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook — at the root, and in any directory that needs one of its own. |

@@ -57,6 +57,37 @@ var leadListFields = map[string]storekit.SortField{
 	leadStatusColumn:  storekit.Column(fieldcatalog.TypeText),
 	leadScoreColumn:   storekit.Column(fieldcatalog.TypeNumber),
 	ownerIDColumn:     storekit.Column(storekit.KindUUID),
+	// The three the list draws and does not store. Each reads the same
+	// expression the row is PRINTED from (lead_read.go), so a reader sees the
+	// value the page was arranged by.
+	lastActivityColumn: {Kind: storekit.KindTimestamp, Expr: orderByLeadLastActivity},
+	leadNextTaskField:  {Kind: storekit.KindTimestamp, Expr: orderByLeadNextTaskDue},
+	leadSourceColumn:   {Kind: fieldcatalog.TypeText, Expr: orderByLeadSourceLabel},
+}
+
+// leadNextTaskField is what the Next task header sorts by: when the next open
+// task falls due. The column shows a title, a count and a deadline, and the
+// deadline is the one a reader sorting it means — a list ordered by task titles
+// answers a question nobody asked.
+const leadNextTaskField = "next_task_due_at"
+
+// orderByLeadLastActivity orders by the last-touch clock the row prints.
+func orderByLeadLastActivity(context.Context, func(any) int) (string, error) {
+	return leadLastActivitySQL(), nil
+}
+
+// orderByLeadNextTaskDue orders by the deadline the Next task column prints.
+// A lead with no open task shows none and orders by none, which the list's
+// ORDER BY already puts last.
+func orderByLeadNextTaskDue(context.Context, func(any) int) (string, error) {
+	return leadNextTaskDueSQL, nil
+}
+
+// orderByLeadSourceLabel orders by the words the Source column prints rather
+// than the key behind them: a catalog whose labels and keys disagree would
+// otherwise arrange the list by an identifier no reader can see.
+func orderByLeadSourceLabel(context.Context, func(any) int) (string, error) {
+	return leadSourceLabelSQL, nil
 }
 
 // ListLeads is the row-scoped lead list read: quick-find, the status and

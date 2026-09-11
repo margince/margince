@@ -51,6 +51,7 @@ var carrierSources = map[string]string{
 	"attachment_extraction": activities.ExtractionActivitySource,
 	"account_scan":          companyscan.ActivitySource,
 	"transcript_read":       activities.TranscriptActivitySource,
+	"voice_build":           ai.VoiceBuildActivitySource,
 }
 
 func TestEveryAITaskNamesTheSourceThatReportsIt(t *testing.T) {

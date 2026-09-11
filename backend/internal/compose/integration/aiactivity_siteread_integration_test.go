@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/people"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -364,5 +365,44 @@ func TestARetryableFailureReclaimedIsALiveSecondAttempt(t *testing.T) {
 	if got.FinishedAt != nil || got.DegradeReason != nil || got.StaleAfter == nil {
 		t.Fatalf("the retry carried the failure with it: finished_at %v, reason %v, stale_after %v — want none, none, a lease",
 			got.FinishedAt, got.DegradeReason, got.StaleAfter)
+	}
+}
+
+// A read's own model calls announce nothing, so one read is ONE occurrence.
+//
+// The three passes a crawl runs used to be reported by the router, and the
+// router keys on correlation id plus task — a read's correlation id being its
+// own row id. So one thing a rep asked for once filed four lines: the dossier's,
+// and one per pass, at a grain nobody asked about. The passes are still TRACED;
+// what they no longer do is claim to be work of their own.
+func TestOneWebsiteReadIsOneOccurrenceWhateverItRunsInside(t *testing.T) {
+	f := newWebsiteReadFixture(t)
+	f.drain(t)
+
+	meter := ai.NewCallMeter(f.env.DB()).WithLogger(testLogger(t))
+	for _, task := range []ai.Task{ai.TaskSiteTriage, ai.TaskSiteExtract, ai.TaskSiteFactExtract} {
+		// Under the READ's own correlation, which is what compose binds for the
+		// crawl — the id the router would key each pass's occurrence on.
+		if err := meter.Record(f.worker, []ai.Call{{
+			LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: "completion",
+			CorrelationID: &f.readID, Task: task, Tier: ai.TierCheapCloud,
+			Provider: "anthropic", ModelID: "claude-cheap",
+			ServedIdentitySource: "response", RequestFingerprint: "fp", LatencyMS: 900,
+		}}); err != nil {
+			t.Fatalf("recording the %s pass: %v", task, err)
+		}
+	}
+
+	if n := f.env.WsCount(t, `SELECT count(*) FROM ai_call`); n != 3 {
+		t.Fatalf("ai_call rows = %d, want 3 — the passes must still be TRACED, only unannounced", n)
+	}
+	if n := f.env.WsCount(t,
+		`SELECT count(*) FROM event_outbox
+		  WHERE envelope->>'type' = 'ai_task.state_changed'
+		    AND envelope->'payload'->>'source' = 'ai_router'`); n != 0 {
+		t.Errorf("the router staged %d announcements for passes inside a read that announces itself", n)
+	}
+	if n := f.env.WsCount(t, `SELECT count(*) FROM ai_task_run`); n != 1 {
+		t.Errorf("ai_task_run rows = %d, want 1 — a rep who clicked read this site is owed one line", n)
 	}
 }

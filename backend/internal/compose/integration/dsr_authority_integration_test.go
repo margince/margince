@@ -65,3 +65,43 @@ func TestSubjectRequestQueueIsTheAdminsAlone(t *testing.T) {
 		t.Fatal("admin sees an empty subject-request queue after one was filed")
 	}
 }
+
+// Filing a request is working the queue too. An erasure request is the
+// instruction the officer later carries out irreversibly, trusting that whoever
+// filed it could — so a rep, who holds person.update for their own contact edits
+// and nothing on the queue, must not be able to plant one.
+func TestFilingASubjectRequestTakesTheQueuesOwnGate(t *testing.T) {
+	e := Setup(t)
+	store := consent.NewStore(e.DB())
+	erasure := consent.CreateDSRInput{
+		Kind:       "erasure",
+		SubjectRef: ids.NewV7().String(),
+		DueAt:      time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
+	}
+
+	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	if !RepPerms.Objects["person"].Update {
+		t.Fatal("the fixture rep must hold person.update, so the refusal below comes from the queue's own gate")
+	}
+	if _, err := store.CreateDSR(repCtx, erasure); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a rep filed an erasure request: err=%v, want permission denied", err)
+	}
+
+	// A kind no fulfilment path knows is refused rather than stored.
+	unknown := erasure
+	unknown.Kind = "obliterate"
+	var invalid *consent.ValidationError
+	if _, err := store.CreateDSR(e.Admin(), unknown); !errors.As(err, &invalid) || invalid.Field != "kind" {
+		t.Fatalf("an unknown request kind answered %v, want a validation error on kind", err)
+	}
+
+	// And the admin, who works the queue, still files one — so the refusals above
+	// are the gate rather than a surface that refuses everyone.
+	created, err := store.CreateDSR(e.Admin(), erasure)
+	if err != nil {
+		t.Fatalf("the admin filing an erasure request: %v", err)
+	}
+	if created.Kind != "erasure" {
+		t.Errorf("the filed request reads back as kind %q, want erasure", created.Kind)
+	}
+}

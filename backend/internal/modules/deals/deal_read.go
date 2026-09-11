@@ -135,43 +135,6 @@ var dealListFields = map[string]storekit.SortField{
 	filterPartnerCompanyID: {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterPartnerCompanyID)},
 }
 
-// orderByStagePosition orders by a stage's place in its PIPELINE, not by its
-// name.
-//
-// Alphabetical is almost never what somebody sorting by stage means: they want
-// the funnel, and "Discovery, Negotiation, Proposal" is the funnel shuffled.
-// `stage` is workspace configuration and carries no row scope, so the position
-// is the same number for every reader.
-func orderByStagePosition(context.Context, func(any) int) (string, error) {
-	return "(SELECT stage_sort.position FROM stage stage_sort WHERE stage_sort.id = deal.stage_id)", nil
-}
-
-// orderByReadableCompanyName orders by the referenced company's name, and by
-// NOTHING for a reference this caller may not read.
-//
-// Ordering by a value is reading it — the rule refuseMaskedSort already applies
-// to masked amounts — so a page ordered by names the caller is refused would
-// disclose them through its order. The row scope goes INSIDE the subquery
-// rather than beside it: a reference outside the caller's scope then answers
-// NULL, which the ORDER BY already puts last, so those deals land in the tail
-// together and the order says nothing about which company they name. That is
-// the same answer the row itself gives, where the reference is withheld.
-func orderByReadableCompanyName(column string) func(context.Context, func(any) int) (string, error) {
-	return func(ctx context.Context, arg func(any) int) (string, error) {
-		scope, err := auth.ScopeClauseFor(ctx, "company", "company_sort", arg)
-		if err != nil {
-			return "", err
-		}
-		if scope != "" {
-			scope = " AND " + scope
-		}
-		// The column is one of this map's own keys, never a caller's string.
-		return storekit.SQLf(
-			"(SELECT company_sort.display_name FROM company company_sort WHERE company_sort.id = deal.%s%s)",
-			column, scope), nil
-	}
-}
-
 // wireRowTags renders one deal row's tag chips. A twin of the people module's:
 // a module never imports a sibling, and the shape is the contract's.
 func wireRowTags(tags []storekit.RowTag) *[]crmcontracts.RowTag {

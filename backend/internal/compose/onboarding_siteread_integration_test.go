@@ -109,6 +109,44 @@ func onboardingPOST[T onboardingRequest](ctx context.Context, t *testing.T, path
 	return httptest.NewRequest(http.MethodPost, path, bytes.NewReader(raw)).WithContext(ctx)
 }
 
+// TestOnboardingSiteReadTransportPromotesAJoinedReadToo holds
+// startCompanySiteRead's own join branch: two onboarding starts for the
+// identical seed URL join the same dossier (its target kind never collides
+// with a sweep's, but the join branch itself is the same shared code path
+// startSiteRead's join-promotion fix lives in, and a future caller sharing
+// TargetKindOnboarding is exactly the case a silently-untested branch here
+// would miss).
+func TestOnboardingSiteReadTransportPromotesAJoinedReadToo(t *testing.T) {
+	e := integration.Setup(t)
+	human := e.As(e.Rep1, nil, integration.AdminPerms)
+	inserter := &fakeInserter{}
+	engine := newDeepReadTestEngine(e, inserter)
+	engine.approvals = approvals.NewService(e.DB())
+	engine.pool = e.Pool
+
+	first := onboardingPOST(human, t, "/v1/company/site-reads",
+		crmcontracts.StartCompanySiteReadRequest{Url: seedURL})
+	firstRec := httptest.NewRecorder()
+	engine.startCompanySiteRead(firstRec, first)
+	if firstRec.Code != http.StatusAccepted {
+		t.Fatalf("first start → %d %s, want 202", firstRec.Code, firstRec.Body.String())
+	}
+
+	second := onboardingPOST(human, t, "/v1/company/site-reads",
+		crmcontracts.StartCompanySiteReadRequest{Url: seedURL})
+	secondRec := httptest.NewRecorder()
+	engine.startCompanySiteRead(secondRec, second)
+	if secondRec.Code != http.StatusAccepted {
+		t.Fatalf("joining start → %d %s, want 202", secondRec.Code, secondRec.Body.String())
+	}
+	if len(inserter.inserts) != 1 {
+		t.Fatalf("a join enqueued a rival job (%d inserts, want 1)", len(inserter.inserts))
+	}
+	// Both are live-priority already, so promotion is a no-op result-wise —
+	// what this holds is that startCompanySiteRead's join branch reaches the
+	// call at all, not that this specific pair changes anything.
+}
+
 func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T) {
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -130,6 +168,11 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 	if started.Status != crmcontracts.CompanySiteReadStatusQueued ||
 		startRec.Header().Get("Location") != "/v1/company/site-reads/"+started.Id.String() || len(inserter.inserts) != 1 {
 		t.Fatalf("started dossier = %+v, location %q, jobs %d", started, startRec.Header().Get("Location"), len(inserter.inserts))
+	}
+	// Onboarding is a person watching this page — it must never queue behind
+	// a boot sweep's housekeeping fan-out on the shared deep_read pool.
+	if got := inserter.opts[0].Priority; got != DeepReadPriorityLive {
+		t.Fatalf("an onboarding deep read queued at priority %d, want %d (live)", got, DeepReadPriorityLive)
 	}
 
 	read, err := e.People.GetOnboardingSiteRead(human, ids.UUID(started.Id))

@@ -81,6 +81,16 @@ var companyListFields = map[string]storekit.SortField{
 	companyNameColumn:  storekit.Column(fieldcatalog.TypeText),
 	ownerIDColumn:      storekit.Column(storekit.KindUUID),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
+	columnDescription:  storekit.Column(fieldcatalog.TypeText),
+	// classification is retired and the column the list draws is lifecycle, so
+	// this is the one the header offers. By the stored value, which groups the
+	// seven states together; the funnel's own order is a question of its own
+	// and the deals list answers `status` the same way today.
+	filterLifecycle: storekit.Column(fieldcatalog.TypeText),
+	// The three the list draws and does not store (company_sorts.go).
+	"website_url":     {Kind: fieldcatalog.TypeText, Expr: orderByPrimaryDomain},
+	"contact_count":   {Kind: fieldcatalog.TypeNumber, Expr: orderByContactCount},
+	"open_deal_count": {Kind: fieldcatalog.TypeNumber, Expr: orderByOpenDealCount},
 }
 
 // companyDomainClause narrows the page to the account that lists one

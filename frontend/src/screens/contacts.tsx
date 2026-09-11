@@ -338,11 +338,12 @@ export function ContactsScreen() {
             // Empty is not "works nowhere" — the field is also absent when the
             // caller may not read edges or that account — so the cell states
             // nothing rather than drawing a dash a reader would take for an
-            // answer. No `sort`: the API's person vocabulary (DM-VOCAB-1) has
-            // no employer key, and a header that looked sortable and refused
-            // would be worse than one that never offered.
+            // answer.
             key: "company",
             header: t("create.relatedCompany"),
+            // By the company's NAME, walking the same edge the row walked. A
+            // reader who may see no employer at all is ordered by none.
+            sort: "employer",
             cell: (person: Person) =>
               person.employer ? (
                 // A real link to the COMPANY, in a cell that is not the row's

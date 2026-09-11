@@ -38,25 +38,14 @@ import {
   publishAgentEdge,
 } from "./agent-edge-signal";
 import { type AgentFault, useAgentFault } from "./agent-fault";
-import {
-  IDLE_ORDER,
-  type IdleKind,
-  LABELS,
-  RUNNING,
-  TASK_SAID,
-} from "./agentrail-copy";
+import { IDLE_ORDER, type IdleKind, LABELS, RUNNING } from "./agentrail-copy";
 import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";
 import { useAgentTicker } from "./agentrail-ticker";
 import { type AiActivity, useAiActivity } from "./ai-activity";
-import {
-  PANEL_HEADING,
-  plain,
-  type SpokenLine,
-  speak,
-  spokenText,
-} from "./ai-activity-lines";
+import { PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
+import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
 import { useAgentTierMap } from "./autonomy";
 import { useCan, useHoldsAdminRole } from "./capability";
 import { type CaptureProgress, liveCapture } from "./capture-progress";
@@ -253,43 +242,35 @@ function useLicensePosture(): LicensePosture | undefined {
     : "ok";
 }
 
+/** One terminal attempt of the model-call trace, as `/ai/calls` reports it. */
+type AiCall = components["schemas"]["AiCallSummary"];
+
 /**
  * The model the agent last actually ran on — the SERVED one, not the configured
  * one, because a fallback ladder makes those two differ exactly when it matters.
  *
- * Operator-only: `/ai/calls` sits behind `automation:update`, so a sales seat
- * gets nothing and the runtime row says the seat cannot read it rather than
- * printing a model nobody on that seat could verify. One call, because the panel
- * shows one line.
- */
-type AiCall = components["schemas"]["AiCallSummary"];
-
-/**
- * The last few things the agent actually did, newest first.
+ * ONE row, because the runtime strip shows one model and nothing else here
+ * reads the trace: the recap below is drawn from the AI-activity feed, which is
+ * the projection that knows what each occurrence was ABOUT. Asking for five
+ * would be four rows nothing renders.
  *
- * This is the recap the panel owes a reader: not what the agent IS, but what it
- * has been doing — the task, the model it ran on, when. The full trace, with the
- * attempt ladder and the payloads, lives on the AI settings tab, and the panel
- * links to it rather than reproducing it. A recap that grows into a log is a
- * second log to keep correct.
- *
- * Operator-only, because `/ai/calls` sits behind `automation:update`. A seat
- * without it gets no rows and is told why, rather than an empty section that
- * reads as an agent which has never run.
+ * Operator-only, because `/ai/calls` sits behind `ai_diagnostics:read`. A seat
+ * without it is told the runtime row is not readable rather than shown a model
+ * nobody on that seat could verify.
  */
-function useRecentCalls(): Readonly<{
+function useLastCall(): Readonly<{
   allowed: boolean;
   calls: readonly AiCall[];
 }> {
   // GET /ai/calls asks for ai_diagnostics:read (ai/callread.go).
   const allowed = useCan("ai_diagnostics", "read");
   const recent = useQuery({
-    queryKey: ["ai-calls", "agentrail-recent"],
+    queryKey: ["ai-calls", "agentrail-served-model"],
     enabled: allowed,
     staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await api.GET("/ai/calls", {
-        params: { query: { limit: RECAP_ROWS } },
+        params: { query: { limit: 1 } },
       });
       if (error) {
         // Chrome must not take a page down over telemetry: an unreadable log is
@@ -385,22 +366,6 @@ function modelText(
 }
 
 /**
- * The recap: what the agent has done lately, and the door to the whole trace.
- *
- * Five rows at most. The question a person asks of a background agent is "what
- * have you been doing", and five answers it — a sixth turns the panel into a log
- * viewer, which already exists and is better at it.
- */
-/** The task in the reader's words, or the token opened up if it is a new one. */
-function saidFor(task: string): string {
-  // `task` comes off the wire, and a bare lookup answers `constructor` from the
-  // prototype chain with a function that React then tries to render.
-  return Object.hasOwn(TASK_SAID, task)
-    ? TASK_SAID[task]
-    : task.replaceAll("_", " ");
-}
-
-/**
  * When it happened, as a person would say it.
  *
  * A wall-clock stamp answers "at what time", and the question a recap answers is
@@ -430,25 +395,57 @@ function agoFor(iso: string, locale: Locale, now: number): string {
   return format.format(Math.max(0, Math.floor(seconds / size)));
 }
 
+/**
+ * The recap: what the agent has done lately, and the door to the whole trace.
+ *
+ * Five rows at most. The question a person asks of a background agent is "what
+ * have you been doing", and five answers it — a sixth turns the panel into a log
+ * viewer, which already exists and is better at it.
+ *
+ * It is drawn from the AI-activity feed rather than from the model-call trace,
+ * and the difference is what a row can SAY. The trace knows the task and the
+ * tokens; it is telemetry, and it deliberately carries no record — a call's
+ * subject travels to the occurrence and never to `ai_call`. The occurrence is
+ * the half that knows what the work was ABOUT, so a recap read from it names
+ * the account that was read and links to it, where a recap read from the trace
+ * could only ever say that something happened five times.
+ *
+ * That makes these rows the settled counterpart of the running section above,
+ * in one vocabulary rather than two: the same `speak` table says "I'm reading
+ * the Acme website" while it runs and "I've read the Acme website" once it is
+ * done. A kind the table has no words for draws NOTHING, for the reason
+ * `RunSection` gives — an invented sentence costs the rows that are real.
+ */
 function Recap({
-  recent,
+  settled,
 }: Readonly<{
-  recent: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
+  /** Today's settled occurrences, or undefined while no read has answered. */
+  settled: readonly AiActivityItem[] | undefined;
 }>) {
   const { locale } = useLocale();
+  const t = useT();
   // Read once per open, so five rows share one reading of the clock and cannot
   // disagree about what "now" is.
   const now = Date.now();
-  if (!recent.allowed) {
-    return <p className="aritem arempty">{LABELS.logUnreadable}</p>;
+  if (settled === undefined) {
+    // Nothing, not a sentence: the panel cannot tell a read still in flight
+    // from one that failed, and both would be libelled by "nothing has
+    // finished today".
+    return null;
   }
-  if (recent.calls.length === 0) {
-    return <p className="aritem arempty">{LABELS.noCallsYet}</p>;
+  const said = settled
+    .flatMap((item) => {
+      const line = speak(item, t);
+      return line === null ? [] : [{ item, line }];
+    })
+    .slice(0, RECAP_ROWS);
+  if (said.length === 0) {
+    return <p className="aritem arempty">{LABELS.nothingToday}</p>;
   }
   return (
     <>
-      {recent.calls.map((call, index) => (
-        <p className="aritem" key={call.id}>
+      {said.map(({ item, line }, index) => (
+        <p className="aritem" key={item.id}>
           {/* The mark fades down the list, so the newest thing the agent did is
               the brightest thing in it. Position IS the age here: the rows are
               newest first, and a reader takes the gradient before they read a
@@ -458,9 +455,14 @@ function Recap({
             aria-hidden="true"
             style={{ opacity: Math.max(0.3, 1 - index * MARK_FADE) }}
           />
-          {saidFor(call.task)}
+          <span className="arsaid">
+            <RailLine line={line} />
+          </span>
+          {/* A settled occurrence has a finish — the projection's own CHECK
+              says so — and `started_at` is what is left if a server ever sends
+              one that does not. */}
           <span className="armuted">
-            {agoFor(call.occurred_at, locale, now)}
+            {agoFor(item.finished_at ?? item.started_at, locale, now)}
           </span>
         </p>
       ))}
@@ -579,6 +581,7 @@ function AgentPanel({
   state,
   line,
   running,
+  settled,
   signals,
   model,
   spend,
@@ -590,6 +593,8 @@ function AgentPanel({
   line: SpokenLine;
   /** The scheduled runs the server reports as live. */
   running: readonly AiActivityItem[];
+  /** What settled today, or undefined while no read of the feed has answered. */
+  settled: readonly AiActivityItem[] | undefined;
   signals: Signals;
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
   spend: Readonly<{
@@ -640,10 +645,10 @@ function AgentPanel({
       </header>
 
       {/* Above the counts: a run happening this second outranks a queue that
-          has been waiting since yesterday. Only live work is listed — a settled
-          run reaches the reader through the resting rotation on the card, not
-          as a list here. The section is absent when its list is, rather than
-          drawn empty. */}
+          has been waiting since yesterday. Only live work is listed here — what
+          settled belongs to the recap further down, so an occurrence is in one
+          section or the other and never both. The section is absent when its
+          list is, rather than drawn empty. */}
       <RunSection heading={PANEL_HEADING.running} items={running} />
 
       {/* The one count somebody opens this panel to act on, as a tile rather
@@ -694,7 +699,7 @@ function AgentPanel({
             {LABELS.fullLog}
           </a>
         </h2>
-        <Recap recent={model} />
+        <Recap settled={settled} />
       </div>
 
       {/* What it is standing on, in one strip. Not a section of its own: it is
@@ -1357,7 +1362,7 @@ export function AgentRail({
   const block = useRef<HTMLElement>(null);
   const phone = usePhoneViewport();
   const signals = useSignals();
-  const model = useRecentCalls();
+  const model = useLastCall();
   const server = useAiActivity();
   const ticker = useAgentTicker();
   const spend = useAiSpend();
@@ -1467,6 +1472,7 @@ export function AgentRail({
               frame={frame}
               line={line}
               running={server.running}
+              settled={server.answered ? server.recent : undefined}
               spend={spend}
             />
           </div>,

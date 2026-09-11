@@ -44,16 +44,23 @@ func (e *deepReadEngine) startCompanySiteRead(w http.ResponseWriter, r *http.Req
 		httperr.Write(w, r, httperr.Validation("url", "invalid", "url must be an absolute http(s) URL"))
 		return
 	}
-	read, _, err := e.people.StartOnboardingSiteRead(r.Context(), seedURL, requestedBy(r.Context()),
+	read, joined, err := e.people.StartOnboardingSiteRead(r.Context(), seedURL, requestedBy(r.Context()),
 		func(ctx context.Context, tx pgx.Tx, read people.SiteRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, SiteDeepReadArgs{
 				Workspace: storekit.MustWorkspace(ctx), SiteReadID: read.ID,
 				RequestedBy: read.RequestedBy,
-			}, siteDeepReadInsertOpts())
+			}, siteDeepReadInsertOpts(DeepReadPriorityLive))
 		})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
+	}
+	if joined {
+		// TargetKindOnboarding never joins a TargetKindCompany sweep
+		// read today, so this is a no-op in production — kept for the same
+		// reason startSiteRead carries it: a joined read is never assumed
+		// live-priority just because IT usually is.
+		promoteQueuedSiteReadPriority(r.Context(), e.pool, e.logger(), read.ID)
 	}
 	w.Header().Set("Location", "/v1/company/site-reads/"+read.ID.String())
 	httperr.WriteJSON(w, http.StatusAccepted, companySiteRead(read, nil, nil))

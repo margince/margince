@@ -641,8 +641,8 @@ function DetailsGridBody({ company }: Readonly<{ company: Company }>) {
       {/* The address block sits last rather than in its old slot between the
           domain and the industry: it is its own grid now, and two grids with a
           third between them put two seams through a panel that reads best as
-          one block. Both grids stand on the same 112px label rung, so the
-          values still share one left edge down the whole panel. */}
+          one block. Both are the same `FieldGrid icons`, so the values share one
+          left edge — which no screen may inset away (disclosure-inset.test.ts). */}
       <FieldGrid icons>
         <LegalNameRow {...row} />
         {/* Beside the legal name, not with the postal address below: a VAT

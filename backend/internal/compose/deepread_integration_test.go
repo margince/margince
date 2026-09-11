@@ -16,9 +16,11 @@ package compose
 // outcome no-ops.
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -486,6 +488,11 @@ func TestDeepReadStartQueuesOnceAndAReClickJoinsWithoutASecondInsert(t *testing.
 		args.SiteReadID != ids.UUID(first.ReadId) || args.RequestedBy != "human:"+e.Rep1.String() {
 		t.Fatalf("job args = %+v, want the dossier's own identity and the human who asked", args)
 	}
+	// A rep pressed the button for this — it must never queue behind a boot
+	// sweep's housekeeping fan-out on the shared deep_read pool.
+	if got := inserter.opts[0].Priority; got != DeepReadPriorityLive {
+		t.Fatalf("a human-started deep read queued at priority %d, want %d (live)", got, DeepReadPriorityLive)
+	}
 
 	// A second click while the read is in flight joins it: same read id,
 	// answered as running, and NO second job rides the queue.
@@ -498,6 +505,112 @@ func TestDeepReadStartQueuesOnceAndAReClickJoinsWithoutASecondInsert(t *testing.
 	}
 	if len(inserter.inserts) != 1 {
 		t.Fatalf("joining start enqueued a rival job (%d inserts, want 1)", len(inserter.inserts))
+	}
+}
+
+// seedHousekeepingSiteDeepRead fixtures the state a real boot-time sweep
+// leaves behind for one company: a queued dossier plus its River job at
+// DeepReadPriorityHousekeeping — the exact shape startSiteRead's join branch
+// meets when a live caller reaches the same company a sweep already
+// queued. Fixtures the STATE the real writer produces (proven correct
+// end-to-end by TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany
+// in integration/capture), not the writer itself — what this test holds is
+// what happens on JOIN, not what the sweep's own insert does.
+func seedHousekeepingSiteDeepRead(t *testing.T, e *integration.Env, company ids.UUID, seedURL string) ids.UUID {
+	t.Helper()
+	readID := ids.NewV7()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO site_read (id, company_id, target_kind, seed_url, requested_by)
+			VALUES ($1, $2, $3, $4, $5)`,
+			readID, company, people.TargetKindCompany, seedURL, "system:capture_auto_enrich"); err != nil {
+			return err
+		}
+		args, err := json.Marshal(SiteDeepReadArgs{Workspace: e.WS, CompanyID: company, SiteReadID: readID, RequestedBy: "system:capture_auto_enrich"})
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(context.Background(), `
+			INSERT INTO river_job (state, kind, queue, priority, args, tags, errors, max_attempts,
+			                       attempt, created_at, scheduled_at)
+			VALUES ('available', $1, $2, $3, $4::jsonb, '{}'::varchar(255)[], '{}'::jsonb[], 3, 0, now(), now())`,
+			SiteDeepReadArgs{}.Kind(), deepReadQueue, DeepReadPriorityHousekeeping, args)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding a housekeeping-priority site_deep_read: %v", err)
+	}
+	return readID
+}
+
+// riverJobPriority reads back the priority of the one site_deep_read job
+// queued for a dossier, by the same site_read_id scoping the production code
+// itself uses (deepread.go's promoteQueuedSiteReadPriority) — not by kind
+// alone, which a sweep pass sharing this workspace could make ambiguous.
+func riverJobPriority(t *testing.T, e *integration.Env, readID ids.UUID) int {
+	t.Helper()
+	var priority int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT priority FROM river_job WHERE kind = $1 AND args ->> 'site_read_id' = $2`,
+			SiteDeepReadArgs{}.Kind(), readID.String(),
+		).Scan(&priority)
+	}); err != nil {
+		t.Fatalf("reading the job's priority: %v", err)
+	}
+	return priority
+}
+
+// TestDeepReadJoiningAHousekeepingReadPromotesItsPriority holds the case
+// createOrJoinSiteRead's join branch cannot cover on its own: it never calls
+// the enqueue callback (the job already exists, and River's own ByArgs
+// uniqueness would silently drop a re-insert anyway), so a live caller
+// reaching the same company a boot-time sweep already queued must not
+// be left waiting behind that sweep's own housekeeping priority just because
+// it joined instead of starting.
+func TestDeepReadJoiningAHousekeepingReadPromotesItsPriority(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "promote.example", "")
+	readID := seedHousekeepingSiteDeepRead(t, e, company, "https://promote.example")
+	if got := riverJobPriority(t, e, readID); got != DeepReadPriorityHousekeeping {
+		t.Fatalf("fixture priority = %d, want %d (housekeeping) before the live request", got, DeepReadPriorityHousekeeping)
+	}
+
+	inserter := &fakeInserter{}
+	engine := newDeepReadTestEngine(e, inserter)
+	engine.pool = e.Pool
+
+	rec, started := postDeepRead(t, e, engine, e.Rep1, company)
+	if rec.Code != http.StatusAccepted || started.Status != crmcontracts.SiteReadStartedStatusRunning {
+		t.Fatalf("live request for an already-queued company → %d %+v, want 202 running (joining the sweep's read)", rec.Code, started)
+	}
+	if ids.UUID(started.ReadId) != readID {
+		t.Fatalf("joined read id = %s, want the seeded housekeeping read %s", started.ReadId, readID)
+	}
+	if len(inserter.inserts) != 0 {
+		t.Fatalf("a join enqueued %d jobs, want 0 — the existing job is promoted, never duplicated", len(inserter.inserts))
+	}
+	if got := riverJobPriority(t, e, readID); got != DeepReadPriorityLive {
+		t.Fatalf("joined read's priority = %d after a live request, want %d (promoted to live)", got, DeepReadPriorityLive)
+	}
+}
+
+// TestDeepReadPromoteQueuedPriorityLogsWhenTheUpdateFails holds the honest
+// hard case the happy-path test above cannot reach: a promotion is
+// best-effort, and best-effort still has to say what it could not do rather
+// than fail silently. An already-cancelled context is the deterministic way
+// to force pool.Exec to fail without needing a broken database.
+func TestDeepReadPromoteQueuedPriorityLogsWhenTheUpdateFails(t *testing.T) {
+	e := integration.Setup(t)
+	var logs bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&logs, nil))
+
+	cancelledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	promoteQueuedSiteReadPriority(cancelledCtx, e.Pool, log, ids.NewV7())
+
+	if !strings.Contains(logs.String(), "could not promote a joined read's priority") {
+		t.Fatalf("a failed promotion logged nothing; want a warning naming what could not be done. Got: %s", logs.String())
 	}
 }
 

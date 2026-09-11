@@ -151,6 +151,9 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 			uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
 			return err
 		}
+		if err := refuseRepricingAFrozenContract(existing, in); err != nil {
+			return err
+		}
 		patch := contractPatch(existing, in)
 		if patch.Empty() {
 			// The unchanged row still leaves the store, so it is masked like
@@ -242,6 +245,35 @@ func (s *Store) ArchiveContract(ctx context.Context, id ids.ContractID) error {
 		}
 		return nil
 	})
+}
+
+// refuseRepricingAFrozenContract keeps a contract's currency and its frozen
+// conversion rate describing the same money.
+//
+// Activation freezes the rate once and never re-reads it (freezeRateForActivation
+// says why), and the base-currency value every rollup reports is value × that
+// rate. A currency changed afterwards leaves the rate naming the old currency, so
+// the rollup either multiplies by a rate for a currency the row no longer holds or,
+// with the currency moved to base, skips the conversion and reports the raw
+// figure — both restate what the agreement was worth without anybody
+// renegotiating it.
+//
+// Keyed on the STATUS, not on whether a rate exists: a contract that activated
+// with no currency froze nothing, and giving it one afterwards would make an
+// active foreign-currency contract with no rate — the state the freeze exists to
+// end, invisible to the base-currency guard. Only a draft, which has not been
+// through activation, is still the human's to re-price.
+func refuseRepricingAFrozenContract(existing crmcontracts.Contract, in crmcontracts.UpdateContractRequest) error {
+	if in.Currency == nil || statusOf(existing) == StatusDraft {
+		return nil
+	}
+	if existing.Currency != nil && *existing.Currency == *in.Currency {
+		return nil
+	}
+	return &ContractCheckError{
+		Field:  "currency",
+		Reason: "a contract's currency is fixed once it leaves draft, because activation freezes its conversion; record a new contract to change it",
+	}
 }
 
 // contractPatch turns the decoded body into a patch. The generated request

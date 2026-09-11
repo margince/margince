@@ -20,10 +20,12 @@ package compose
 // The budget counter these gates spend from is tested here too, next to the
 // trigger that shares it with the sweep.
 //
-// What they do NOT cover is the queued read itself: starting one needs an
-// ambient River client, and this repo has no harness that stands one up in a
-// test. The same gap already applies to the sweep's own trigger path; the
-// read-and-apply half is covered by TestAutoEnrichLaneAppliesDirectlyInsteadOfStaging.
+// What they do NOT cover is the queued read itself: starting one from THIS
+// file needs an ambient River client this package has no harness for.
+// integration/capture's TestCaptureAutoEnrichSweepQueuesDomainTriageAtHousekeepingPriorityToo
+// covers the queue over a real River runner instead, the same way the sweep's
+// own trigger path is covered there; the read-and-apply half is covered by
+// TestAutoEnrichLaneAppliesDirectlyInsteadOfStaging.
 
 import (
 	"context"

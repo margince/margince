@@ -1,13 +1,16 @@
+import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, SegmentedControl } from "../design-system/atoms";
+import { navigate } from "../app/router";
+import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDayMonth, formatTimeOfDay } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { ChannelReplyAction } from "./compose";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
+import { personTabRoute } from "./persontab";
 
 // Conversation memory (concept §5.10, ADR-0097 D3).
 //
@@ -33,6 +36,16 @@ type EmailSummary = components["schemas"]["EmailSummary"];
 
 const FILTERS = ["all", "email", "meetings", "calls", "notes"] as const;
 type Filter = (typeof FILTERS)[number];
+
+// How many conversations the card draws before the footer takes over.
+//
+// The card is a GLANCE — what was said lately, read beside the card that says
+// what is owed — and the two are a pair because they are read together. An
+// uncut list breaks that: a contact with fifty captured exchanges makes this
+// column longer than the page, and the other half of the reading leaves the
+// screen. Three is what the rail's own recent-activity glance shows, so the
+// two condensed lists on one record agree about how long a glance is.
+const GLANCE = 3;
 
 export function PersonMemory({
   view,
@@ -62,10 +75,34 @@ export function PersonMemory({
           fromEntry(entry, t, interactionLabel, locale, recordZone),
         )
       : foldActivities(view, t, interactionLabel, locale, recordZone);
-  const shown = rows.filter((row) => matches(row, filter));
+  // Filter first, then cut: three of what the reader asked for, not whichever
+  // of the newest three survive the cut they chose. A filter that narrowed to
+  // nothing already drawn would read as a channel with no history on it.
+  const matching = rows.filter((row) => matches(row, filter));
+  const shown = matching.slice(0, GLANCE);
 
   return (
-    <Panel className="pe-memory" title={t("person.memory.title")}>
+    <Panel
+      className="pe-memory"
+      title={t("person.memory.title")}
+      // The way out of the glance, in the band that belongs to the whole card
+      // rather than to any row. It lands on the Timeline tab — this record's
+      // chronology whole, every exchange with the changes to the record beside
+      // them — so it stands even when the glance happens to be drawing
+      // everything the card folded, and a cut that came up empty needs it
+      // most. The rail's own glance leads to the same tab: one record, one
+      // ledger a reader is sent to.
+      footer={
+        <Button
+          small
+          variant="ghost"
+          onClick={() => navigate(personTabRoute(view.person.id, "timeline"))}
+        >
+          {t("person.memory.viewAll")}{" "}
+          <ChevronRight size={13} aria-hidden="true" />
+        </Button>
+      }
+    >
       {/* The cut sits UNDER the head, not in it. Five options do not fit beside
           the title on the one band a panel head is, and a strip that wrapped to
           a second row gave this card a head taller than every other card in the
@@ -85,7 +122,7 @@ export function PersonMemory({
           }}
         />
       </PanelBody>
-      {shown.length === 0 && (
+      {matching.length === 0 && (
         <PanelBody>
           <p className="pe-prose t-body">{t("person.memory.empty")}</p>
         </PanelBody>

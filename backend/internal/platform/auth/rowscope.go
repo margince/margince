@@ -185,7 +185,7 @@ var ownerScopedTables = map[string]bool{
 // is a deliberate human disclosure by someone who could already read it,
 // which is the same act that promotion is. Scope alone never widens one.
 func VisiblePredicate(p principal.Principal, table string, arg func(any) int) func(alias string) string {
-	return predicateFor(p, table, arg, withCapturePrivacy)
+	return predicateFor(p, table, arg, withCapturePrivacy, asClassified)
 }
 
 // capturePrivacy selects whether a rendered predicate enforces the
@@ -198,14 +198,22 @@ const (
 	withoutCapturePrivacy capturePrivacy = false
 )
 
-func predicateFor(p principal.Principal, table string, arg func(any) int, capture capturePrivacy) func(alias string) string {
+func predicateFor(p principal.Principal, table string, arg func(any) int, capture capturePrivacy, class readClass) func(alias string) string {
 	// Customer identity is workspace-readable (tableclass.go): the own/team
 	// arm is TRUE for every principal, and only capture privacy and a grant
 	// can still say anything about the row. The owner predicate is not even
 	// rendered for it — a registered parameter the SQL never names is a
-	// Postgres error, not a no-op.
+	// Postgres error, not a no-op. asOwnerScoped is the exception (tableclass.go).
+	ownerScoped := class == asOwnerScoped || !identityTables[table]
+	everyRow := readsEveryRow(p, table)
+	if class == asOwnerScoped {
+		everyRow = Unbounded(p)
+	}
 	scope := func(string) string { return "TRUE" }
-	if !identityTables[table] {
+	switch {
+	case class == asOwnerScoped:
+		scope = ownerPredicate(p, arg, unownedIsNobodys)
+	case ownerScoped:
 		scope = OwnerPredicate(p, arg)
 	}
 	// The system principal is trusted by construction and reads both
@@ -213,7 +221,7 @@ func predicateFor(p principal.Principal, table string, arg func(any) int, captur
 	private := bool(capture) && ownerPrivateTables[table] && p.Type != principal.PrincipalSystem
 	// An actor who reads every row needs no grant arm to see a shareable
 	// row — unless capture privacy just took it away from them again.
-	shareable := shareableTables[table] && (!readsEveryRow(p, table) || private)
+	shareable := shareableTables[table] && (!everyRow || private)
 	if !private && !shareable {
 		return scope
 	}
@@ -350,7 +358,7 @@ func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string,
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)
-	clause := predicateFor(p, table, arg, withoutCapturePrivacy)("")
+	clause := predicateFor(p, table, arg, withoutCapturePrivacy, asClassified)("")
 
 	var visible bool
 	err = tx.QueryRow(ctx,

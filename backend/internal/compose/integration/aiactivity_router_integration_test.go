@@ -194,25 +194,28 @@ func TestARouterReportedTaskReachesTheProjection(t *testing.T) {
 	}
 }
 
-// One request's calls for one task are ONE line. Forty page reads under a
-// single job pass must not become forty rows on somebody's rail, and the second
-// call must WIN rather than be refused as a redelivery of the first — otherwise
-// a failure a retry has already corrected is reported forever.
+// One request's calls for one task are ONE line. A hundred candidates enriched
+// under a single job pass must not become a hundred rows on somebody's rail,
+// and the second call must WIN rather than be refused as a redelivery of the
+// first — otherwise a failure a retry has already corrected is reported forever.
+//
+// `enrich` is the example because it is the shape: one correlation id per job
+// pass, a call per candidate in series, and the router owns it.
 func TestOneRequestsCallsForOneTaskAreOneOccurrence(t *testing.T) {
 	f := newRouterFixture(t)
-	f.call(t, ai.TaskSiteFactExtract, func(c *ai.Call) { c.ErrorSentinel = "provider_unavailable" })
+	f.call(t, ai.TaskEnrich, func(c *ai.Call) { c.ErrorSentinel = "provider_unavailable" })
 	f.drain(t)
-	if got := f.row(t, ai.TaskSiteFactExtract); got.State != "failed" || got.Attempt != 1 {
+	if got := f.row(t, ai.TaskEnrich); got.State != "failed" || got.Attempt != 1 {
 		t.Fatalf("first call projected (%s, attempt %d), want (failed, attempt 1)", got.State, got.Attempt)
 	}
 
-	f.call(t, ai.TaskSiteFactExtract, nil)
+	f.call(t, ai.TaskEnrich, nil)
 	f.drain(t)
 
 	if n := f.env.WsCount(t, `SELECT count(*) FROM ai_task_run WHERE source = 'ai_router'`); n != 1 {
 		t.Errorf("ai_router occurrences = %d, want 1 — the two calls are one piece of work", n)
 	}
-	got := f.row(t, ai.TaskSiteFactExtract)
+	got := f.row(t, ai.TaskEnrich)
 	if got.Attempt != 2 {
 		t.Errorf("attempt = %d, want 2 — a second call under one key that reused attempt 1 would be refused by the projection's guard", got.Attempt)
 	}
@@ -392,7 +395,7 @@ func TestConcurrentCallsOfOneTaskAllReachTheProjection(t *testing.T) {
 			<-start
 			errs <- meter.Record(f.ctx, []ai.Call{{
 				LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: "completion",
-				CorrelationID: &f.corr, Task: ai.TaskSiteFactExtract, Tier: ai.TierCheapCloud,
+				CorrelationID: &f.corr, Task: ai.TaskEnrich, Tier: ai.TierCheapCloud,
 				Provider: "anthropic", ModelID: "claude-cheap", ServedIdentitySource: "response",
 				// The last one to land wins the row, so every worker carries a
 				// distinguishable outcome rather than all of them agreeing.
@@ -432,7 +435,7 @@ func TestConcurrentCallsOfOneTaskAllReachTheProjection(t *testing.T) {
 	if n := f.env.WsCount(t, `SELECT count(*) FROM ai_task_run WHERE source = 'ai_router'`); n != 1 {
 		t.Errorf("ai_router occurrences = %d, want 1 — they are one piece of work", n)
 	}
-	if got := f.row(t, ai.TaskSiteFactExtract); got.Attempt != racingCalls {
+	if got := f.row(t, ai.TaskEnrich); got.Attempt != racingCalls {
 		t.Errorf("attempt = %d, want %d — an outcome was refused as a redelivery and lost", got.Attempt, racingCalls)
 	}
 }

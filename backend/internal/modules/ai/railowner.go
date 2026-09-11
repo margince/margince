@@ -48,6 +48,7 @@ const (
 	sourceAttachmentExtraction = "attachment_extraction"
 	sourceAccountScan          = "account_scan"
 	sourceTranscriptRead       = "transcript_read"
+	sourceVoiceBuild           = "voice_build"
 )
 
 // railOwners answers who reports each task. TOTAL over the contract's task
@@ -71,7 +72,20 @@ var railOwners = map[Task]string{
 	// done.
 	TaskTranscriptPropose: sourceTranscriptRead,
 
+	// Learning a rep's writing voice, which they press a button and wait for.
+	// The build row is queued before any worker sees it, carries the claim's
+	// reclaim window as its lease, and counts its own attempts across a budget
+	// deferral — so it can say queued and running, which the router reporting
+	// the model call afterwards never could.
+	TaskVoiceBuild: sourceVoiceBuild,
+
 	TaskEmbeddings: SourceNoOccurrence,
+
+	// The three passes of one website read. The read itself is a carrier and
+	// announces the occurrence; these run inside it.
+	TaskSiteTriage:      SourceNoOccurrence,
+	TaskSiteExtract:     SourceNoOccurrence,
+	TaskSiteFactExtract: SourceNoOccurrence,
 
 	// A planned task: nothing calls it yet, and when something does the call
 	// will be one interactive completion the router reports after the fact —
@@ -98,12 +112,8 @@ var railOwners = map[Task]string{
 	TaskRateExtract:                   SourceRouter,
 	TaskSignalExtract:                 SourceRouter,
 	TaskStageEvidenceExtract:          SourceRouter,
-	TaskSiteExtract:                   SourceRouter,
-	TaskSiteFactExtract:               SourceRouter,
-	TaskSiteTriage:                    SourceRouter,
 	TaskSummarize:                     SourceRouter,
 	TaskTranscript:                    SourceRouter,
-	TaskVoiceBuild:                    SourceRouter,
 }
 
 // railNoOccurrenceReasons says why a task is a step rather than an occurrence.
@@ -113,7 +123,20 @@ var railOwners = map[Task]string{
 // to defend. A reason that is really an editorial preference ("no rep wants to
 // see it") belongs in the CLIENT, which decides what to draw — this map is only
 // for work that has no unit of its own to be an occurrence of.
+// siteReadPassesReason answers for all three passes of one website read,
+// because the reason is the same sentence about the same piece of work.
+const siteReadPassesReason = "a website read runs all three of these passes, and the READ is the " +
+	"occurrence: it is what a person asked for, it owns the row that is queued before any worker " +
+	"sees it, and it already announces itself. The router keys on correlation id plus task, and a " +
+	"read's correlation id is its own row id — so leaving these to the router files three more " +
+	"lines for one thing somebody asked for once, at a grain nobody asked about: a rep who clicked " +
+	"\"read this site\" has no use for the news that its triage pass finished."
+
 var railNoOccurrenceReasons = map[Task]string{
+	TaskSiteTriage:      siteReadPassesReason,
+	TaskSiteExtract:     siteReadPassesReason,
+	TaskSiteFactExtract: siteReadPassesReason,
+
 	TaskEmbeddings: "an embedding is a step inside another piece of work, never one of its own: " +
 		"every call happens in service of a search, an enrich or a reindex, and that is the " +
 		"occurrence. Reporting it separately would report one piece of work twice at two grains — " +

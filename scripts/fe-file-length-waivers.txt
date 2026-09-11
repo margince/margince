@@ -48,7 +48,7 @@
 1424 frontend/src/screens/offers.tsx
 1428 frontend/src/screens/contacts.test.tsx
 1430 frontend/src/screens/personrail.tsx
-1488 frontend/src/app/agentrail.test.tsx
+1442 frontend/src/app/agentrail.test.tsx
 1505 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1527 frontend/src/design-system/listtable.test.tsx
 1571 frontend/src/app/agentrail.tsx
@@ -62,7 +62,7 @@
 2185 frontend/src/screens/leads.tsx
 2308 frontend/src/screens/company360.test.tsx
 2535 frontend/src/screens/companies.test.tsx
-2593 frontend/src/screens/companies.tsx
+2572 frontend/src/screens/companies.tsx
 2645 frontend/src/screens/deals.test.tsx
 2797 frontend/src/screens/compose.tsx
 2811 frontend/src/screens/settings.tsx
@@ -106,8 +106,8 @@
 629 frontend/src/screens/knowledge.tsx
 630 frontend/src/screens/onboarding-connect-panels.tsx
 640 frontend/src/screens/retention.tsx
+648 frontend/src/screens/leads.list.tsx
 648 frontend/src/screens/partners.tsx
-649 frontend/src/screens/leads.list.tsx
 661 frontend/src/screens/record360/citations.tsx
 663 frontend/src/screens/approvalkind.ts
 670 frontend/src/screens/entityref.tsx
@@ -147,5 +147,5 @@
 982 frontend/src/screens/create.tsx
 983 frontend/src/design-system/decisioncard.tsx
 984 frontend/src/screens/overlay-usermap.tsx
-990 frontend/src/screens/companyheader.tsx
+989 frontend/src/screens/companyheader.tsx
 995 frontend/src/screens/onboarding-read.tsx

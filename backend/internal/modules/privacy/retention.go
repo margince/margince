@@ -31,6 +31,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
+// publishedRetentionAction is the check the one emit site whose action comes off
+// a ROW rather than out of the code has to make.
+//
+// Every other site passes a contract constant, so the compiler holds them.
+// retention_policy.action carries the same closed set under a CHECK, but a row
+// written before a value was retired — or by a migration that widened the CHECK
+// without the contract — would otherwise ship an event every subscriber drops in
+// silence, which is the shape this event's closed set exists to stop.
+func publishedRetentionAction(
+	stored string, policyID ids.UUID,
+) (crmcontracts.PublicEventRetentionAppliedAction, error) {
+	action := crmcontracts.PublicEventRetentionAppliedAction(stored)
+	if !action.Valid() {
+		return "", fmt.Errorf(
+			"privacy: retention policy %s names the action %q, which retention.applied does not publish",
+			policyID, stored)
+	}
+	return action, nil
+}
+
 // retentionAppliedPayload builds the retention.applied wire payload — the
 // subject travels separately (the caller's own entityType, passed to
 // storekit.EmitEventForEntity), since this event's entity is dynamic
@@ -38,7 +58,16 @@ import (
 // per site). policyID/reason are each nil where that site's
 // action carries no such value — the union this schema's optional
 // policy/reason fields exist for.
-func retentionAppliedPayload(action string, policyID *ids.UUID, reason *string) crmcontracts.PublicEventRetentionApplied {
+//
+// The action is the contract's own type rather than a string, so a fourth one
+// cannot reach a subscriber by being spelled at an emit site: the set is closed
+// in the schema, and the compiler is what holds the sites to it. A subscriber
+// switching on the three exhaustively is the whole reason the set is closed, and
+// a value it does not know is dropped in silence that reads exactly like no
+// event.
+func retentionAppliedPayload(
+	action crmcontracts.PublicEventRetentionAppliedAction, policyID *ids.UUID, reason *string,
+) crmcontracts.PublicEventRetentionApplied {
 	payload := crmcontracts.PublicEventRetentionApplied{Action: action}
 	if policyID != nil {
 		policy := openapi_types.UUID(*policyID)

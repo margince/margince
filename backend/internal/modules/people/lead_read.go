@@ -33,11 +33,37 @@ const liveOnlyClause = ` AND archived_at IS NULL`
 // signal. Every lead read is FROM the unaliased table, which is what lets
 // them name lead.id. A restricted activity (A165: held under a statutory
 // retention obligation) is in none of them, the same as in every other read.
+// leadSourceLabelSQL is the source in the words the catalog gives it, which is
+// what the Source column prints. The stored key is an identifier; a reader
+// sorting the column means the label beside it.
+const leadSourceLabelSQL = `(SELECT s.label FROM lead_source s WHERE s.key = lead.source)`
+
+// leadNextTaskDueSQL is when the next open task a reader may open falls due —
+// the deadline the Next task column prints, taking the audience for the reason
+// the pair beside it does.
+const leadNextTaskDueSQL = `(SELECT a.due_at FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done
+	     AND a.audience = 'workspace'
+	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1)`
+
+// leadLastActivitySQL is the last-touch clock, excluding system remediation for
+// the same reason last_activity_of_person does: work the product files ABOUT a
+// lead is not the lead engaging.
+//
+// The row that PRINTS it and the expression that ORDERS BY it read this, so a
+// reader sees the instant the list was arranged by rather than a second reading
+// of the same question.
+func leadLastActivitySQL() string {
+	return `(SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
+	     ` + auth.OriginIsEngagement("a") + `)`
+}
+
 var leadColumns = `id, full_name, email, title, company_name, candidate_company_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
 	promoted_person_id, promoted_at, merged_into_id, source, captured_by, version, created_at, updated_at, archived_at,
 	routed_at, first_response_at,
-	(SELECT s.label FROM lead_source s WHERE s.key = lead.source),
+	` + leadSourceLabelSQL + `,
 	disqualify_reason_id, disqualify_note,
 	(SELECT r.label FROM lead_disqualify_reason r WHERE r.id = lead.disqualify_reason_id),
 	status_set_by, qualified_deal_id,
@@ -51,12 +77,7 @@ var leadColumns = `id, full_name, email, title, company_name, candidate_company_
 	         OR (a.kind = 'meeting' AND a.meeting_status IN ('booked','held')))
 	  ORDER BY CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 0
 	                WHEN a.kind = 'meeting' THEN 1 ELSE 2 END, a.occurred_at DESC, a.id LIMIT 1),
-	-- The last-touch clock, so it excludes system remediation for the same
-	-- reason last_activity_of_person does: work the product files ABOUT a lead
-	-- is not the lead engaging.
-	(SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	     ` + auth.OriginIsEngagement("a") + `),
+	` + leadLastActivitySQL() + `,
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done),
 	-- The next open task, as the pair it is: its title and its deadline
@@ -74,10 +95,7 @@ var leadColumns = `id, full_name, email, title, company_name, candidate_company_
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done
 	     AND a.audience = 'workspace'
 	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1),
-	(SELECT a.due_at FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done
-	     AND a.audience = 'workspace'
-	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1),
+	` + leadNextTaskDueSQL + `,
 	(SELECT factor.value->>'factor'
 	   FROM LATERAL (
 	     SELECT factors FROM lead_score_history

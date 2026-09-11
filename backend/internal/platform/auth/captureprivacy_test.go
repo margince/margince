@@ -155,7 +155,7 @@ func TestSubjectRightsPredicateDropsOnlyTheCapturePrivacyArm(t *testing.T) {
 	p := human(principal.RowScopeTeam)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	if sql := predicateFor(p, "person", arg, withoutCapturePrivacy)("t"); sql != "TRUE" {
+	if sql := predicateFor(p, "person", arg, withoutCapturePrivacy, asClassified)("t"); sql != "TRUE" {
 		t.Errorf("the subject-rights person predicate = %q, want TRUE: it either still "+
 			"applies capture privacy (a SAR would omit an unpromoted capture) or narrows "+
 			"a workspace-readable record", sql)
@@ -163,7 +163,7 @@ func TestSubjectRightsPredicateDropsOnlyTheCapturePrivacyArm(t *testing.T) {
 	// "list" is neither shareable nor an identity table, so it is the honest
 	// witness that the crossing lifts capture privacy alone and leaves a
 	// scoped table's owner arm standing.
-	if sql := predicateFor(p, "list", arg, withoutCapturePrivacy)("t"); !strings.Contains(sql, "t.owner_id") {
+	if sql := predicateFor(p, "list", arg, withoutCapturePrivacy, asClassified)("t"); !strings.Contains(sql, "t.owner_id") {
 		t.Errorf("the subject-rights predicate over a scoped table dropped the owner "+
 			"scope; the crossing must lift capture privacy and nothing else: %s", sql)
 	}

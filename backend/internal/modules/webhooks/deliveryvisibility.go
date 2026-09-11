@@ -6,6 +6,7 @@ package webhooks
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -13,12 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-)
-
-// companyAnchor is the record type a delivery or approval is filed under.
-const (
-	companyAnchor = "company"
-	dealAnchor    = "deal"
 )
 
 // workspaceLevelEntities are the event subject types with NO per-owner row
@@ -133,7 +128,7 @@ var workspaceLevelEntities = map[string]struct{}{
 // (not entity type) because their runtime subject class collides with the
 // row-scoped entity names above. The overlay mirror.* events stamp the
 // diverged record's RUNTIME canonical class (rec.ObjectClass / ref.Type /
-// del.ObjectClass — e.g. "person", dealAnchor) as their entity type, but the
+// del.ObjectClass — e.g. "person", "deal") as their entity type, but the
 // id they carry is a mirror-synthetic key (externalIDToUUID) or a
 // pre-materialization EntityRef — NOT a live record id the owner's grants
 // can be probed against. An entity-type probe would therefore either miss
@@ -208,7 +203,7 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 		return ok && actor.UserID != ids.Nil && actor.UserID == entityID, nil
 	}
 	switch entityType {
-	case "person", companyAnchor, dealAnchor, "lead", "project", "voice_profile":
+	case "person", "company", "deal", "lead", "project", "voice_profile":
 		return s.rowScopedVisible(ctx, entityType, func(c context.Context, tx pgx.Tx) error {
 			return auth.EnsureVisible(c, tx, entityType, entityID)
 		})
@@ -349,9 +344,9 @@ func (s *Store) contractVisibleTo(ctx context.Context, contractID ids.UUID) (boo
 	if err != nil {
 		return false, err
 	}
-	anchor, anchorID := companyAnchor, companyID
+	anchor, anchorID := "company", companyID
 	if dealID != nil {
-		anchor, anchorID = dealAnchor, *dealID
+		anchor, anchorID = "deal", *dealID
 	}
 	return s.probeVisible(ctx, func(c context.Context, tx pgx.Tx) error {
 		return auth.EnsureVisibleLive(c, tx, anchor, anchorID)
@@ -377,14 +372,14 @@ func (s *Store) dealRoomVisibleTo(ctx context.Context, roomID ids.UUID) (bool, e
 	if err != nil {
 		return false, err
 	}
-	return s.rowScopedVisible(ctx, dealAnchor, func(c context.Context, tx pgx.Tx) error {
-		return auth.EnsureVisible(c, tx, dealAnchor, dealID)
+	return s.rowScopedVisible(ctx, "deal", func(c context.Context, tx pgx.Tx) error {
+		return auth.EnsureVisible(c, tx, "deal", dealID)
 	})
 }
 
-// commissionVisibleTo gates a commission subject on commission.read and then on
-// the row-scope visibility of the deal it was accrued on. An absent entry reads
-// as not-visible.
+// commissionVisibleTo gates a commission subject on commission.read, then on the
+// deal it was accrued on being visible AND worked by the subscriber — the two
+// arms commissions.VisibleClause composes. An absent entry reads as not-visible.
 func (s *Store) commissionVisibleTo(ctx context.Context, entryID ids.UUID) (bool, error) {
 	readable, err := objectReadable(ctx, "commission")
 	if err != nil || !readable {
@@ -401,9 +396,40 @@ func (s *Store) commissionVisibleTo(ctx context.Context, entryID ids.UUID) (bool
 	if err != nil {
 		return false, err
 	}
-	return s.rowScopedVisible(ctx, dealAnchor, func(c context.Context, tx pgx.Tx) error {
-		return auth.EnsureVisible(c, tx, dealAnchor, dealID)
+	return s.rowScopedVisible(ctx, "deal", func(c context.Context, tx pgx.Tx) error {
+		if err := auth.EnsureVisible(c, tx, "deal", dealID); err != nil {
+			return err
+		}
+		return dealWorkedBy(c, tx, dealID)
 	})
+}
+
+// dealWorkedBy is the owner arm of a commission's visibility: the deal must be
+// one the subscriber owns, shares a team with the owner of, or was granted.
+//
+// A deal is read by every seat, so EnsureVisible admits any deal, while an entry
+// is the partner's compensation on it — the ledger's own read withholds it from
+// a rep who does not work the deal, and a delivery is that same read. It is
+// spelled here rather than borrowed because webhooks cannot import commissions;
+// both render auth.OwnerScopeClauseFor, which is the one statement of the rule.
+func dealWorkedBy(ctx context.Context, tx pgx.Tx, dealID ids.UUID) error {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idPos := arg(dealID)
+	clause, err := auth.OwnerScopeClauseFor(ctx, "deal", "d", arg)
+	if err != nil || clause == "" {
+		return err
+	}
+	var worked bool
+	if err := tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM deal d WHERE d.id = $%d AND %s)`, idPos, clause),
+		args...).Scan(&worked); err != nil {
+		return err
+	}
+	if !worked {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }
 
 // offerDealVisible resolves an offer's parent deal and gates on the owner's
@@ -423,7 +449,7 @@ func (s *Store) offerDealVisible(ctx context.Context, offerID ids.UUID) (bool, e
 		return false, err
 	}
 	return s.probeVisible(ctx, func(c context.Context, tx pgx.Tx) error {
-		return auth.EnsureVisible(c, tx, dealAnchor, dealID)
+		return auth.EnsureVisible(c, tx, "deal", dealID)
 	})
 }
 

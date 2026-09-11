@@ -79,6 +79,10 @@ type deepReadEngine struct {
 	// confirmation is told so: it then keeps the dossier's reference rather
 	// than handing over a key nobody here can act on.
 	blob blobstore.Store
+	// pool promotes a joined read's priority (deepread.go). Nil is a test
+	// double that never joins an already-queued housekeeping read, so it has
+	// nothing to promote.
+	pool *pgxpool.Pool
 }
 
 // logger answers the engine's logger, or the default when the composition
@@ -142,7 +146,7 @@ func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, overrid
 				CompanyID:   companyID.UUID,
 				SiteReadID:  read.ID,
 				RequestedBy: read.RequestedBy,
-			}, siteDeepReadInsertOpts())
+			}, siteDeepReadInsertOpts(DeepReadPriorityLive))
 		})
 	if err != nil {
 		return crmcontracts.SiteReadStarted{}, err
@@ -153,6 +157,10 @@ func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, overrid
 		if read.Status == siteReadStatusDeferred {
 			status = crmcontracts.SiteReadStartedStatusDeferred
 		}
+		// This request pressed the button for a read a boot-time sweep already
+		// queued — it must not wait behind that sweep's own housekeeping
+		// priority just because it joined instead of starting.
+		promoteQueuedSiteReadPriority(ctx, e.pool, e.logger(), read.ID)
 	}
 	return crmcontracts.SiteReadStarted{
 		ReadId: openapi_types.UUID(read.ID),
@@ -250,6 +258,7 @@ func WithDeepRead(inserter *jobs.Runner, brain completer) Option {
 			// leaves the onboarding confirmation unable to collect the mark its
 			// anchor declined — the two-way wiring WithDataReset carries too.
 			blob: s.blob,
+			pool: pool,
 		}
 		rollout := s.companyContextRollout
 		s.siteReadHandlers = siteReadHandlers{engine: engine, start: engine.start, report: engine.report, latest: engine.latestReport, companyContextRollout: rollout}

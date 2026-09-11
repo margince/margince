@@ -140,7 +140,11 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 			return err
 		}
 		policyID := pol.ID
-		return storekit.EmitEventForEntity(ctx, tx, auditID, pol.ObjectType, id, retentionAppliedPayload(pol.Action, &policyID, nil))
+		action, err := publishedRetentionAction(pol.Action, pol.ID)
+		if err != nil {
+			return err
+		}
+		return storekit.EmitEventForEntity(ctx, tx, auditID, pol.ObjectType, id, retentionAppliedPayload(action, &policyID, nil))
 	})
 }
 

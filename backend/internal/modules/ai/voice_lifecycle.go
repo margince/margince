@@ -43,6 +43,14 @@ type VoiceBuild struct {
 	CompletedAt     *time.Time
 	UpdatedAt       *time.Time
 	ArchivedAt      *time.Time
+	// Attempt is which claim of this build is current, and AttemptAt when it
+	// became current. A build deferred for a budget window and re-claimed, or
+	// reclaimed from a dead worker, is the same build on a new attempt — and
+	// the AI-activity projection orders two events for one occurrence by this,
+	// because status cannot tell a 'queued' that supersedes a 'running' from a
+	// stale redelivery of an earlier one.
+	Attempt   int
+	AttemptAt time.Time
 }
 
 // CreateVoiceBuildInput identifies the human-approved reason for a build.
@@ -50,14 +58,15 @@ type CreateVoiceBuildInput struct {
 	Reason string
 }
 
-const voiceBuildColumns = `id, voice_profile_id, reason, status, stage, source_hash, source_count, result_version, candidate_action, status_code, status_detail, next_attempt_at, version, created_at, started_at, completed_at, updated_at, archived_at`
+const voiceBuildColumns = `id, voice_profile_id, reason, status, stage, source_hash, source_count, result_version, candidate_action, status_code, status_detail, next_attempt_at, version, created_at, started_at, completed_at, updated_at, archived_at, attempt, attempt_at`
 
 func scanVoiceBuild(row pgx.Row) (VoiceBuild, error) {
 	var build VoiceBuild
 	err := row.Scan(&build.ID, &build.ProfileID, &build.Reason, &build.Status, &build.Stage,
 		&build.SourceHash, &build.SourceCount, &build.ResultVersion, &build.CandidateAction,
 		&build.StatusCode, &build.StatusDetail, &build.NextAttemptAt, &build.Version,
-		&build.CreatedAt, &build.StartedAt, &build.CompletedAt, &build.UpdatedAt, &build.ArchivedAt)
+		&build.CreatedAt, &build.StartedAt, &build.CompletedAt, &build.UpdatedAt, &build.ArchivedAt,
+		&build.Attempt, &build.AttemptAt)
 	return build, err
 }
 
@@ -139,7 +148,7 @@ func (s *VoiceStore) CreateBuild(ctx context.Context, profileID ids.UUID, in Cre
 		if err != nil {
 			return err
 		}
-		if err := emitVoiceBuild(ctx, tx, auditID, build); err != nil {
+		if err := emitVoiceBuild(ctx, tx, auditID, build, voiceBuildQueuedLease); err != nil {
 			return err
 		}
 		if s.enqueueBuild != nil {
@@ -172,8 +181,20 @@ func (s *VoiceStore) GetBuild(ctx context.Context, profileID, buildID ids.UUID) 
 	return build, err
 }
 
-func emitVoiceBuild(ctx context.Context, tx pgx.Tx, auditID ids.UUID, build VoiceBuild) error {
-	return storekit.EmitEvent(ctx, tx, auditID, build.ProfileID, voiceBuildChangedPayload(build))
+// emitVoiceBuild publishes one state change BOTH ways: the public
+// voice.build_changed a subscriber reads, and the AI-activity occurrence a rep
+// watches. Every status write funnels through here, so the rail cannot fall
+// behind the event by one transition.
+//
+// lease is how long this state stays believable, and applies only to a live
+// one. A caller that has just settled the build passes none.
+func emitVoiceBuild(
+	ctx context.Context, tx pgx.Tx, auditID ids.UUID, build VoiceBuild, lease time.Duration,
+) error {
+	if err := storekit.EmitEvent(ctx, tx, auditID, build.ProfileID, voiceBuildChangedPayload(build)); err != nil {
+		return err
+	}
+	return emitVoiceBuildActivity(ctx, tx, auditID, build, lease)
 }
 
 // voiceBuildChangedPayload builds voice.build_changed's typed payload.

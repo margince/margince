@@ -75,6 +75,20 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		// recompute that ran before this seat's import row landed would derive
 		// an audience from a contributor set missing exactly the seat whose
 		// sync it is.
+		//
+		// Only once the claim is proven: the natural key is a header the sender
+		// types, so a colliding Message-ID says nothing about which message this
+		// mailbox holds (replayClaimIsProvenTx).
+		same, err := replayClaimIsProvenTx(ctx, tx, id, fields, rec.Parts)
+		if err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
+		if !same {
+			// Skipped, and traced, as a replay onto an incumbent outside this
+			// seat's authority: from the seat's side a message in its mailbox
+			// never arrived, and the ref would name somebody else's row.
+			return datasource.EntityRef{}, false, counterpartyDecision{}, skipInvisibleIncumbent(rec, "activity")
+		}
 		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}

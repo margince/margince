@@ -3927,6 +3927,14 @@ export const vi = {
   "agent.activity.transcriptRead.degraded":
     "Tôi đã dừng trước khi đọc hết bản chép lời.",
   "agent.activity.transcriptRead.failed": "Tôi không đọc được bản chép lời.",
+  "agent.activity.voiceBuild.queued": "Việc học giọng văn của bạn đang chờ.",
+  "agent.activity.voiceBuild.running": "Tôi đang học giọng văn của bạn.",
+  "agent.activity.voiceBuild.stalled":
+    "Việc học giọng văn của bạn mất nhiều thời gian bất thường. Có thể nó đã dừng.",
+  "agent.activity.voiceBuild.done": "Tôi đã học được giọng văn của bạn.",
+  "agent.activity.voiceBuild.degraded":
+    "Tôi đã dừng giữa chừng khi đang học giọng văn của bạn.",
+  "agent.activity.voiceBuild.failed": "Tôi không thể học giọng văn của bạn.",
   "agent.activity.siteRead.queued": "Trang web của công ty đang chờ được đọc.",
   "agent.activity.siteRead.running": "Tôi đang đọc trang web của công ty.",
   "agent.activity.siteRead.stalled":
@@ -8113,6 +8121,7 @@ export const vi = {
   "person.loops.atLeast": "ít nhất {count}",
 
   "person.memory.title": "Ký ức trò chuyện",
+  "person.memory.viewAll": "Xem tất cả hoạt động",
   "person.memory.empty": "Chưa ghi nhận gì trên kênh này.",
   "person.memory.all": "Tất cả",
   "person.memory.email": "Email",

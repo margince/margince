@@ -32,7 +32,6 @@ import { RecordTabs } from "../design-system/recordtabs";
 import {
   hasTimelineFilters,
   useRecordTimeline,
-  useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
@@ -65,6 +64,11 @@ import {
 } from "./company360";
 import { NewDealAction } from "./companyactions";
 import { CompanyApprovalsPanel } from "./companyapprovals";
+import {
+  citationHasReceipt,
+  citationOpensRecord,
+  openCitation,
+} from "./companycitations";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyContractsCard } from "./companycontracts";
 import { CompanyDocumentsCard } from "./companydocuments";
@@ -129,10 +133,9 @@ import {
   ChronologyFilter,
   ChronologyFooter,
   chronologyNotice,
-  useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
-import { ConversationList } from "./recordconversations";
+import { ConversationList, useChronologyCut } from "./recordconversations";
 import {
   createdColumn,
   lastActivityColumn,
@@ -310,11 +313,14 @@ export function CompaniesScreen() {
             key: "description",
             header: t("company.description"),
             cell: (company: Company) => company.description ?? "",
+            sort: "description",
           },
           tagsColumn<Company>(t),
           {
             key: "website",
             header: t("company.website"),
+            // By the HOST the cell prints — the scheme is a constant.
+            sort: "website_url",
             cell: (company: Company) =>
               company.website_url ? (
                 <a
@@ -335,6 +341,8 @@ export function CompaniesScreen() {
             header: t("company.contactCount"),
             numeric: true,
             cell: (company: Company) => company.contact_count ?? "",
+            // A reader shown no count is ordered by none: such rows go last.
+            sort: "contact_count",
           },
           {
             // Withheld (absent key), not zero, for a role without
@@ -344,10 +352,12 @@ export function CompaniesScreen() {
             header: t("company.openDealCount"),
             numeric: true,
             cell: (company: Company) => company.open_deal_count ?? "",
+            sort: "open_deal_count",
           },
           {
             key: "class",
             header: t("company.lifecycle"),
+            sort: "lifecycle",
             // classification is retired and no longer written by anything,
             // so a column reading it would show whatever it happened to
             // hold when the split shipped, forever.
@@ -359,6 +369,10 @@ export function CompaniesScreen() {
           {
             key: "relationship",
             header: t("company.relationshipTypes"),
+            // NO `sort`, and not a gap: an account can be a partner AND a
+            // customer, so ordering by the first member of a set would read as
+            // an answer without being one. The filter above narrows instead.
+            //
             // A filter with no column to read it back on is a list that cannot
             // say why a row matched. Multi-valued on purpose (ADR-0079):
             // an account can be a partner AND a customer, and showing only the
@@ -1231,8 +1245,9 @@ function useChronologySlots({
     records("person", id) ??
     records("deal", id) ??
     records("company", id);
-  const [filter, setFilter] = useChronologyFilter(company.id);
-  const [filters, setFilters] = useTimelineFilters(company.id);
+  const { filter, filters, setFilters, openCut, kinds } = useChronologyCut(
+    company.id,
+  );
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("company", company.id, {
@@ -1260,12 +1275,7 @@ function useChronologySlots({
     // An account holds no currency of its own: a minor-unit column on this
     // record says so rather than printing a bare integer under a currency it
     // was never denominated in.
-    values: {
-      currency: null,
-      locale,
-      zone: recordZone,
-      nameOf: colleagueName,
-    },
+    values: { currency: null, locale, zone: recordZone, nameOf: colleagueName },
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}
@@ -1274,10 +1284,11 @@ function useChronologySlots({
       />
     ),
   });
-  // An evidence mark asks "where did this value come from" — the answer is
-  // the record's change history, so the mark turns the timeline to Changes
-  // rather than opening a screen of its own.
-  const showChanges = () => setFilter("changes");
+  // An evidence mark asks "where did this value come from", and the answer
+  // is the record's change history: the mark turns the timeline to Changes
+  // through the opener a pill press uses — one act, one set of rules about
+  // opening a cut, and no screen of its own.
+  const showChanges = () => openCut("changes");
 
   if (!active) {
     return {
@@ -1310,13 +1321,13 @@ function useChronologySlots({
       timelineGroups: groupChronology(history.entries, timeline.hasNextPage),
       timelineHeader: (
         <>
-          <ChronologyFilter
-            filter={filter}
-            conversations
-            onFilter={setFilter}
-          />
+          <ChronologyFilter filter={filter} conversations onFilter={openCut} />
           {filter !== "changes" && (
-            <TimelineFilterBar value={filters} onChange={setFilters} />
+            <TimelineFilterBar
+              value={filters}
+              kinds={kinds}
+              onChange={setFilters}
+            />
           )}
         </>
       ),
@@ -2469,38 +2480,6 @@ function CompanyTasksTab({
       }
     />
   );
-}
-
-// openCitation routes a cited record to its own screen. The brief, the
-// prepared answers and the suggestions all cite the same records, so they
-// share one route — a second copy would drift and send one card's reader to
-// the wrong screen.
-// A citation goes to one of two places. A deal or a person has a screen of its
-// own; a fact or a profile field has no screen, but it does have a receipt —
-// where the value came from and what could not be recorded about it — which is
-// what the reader wanted when they clicked the chip.
-function citationOpensRecord(entityType: string): boolean {
-  return entityType === "deal" || entityType === "person";
-}
-
-// An activity opens the MESSAGE, in the account page's own email drawer.
-//
-// The kinds a receipt can be written for. Narrowing HERE rather than asserting
-// at the fetch is what keeps the modal's contract honest: a kind that grows a
-// receipt upstream fails to compile until this decision learns about it.
-function citationHasReceipt(
-  entityType: string,
-): entityType is CitedRecord["entityType"] {
-  return entityType === "fact" || entityType === "profile_field";
-}
-
-function openCitation(entityType: string, entityId: string) {
-  if (entityType === "deal") {
-    navigate({ screen: "deals", id: entityId });
-  }
-  if (entityType === "person") {
-    navigate({ screen: "contacts", id: entityId });
-  }
 }
 
 // The reference material a reader opens when the summary above is not enough.
