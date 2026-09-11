@@ -17,6 +17,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import * as router from "../app/router";
 import { LocaleProvider } from "../i18n";
 import { PersonMemory } from "./personmemory";
 
@@ -24,7 +25,10 @@ type Person360 = components["schemas"]["Person360"];
 type Activity = components["schemas"]["Activity"];
 type EmailSummary = components["schemas"]["EmailSummary"];
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const EMAIL_ID = "01a05500-0000-7000-8000-00000000ee01";
 const NOTE_ID = "01a05500-0000-7000-8000-00000000ee02";
@@ -101,6 +105,19 @@ const noteRow: Activity = {
   version: 1,
   is_done: false,
 };
+
+// More conversations than the glance draws, newest first, every instant fixed
+// — `make fe-clock-drift` runs the suite at +200 days, and a row dated
+// relative to today would be read as a meeting still to come and dropped.
+function notes(count: number): Activity[] {
+  return Array.from({ length: count }, (_, index) => ({
+    ...noteRow,
+    id: `01a05500-0000-7000-8000-0000000000${10 + index}`,
+    subject: `Note ${index + 1}`,
+    body: `Body ${index + 1}`,
+    occurred_at: `2026-08-${20 - index}T11:00:00Z`,
+  }));
+}
 
 const onePage = { has_more: false, next_cursor: null };
 
@@ -220,6 +237,49 @@ describe("the person page's memory card", () => {
 
     expect(screen.getByText("Call prep")).toBeTruthy();
     expect(screen.queryByText("Re: the renewal quote")).toBeNull();
+  });
+
+  // The card is one half of the record's reading and the commitments card is
+  // the other, and they are a pair because they are read together. Uncut, a
+  // contact with fifty captured exchanges pushes the other half off the
+  // screen.
+  it("draws three conversations and holds the rest behind the footer", () => {
+    renderCard(viewWith(notes(5)));
+
+    expect(screen.getByText("Note 1")).toBeTruthy();
+    expect(screen.getByText("Note 3")).toBeTruthy();
+    expect(screen.queryByText("Note 4")).toBeNull();
+    expect(screen.queryByText("Note 5")).toBeNull();
+  });
+
+  it("leads to the record's chronology for everything it does not draw", async () => {
+    const user = userEvent.setup();
+    const navigate = vi.spyOn(router, "navigate").mockImplementation(() => {});
+    renderCard(viewWith(notes(5)));
+
+    await user.click(screen.getByRole("button", { name: /View all activity/ }));
+
+    // The tab that holds the exchanges whole, which is also where the rail's
+    // own glance leads: one record, one ledger to be sent to.
+    expect(navigate).toHaveBeenCalledWith({
+      screen: "contacts",
+      id: "p-1",
+      id2: "timeline",
+    });
+  });
+
+  // The cut is taken AFTER the filter. Taken before it, a reader who asked for
+  // email would be shown whichever of the newest three happened to be email —
+  // which on a contact with four notes and one message is nothing at all, and
+  // reads as a channel this contact has never been reached on.
+  it("draws three of what the reader asked for, not three of everything", async () => {
+    const user = userEvent.setup();
+    renderCard(viewWith([...notes(4), emailRow()]), vi.fn());
+
+    await user.click(screen.getByRole("button", { name: "Email" }));
+
+    expect(screen.getByText("Re: the renewal quote")).toBeTruthy();
+    expect(screen.queryByText("Note 1")).toBeNull();
   });
 
   it("leaves every other kind reading as it did", () => {

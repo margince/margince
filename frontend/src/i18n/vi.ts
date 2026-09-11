@@ -8105,6 +8105,7 @@ export const vi = {
   "person.loops.atLeast": "ít nhất {count}",
 
   "person.memory.title": "Ký ức trò chuyện",
+  "person.memory.viewAll": "Xem tất cả hoạt động",
   "person.memory.empty": "Chưa ghi nhận gì trên kênh này.",
   "person.memory.all": "Tất cả",
   "person.memory.email": "Email",
