@@ -23,6 +23,18 @@ type stubs struct{}
 
 var _ crmcontracts.ServerInterface = stubs{}
 
+func (stubs) ListAcquisitionSources(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListAcquisitionSources")
+}
+
+func (stubs) CreateAcquisitionSource(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateAcquisitionSourceParams) {
+	httperr.NotImplemented(w, r, "CreateAcquisitionSource")
+}
+
+func (stubs) UpdateAcquisitionSource(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateAcquisitionSourceParams) {
+	httperr.NotImplemented(w, r, "UpdateAcquisitionSource")
+}
+
 func (stubs) ListActivities(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListActivitiesParams) {
 	httperr.NotImplemented(w, r, "ListActivities")
 }

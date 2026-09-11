@@ -44,6 +44,18 @@ func orderByStagePosition(context.Context, func(any) int) (string, error) {
 	return "(SELECT stage_sort.position FROM stage stage_sort WHERE stage_sort.id = deal.stage_id)", nil
 }
 
+// orderByPriorityRank orders by the generated rank beside `priority`, so the
+// order is the business one — High, Medium, Low, then the deals nobody has
+// prioritised — rather than the alphabetical one the text column would give
+// ('high' < 'low' < 'medium' interleaves them meaninglessly).
+//
+// The rank is a STORED generated column rather than a CASE rendered here, so
+// the index on it can serve this ordering and there is no writer that could
+// set one without the other.
+func orderByPriorityRank(context.Context, func(any) int) (string, error) {
+	return "deal.priority_rank", nil
+}
+
 // orderByReadableCompanyName orders by the referenced company's name, and by
 // NOTHING for a reference this caller may not read.
 //

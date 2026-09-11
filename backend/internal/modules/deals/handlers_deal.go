@@ -65,6 +65,15 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		category := string(*params.ForecastCategory)
 		in.ForecastCategory = &category
 	}
+	if params.CommercialMotion != nil {
+		motion := string(*params.CommercialMotion)
+		in.CommercialMotion = &motion
+	}
+	if params.Priority != nil {
+		priority := string(*params.Priority)
+		in.Priority = &priority
+	}
+	in.AcquisitionSource = params.AcquisitionSource
 
 	deals, page, err := h.store.ListDeals(r.Context(), in)
 	if err != nil {

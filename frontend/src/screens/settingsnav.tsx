@@ -17,7 +17,6 @@ import {
   BookOpen,
   Building2,
   Database,
-  Gauge,
   House,
   KeyRound,
   type LucideIcon,
@@ -39,11 +38,11 @@ import { useMe } from "./common";
 import {
   SETTINGS_GROUPS as CATALOG_GROUPS,
   type SettingsPage,
-  type SettingsPageId,
   type SettingsReach,
   settingsReach,
   visibleSettingsPages,
 } from "./settingscatalog";
+import { PAGE_ICONS } from "./settingsnavicons";
 import { settingsRouteTarget } from "./settingsrouting";
 import { SettingsSearchBox } from "./settingssearchbox";
 
@@ -121,46 +120,6 @@ import { SettingsSearchBox } from "./settingssearchbox";
 // the file, including the two that claim to check the whole level.
 // The two audience groups the rail renders, in order. Beside the register they
 // group, so a group added to one is visible from the other.
-
-/**
- * A lucide glyph per catalog page.
- *
- * Here rather than in the catalog because the catalog is React-free by
- * construction — it is imported by a node test and a plain script, and one
- * lucide import would end that. A page missing from this map is a TypeScript
- * error, so the table cannot fall behind the catalog silently.
- */
-const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
-  account: UserRound,
-  voice: Mic,
-  agents: KeyRound,
-  connections: Plug,
-  "capture-activity": Activity,
-  company: Building2,
-  authentication: ShieldCheck,
-  members: UsersRound,
-  teams: UsersRound,
-  seats: BadgeCheck,
-  pipelines: Database,
-  stageautomation: Gauge,
-  leads: Database,
-  fields: Database,
-  tags: Database,
-  products: Database,
-  capture: Mail,
-  integrations: Webhook,
-  knowledge: BookOpen,
-  import: Database,
-  models: Sparkles,
-  automations: Sparkles,
-  usage: Sparkles,
-  "model-calls": Sparkles,
-  privacy: ShieldCheck,
-  audit: ShieldCheck,
-  "system-health": Wrench,
-  extensions: Blocks,
-  reset: Wrench,
-};
 
 export const SETTINGS_TABS = [
   { id: "account", icon: UserRound, group: "you" },

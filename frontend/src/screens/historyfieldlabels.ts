@@ -72,6 +72,10 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["title", "history.field.title"],
   ["visibility", "history.field.visibility"],
   ["wait_until", "history.field.wait_until"],
+  ["description", "history.field.description"],
+  ["commercial_motion", "history.field.commercial_motion"],
+  ["priority", "history.field.priority"],
+  ["acquisition_source", "history.field.acquisition_source"],
 ]);
 
 // Fields a SYNTHETIC AuditEvent payload names — a write with no before/after

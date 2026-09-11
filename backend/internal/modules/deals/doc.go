@@ -18,7 +18,9 @@
 // lifecycle, so it can be named, taken back, and not re-applied afterwards),
 // product, offer, offer_line_item, offer_template (the E03.16-.20 offer
 // engine: rate-card products, versioned deal-bound offers with derived money
-// totals).
+// totals), deal_acquisition_source (the administered business channels a deal
+// is attributed to — the opportunity's origin, distinct from the lead
+// vocabulary's record provenance).
 //
 // The project moved OUT of this module into modules/projects, superseding
 // ADR-0073 — see that package's doc.go for the reasoning and for the two

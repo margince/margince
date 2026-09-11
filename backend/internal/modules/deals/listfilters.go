@@ -34,7 +34,15 @@ const (
 	filterForecastCategory   = "forecast_category"
 	filterKey                = "key"
 	filterPhase              = "phase"
+	filterCommercialMotion   = "commercial_motion"
+	filterPriority           = "priority"
+	filterAcquisitionSource  = "acquisition_source"
 )
+
+// filterUnset is the sentinel the three commercial-context filters take to
+// mean "no value recorded". A filter parameter cannot say that with an enum
+// member, and an empty string already means "not filtering".
+const filterUnset = "unset"
 
 var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListDealsInput, v []ids.UUID) { in.TagIDs = v }),
@@ -62,6 +70,11 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterStatus:         storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Status = v }),
 	filterForecastCategory: storekit.FilterWord(
 		func(in *ListDealsInput, v *string) { in.ForecastCategory = v }),
+	filterCommercialMotion: storekit.FilterWord(
+		func(in *ListDealsInput, v *string) { in.CommercialMotion = v }),
+	filterPriority: storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Priority = v }),
+	filterAcquisitionSource: storekit.FilterWord(
+		func(in *ListDealsInput, v *string) { in.AcquisitionSource = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by.

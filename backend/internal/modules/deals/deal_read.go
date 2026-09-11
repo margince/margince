@@ -90,7 +90,13 @@ type ListDealsInput struct {
 	// a tile's number and the list behind it are one answer rather than two
 	// derivations that can disagree.
 	ForecastCategory *string
-	Stalled          *bool
+	// The three commercial-context filters. Each also admits the sentinel
+	// "unset", which no enum value can express: a caller asking for deals
+	// nobody has classified is asking about the absence, not about a value.
+	CommercialMotion  *string
+	Priority          *string
+	AcquisitionSource *string
+	Stalled           *bool
 	// QuietForDays narrows to open deals idle at least this long, which is the
 	// stalled rule at a caller-named window (QuietSQL). Separate from Stalled
 	// because they answer different questions: Stalled is the product-wide
@@ -123,16 +129,22 @@ const dealNameColumn = "name"
 // Three of the eight are not columns of `deal` at all: a stage and the two
 // companies are references, so each carries the expression that orders it.
 var dealListFields = map[string]storekit.SortField{
-	"created_at":           storekit.Column(storekit.KindTimestamp),
-	"updated_at":           storekit.Column(storekit.KindTimestamp),
-	"last_activity_at":     storekit.Column(storekit.KindTimestamp),
-	"amount_minor":         storekit.Column(fieldcatalog.TypeCurrency),
-	closeDateField:         storekit.Column(fieldcatalog.TypeDate),
-	dealNameColumn:         storekit.Column(fieldcatalog.TypeText),
-	"status":               storekit.Column(fieldcatalog.TypeText),
-	filterStageID:          {Kind: fieldcatalog.TypeNumber, Expr: orderByStagePosition},
-	filterCompanyID:        {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterCompanyID)},
-	filterPartnerCompanyID: {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterPartnerCompanyID)},
+	"created_at":            storekit.Column(storekit.KindTimestamp),
+	"updated_at":            storekit.Column(storekit.KindTimestamp),
+	"last_activity_at":      storekit.Column(storekit.KindTimestamp),
+	"amount_minor":          storekit.Column(fieldcatalog.TypeCurrency),
+	closeDateField:          storekit.Column(fieldcatalog.TypeDate),
+	dealNameColumn:          storekit.Column(fieldcatalog.TypeText),
+	"status":                storekit.Column(fieldcatalog.TypeText),
+	filterStageID:           {Kind: fieldcatalog.TypeNumber, Expr: orderByStagePosition},
+	filterCompanyID:         {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterCompanyID)},
+	filterPartnerCompanyID:  {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterPartnerCompanyID)},
+	filterCommercialMotion:  storekit.Column(fieldcatalog.TypeText),
+	filterAcquisitionSource: storekit.Column(fieldcatalog.TypeText),
+	// The wire name is `priority`; the ORDER BY is the generated rank beside
+	// it, so High → Medium → Low comes out in its business order rather than
+	// the alphabetical one ('high' < 'low' < 'medium' interleaves them).
+	filterPriority: {Kind: fieldcatalog.TypeNumber, Expr: orderByPriorityRank},
 }
 
 // wireRowTags renders one deal row's tag chips. A twin of the people module's:
@@ -301,6 +313,7 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		// quietly joining whichever one is asked for.
 		where = append(where, storekit.SQLf("forecast_category = $%d", arg(*in.ForecastCategory)))
 	}
+	where = appendCommercialFilters(where, in, arg)
 	if in.Stalled != nil {
 		if *in.Stalled {
 			where = append(where, StalledSQL(""))
@@ -379,6 +392,7 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 const dealColumns = `id, name, amount_minor, currency, pipeline_id, stage_id,
 	company_id, project_id, owner_id, partner_company_id, partner_attribution, status, lost_reason,
 	won_without_contract_reason, won_without_contract_detail,
+	description, commercial_motion, priority, acquisition_source,
 	expected_close_date, close_date_provisional, closed_at, forecast_category, wait_until, last_activity_at,
 	source, captured_by, version, created_at, updated_at, archived_at`
 
@@ -411,10 +425,12 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var version int64
 
 	var wonReason *string
+	var motion, priority *string
 	dests := []any{
 		&id, &d.Name, &d.AmountMinor, &d.Currency, &pipelineID, &stageID,
 		&companyID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
 		&wonReason, &d.WonWithoutContractDetail,
+		&d.Description, &motion, &priority, &d.AcquisitionSource,
 		&expectedClose, &closeDateProvisional, &d.ClosedAt, &forecastCat, &waitUntil, &d.LastActivityAt,
 		&d.Source, &d.CapturedBy, &version, &d.CreatedAt, &d.UpdatedAt, &d.ArchivedAt,
 	}
@@ -432,6 +448,14 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	if wonReason != nil {
 		reason := crmcontracts.DealWonWithoutContractReason(*wonReason)
 		d.WonWithoutContractReason = &reason
+	}
+	if motion != nil {
+		m := crmcontracts.DealCommercialMotion(*motion)
+		d.CommercialMotion = &m
+	}
+	if priority != nil {
+		pr := crmcontracts.DealPriority(*priority)
+		d.Priority = &pr
 	}
 
 	d.Id = openapi_types.UUID(id)

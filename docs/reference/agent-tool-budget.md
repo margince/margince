@@ -30,15 +30,15 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1626 | 4% | 21584 | 6 | 6 |
-| `overnight_at_risk_sweep` | 7 | 2499 | 7% | 20711 | 15 | 10 |
-| _whole served catalog, for scale_ | 76 | 24267 | 74% | — | — | — |
+| `morning_brief` | 5 | 1663 | 5% | 21547 | 6 | 6 |
+| `overnight_at_risk_sweep` | 7 | 2536 | 7% | 20674 | 15 | 10 |
+| _whole served catalog, for scale_ | 76 | 24304 | 74% | — | — | — |
 
 ### `morning_brief`
 
 > Prepare the acting person's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this person; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
 
-Attaches 5 tools for 1626 tokens, leaving 21584 of its budget and 31142 tokens of the
+Attaches 5 tools for 1663 tokens, leaving 21547 of its budget and 31105 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -61,7 +61,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2499 tokens, leaving 20711 of its budget and 30269 tokens of the
+Attaches 7 tools for 2536 tokens, leaving 20674 of its budget and 30232 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -126,7 +126,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 272 tokens, mean 318, across 76 served tools.
+Median 272 tokens, mean 319, across 76 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -142,9 +142,9 @@ a term in an addition.
 | `log_activity` | 676 | 1 scenario |
 | `send_message` | 603 | — |
 | `update_record` | 581 | 4 scenarios |
+| `list_records` | 540 | — |
 | `forecast_readings` | 509 | — |
 | `progress_deal` | 505 | 3 scenarios |
-| `list_records` | 503 | — |
 | `resolve_entities` | 491 | — |
 | `query_workspace` | 484 | 3 scenarios |
 | `create_record` | 480 | 1 scenario |
