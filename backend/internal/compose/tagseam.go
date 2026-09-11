@@ -136,6 +136,17 @@ func (a tagAdapter) FindTag(ctx context.Context, name string) (ids.UUID, bool, e
 	return a.store.FindTag(ctx, name)
 }
 
+// FindTagToRemove resolves a live OR retired name, because a retired word is
+// exactly what removal has to reach: retiring it is what left it on the records
+// still carrying it.
+func (a tagAdapter) FindTagToRemove(ctx context.Context, name string) (ids.UUID, bool, error) {
+	id, state, err := a.store.LookupTagName(ctx, name)
+	if err != nil {
+		return ids.UUID{}, false, err
+	}
+	return id, state.Live() || state.Archived(), nil
+}
+
 // TaggableTypes hands through the collections module's own list, so the tool
 // schemas' record_type enum and the store's CHECK cannot drift apart.
 func (a tagAdapter) TaggableTypes() []string {

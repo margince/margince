@@ -68,9 +68,6 @@ func TestThePublishedDocumentCarriesASectionPerWrite(t *testing.T) {
 	}
 }
 
-// Every other URI is not found — the same answer a URI the caller cannot see
-// gets, so this resource hides existence exactly as the rest of the surface
-// does.
 // The resource and the tool seam serve the SAME bytes.
 //
 // Two doors onto one document is the point of publishing it at all: a client
@@ -94,6 +91,9 @@ func TestTheRecordFieldsResourceAndTheSeamServeTheSameBytes(t *testing.T) {
 	}
 }
 
+// Every other URI is not found — the same answer a URI the caller cannot see
+// gets, so this resource hides existence exactly as the rest of the surface
+// does.
 func TestAnUnknownRecordFieldsURIIsNotFound(t *testing.T) {
 	for _, uri := range []string{"margince://schema/query", "margince://schema/record-field", ""} {
 		_, err := RecordFieldsResource{}.ReadResource(context.Background(), uri)

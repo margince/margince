@@ -11,9 +11,7 @@ var previewImportCopy = toolCopy{
 	Purpose: "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each " +
 		"column is, and this checks every row against the workspace and reports what importing " +
 		"it would do.",
-	Limits: "Writes nothing. A column header is matched to a field NAME and never guessed, so an " +
-		"ordinary header row — `name`, `company`, `city` — places nothing without a mapping and is " +
-		"refused with the field list to map onto. `object` is company, person or lead. Use `person` for a file " +
+	Limits: "Writes nothing. `object` is company, person or lead. Use `person` for a file " +
 		"the business already knows — a migration off another CRM, a corrected export coming back. " +
 		"Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a " +
 		"human promotes them. A row naming a record already here is counted in `duplicates`, and " +
@@ -57,8 +55,8 @@ var commitImportCopy = toolCopy{
 		"when it answers.",
 	Limits: "Only from awaiting_approval, which is the PERSON's approval and not this call's to " +
 		"give: nothing stages it, and an import cannot be undone from here — undoing one needs the " +
-		"web app. Put the dry run's counts in front of them and let them say go. The exception is " +
-		"a person who has already been through the file and asked for it to be loaded; they have " +
-		"approved it, and asking a second time is not diligence.",
-	Instead: "read_import_report first, and report what it says — numbers nobody read are not a check.",
+		"web app. Put the dry run's counts in front of them and let them say go — unless they have " +
+		"already been through the file and asked for it to be loaded, which is an approval and not " +
+		"a question to ask twice.",
+	Instead: "read_import_report first: numbers nobody read are not a check.",
 }

@@ -211,15 +211,18 @@ func checkAvailabilityWindow(t *testing.T, answer AvailabilityResult) Envelope {
 // authority claim an answer computed without its source may not make.
 func TestAnUnconnectedCalendarDoesNotAnswerAsAnEmptyOne(t *testing.T) {
 	env := checkAvailabilityWindow(t, AvailabilityResult{
-		Slots: aWorkdayOfSlots(), CalendarConnected: false,
+		Slots: aWorkdayOfSlots(), CalendarBacking: CalendarUnbacked,
 	})
 
 	warning, warned := warningNamed(env, warningNoCalendarConnected)
 	if !warned {
 		t.Fatalf("a free day read off an unconnected calendar carries no warning: %v", env.Warnings)
 	}
-	if warning.Message == "" {
-		t.Error("the warning carries a code with nothing for a reader to act on")
+	// The clause its own comment calls load-bearing, and the one a reader
+	// reached past unprompted in every measured run: a free slot is not
+	// evidence that a meeting does not exist.
+	if !strings.Contains(warning.Message, "no evidence that a meeting") {
+		t.Errorf("the warning no longer names the conclusion not to draw: %q", warning.Message)
 	}
 	if env.Freshness.Authoritative {
 		t.Error("an answer computed without the calendar it reports on claims to be authoritative")
@@ -231,7 +234,7 @@ func TestAnUnconnectedCalendarDoesNotAnswerAsAnEmptyOne(t *testing.T) {
 // discount the ones that matter.
 func TestAGenuinelyFreeDayCarriesNoCalendarWarning(t *testing.T) {
 	env := checkAvailabilityWindow(t, AvailabilityResult{
-		Slots: aWorkdayOfSlots(), CalendarConnected: true,
+		Slots: aWorkdayOfSlots(), CalendarBacking: CalendarBacked,
 	})
 
 	if _, warned := warningNamed(env, warningNoCalendarConnected); warned {
@@ -239,5 +242,30 @@ func TestAGenuinelyFreeDayCarriesNoCalendarWarning(t *testing.T) {
 	}
 	if !env.Freshness.Authoritative {
 		t.Error("a window read off the host's own calendar disclaims its own authority")
+	}
+}
+
+// A host who is NOT the acting seat carries the same caveat and says nothing
+// about that person's account.
+//
+// Whether a colleague has connected a calendar is their account's business, and
+// this tool takes any host_user_id — so an answer that reported it would let
+// anyone holding read walk the roster and learn who has connected Google or
+// Microsoft, and whose grant has since stopped working. The window is still
+// only what this CRM holds, which is what the reader is owed and all they get.
+func TestAForeignHostsWindowCarriesTheCaveatWithoutTheirConnectorState(t *testing.T) {
+	env := checkAvailabilityWindow(t, AvailabilityResult{
+		Slots: aWorkdayOfSlots(), CalendarBacking: CalendarBackingUnknown,
+	})
+
+	warning, warned := warningNamed(env, warningNoCalendarConnected)
+	if !warned {
+		t.Fatalf("a foreign host's free day carries no caveat, so it reads as their diary: %v", env.Warnings)
+	}
+	if strings.Contains(warning.Message, "No calendar is connected") {
+		t.Errorf("the caveat states another seat's connector state: %q", warning.Message)
+	}
+	if env.Freshness.Authoritative {
+		t.Error("a window computed without the host's calendar claims to be authoritative")
 	}
 }

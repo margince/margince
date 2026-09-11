@@ -111,6 +111,17 @@ func (s stubTags) FindTag(_ context.Context, name string) (ids.UUID, bool, error
 	return ids.NewV7(), true, nil
 }
 
+// FindTagToRemove answers for a live OR retired name, which is the whole
+// difference from FindTag: removal is the one verb that must reach a word
+// somebody has already retired, because retiring it is what stranded it on the
+// records still carrying it.
+func (s stubTags) FindTagToRemove(_ context.Context, name string) (ids.UUID, bool, error) {
+	if s.ensured != nil {
+		*s.ensured = name
+	}
+	return ids.NewV7(), true, nil
+}
+
 // ResolveTag stands in for a governed vocabulary: it answers for a name the
 // workspace already holds and REFUSES anything else. Returning a fresh id for
 // every name — which the stub it replaced did — would let a test claiming

@@ -252,8 +252,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
-| `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
+| `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `promote_lead` | 1.00 | 3 | `case40_sort_the_queue` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
@@ -319,13 +319,13 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `run_analytics_query` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `compose_analytics_report` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `search_records` | 0.00 | 0/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
+| `check_availability` | 0.67 | 2/3 | — | `case23_find_us_a_slot` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `advance_project_phase` | 0.33 | 1/3 | `case41_close_the_project` | `case41_close_the_project` |
-| `check_availability` | 0.67 | 2/3 | — | `case23_find_us_a_slot` |
 | `merge_records` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `archive_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
-| `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `update_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
+| `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `merge_tags` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `list_colleagues` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `list_channel_providers` | 0.33 | 1/3 | `case42_can_i_answer_on_whatsapp` | `case42_can_i_answer_on_whatsapp` |
@@ -359,8 +359,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `search_records` | 0.00 | 0/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
-| `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `update_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
+| `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `merge_tags` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `list_tags` | 0.83 | 5/6 | — | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |

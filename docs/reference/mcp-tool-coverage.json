@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 39,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 12467,
+    "tokens_served_but_never_driven": 12501,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 7,
@@ -1179,7 +1179,7 @@
   "tools": [
     {
       "name": "send_account_email",
-      "tokens": 767,
+      "tokens": 768,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1216,22 +1216,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "progress_deal",
-      "tokens": 505,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
-      "measured_by_model": {}
-    },
-    {
       "name": "list_records",
-      "tokens": 503,
+      "tokens": 508,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1256,8 +1242,22 @@
       "measured_by_model": {}
     },
     {
+      "name": "progress_deal",
+      "tokens": 505,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
+      "measured_by_model": {}
+    },
+    {
       "name": "resolve_entities",
-      "tokens": 491,
+      "tokens": 498,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1304,7 +1304,7 @@
     },
     {
       "name": "book_meeting",
-      "tokens": 423,
+      "tokens": 424,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1348,7 +1348,7 @@
     },
     {
       "name": "enrich",
-      "tokens": 391,
+      "tokens": 398,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1389,23 +1389,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "forecast_input_checks",
-      "tokens": 324,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case21_what_are_we_closing",
-        "case22_can_i_trust_the_numbers"
-      ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
       "name": "prep_for_meeting",
-      "tokens": 324,
+      "tokens": 326,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1418,6 +1403,21 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
+      "measured_by_model": {}
+    },
+    {
+      "name": "forecast_input_checks",
+      "tokens": 324,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case21_what_are_we_closing",
+        "case22_can_i_trust_the_numbers"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1448,7 +1448,7 @@
     },
     {
       "name": "catch_me_up_on",
-      "tokens": 278,
+      "tokens": 280,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1473,7 +1473,7 @@
     },
     {
       "name": "draft_email",
-      "tokens": 278,
+      "tokens": 279,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1572,7 +1572,7 @@
     },
     {
       "name": "create_task",
-      "tokens": 220,
+      "tokens": 222,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1588,7 +1588,7 @@
     },
     {
       "name": "read_record",
-      "tokens": 220,
+      "tokens": 222,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1685,7 +1685,7 @@
     },
     {
       "name": "relink_thread",
-      "tokens": 196,
+      "tokens": 197,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1731,7 +1731,7 @@
     },
     {
       "name": "intro_path_to",
-      "tokens": 187,
+      "tokens": 190,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1791,7 +1791,7 @@
     },
     {
       "name": "run_report",
-      "tokens": 1010,
+      "tokens": 1011,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [
@@ -1811,7 +1811,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 774,
+      "tokens": 728,
       "agents": [],
       "required_by_cases": [
         "case10_finish_the_import",
@@ -1851,7 +1851,7 @@
     },
     {
       "name": "log_activity",
-      "tokens": 676,
+      "tokens": 677,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -1892,7 +1892,7 @@
     },
     {
       "name": "update_record",
-      "tokens": 581,
+      "tokens": 582,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
@@ -2024,7 +2024,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 480,
+      "tokens": 483,
       "agents": [],
       "required_by_cases": [
         "case1_log_it",
@@ -2136,7 +2136,7 @@
     },
     {
       "name": "search_records",
-      "tokens": 382,
+      "tokens": 385,
       "agents": [],
       "required_by_cases": [
         "case5_before_the_meeting"
@@ -2193,8 +2193,41 @@
       }
     },
     {
+      "name": "check_availability",
+      "tokens": 365,
+      "agents": [],
+      "required_by_cases": [
+        "case23_find_us_a_slot"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "search_context",
-      "tokens": 343,
+      "tokens": 345,
       "agents": [],
       "required_by_cases": [
         "case6_ask_the_company"
@@ -2275,39 +2308,6 @@
       }
     },
     {
-      "name": "check_availability",
-      "tokens": 329,
-      "agents": [],
-      "required_by_cases": [
-        "case23_find_us_a_slot"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "promote_lead",
       "tokens": 303,
       "agents": [],
@@ -2342,7 +2342,7 @@
     },
     {
       "name": "merge_records",
-      "tokens": 291,
+      "tokens": 294,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
@@ -2375,7 +2375,7 @@
     },
     {
       "name": "archive_record",
-      "tokens": 289,
+      "tokens": 290,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
@@ -2408,7 +2408,7 @@
     },
     {
       "name": "relink_activity",
-      "tokens": 276,
+      "tokens": 277,
       "agents": [],
       "required_by_cases": [
         "case9_filed_in_the_wrong_place"
@@ -2543,7 +2543,7 @@
     },
     {
       "name": "apply_tag",
-      "tokens": 226,
+      "tokens": 227,
       "agents": [],
       "required_by_cases": [
         "case30_a_word_for_it"
@@ -2577,11 +2577,11 @@
       }
     },
     {
-      "name": "commit_import",
-      "tokens": 217,
+      "name": "disqualify_lead",
+      "tokens": 209,
       "agents": [],
       "required_by_cases": [
-        "case10_finish_the_import"
+        "case40_sort_the_queue"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
@@ -2591,34 +2591,30 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
     {
-      "name": "disqualify_lead",
-      "tokens": 209,
+      "name": "relink_activities",
+      "tokens": 206,
       "agents": [],
       "required_by_cases": [
-        "case40_sort_the_queue"
+        "case9_filed_in_the_wrong_place"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
@@ -2682,11 +2678,11 @@
       }
     },
     {
-      "name": "relink_activities",
+      "name": "commit_import",
       "tokens": 204,
       "agents": [],
       "required_by_cases": [
-        "case9_filed_in_the_wrong_place"
+        "case10_finish_the_import"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
@@ -2696,21 +2692,25 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
         }
       }
     },
@@ -2891,7 +2891,7 @@
     },
     {
       "name": "remove_tag",
-      "tokens": 166,
+      "tokens": 167,
       "agents": [],
       "required_by_cases": [
         "case31_wrong_word_on_the_record"
@@ -2998,7 +2998,7 @@
     },
     {
       "name": "get_record_tags",
-      "tokens": 141,
+      "tokens": 142,
       "agents": [],
       "required_by_cases": [
         "case31_wrong_word_on_the_record"

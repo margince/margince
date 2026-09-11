@@ -6,7 +6,7 @@
   "catalog": {
     "tools": 76,
     "system_frame_tokens": 353,
-    "tokens": 24126,
+    "tokens": 24157,
     "median_tool_tokens": 272,
     "mean_tool_tokens": 317
   },
@@ -21,9 +21,9 @@
         "read_brief",
         "read_record"
       ],
-      "tokens": 1626,
+      "tokens": 1634,
       "percent_of_ceiling": 4,
-      "headroom_tokens": 21584,
+      "headroom_tokens": 21576,
       "dangling_cross_references": [
         "annotate_brief → log_activity",
         "catch_me_up_on → prep_for_meeting",
@@ -46,9 +46,9 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "tokens": 2499,
+      "tokens": 2509,
       "percent_of_ceiling": 7,
-      "headroom_tokens": 20711,
+      "headroom_tokens": 20701,
       "dangling_cross_references": [
         "at_risk_relationships → account_coverage",
         "at_risk_relationships → intro_path_to",
@@ -72,15 +72,15 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 1010
-    },
-    {
-      "name": "preview_import",
-      "tokens": 774
+      "tokens": 1011
     },
     {
       "name": "send_account_email",
-      "tokens": 767
+      "tokens": 768
+    },
+    {
+      "name": "preview_import",
+      "tokens": 728
     },
     {
       "name": "send_email",
@@ -88,11 +88,11 @@
     },
     {
       "name": "log_activity",
-      "tokens": 676
+      "tokens": 677
     },
     {
       "name": "update_record",
-      "tokens": 581
+      "tokens": 582
     },
     {
       "name": "send_message",
@@ -103,16 +103,16 @@
       "tokens": 509
     },
     {
+      "name": "list_records",
+      "tokens": 508
+    },
+    {
       "name": "progress_deal",
       "tokens": 505
     },
     {
-      "name": "list_records",
-      "tokens": 503
-    },
-    {
       "name": "resolve_entities",
-      "tokens": 491
+      "tokens": 498
     },
     {
       "name": "query_workspace",
@@ -120,7 +120,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 480
+      "tokens": 483
     },
     {
       "name": "run_analytics_query",
@@ -140,7 +140,7 @@
     },
     {
       "name": "book_meeting",
-      "tokens": 423
+      "tokens": 424
     },
     {
       "name": "annotate_brief",
@@ -152,11 +152,15 @@
     },
     {
       "name": "enrich",
-      "tokens": 391
+      "tokens": 398
     },
     {
       "name": "search_records",
-      "tokens": 382
+      "tokens": 385
+    },
+    {
+      "name": "check_availability",
+      "tokens": 365
     },
     {
       "name": "describe_report_vocabulary",
@@ -168,22 +172,18 @@
     },
     {
       "name": "search_context",
-      "tokens": 343
+      "tokens": 345
     },
     {
       "name": "advance_project_phase",
       "tokens": 340
     },
     {
-      "name": "check_availability",
-      "tokens": 329
+      "name": "prep_for_meeting",
+      "tokens": 326
     },
     {
       "name": "forecast_input_checks",
-      "tokens": 324
-    },
-    {
-      "name": "prep_for_meeting",
       "tokens": 324
     },
     {
@@ -196,11 +196,11 @@
     },
     {
       "name": "merge_records",
-      "tokens": 291
+      "tokens": 294
     },
     {
       "name": "archive_record",
-      "tokens": 289
+      "tokens": 290
     },
     {
       "name": "describe_analytics_vocabulary",
@@ -208,15 +208,15 @@
     },
     {
       "name": "catch_me_up_on",
-      "tokens": 278
+      "tokens": 280
     },
     {
       "name": "draft_email",
-      "tokens": 278
+      "tokens": 279
     },
     {
       "name": "relink_activity",
-      "tokens": 276
+      "tokens": 277
     },
     {
       "name": "draft_follow_ups_for",
@@ -256,19 +256,15 @@
     },
     {
       "name": "apply_tag",
-      "tokens": 226
+      "tokens": 227
     },
     {
       "name": "create_task",
-      "tokens": 220
+      "tokens": 222
     },
     {
       "name": "read_record",
-      "tokens": 220
-    },
-    {
-      "name": "commit_import",
-      "tokens": 217
+      "tokens": 222
     },
     {
       "name": "whats_slipping_this_week",
@@ -291,11 +287,15 @@
       "tokens": 206
     },
     {
+      "name": "relink_activities",
+      "tokens": 206
+    },
+    {
       "name": "update_tag",
       "tokens": 205
     },
     {
-      "name": "relink_activities",
+      "name": "commit_import",
       "tokens": 204
     },
     {
@@ -304,7 +304,7 @@
     },
     {
       "name": "relink_thread",
-      "tokens": 196
+      "tokens": 197
     },
     {
       "name": "data_coverage",
@@ -324,7 +324,7 @@
     },
     {
       "name": "intro_path_to",
-      "tokens": 187
+      "tokens": 190
     },
     {
       "name": "create_tag",
@@ -336,7 +336,7 @@
     },
     {
       "name": "remove_tag",
-      "tokens": 166
+      "tokens": 167
     },
     {
       "name": "check_location_support",
@@ -352,7 +352,7 @@
     },
     {
       "name": "get_record_tags",
-      "tokens": 141
+      "tokens": 142
     },
     {
       "name": "whoami",

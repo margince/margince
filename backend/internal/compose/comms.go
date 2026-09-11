@@ -340,17 +340,23 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 		return agents.AvailabilityResult{}, err
 	}
 	calendarOwner := ids.From[ids.UserKind](hostID)
-	// Whether a calendar backs the answer is read BEFORE the slots, so a
-	// deployment that cannot answer it publishes no window at all. The busy list
-	// alone cannot be read honestly: a host with no connected calendar and a host
-	// with an empty day produce the same slots, and the caller has no other way
-	// to tell them apart.
-	connected, err := c.calendars.connected(ctx, calendarOwner)
+	// The store applies its default slot duration when none is named. It runs
+	// FIRST because it carries the object gate: a caller it refuses must not
+	// have caused a read of anybody's connector state on the way.
+	slots, truncated, err := c.store.Availability(ctx, calendarOwner, from, to, time.Duration(durationMinutes)*time.Minute)
 	if err != nil {
 		return agents.AvailabilityResult{}, err
 	}
-	// The store applies its default slot duration when none is named.
-	slots, truncated, err := c.store.Availability(ctx, calendarOwner, from, to, time.Duration(durationMinutes)*time.Minute)
+	// The busy list alone cannot be read honestly: a host with no connected
+	// calendar and a host with an empty day produce the same slots, and the
+	// caller has no other way to tell them apart.
+	//
+	// ONLY FOR THE ACTING SEAT. capture is per-user, and this tool takes any
+	// host_user_id — so asking it for an arbitrary host would answer, to anyone
+	// holding read, which colleagues have connected Google or Microsoft and
+	// whose grant has since stopped working. capture's own connections reader
+	// hard-scopes to the actor for that reason and this follows it.
+	backing, err := c.calendarBackingFor(ctx, calendarOwner)
 	if err != nil {
 		return agents.AvailabilityResult{}, err
 	}
@@ -366,7 +372,7 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 	for _, s := range slots {
 		free = append(free, agents.FreeSlot{Start: s.Start, End: s.End})
 	}
-	return agents.AvailabilityResult{Slots: free, Truncated: truncated, CalendarConnected: connected}, nil
+	return agents.AvailabilityResult{Slots: free, Truncated: truncated, CalendarBacking: backing}, nil
 }
 
 func (c commsAdapter) BookMeeting(ctx context.Context, in agents.BookMeetingArgs) (json.RawMessage, error) {
@@ -392,6 +398,27 @@ func (c commsAdapter) BookMeeting(ctx context.Context, in agents.BookMeetingArgs
 // defaultHost resolves the calendar owner: the explicit host, else the
 // acting principal's user. An agent principal has no own calendar —
 // it must name one (and the store's delegation gate answers).
+// calendarBackingFor answers what backs this host's window, and refuses to look
+// when the host is not the acting seat.
+//
+// The unknown answer is returned WITHOUT reading anything, so it is the same
+// bytes and the same cost whatever that host has connected. A version that read
+// first and withheld afterwards would still be a timing signal.
+func (c commsAdapter) calendarBackingFor(ctx context.Context, host ids.UserID) (agents.CalendarBacking, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() || actor.UserID != host.UUID {
+		return agents.CalendarBackingUnknown, nil
+	}
+	connected, err := c.calendars.connected(ctx, host)
+	if err != nil {
+		return "", err
+	}
+	if connected {
+		return agents.CalendarBacked, nil
+	}
+	return agents.CalendarUnbacked, nil
+}
+
 func defaultHost(ctx context.Context, host *ids.UUID) (ids.UUID, error) {
 	if host != nil {
 		return *host, nil
