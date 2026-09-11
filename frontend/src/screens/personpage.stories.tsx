@@ -104,6 +104,8 @@ const populated: View = {
     last_name: "Buyer",
     title: "Head of Fleet",
     owner_id: "u-1",
+    // Needed for useCanWriteRecord to show this fixture's edit affordances.
+    writable: true,
     social: { linkedin: "https://linkedin.com/in/danabuyer" },
     address: { city: "Munich", country: "DE" },
     emails: [
@@ -1165,11 +1167,9 @@ export const RailThin: Story = {
 };
 
 // Every profile field DetailsGrid can hold, unset at once: title, linkedin,
-// city, email and phone all blank. Email and phone are always read-only
-// (personrail.tsx's CONTACT_METHOD_IMMUTABLE), so they read `field.unset`
-// here whether or not the reader can edit; title, linkedin and city ARE
-// editable under this fixture's granted /me, so they read as the "Add …"
-// placeholder instead: the two empty-field states side by side.
+// city, email and phone all blank. Email and phone have no inline editor, so
+// they read `field.unset` here regardless of what the reader can edit; title,
+// linkedin and city ARE editable under this fixture's granted /me instead.
 const unsetFields: View = {
   ...populated,
   person: {

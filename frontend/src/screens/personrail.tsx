@@ -441,10 +441,10 @@ function CityRow({ person, canEdit, readOnlyReason, patch }: DetailsRowProps) {
   );
 }
 
-// Email and phone have no update path on the wire (UpdatePersonRequest carries
-// neither), so they are not drawn as editors. They are drawn as what a reader
-// does with them: an address is written to and a number is dialled, and a
-// value a reader could only look at taught them the record was a printout.
+// The rail draws email and phone read-only: an address is written to and a
+// number is dialled from here. Editing the set is the record's Edit action
+// (personeditmergearchive), which sends the whole emails/phones list on
+// UpdatePersonRequest — one editor for these rows, not a second grown on the rail.
 function EmailRow({ person }: Readonly<{ person: Person }>) {
   const t = useT();
   const email = person.emails?.[0]?.email;

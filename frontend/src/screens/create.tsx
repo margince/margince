@@ -4,12 +4,10 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { navigate, type Route, type Screen } from "../app/router";
 import {
   Button,
-  Card,
   Checkbox,
   Field,
   type FieldControl,
   Modal,
-  Radio,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
@@ -22,7 +20,7 @@ import {
   problemMessageOf,
   useSorMode,
 } from "./common";
-import { kindOf, withPrimaryMarked, withRowUpdated } from "./createrows";
+import { RepeatableRowsField } from "./repeatablerowsfield";
 
 // The record screens whose entities are served from the incumbent mirror in
 // overlay mode. Creating one there answers unsupported_by_sor, so CreateAction
@@ -555,104 +553,6 @@ export function fieldControl(
       placeholder={field.placeholder}
       onChange={(event) => setValue(event.target.value)}
     />
-  );
-}
-
-// A repeatable-row field (emails/phones/domains): each existing row renders
-// its subfields via the same fieldControl every scalar field uses, plus an
-// optional "primary" radio (selecting one clears it on every other row) and a
-// remove button; an "Add" button appends a blank row. Rows live in the
-// second `rows` channel — never merged into `values` — so scalar-only
-// screens stay untouched.
-function RepeatableRowsField({
-  field,
-  formId,
-  rows,
-  setRows,
-}: Readonly<{
-  field: CreateField;
-  formId: string;
-  rows: FormRow[];
-  setRows: (next: FormRow[]) => void;
-}>) {
-  const t = useT();
-  const rowFields = field.rowFields ?? [];
-  const primaryKey = field.primaryKey;
-  const typeKey = field.typeKey;
-  const typeDefault = field.typeDefault ?? "";
-
-  function updateRow(index: number, key: string, value: string) {
-    setRows(withRowUpdated(rows, index, key, value, primaryKey, typeKey));
-  }
-
-  function markPrimary(index: number) {
-    if (!primaryKey) {
-      return;
-    }
-    setRows(withPrimaryMarked(rows, index, primaryKey, typeKey, typeDefault));
-  }
-
-  function removeRow(index: number) {
-    setRows(rows.filter((_, rowIndex) => rowIndex !== index));
-  }
-
-  return (
-    <div className="field-repeatable">
-      <span className="t-label">
-        {fieldLabel(field, t)}
-        {field.required ? " *" : ""}
-      </span>
-      {rows.map((row, index) => (
-        // Rows have no stable identity until saved — index is the only key
-        // available, and reordering never happens (add appends, remove
-        // filters), so it's safe here.
-        <Card
-          as="div"
-          // biome-ignore lint/suspicious/noArrayIndexKey: rows are unordered-append/remove only
-          key={index}
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "var(--space-2)",
-            alignItems: "center",
-          }}
-        >
-          {rowFields.map((subField) => (
-            <Field
-              key={subField.key}
-              label={t(subField.label)}
-              required={subField.required}
-            >
-              {(control) =>
-                fieldControl(
-                  subField,
-                  control,
-                  row[subField.key] ?? "",
-                  (next) => updateRow(index, subField.key, next),
-                  t,
-                )
-              }
-            </Field>
-          ))}
-          {primaryKey && (
-            <Radio
-              className="t-label"
-              // Scoped by kind so the native radio group itself cannot enforce exclusivity across kinds.
-              name={`${formId}-${field.key}-${kindOf(row, typeKey, typeDefault)}-primary`}
-              checked={row[primaryKey] === "true"}
-              onChange={() => markPrimary(index)}
-              label={t("field.primary")}
-            />
-          )}
-          <Button small type="button" onClick={() => removeRow(index)}>
-            {t("field.removeRow")}
-          </Button>
-        </Card>
-      ))}
-      <Button small type="button" onClick={() => setRows([...rows, {}])}>
-        {field.addLabel ? t(field.addLabel) : fieldLabel(field, t)}
-      </Button>
-    </div>
   );
 }
 

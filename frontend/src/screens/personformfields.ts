@@ -180,17 +180,18 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
 // two cannot come to describe an address differently — the same reason one
 // mapper serves both request bodies.
 //
-// It carries the email and phone rows because nothing else in the product can
-// change them. A bounced send names the address that refused it and sends the
-// reader here; a form that omitted the field left that reader at a page which
-// reported the failure and could not fix it.
+// It carries the email and phone rows so a reader can correct them by hand: a
+// bounced send names the address that refused it and sends the reader here, and
+// a form that omitted the field would leave them at a page that reported the
+// failure and could not fix it. This is the human editor of these rows, not the
+// only writer of them — capture, provider fills and imports write them too.
 //
 // Moving the primary marker between two addresses of the SAME type is refused
 // by the server with a bare 409 today. Not a limit of this form and not
 // introduced here — the same PATCH has answered that way since the field
 // existed — but the primary radio is the first control that reaches it, so the
-// conflict is shown rather than swallowed. Correcting an address, adding one
-// and removing one all work.
+// conflict is shown rather than swallowed. Correcting an address, adding one,
+// removing one and reordering all work.
 export function personEditFields(t: ReturnType<typeof useT>): CreateField[] {
   return contactCreateFields(t);
 }
