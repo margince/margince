@@ -7,7 +7,7 @@
 // FETCHED WHEN THEY ASK FOR IT, not when the refusal appears. Most refusals are
 // read and abandoned, and a request fired on every one would be work done for
 // nothing. The button opens the modal and the modal waits a moment, which is
-// the honest order: the person has already decided to look.
+// the honest order: the human has already decided to look.
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -49,12 +49,12 @@ export function DirectSendAction({
   const opened = useQuery({
     queryKey: ["communication-review", review.reviewId],
     queryFn: () => fetchReview(review.reviewId),
-    // Only once the person has asked to see it. A refusal read and abandoned
+    // Only once the human has asked to see it. A refusal read and abandoned
     // should cost nothing.
     enabled: open,
     // ONE ATTEMPT, and the button is the retry. React Query's own retries
     // leave the control looking busy for seconds with nothing to press, and a
-    // person who has decided to overrule the engine should be told promptly
+    // human who has decided to overrule the engine should be told promptly
     // that the review would not open rather than watched to wait.
     retry: false,
   });

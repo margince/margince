@@ -33,14 +33,14 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 		{
 			// A rep with no authority to overrule the engine. Asking somebody
 			// who has is the move they can make.
-			name: "a person who cannot direct a send", actor: principal.Principal{Type: principal.PrincipalHuman},
+			name: "a human who cannot direct a send", actor: principal.Principal{Type: principal.PrincipalHuman},
 			review: held, want: []string{"request_decision"},
 		},
 		{
 			// A rep who holds the grant is offered the SEND, not the ask.
 			// Telling them to ask a colleague would be telling them to go
 			// around themselves.
-			name: "a person who may direct a send",
+			name: "a human who may direct a send",
 			actor: principal.Principal{
 				Type: principal.PrincipalHuman,
 				Permissions: principal.Permissions{
@@ -71,7 +71,7 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 		},
 		{
 			// A connector runs with its granting human's grants and is still
-			// not a person at a keyboard.
+			// not a human at a keyboard.
 			name: "a connector", actor: principal.Principal{Type: principal.PrincipalConnector}, review: held,
 		},
 		{
@@ -80,8 +80,8 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 		{
 			// A refusal with no held message has nothing to decide about — a
 			// channel reply, whose shape the held row cannot carry. Offering
-			// the route would send even a person into a refusal.
-			name:  "a person with no message to decide about",
+			// the route would send even a human into a refusal.
+			name:  "a human with no message to decide about",
 			actor: principal.Principal{Type: principal.PrincipalHuman}, review: consent.Review{},
 		},
 	} {

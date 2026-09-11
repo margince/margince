@@ -319,7 +319,7 @@ func anyEnforcedDenial(denied []commsauthz.Decision) bool {
 // One action today and a list on purpose: the shape is what a caller reads, and
 // a second action arriving later should not change it. An empty list is a real
 // answer — the caller may do nothing but stop and report, and the reference
-// still travels so a person reading their transcript can pick the review up.
+// still travels so a human reading their transcript can pick the review up.
 func actionsForRefusal(ctx context.Context, review consent.Review) []string {
 	// The review must have a message to decide about. One refused without an
 	// intent — a channel reply, whose shape the held row cannot carry — is not
@@ -327,7 +327,7 @@ func actionsForRefusal(ctx context.Context, review consent.Review) []string {
 	if review.IntentID.IsZero() {
 		return nil
 	}
-	// A PERSON, and the one whose message it was. Both doors below are
+	// A HUMAN, and the one whose message it was. Both doors below are
 	// human-only (agents and connectors are refused), so an agent acting for
 	// somebody is told nothing rather than told wrong.
 	actor, ok := principal.Actor(ctx)
@@ -337,13 +337,13 @@ func actionsForRefusal(ctx context.Context, review consent.Review) []string {
 	// A HOLDER OF THE GRANT IS OFFERED THE SEND, not the ask.
 	//
 	// Directing a send and asking somebody to are answers to the same question
-	// — "this was refused, now what" — and which one a person is shown is
+	// — "this was refused, now what" — and which one a human is shown is
 	// decided by what they may actually do. Offering a rep who holds the
 	// authority the chance to ask a colleague would be telling them to go
 	// around themselves; offering one who does not the direct send would be a
 	// button that fails when pressed.
 	//
-	// ONE OR THE OTHER, never both. A person holding the grant can still route
+	// ONE OR THE OTHER, never both. A human holding the grant can still route
 	// a review from the review itself if they want a second opinion, which is a
 	// deliberate act rather than a choice a refusal should press on them.
 	if auth.Require(ctx, consent.EntityCommunicationException, principal.ActionCreate) == nil {

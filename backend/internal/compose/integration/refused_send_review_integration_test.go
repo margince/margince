@@ -769,7 +769,7 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 	// the bug it exists to catch.
 	//
 	// The fixture signs in as an admin, who holds communication_exception — so
-	// the move offered is the SEND rather than the ask. Which one a person sees
+	// the move offered is the SEND rather than the ask. Which one a human sees
 	// is the server's decision and turns on that grant; the test below takes
 	// the grant away and watches the offer change.
 	if len(problem.Details.AvailableActions) != 1 ||
@@ -783,7 +783,7 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 // A REP WHO CANNOT OVERRULE THE ENGINE IS OFFERED THE ASK INSTEAD.
 //
 // The two are answers to one question — "this was refused, now what" — and
-// which a person sees is decided by what they may actually do. Offering a
+// which a human sees is decided by what they may actually do. Offering a
 // holder the ask would tell them to go around themselves; offering somebody
 // without the grant the send would be a button that fails when pressed.
 func TestARepWhoCannotOverruleTheEngineIsOfferedTheAsk(t *testing.T) {
