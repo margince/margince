@@ -171,6 +171,18 @@ func (s *Store) CreateAcquisitionSource(
 			Message: "key must be a non-empty lowercase value",
 		}
 	}
+	// `unset` is the list filter's sentinel for "no source recorded". A channel
+	// actually keyed that way could never be filtered FOR — asking for it would
+	// return the unclassified deals instead — so the name is refused here rather
+	// than allowed to create a row nothing can find. Reachable by label alone:
+	// "Unset" slugs to exactly this.
+	if key == filterUnset {
+		return crmcontracts.AcquisitionSource{}, &values.ParseError{
+			Field:   sourceKeyColumn,
+			Code:    "reserved_key",
+			Message: "unset is reserved: the deal list uses it to mean no source recorded",
+		}
+	}
 	var out crmcontracts.AcquisitionSource
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		id := ids.NewV7()

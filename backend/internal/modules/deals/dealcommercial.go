@@ -11,8 +11,14 @@ package deals
 // those call sites.
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // motionOf and priorityOf read the deal's current commercial enums as the
@@ -61,4 +67,25 @@ func appendCommercialFilters(where []string, in ListDealsInput, arg func(any) in
 		where = append(where, storekit.SQLf("%s = $%d", f.column, arg(*f.value)))
 	}
 	return where
+}
+
+// lockedAcquisitionSource takes the deal's row lock and re-reads the source
+// under it, so the "already holds this key" exemption is decided on a value
+// that cannot move before the write.
+//
+// The unlocked read the caller already did is fine for an audit before-image;
+// it is not fine for a decision about what may be assigned. Deal first, then
+// the catalog row, which is the order every writer in this package takes.
+func lockedAcquisitionSource(
+	ctx context.Context, tx pgx.Tx, current crmcontracts.Deal,
+) (*string, error) {
+	if _, err := storekit.LockRow(ctx, tx, dealTable, ids.UUID(current.Id), storekit.LiveOnly); err != nil {
+		return nil, err
+	}
+	var held *string
+	if err := tx.QueryRow(ctx,
+		`SELECT acquisition_source FROM deal WHERE id = $1`, current.Id).Scan(&held); err != nil {
+		return nil, fmt.Errorf("re-read acquisition source: %w", err)
+	}
+	return held, nil
 }
