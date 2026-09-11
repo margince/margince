@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (109)
+## Parity (108)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -72,7 +72,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendmailproviders_test.go` | H3 | Which capture providers are a MAILBOX is answered on both sides of the wire, and the two answers must be the same three names. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
-| `frontendprimaryemail_test.go` | H3 | The browser and the server pick the SAME address to write to, or the address a composer prefills and the address a draft is written to differ on a record where the reader can see both. |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails SILENTLY when it falls short. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat MAY DO, not which role it holds. |
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one LIST ROW carries, or the chip strip's "+N" counts a number nobody has. |

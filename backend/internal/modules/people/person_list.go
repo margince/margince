@@ -73,6 +73,25 @@ var personListFields = map[string]storekit.SortField{
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	// The Company header, by the employer the row prints.
 	personEmployerField: {Kind: fieldcatalog.TypeText, Expr: orderByCurrentEmployer},
+	// The Email header, by the one address the row prints.
+	personPrimaryEmailField: {Kind: fieldcatalog.TypeText, Expr: orderByReachableEmail},
+}
+
+// personPrimaryEmailField is what the Email header sorts by, named for the wire
+// field the column draws rather than a column of `person`: an address lives on
+// person_email, and which of them a row shows is a choice.
+const personPrimaryEmailField = "primary_email"
+
+// orderByReachableEmail orders by the address the Email column prints.
+//
+// The same expression the row is rendered from (ReachableEmailOrder), so the
+// address a reader sees and the address the page is arranged by are one string.
+// A contact with no live address shows none and orders by none, which the list
+// already puts last.
+func orderByReachableEmail(context.Context, func(any) int) (string, error) {
+	return `(SELECT pe.email FROM person_email pe
+	          WHERE pe.person_id = person.id AND pe.archived_at IS NULL` +
+		ReachableEmailOrder + ` LIMIT 1)`, nil
 }
 
 // personEmployerField is what the Company header sorts by. Named for the wire
