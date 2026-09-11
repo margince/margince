@@ -41,45 +41,75 @@ import (
 // who may read people and not edges still gets their people — the contract says
 // absent never means "works nowhere", which is what stops a reader taking the
 // omission for an answer.
-func attachPersonEmployers(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Person, personIDs []ids.UUID) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	people := arg(personIDs)
-
+// currentEmployerFrom is the FROM and WHERE of "which company this person works
+// for, as this caller may see it", with the person binding left to the caller.
+//
+// The row that PRINTS the employer and the expression that ORDERS BY it read
+// this, so a reader sees the company the list was arranged by rather than a
+// second reading of the same question.
+//
+// It takes its own gates rather than being handed them — the employment EDGE
+// scope, the organization object grant and its row scope, each of which can
+// hide an employer independently — because a caller that had to remember to
+// pass three could forget one, and the one forgotten would be the one nobody
+// notices until a reader sees an account they hold no grant for.
+//
+// A false is not a refusal: a caller who may not traverse edges, or may not
+// read organizations, still gets their people. A person list is not a question
+// about employers, and the contract says an absent employer never means "works
+// nowhere".
+func currentEmployerFrom(
+	ctx context.Context, personBinding string, arg func(any) int,
+) (from string, visible bool, err error) {
 	edgeBound, err := auth.EdgeReadScope(ctx, "rel", arg)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return nil
+		return "", false, nil
 	}
 	if err != nil {
-		return err
+		return "", false, err
 	}
 	if edgeBound == "" {
 		edgeBound = scopeAllRows
 	}
 	if err := auth.Require(ctx, organizationEntity, principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return nil
+			return "", false, nil
 		}
-		return err
+		return "", false, err
 	}
 	orgScope, err := auth.ScopeClauseFor(ctx, organizationEntity, "org", arg)
 	if err != nil {
-		return err
+		return "", false, err
 	}
 	if orgScope == "" {
 		orgScope = scopeAllRows
 	}
-
-	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT rel.person_id, org.id, org.display_name
+	return `
 		 FROM relationship rel
 		 JOIN organization org ON org.id = rel.organization_id
-		 WHERE rel.person_id = ANY($%d)
+		 WHERE ` + personBinding + `
 		   AND rel.kind = 'employment'
-		   AND `+employment.CurrentPrimarySQL("rel")+`
+		   AND ` + employment.CurrentPrimarySQL("rel") + `
 		   AND rel.archived_at IS NULL
-		   AND `+edgeBound+`
+		   AND ` + edgeBound + `
 		   AND org.archived_at IS NULL
-		   AND `+orgScope, people), args...)
+		   AND ` + orgScope, true, nil
+}
+
+func attachPersonEmployers(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Person, personIDs []ids.UUID) error {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	people := arg(personIDs)
+
+	from, visible, err := currentEmployerFrom(ctx, storekit.SQLf("rel.person_id = ANY($%d)", people), arg)
+	if err != nil {
+		return err
+	}
+	if !visible {
+		return nil
+	}
+
+	rows, err := tx.Query(ctx, `SELECT rel.person_id, org.id, org.display_name`+from, args...)
 	if err != nil {
 		return err
 	}

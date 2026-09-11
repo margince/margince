@@ -48,11 +48,21 @@ func projectCardColumns(quietDaysPos int) string {
 	` + ProjectInFlightSQL("p") + ` AND ` + ProjectQuietSQL("p", "now()", quietDaysPos)
 }
 
-// projectCardOrder puts the work in motion first: delivering, then pursuing,
-// then the initiatives, and closed projects last — a page reader wants what is
-// live, and within one phase the most recently touched project.
-const projectCardOrder = `ORDER BY CASE p.phase
-		WHEN 'delivering' THEN 0 WHEN 'pursuing' THEN 1 WHEN 'initiative' THEN 2 ELSE 3 END,
+// phaseRank is where a phase sits when the work is arranged by how live it is:
+// delivering first, then pursuing, then the initiatives, and closed last.
+//
+// Alphabetical is the shuffle — closed, delivering, initiative, pursuing — so
+// it is not an order anybody asking to see projects by phase means. The account
+// page's card list and the projects list both read this, so a reader moving
+// between the two surfaces sees one arrangement rather than two.
+func phaseRank(alias string) string {
+	return `CASE ` + alias + `.phase
+		WHEN 'delivering' THEN 0 WHEN 'pursuing' THEN 1 WHEN 'initiative' THEN 2 ELSE 3 END`
+}
+
+// projectCardOrder puts the work in motion first, and within one phase the most
+// recently touched project.
+var projectCardOrder = `ORDER BY ` + phaseRank("p") + `,
 	p.last_activity_at DESC NULLS LAST, p.created_at DESC, p.id`
 
 // ListProjectsForOrganizationTx lists the company's unarchived projects under

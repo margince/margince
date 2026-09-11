@@ -71,6 +71,34 @@ var personListFields = map[string]storekit.SortField{
 	personNameColumn:   storekit.Column(fieldcatalog.TypeText),
 	ownerIDColumn:      storekit.Column(storekit.KindUUID),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
+	// The Company header, by the employer the row prints.
+	personEmployerField: {Kind: fieldcatalog.TypeText, Expr: orderByCurrentEmployer},
+}
+
+// personEmployerField is what the Company header sorts by. Named for the wire
+// field the column draws rather than a column of `person`, because the employer
+// is an EDGE: the row carries a company resolved through it, and the sort walks
+// the same edge.
+const personEmployerField = "employer"
+
+// orderByCurrentEmployer orders by the company the Company column prints, and
+// by NOTHING when this caller may see no employer at all.
+//
+// The three gates that can hide an employer are the read's own
+// (currentEmployerFrom), so a person whose company is outside this caller's
+// scope sorts into the tail rather than ordering the page by a name the row
+// beside it leaves blank.
+func orderByCurrentEmployer(ctx context.Context, arg func(any) int) (string, error) {
+	from, visible, err := currentEmployerFrom(ctx, "rel.person_id = person.id", arg)
+	if err != nil {
+		return "", err
+	}
+	if !visible {
+		// A caller who may see no employer is ordered by no employer: every row
+		// sits in the tail and the page falls back to its tie-breaker.
+		return "NULL::text", nil
+	}
+	return "(SELECT org.display_name" + from + ")", nil
 }
 
 // personTagClause narrows the page to the people carrying the named tags.

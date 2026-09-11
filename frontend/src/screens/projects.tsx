@@ -254,12 +254,17 @@ export function ProjectsScreen() {
             cell: (project: Project) => (
               <EntityRef kind="organization" id={project.organization_id} />
             ),
+            // By the company's NAME. One outside this reader's scope orders
+            // the page by nothing rather than by a name it withholds.
+            sort: "organization_id",
           },
           {
             key: "phase",
             header: t("project.phaseLabel"),
-            // Not sortable: phase is not in the list's sort vocabulary, and
-            // the chip beside the table is the way to read one phase at a time.
+            // By how LIVE the work is — delivering, pursuing, initiative, then
+            // closed — which is the arrangement the account page already uses.
+            // Alphabetical would be that order shuffled.
+            sort: "phase",
             cell: (project: Project) => <PhaseBadge phase={project.phase} />,
           },
           ownerColumn<Project>(t),
