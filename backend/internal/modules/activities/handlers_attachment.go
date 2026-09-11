@@ -10,8 +10,10 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // multipartSpillBytes is how much of an upload is held in memory before the
@@ -46,8 +48,13 @@ func (h Handlers) WithUploadLimit(bytes int64) Handlers {
 }
 
 // UploadAttachment stores an uploaded file against an entity. Multipart is
-// parsed here (the JSON decoder cannot carry bytes); the store owns the
-// RBAC gate, provenance, and the write shape.
+// parsed here (the JSON decoder cannot carry bytes); the store owns provenance
+// and the write shape, and the RBAC gate that decides.
+//
+// The grant is asked TWICE, and the two are not the same question. Here it is
+// only "may this caller write anything at all", asked before the parse so a
+// refusal costs a header rather than a file; in the store it is "may this
+// caller write THIS object type", asked once the body has said which.
 func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	if h.uploadLimit <= 0 {
 		// Answered as OUR fault, because it is: nobody wired the ceiling. The
@@ -55,6 +62,20 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		// perfectly good file and tells them it exceeds a 0 MB limit, which
 		// sends them off to shrink a file that was never the problem.
 		httperr.Write(w, r, errUploadLimitUnset)
+		return
+	}
+	// THE GRANT, BEFORE THE BYTES. The exact question — may this caller write
+	// THIS object type — cannot be asked yet: the type arrives inside the body,
+	// and reading the body is the cost. So the coarse half is asked first, and
+	// a caller holding no write grant on anything is refused for the price of a
+	// header rather than the price of a file. Without it a session with no
+	// grants at all was a free amplifier: one request in, one whole upload
+	// parsed and spilled, a 403 out, repeatable.
+	//
+	// The store still asks the exact question once the body names its object,
+	// and keeps asking it — this is an early refusal, never the gate.
+	if err := auth.RequireAnyObject(r.Context(), principal.ActionUpdate); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	// The same ceiling the chassis already applied, and applied again anyway: it
@@ -73,7 +94,7 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	entityType := r.FormValue("entity_type")
 	if !crmcontracts.AttachmentEntityType(entityType).Valid() {
 		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_enum",
-			"entity_type must be one of contact, company, deal, activity, lead"))
+			"entity_type must be one of contact, company, deal, activity, lead, project"))
 		return
 	}
 	entityID, err := ids.Parse(r.FormValue("entity_id"))

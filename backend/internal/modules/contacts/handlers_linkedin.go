@@ -14,6 +14,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -67,6 +68,14 @@ func (h Handlers) ImportLinkedInConnections(w http.ResponseWriter, r *http.Reque
 		// Our fault, not the caller's: nobody wired the ceiling. Carrying on
 		// with a zero bound would refuse their export and blame its size.
 		httperr.Write(w, r, errUploadLimitUnset)
+		return
+	}
+	// THE GRANT, BEFORE THE BYTES. The store asks for exactly this and keeps
+	// asking — but it asks after the parse, so a session that may not create a
+	// contact still made the server take a whole export apart and spill it
+	// before being refused, once per request and free to the sender.
+	if err := auth.Require(r.Context(), entityContact, principal.ActionCreate); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, h.uploadLimit)

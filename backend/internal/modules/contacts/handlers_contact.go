@@ -11,9 +11,11 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // MergeContact serves POST /contacts/{id}/merge — merge this contact (A, the path id)
@@ -110,6 +112,19 @@ func (h Handlers) CreateContact(w http.ResponseWriter, r *http.Request, _ crmcon
 // half of one endpoint where nobody looks for it. The ceiling the parse runs
 // under is granted to this route in compose.uploadCeilings.
 func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request) {
+	// THE GRANTS, BEFORE THE BYTES, and both of them because the import needs
+	// both: it creates the contacts no card matches and updates the ones a card
+	// does. The store asks for the pair and keeps asking — but it asks after
+	// the parse, so a session holding neither still made the server take a
+	// whole address book apart before being refused.
+	if err := auth.Require(r.Context(), entityContact, principal.ActionCreate); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := auth.Require(r.Context(), entityContact, principal.ActionUpdate); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	// upload:route /v1/contacts/vcard-import — the ceiling this parse runs under
 	// is granted to that path in compose.uploadCeilings, and
 	// TestEveryMultipartParseNamesItsRoute holds the two together. What is

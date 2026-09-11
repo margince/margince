@@ -14,10 +14,12 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Handlers is the knowledge module's transport surface.
@@ -141,6 +143,15 @@ func (h Handlers) UploadCorpusDocument(w http.ResponseWriter, r *http.Request, i
 	}
 	if h.queue == nil {
 		httperr.Write(w, r, errIngestUnavailable)
+		return
+	}
+	// THE GRANT, BEFORE THE BYTES. The store asks this same question, and asks
+	// it again where it decides — but it asks after the parse, so without this
+	// a session that may not file a document still made the server take one
+	// apart and spill it to disk before being refused. The import lane
+	// (compose.stageImportSource) has always had it in this order.
+	if err := auth.Require(r.Context(), "knowledge_document", principal.ActionCreate); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	// The same ceiling the chassis already applied, applied again: it is what
