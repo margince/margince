@@ -32,7 +32,6 @@ import { RecordTabs } from "../design-system/recordtabs";
 import {
   hasTimelineFilters,
   useRecordTimeline,
-  useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
@@ -129,10 +128,9 @@ import {
   ChronologyFilter,
   ChronologyFooter,
   chronologyNotice,
-  useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
-import { ConversationList } from "./recordconversations";
+import { ConversationList, useChronologyCut } from "./recordconversations";
 import {
   createdColumn,
   lastActivityColumn,
@@ -1227,8 +1225,9 @@ function useChronologySlots({
     records("person", id) ??
     records("deal", id) ??
     records("organization", id);
-  const [filter, setFilter] = useChronologyFilter(org.id);
-  const [filters, setFilters] = useTimelineFilters(org.id);
+  const { filter, filters, setFilters, openCut, kinds } = useChronologyCut(
+    org.id,
+  );
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("organization", org.id, {
@@ -1306,13 +1305,13 @@ function useChronologySlots({
       timelineGroups: groupChronology(history.entries, timeline.hasNextPage),
       timelineHeader: (
         <>
-          <ChronologyFilter
-            filter={filter}
-            conversations
-            onFilter={setFilter}
-          />
+          <ChronologyFilter filter={filter} conversations onFilter={openCut} />
           {filter !== "changes" && (
-            <TimelineFilterBar value={filters} onChange={setFilters} />
+            <TimelineFilterBar
+              value={filters}
+              kinds={kinds}
+              onChange={setFilters}
+            />
           )}
         </>
       ),
