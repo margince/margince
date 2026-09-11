@@ -311,6 +311,12 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 	if err != nil {
 		return err
 	}
+	// Only an activity the rep may read can bring a dismissed deal back —
+	// the lineage line then names it, and the two must agree.
+	readable, err := briefActivityClause(ctx, "a", arg)
+	if err != nil {
+		return err
+	}
 	q := fmt.Sprintf(`
 		SELECT d.id, s.win_probability, %s, d.expected_close_date
 		FROM deal d
@@ -336,10 +342,11 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 				  -- dismissed deal back for something still to come — and the
 				  -- lineage read bounds itself the same way, so an unbounded
 				  -- one here would return deals whose card can say nothing.
-				  AND a.occurred_at <= $%d) END)`,
+				  AND a.occurred_at <= $%d
+				  AND %s) END)`,
 		briefBaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), userPos, asOfPos,
 		briefSnoozeLiftedSQL("d.id", "bi.reopen_on", "bi.reopen_ref", "bi.state_at", fmt.Sprintf("$%d", asOfPos)),
-		asOfPos)
+		asOfPos, readable)
 	if scope != "" {
 		q += " AND " + scope
 	}
@@ -402,19 +409,33 @@ func briefEvidenceRows(
 	if err != nil {
 		return false, err
 	}
+	// One statement for every deal, rendered once: the activity clause is a
+	// property of the caller, like the seat edge above. The deal's slot is
+	// registered first and rebound per deal, so the clause's own parameters
+	// keep the positions it rendered against.
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	dealPos, sincePos, asOfPos, capPos := arg(ids.Nil), arg(lastView), arg(asOf.UTC()), arg(briefOvernightEvidenceCap)
+	readable, err := briefActivityClause(ctx, "a", arg)
+	if err != nil {
+		return false, err
+	}
+	overnightSQL := fmt.Sprintf(`
+		SELECT a.id FROM activity a
+		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $%[1]d
+		WHERE a.archived_at IS NULL
+		  AND ($%[2]d::timestamptz IS NULL OR a.occurred_at > $%[2]d)
+		  -- Bounded at the cutoff, the way the dismissal filter above is: a
+		  -- future-dated row has not happened, so counting it as overnight
+		  -- movement claims the deal moved for something still to come.
+		  AND a.occurred_at <= $%[3]d
+		  AND %[5]s
+		ORDER BY a.occurred_at DESC, a.id DESC
+		LIMIT $%[4]d`, dealPos, sincePos, asOfPos, capPos, readable)
 	for _, dealID := range order {
 		f := facts[dealID]
-		overnight, err := collectIDList(tx.Query(ctx, `
-			SELECT a.id FROM activity a
-			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-			WHERE a.archived_at IS NULL
-			  AND ($2::timestamptz IS NULL OR a.occurred_at > $2)
-			  -- Bounded at the cutoff, the way the dismissal filter above is: a
-			  -- future-dated row has not happened, so counting it as overnight
-			  -- movement claims the deal moved for something still to come.
-			  AND a.occurred_at <= $3
-			ORDER BY a.occurred_at DESC, a.id DESC
-			LIMIT $4`, dealID, lastView, asOf.UTC(), briefOvernightEvidenceCap))
+		args[dealPos-1] = dealID
+		overnight, err := collectIDList(tx.Query(ctx, overnightSQL, args...))
 		if err != nil {
 			return false, err
 		}

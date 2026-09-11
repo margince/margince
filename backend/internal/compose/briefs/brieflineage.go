@@ -77,14 +77,23 @@ func briefLineage(
 	// `bi.state <> 'new'` is kept deliberately: it is what idx_brief_item_deal
 	// is partial on, so dropping it for readability would fall off the index
 	// this query is shaped around.
-	rows, err := tx.Query(ctx, `
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	orderPos, userPos, nowPos := arg(order), arg(userID), arg(now.UTC())
+	// The line names the activity's moment, so only one the rep may read can
+	// date it — the candidate query admits a returning deal on the same terms.
+	readable, err := briefActivityClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH last_mark AS (
 			SELECT DISTINCT ON (bi.deal_id)
 			       bi.deal_id, bi.state, bi.state_at
 			  FROM brief_item bi
 			  JOIN brief_run br ON br.id = bi.brief_run_id
-			 WHERE bi.deal_id = ANY($1)
-			   AND br.user_id = $2
+			 WHERE bi.deal_id = ANY($%d)
+			   AND br.user_id = $%d
 			   AND bi.state <> 'new'
 			 ORDER BY bi.deal_id, bi.state_at DESC
 		)
@@ -99,9 +108,10 @@ func briefLineage(
 		   -- happened yet, and the candidate query bounds itself the same way,
 		   -- so the two agree about which deals are returning — disagreement
 		   -- would put a deal back with no line explaining it.
-		   AND a.occurred_at <= $3
-		 GROUP BY m.deal_id, m.state_at`,
-		order, userID, now.UTC())
+		   AND a.occurred_at <= $%d
+		   AND %s
+		 GROUP BY m.deal_id, m.state_at`, orderPos, userPos, nowPos, readable),
+		args...)
 	if err != nil {
 		return nil, err
 	}
