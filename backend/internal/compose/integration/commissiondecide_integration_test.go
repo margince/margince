@@ -114,6 +114,12 @@ func awaitLockWaiters(t *testing.T, holder int32, n int) {
 	defer cancel()
 	watcher := OwnerConn(t)
 	for {
+		// pg_stat_activity is materialized once per transaction and cached, so
+		// each poll clears it first on this same connection, or a void that
+		// reached the lock after the first read would never be seen.
+		if _, err := watcher.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+			t.Fatalf("clearing the stats snapshot before probing the lock queue: %v", err)
+		}
 		var waiting int
 		if err := watcher.QueryRow(ctx, `
 			WITH RECURSIVE queued AS (
