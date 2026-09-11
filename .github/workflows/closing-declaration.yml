@@ -57,6 +57,13 @@ jobs:
           # The METADATA, not the body. This is the same list that closes an
           # issue on merge, so a pull request this reads as declaring is one
           # GitHub will actually act on.
+          #
+          # A FAILED QUERY IS NOT AN EMPTY ONE. Suppressing the failure would
+          # hand the check an empty list, and a pull request carrying perfectly
+          # good closing metadata would be warned for a transient API blip —
+          # the check would be loudest exactly when it knows least. The job
+          # still succeeds; it just says nothing rather than something false.
+          asked=0
           refs="$(gh api graphql -f query='
             query($owner:String!, $repo:String!, $pr:Int!) {
               repository(owner:$owner, name:$repo) {
@@ -67,7 +74,11 @@ jobs:
             }' -F owner="${{ github.repository_owner }}" \
                -F repo="${{ github.event.repository.name }}" \
                -F pr="$PR" \
-            --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[].number' || true)"
+            --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[].number')" || asked=$?
+          if [ "$asked" -ne 0 ]; then
+            echo "could not read this pull request's closing references; saying nothing rather than guessing" >&2
+            exit 0
+          fi
 
           status=0
           out="$(CLOSING_DECL_REFS="$refs" CLOSING_DECL_BODY="$BODY" \
@@ -85,21 +96,30 @@ jobs:
           # moment the author adds the declaration, which is the whole reason
           # `edited` is one of the triggers.
           marker='<!-- closing-declaration -->'
-          if [ "$status" -eq 0 ]; then
-            body="$(printf '%s\n%s' "$marker" 'This pull request declares what it closes.')"
-          else
-            body="$(printf '%s\n%s\n\n```\n%s\n```' "$marker" \
-              '**This pull request declares neither an issue it closes nor that it closes none.**' \
-              "$out")"
-          fi
+          existing="$(gh api --paginate "repos/${{ github.repository }}/issues/${PR}/comments" \
+            --jq "[.[] | select(.body != null and (.body | contains(\"$marker\"))) | .id] | first // empty" || true)"
 
+          # WITHDRAWN, not answered. A finding that resolves itself should leave
+          # nothing behind: rewriting it into "this pull request declares what it
+          # closes" would put a permanent line on every pull request that ever
+          # forgot one, which is a worse record than the omission was. So the
+          # comment is DELETED once the declaration is there.
+          #
           # Never fails the job, including when it cannot comment at all: a job
           # that went red because commenting failed would be the gate this is
           # not.
-          existing="$(gh api --paginate "repos/${{ github.repository }}/issues/${PR}/comments" \
-            --jq "[.[] | select(.body != null and (.body | contains(\"$marker\"))) | .id] | first // empty" || true)"
+          if [ "$status" -eq 0 ]; then
+            if [ -n "$existing" ]; then
+              gh api -X DELETE "repos/${{ github.repository }}/issues/comments/${existing}" >/dev/null || true
+            fi
+            exit 0
+          fi
+
+          body="$(printf '%s\n%s\n\n```\n%s\n```' "$marker" \
+            '**This pull request declares neither an issue it closes nor that it closes none.**' \
+            "$out")"
           if [ -n "$existing" ]; then
             gh api -X PATCH "repos/${{ github.repository }}/issues/comments/${existing}" -f body="$body" >/dev/null || true
-          elif [ "$status" -ne 0 ]; then
+          else
             gh api -X POST "repos/${{ github.repository }}/issues/${PR}/comments" -f body="$body" >/dev/null || true
           fi

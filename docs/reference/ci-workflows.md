@@ -90,8 +90,16 @@ Nine workflows sit beside the gate, deliberately outside it:
   **Gates nothing**, for the reason `review-coverage.yml` gives: a job that
   failed on a finding would be a gate whatever its name said. The mechanism is
   not broken — the habit is patchy — so it warns where the omission happens, and
-  `edited` is a trigger so the comment withdraws itself the moment the author
-  adds the line. Promote it to blocking only if the warning is measurably
+  `edited` is a trigger so the comment is **deleted** the moment the author adds
+  the line. Deleted rather than rewritten into a success note: a finding that
+  resolves itself should leave nothing behind, and a permanent "this one
+  declares" line on every pull request that ever forgot one is a worse record
+  than the omission was.
+
+  **A failed metadata query is not an empty one.** Suppressing it would hand the
+  check an empty list and warn a pull request carrying perfectly good closing
+  metadata, which would make the check loudest exactly when it knows least — so
+  it says nothing and exits. Promote it to blocking only if the warning is measurably
   ignored. Reported by
   [`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh),
   which reads its evidence from the environment so every arm is drivable from a
