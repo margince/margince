@@ -85,7 +85,13 @@ func recipientOf(view crmcontracts.Person360) RecipientIn {
 	if person.Title != nil {
 		out.Title = *person.Title
 	}
-	out.Email = primaryEmail(person)
+	// The address the SERVER picked, not a pick made again here. Which of a
+	// contact's addresses they are reachable at is one decision — primary if
+	// they have one, else the first live address, never a retired one — and it
+	// is made in the read that builds the list this field came from.
+	if person.PrimaryEmail != nil {
+		out.Email = string(*person.PrimaryEmail)
+	}
 	return out
 }
 
@@ -130,30 +136,6 @@ func surname(person crmcontracts.Person) string {
 		return strings.TrimSpace(rest)
 	}
 	return ""
-}
-
-// primaryEmail takes the address the record marks primary, and otherwise the
-// first live one it carries — a contact with one unmarked address is still
-// reachable, and refusing to address them would read the flag as permission
-// when it only ranks. An archived address is skipped either way: it is an
-// address somebody deliberately retired.
-func primaryEmail(person crmcontracts.Person) string {
-	if person.Emails == nil {
-		return ""
-	}
-	first := ""
-	for _, email := range *person.Emails {
-		if email.ArchivedAt != nil {
-			continue
-		}
-		if email.IsPrimary {
-			return string(email.Email)
-		}
-		if first == "" {
-			first = string(email.Email)
-		}
-	}
-	return first
 }
 
 // currentEmployer names where this person works now. The 360 sorts the

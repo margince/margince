@@ -30038,9 +30038,14 @@ type Person struct {
 	LastName       *string    `json:"last_name,omitempty"`
 
 	// MergedIntoId Set when this row was merged away.
-	MergedIntoId *openapi_types.UUID     `json:"merged_into_id,omitempty"`
-	OwnerId      *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones       *[]PersonPhone          `json:"phones,omitempty"`
+	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
+	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
+	Phones       *[]PersonPhone      `json:"phones,omitempty"`
+
+	// PrimaryEmail The one address this contact is reachable at, chosen by the server: the primary one if they have one, else the first live address in the order `emails` is sent in. Null when every address is archived, or when they have none.
+	// It is a derived field and not a second column. The choice used to be made in the browser, which meant each surface that needed "the address" re-made it — and a list could not be ORDERED by it at all, because the rule was not one the server knew. Sending the answer makes the address a reader sees and the address the page is arranged by the same string.
+	// Never a RETIRED address. An archived one is out of service, and offering it is worse than offering none: a reader writes to it and hears nothing back.
+	PrimaryEmail *openapi_types.Email    `json:"primary_email,omitempty"`
 	Raw          *map[string]interface{} `json:"raw,omitempty"`
 
 	// Reachability Per-channel reachability (design §6.6), derived from `person_channel_identity`.
@@ -48797,6 +48802,14 @@ func (a *Person) UnmarshalJSON(b []byte) error {
 		delete(object, "phones")
 	}
 
+	if raw, found := object["primary_email"]; found {
+		err = json.Unmarshal(raw, &a.PrimaryEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'primary_email': %w", err)
+		}
+		delete(object, "primary_email")
+	}
+
 	if raw, found := object["raw"]; found {
 		err = json.Unmarshal(raw, &a.Raw)
 		if err != nil {
@@ -49005,6 +49018,13 @@ func (a Person) MarshalJSON() ([]byte, error) {
 		object["phones"], err = json.Marshal(a.Phones)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phones': %w", err)
+		}
+	}
+
+	if a.PrimaryEmail != nil {
+		object["primary_email"], err = json.Marshal(a.PrimaryEmail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'primary_email': %w", err)
 		}
 	}
 

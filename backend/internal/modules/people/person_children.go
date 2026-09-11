@@ -374,33 +374,6 @@ func attachPersonChildren(ctx context.Context, tx pgx.Tx, people []crmcontracts.
 	return attachPersonReachability(ctx, tx, idx, personIDs)
 }
 
-func attachPersonEmails(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Person, personIDs []ids.UUID) error {
-	rows, err := tx.Query(ctx,
-		`SELECT person_id, id, email, email_type, is_primary, position, source, captured_by
-		 FROM person_email WHERE person_id = ANY($1) AND archived_at IS NULL
-		 ORDER BY position, created_at`, personIDs)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var personID, emailID ids.UUID
-		var e crmcontracts.PersonEmail
-		var email string
-		if err := rows.Scan(&personID, &emailID, &email, &e.EmailType, &e.IsPrimary, &e.Position, &e.Source, &e.CapturedBy); err != nil {
-			return err
-		}
-		e.Id = openapi_types.UUID(emailID)
-		e.Email = openapi_types.Email(email)
-		p := idx[openapi_types.UUID(personID)]
-		if p.Emails == nil {
-			p.Emails = &[]crmcontracts.PersonEmail{}
-		}
-		*p.Emails = append(*p.Emails, e)
-	}
-	return rows.Err()
-}
-
 func attachPersonPhones(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Person, personIDs []ids.UUID) error {
 	phoneRows, err := tx.Query(ctx,
 		`SELECT person_id, id, phone, phone_type, is_primary, position, source, captured_by
