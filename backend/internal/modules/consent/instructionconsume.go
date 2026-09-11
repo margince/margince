@@ -134,6 +134,7 @@ func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUI
 // cannot slip between the two.
 func consumeInstructionTx(
 	ctx context.Context, tx pgx.Tx, inst LiveInstruction, deliveryID ids.UUID, wording [32]byte,
+	withdraw ReviewRouter,
 ) error {
 	// WHAT THE HUMAN ACKNOWLEDGED, read from the INSTRUCTION rather than from
 	// the held row it was given against.
@@ -167,6 +168,19 @@ func consumeInstructionTx(
 		return fmt.Errorf(
 			"consent: the decision was no longer live when the message was staged: %w",
 			apperrors.ErrConflict)
+	}
+	// THE REVIEW IS FINISHED, because the message it was about has gone.
+	//
+	// Without this the review stays live forever: the rep's queue keeps showing
+	// work that is done, the message can be routed to a decider who would be
+	// asked about a closed matter, and the live-intent index goes on treating a
+	// spent message as one still waiting.
+	//
+	// Resolved rather than deleted. The review is what a subject asking "why
+	// did I receive this" is shown beside the decision, and a queue that
+	// emptied itself by forgetting would answer nothing.
+	if err := resolveReviewTx(ctx, tx, inst.ReviewID, withdraw); err != nil {
+		return err
 	}
 	// AUDITED AS AN UPDATE WITH BOTH IMAGES, because that is what it is: the
 	// row moves from a live decision to a spent one, and the status column
@@ -250,7 +264,7 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 		// it again, which is the right answer.
 		return ids.UUID{}, nil
 	}
-	if err := consumeInstructionTx(ctx, tx, inst, deliveryID, wording); err != nil {
+	if err := consumeInstructionTx(ctx, tx, inst, deliveryID, wording, g.store.reviewRouter); err != nil {
 		return ids.UUID{}, err
 	}
 	return inst.ID, nil
@@ -302,4 +316,39 @@ func (s *Store) HeldMessageForReview(ctx context.Context, reviewID ids.UUID) (id
 		return nil
 	})
 	return intent, err
+}
+
+// resolveReviewTx closes a review whose message has gone.
+//
+// The state and the moment move together, which the row's own shape CHECK
+// requires: a resolved review that named no moment, or a live one that claimed
+// one, would each be a row the database refuses.
+func resolveReviewTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, router ReviewRouter) error {
+	if reviewID.IsZero() {
+		return nil
+	}
+	var routedTo *ids.UUID
+	err := tx.QueryRow(ctx, `
+		UPDATE communication_review
+		   SET state = 'resolved', resolved_at = now()
+		 WHERE id = $1 AND resolved_at IS NULL
+		RETURNING approval_id`, reviewID).Scan(&routedTo)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Already closed. Nothing to retract either: whoever closed it first
+		// took the card with them.
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("consent: closing the review this message answered: %w", err)
+	}
+	// THE CARD GOES WITH IT. A review can be routed and then directed from the
+	// review itself — by the same rep once they are granted the authority, or
+	// by a colleague reading it. The card is then asking about a message that
+	// has already gone, and approving it would put a second decision on the
+	// record for one send.
+	if routedTo == nil || router == nil {
+		return nil
+	}
+	return router.WithdrawCardTx(ctx, tx, *routedTo,
+		"the message this asked about has already been sent")
 }

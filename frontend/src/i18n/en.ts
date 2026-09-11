@@ -1507,6 +1507,7 @@ export const en = {
   "approval.kind.update_record": "Update a record",
   "approval.kind.create_record": "Create a record",
   "approval.kind.send_email": "Send an email",
+  "approval.kind.communication_review": "Decide a refused email",
   "approval.kind.held_draft": "Review a drafted email",
   "approval.kind.book_meeting": "Book a meeting",
   "approval.kind.volume_release": "Let an agent continue",

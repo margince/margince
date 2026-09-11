@@ -420,9 +420,10 @@ func collectStringConsts(file *ast.File, into map[string]string) {
 // gatekit:fixture the value each exported approvals kind constant carries —
 // resolved constant data, not a cost.
 var exportedApprovalKinds = map[string]string{
-	"KindVolumeRelease":     approvals.KindVolumeRelease,
-	"KindScheduledSendHeld": approvals.KindScheduledSendHeld,
-	"KindImportCommit":      approvals.KindImportCommit,
+	"KindVolumeRelease":       approvals.KindVolumeRelease,
+	"KindScheduledSendHeld":   approvals.KindScheduledSendHeld,
+	"KindImportCommit":        approvals.KindImportCommit,
+	"KindCommunicationReview": approvals.KindCommunicationReview,
 }
 
 // crossPackageKinds resolves a kind another module exports and compose stages
@@ -430,11 +431,12 @@ var exportedApprovalKinds = map[string]string{
 // gatekit:fixture the value each cross-package kind constant carries, keyed as
 // written at the call site — resolved constant data, not a cost.
 var crossPackageKinds = map[string]string{
-	"approvals.KindVolumeRelease":     approvals.KindVolumeRelease,
-	"approvals.KindScheduledSendHeld": approvals.KindScheduledSendHeld,
-	"deals.CloseDateCorrectionKind":   deals.CloseDateCorrectionKind,
-	"deals.FollowUpReconcileKind":     deals.FollowUpReconcileKind,
-	"deals.StageProgressionKind":      deals.StageProgressionKind,
+	"approvals.KindVolumeRelease":       approvals.KindVolumeRelease,
+	"approvals.KindScheduledSendHeld":   approvals.KindScheduledSendHeld,
+	"approvals.KindCommunicationReview": approvals.KindCommunicationReview,
+	"deals.CloseDateCorrectionKind":     deals.CloseDateCorrectionKind,
+	"deals.FollowUpReconcileKind":       deals.FollowUpReconcileKind,
+	"deals.StageProgressionKind":        deals.StageProgressionKind,
 }
 
 // isPackageQualifier reports whether an identifier names an imported package

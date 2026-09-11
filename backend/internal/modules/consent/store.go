@@ -29,6 +29,11 @@ type Store struct {
 	// module never imports a sibling; nil on any installation that has not
 	// wired it, which the page renders as an omission rather than a blank.
 	installationName InstallationNameReader
+	// reviewRouter puts a refused send in front of somebody who may direct it.
+	// Injected because approvals is a sibling module; nil on an installation
+	// with no approvals surface, and routing then refuses rather than staging
+	// nothing and reporting success.
+	reviewRouter ReviewRouter
 	// country selects which jurisdiction's messaging rules a decision is taken
 	// under. Injected by compose because the setting lives in identity
 	// (installationcountry.go).

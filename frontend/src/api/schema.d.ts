@@ -9308,6 +9308,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/communication-reviews/{id}/request-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask somebody who may override the engine to decide this refused send.
+         * @description A rep refused at the keyboard usually cannot direct the send themselves — that takes the
+         *     `communication_exception` grant, which most seats do not hold. This is how they ask somebody
+         *     who does: the review is staged as an approval card, and whoever approves it is the person
+         *     whose name goes on the instruction.
+         *
+         *     ASKING GRANTS NOTHING. The caller still cannot direct the send, and the card is answered by
+         *     somebody who can or by nobody at all. What routing changes is that the question becomes
+         *     findable instead of sitting in a review only its author reads.
+         *
+         *     SCOPED TO THE REVIEW'S OWN INITIATOR. A seat that could route anybody's review would be
+         *     raising cards about other people's correspondence, so this answers 404 for a review that
+         *     belongs to somebody else — the same answer reading one does, and for the same reason.
+         *
+         *     Pressing it twice raises ONE card. The question is about one refused message however many
+         *     times it is asked.
+         */
+        post: operations["requestCommunicationDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/communication-reviews/{id}/direct-send": {
         parameters: {
             query?: never;
@@ -29368,10 +29404,12 @@ export interface components {
              * @description What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
              *     and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
              *     answer — an objection, a dead address — where offering a context form would invite a rep
-             *     to argue with a withdrawal.
+             *     to argue with a withdrawal. `awaiting_decision` is a refusal the rep has handed to
+             *     somebody who may override it: their work no longer, so a surface should say so rather
+             *     than showing them a form they have already filled in.
              * @enum {string}
              */
-            state: "needs_context" | "needs_repair" | "resolved" | "superseded" | "cancelled";
+            state: "needs_context" | "needs_repair" | "awaiting_decision" | "resolved" | "superseded" | "cancelled";
             /** @enum {string} */
             kind: "single";
             /**
@@ -29390,6 +29428,28 @@ export interface components {
             reason_code: string;
             /** @description What was refused, per recipient. Empty once an erasure has cleared the subject from it. */
             refusals: components["schemas"]["RefusedRecipient"][];
+        };
+        /** @description What the person asking wants the decider to know. */
+        RequestCommunicationDecisionRequest: {
+            /**
+             * @description Why this message should go, in the asker's own words. Optional — a refusal is often
+             *     self-explanatory — but it is what the approver reads and therefore what the record says
+             *     they acted on.
+             *
+             *     Bounded by what an instruction's explanation accepts, because that is where these words
+             *     end up. A note the record could not hold would stage a card that fails when somebody
+             *     approves it.
+             */
+            note?: string;
+        };
+        /** @description The approval card a routed refusal was staged as. */
+        CommunicationDecisionRequested: {
+            /**
+             * Format: uuid
+             * @description The card carrying the question. A second ask about the same review answers the same id:
+             *     one refused message is one decision.
+             */
+            approval_id: string;
         };
         /**
          * @description A designated human's decision that one refused message goes out anyway. Every field is frozen
@@ -48180,6 +48240,34 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    requestCommunicationDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RequestCommunicationDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description The card the question was staged as. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationDecisionRequested"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     directCommunicationSend: {

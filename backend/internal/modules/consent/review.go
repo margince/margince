@@ -48,6 +48,10 @@ const (
 	// ReviewNeedsRepair is a refusal no evidence can answer, because something
 	// about the message or the address is wrong.
 	ReviewNeedsRepair = "needs_repair"
+	// ReviewAwaitingDecision is a refusal the rep has handed to somebody who
+	// may override it. It is the rep's work no longer, and a surface should say
+	// so rather than showing them a form they have already filled in.
+	ReviewAwaitingDecision = "awaiting_decision"
 	// ReviewResolved is work somebody finished.
 	ReviewResolved = "resolved"
 	// ReviewSuperseded is a review replaced by a fresher attempt at the same

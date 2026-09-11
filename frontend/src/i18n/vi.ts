@@ -1418,6 +1418,7 @@ export const vi = {
   "approval.kind.update_record": "Cập nhật một bản ghi",
   "approval.kind.create_record": "Tạo một bản ghi",
   "approval.kind.send_email": "Gửi một email",
+  "approval.kind.communication_review": "Quyết định email bị từ chối",
   "approval.kind.held_draft": "Xem lại email đã soạn",
   "approval.kind.book_meeting": "Đặt một lịch họp",
   "approval.kind.volume_release": "Cho tác nhân tiếp tục",

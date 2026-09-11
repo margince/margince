@@ -62,6 +62,13 @@ func (h Handlers) WithInstallationName(r InstallationNameReader) Handlers {
 	return h
 }
 
+// WithReviewRouter injects the approvals-side seam a refused send is handed to.
+// Compose supplies it; a module never imports a sibling.
+func (h Handlers) WithReviewRouter(r ReviewRouter) Handlers {
+	h.store = h.store.WithReviewRouter(r)
+	return h
+}
+
 // WithEraser returns a copy wired to the erase path.
 func (h Handlers) WithEraser(e Eraser) Handlers {
 	h.eraser = e
