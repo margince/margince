@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
@@ -28,6 +29,7 @@ import {
   useRecordChronology,
 } from "./recordchronology";
 import { ConversationList, useChronologyCut } from "./recordconversations";
+import { AddRelationshipAction } from "./relationships";
 import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import "./person360.css";
@@ -226,6 +228,11 @@ export function PersonDealsTab({
   loading = false,
 }: Readonly<{ view?: Person360; loading?: boolean }>) {
   const t = useT();
+  // The object half of the gate, asked as the server asks it. The row half —
+  // whether this caller may write THIS contact — is the anchor's own, and the
+  // server applies it to the write; a tab that second-guessed it here would
+  // withhold the verb on a record the write would have accepted.
+  const canSeat = useCanWrite("relationship", "create");
   const roles = view?.deal_roles?.data ?? [];
   const state = sectionState(
     view,
@@ -236,7 +243,26 @@ export function PersonDealsTab({
   );
   return (
     <div className="record-stack">
-      <Panel title={t("tab.deals")}>
+      <Panel
+        title={t("tab.deals")}
+        // THE TAB'S OWN VERB, and the same one the relationships tab offers —
+        // reached from where a reader is already asking the question rather
+        // than spelled a second time. Narrowed to the deal edge: a kind
+        // selector offering "employment" on a Deals tab would ask the reader to
+        // answer what the tab already answered.
+        //
+        // Withheld outright without the grant, as the relationships tab does:
+        // there is no fact about this contact to report, so a disabled button
+        // would be an affordance that says nothing.
+        titleAction={
+          view?.person.id && canSeat ? (
+            <AddRelationshipAction
+              scope={{ person_id: view.person.id }}
+              only={{ kind: "deal_stakeholder", label: "rel.seatOnDeal" }}
+            />
+          ) : undefined
+        }
+      >
         <SurfaceState
           state={state}
           emptyLabel={t("person.deals.empty")}

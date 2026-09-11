@@ -28,6 +28,11 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import type { CreateField } from "./create";
 import { EditAction } from "./edit";
 import { EntityRef } from "./entityref";
+import {
+  type Candidate,
+  type RelationshipEntity,
+  searchByEntity,
+} from "./relationshipcandidates";
 import "./candidatepicker.css";
 
 // The Relationships tab (P-5): the one surface a person/company 360 renders
@@ -188,84 +193,6 @@ function dateRange(rel: Relationship, t: (key: MessageKey) => string): string {
   return rel.started_at ? `${rel.started_at} – ${end}` : end;
 }
 
-type Candidate = { id: string; name: string };
-
-// include_anchor: recording that a person works at the company running the CRM
-// is an ordinary, frequent fact. The list hides the own company by default
-// because it answers "which companies are we selling to"; this question is a
-// different one, so it opts back in (ADR-0082/A127).
-async function searchCompanyCandidates(q: string): Promise<Candidate[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q, limit: 10, include_anchor: true } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.map((company) => ({
-    id: company.id,
-    name: company.display_name,
-  }));
-}
-
-async function searchPersonCandidates(q: string): Promise<Candidate[]> {
-  const { data, error } = await api.GET("/people", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.map((person) => ({ id: person.id, name: person.full_name }));
-}
-
-// /deals has no free-text `q` in the contract (only structured filters), so
-// the stakeholder picker fetches a recent page and matches the typed term
-// against the deal name client-side. Deals past that page aren't reached — an
-// accepted PoC limit, scoped to the manual deal_stakeholder edge.
-const DEAL_PICKER_PAGE = 50;
-
-async function searchDealCandidates(q: string): Promise<Candidate[]> {
-  const { data, error } = await api.GET("/deals", {
-    params: { query: { limit: DEAL_PICKER_PAGE } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  const needle = q.toLowerCase();
-  return data.data
-    .filter((deal) => deal.name.toLowerCase().includes(needle))
-    .slice(0, 10)
-    .map((deal) => ({ id: deal.id, name: deal.name }));
-}
-
-// The entity kinds this tab can ever pick as a relationship's other side —
-// company/person/deal, per the rel_*_shape CHECKs (migration 0007). A
-// lead has no relationship edges (it is promoted into a person first) and a
-// project seats its stakeholders through its own endpoint, so
-// this narrows EntityKind rather than switching on a kind the module can
-// never produce.
-type RelationshipEntity = Exclude<EntityKind, "lead" | "project">;
-
-function searchByEntity(
-  entity: RelationshipEntity,
-  query: string,
-): Promise<Candidate[]> {
-  switch (entity) {
-    case "company":
-      return searchCompanyCandidates(query);
-    case "person":
-      return searchPersonCandidates(query);
-    case "deal":
-      return searchDealCandidates(query);
-    default:
-      // Relationship edges only ever anchor person/company/deal (see
-      // edgeOptions below) — `lead`/`user`/`team` are EntityRefKind additions
-      // for record refs elsewhere (EntityRef), not creatable relationship
-      // endpoints, so this branch is unreachable for any real EdgeOption but
-      // still needs to satisfy the now-widened union's exhaustiveness check.
-      return Promise.resolve([]);
-  }
-}
-
 // A creatable edge from this scope: the kind, which entity fills the picked
 // endpoint, and which request field carries its id — all fixed by (scope,
 // kind) per the rel_*_shape CHECKs (migration 0007). The anchor endpoint
@@ -358,21 +285,37 @@ function invalidateAfterEdge(
 // other-side target picker (mirrors merge.tsx's debounced search-and-pick —
 // the source of the edge is fixed by scope, so there is no "exclude self"
 // filtering here).
-function AddRelationshipAction({
+export function AddRelationshipAction({
   scope,
   refusedReasonId,
+  only,
 }: Readonly<{
   scope: RelationshipScope;
   // The id of the anchor page's sentence about why its record takes no
   // changes. An edge is written through the anchor's own write gate on the
   // server, so a deal this caller cannot write takes no stakeholder from them.
   refusedReasonId?: string;
+  // ONE edge and the word for it, when the surface offering this verb is about
+  // that edge alone. A contact's Deals tab is exactly that: the reader is there
+  // to seat this person on a deal, and a kind selector offering "employment"
+  // beside it would ask them to answer a question the tab already answered.
+  //
+  // The scope is unchanged — it is still this person — so the picker, the write
+  // and the invalidation are the ones the relationships tab already uses. What
+  // narrows is what this surface offers and what it calls it.
+  only?: { kind: CreatableRelationshipKind; label: MessageKey };
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const headingId = useId();
-  const options = edgeOptions(scope);
-  const copy = scopeCopy(scope);
+  const all = edgeOptions(scope);
+  const options = only
+    ? all.filter((option) => option.kind === only.kind)
+    : all;
+  const scopeWords = scopeCopy(scope);
+  const copy = only
+    ? { ...scopeWords, add: only.label, singleKind: true }
+    : scopeWords;
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<CreatableRelationshipKind>(options[0].kind);
   const [role, setRole] = useState("");

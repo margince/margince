@@ -280,6 +280,78 @@ describe("the deals tab", () => {
     withProviders(<PersonDealsTab view={withheld} />);
     expect(screen.queryByText(/not recorded on any deal/)).toBeNull();
   });
+
+  // THE TAB'S OWN VERB. A reader asking which deals this contact is on is the
+  // reader who wants to put them on one, and before this the only path was the
+  // relationships tab — a different question, reached from a different place.
+  it("offers the verb that seats this contact on a deal", async () => {
+    const searched: string[] = [];
+    const page = (rows: { id: string; name: string }[]) =>
+      new Response(
+        JSON.stringify({
+          data: rows,
+          page: { has_more: false, next_cursor: null },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    stubWithSession(
+      {
+        "GET /deals": () => {
+          searched.push("deals");
+          // A name NOT already on the tab. "Fleet renewal 2026" is the row the
+          // page draws, so waiting for it would pass on the rendering the
+          // picker had nothing to do with.
+          return page([{ id: "d-9", name: "Depot expansion 2027" }]);
+        },
+        "GET /organizations": () => {
+          // The contract path is still /organizations; the record is called a
+          // company, which is the word this marker uses.
+          searched.push("companies");
+          return page([]);
+        },
+      },
+      { relationship: ["create"] },
+    );
+    withProviders(<PersonDealsTab view={view} />);
+
+    const add = await screen.findByRole("button", { name: "Add to a deal" });
+    await userEvent.click(add);
+
+    expect(screen.getByRole("heading", { name: "Add to a deal" })).toBeTruthy();
+
+    // NARROWED TO THE DEAL EDGE, asserted on what the picker SEARCHES.
+    //
+    // Two weaker assertions were tried and both passed with the narrowing
+    // removed: the kind selector is hidden either way, and no option label is
+    // rendered when it is hidden. What the narrowing actually decides is which
+    // endpoint the dialog picks first — unnarrowed, a person scope leads with
+    // `employment` and the picker searches COMPANIES, so a reader typing a deal
+    // name would find nothing and never learn why.
+    await userEvent.type(
+      screen.getByRole("searchbox", { name: /search/i }),
+      "Depot",
+    );
+    await waitFor(
+      () => {
+        expect(screen.getByText("Depot expansion 2027")).toBeTruthy();
+      },
+      { timeout: 2000 },
+    );
+    expect(searched).toContain("deals");
+    expect(searched).not.toContain("companies");
+  });
+
+  // Withheld rather than disabled: a grant the role does not hold is not a fact
+  // about this contact, so there is nothing for a disabled button to explain.
+  it("withholds the verb from a reader who may not write an edge", async () => {
+    stubWithSession({}, {});
+    withProviders(<PersonDealsTab view={view} />);
+
+    // Awaited through the rows, so the absence is read AFTER the grant probe
+    // has answered rather than before it has run.
+    await screen.findByText("Fleet renewal 2026");
+    expect(screen.queryByRole("button", { name: "Add to a deal" })).toBeNull();
+  });
 });
 
 describe("the meetings tab", () => {

@@ -503,6 +503,7 @@ export const de = {
   "partner.stage.noFit": "Keine Passung",
 
   "rel.add": "Beziehung hinzufügen",
+  "rel.seatOnDeal": "Zu einem Deal hinzufügen",
   "rel.addStakeholder": "Beteiligten hinzufügen",
   "rel.dealStakeholders": "Beteiligte",
   "rel.dealStakeholdersEmpty": "Für diesen Deal ist niemand erfasst",
