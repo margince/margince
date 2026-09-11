@@ -225,17 +225,19 @@ func TestDeepReadRejectionLandsNothing(t *testing.T) {
 }
 
 // fakeInserter stands in for the insert-only River client so handler
-// tests can count what start enqueues.
+// tests can count what start enqueues, and what opts it queued it under.
 type fakeInserter struct {
 	inserts []river.JobArgs
+	opts    []*river.InsertOpts
 	err     error
 }
 
-func (f *fakeInserter) EnqueueTx(_ context.Context, _ pgx.Tx, args river.JobArgs, _ *river.InsertOpts) error {
+func (f *fakeInserter) EnqueueTx(_ context.Context, _ pgx.Tx, args river.JobArgs, opts *river.InsertOpts) error {
 	if f.err != nil {
 		return f.err
 	}
 	f.inserts = append(f.inserts, args)
+	f.opts = append(f.opts, opts)
 	return nil
 }
 

@@ -292,7 +292,7 @@ func startAutoEnrichRead(ctx context.Context, peopleStore *people.Store,
 				// job carries what it was queued to cost, so an operator
 				// reading river_job sees the ceiling without inferring it.
 				MaxPages: autoEnrichMaxPages,
-			}, siteDeepReadInsertOpts())
+			}, siteDeepReadInsertOpts(DeepReadPriorityHousekeeping))
 			return insErr
 		})
 	if err != nil {

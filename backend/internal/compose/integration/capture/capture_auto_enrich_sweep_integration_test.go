@@ -89,15 +89,37 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedOrg(t *testing.T) {
 	// The sweep created a system-requested dossier for the org...
 	var readCount int
 	var requestedBy string
+	var readID string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*), coalesce(max(requested_by), '') FROM site_read WHERE organization_id = $1`,
-			orgID).Scan(&readCount, &requestedBy)
+			`SELECT count(*), coalesce(max(requested_by), ''), coalesce(max(id::text), '')
+			 FROM site_read WHERE organization_id = $1`,
+			orgID).Scan(&readCount, &requestedBy, &readID)
 	}); err != nil {
 		t.Fatalf("reading the dossier: %v", err)
 	}
 	if readCount != 1 || requestedBy != "system:capture_auto_enrich" {
 		t.Fatalf("dossier count=%d requested_by=%q, want 1 / system:capture_auto_enrich", readCount, requestedBy)
+	}
+
+	// ...at the housekeeping priority (River's lowest tier) — a boot-time fan-out
+	// across every due org must never queue ahead of a live, human-started read
+	// sharing deep_read's two workers. Scoped to THIS dossier's own job by
+	// site_read_id: sweepWorkspace also runs sweepDomainTriage unconditionally
+	// before the auto-enrich loop, which can enqueue its own site_deep_read row
+	// for an unrelated domain in the same pass — an unscoped query naming only
+	// `kind` would read whichever row Postgres happened to return first.
+	var priority int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT priority FROM river_job WHERE kind = $1 AND args ->> 'site_read_id' = $2`,
+			compose.SiteDeepReadArgs{}.Kind(), readID,
+		).Scan(&priority)
+	}); err != nil {
+		t.Fatalf("reading the enqueued read's priority: %v", err)
+	}
+	if priority != compose.DeepReadPriorityHousekeeping {
+		t.Fatalf("sweep-enqueued deep read priority = %d, want %d (housekeeping)", priority, compose.DeepReadPriorityHousekeeping)
 	}
 
 	// ...and armed the cursor (attempt counted, outcome queued)...
@@ -124,5 +146,78 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedOrg(t *testing.T) {
 	}
 	if enqueued != 1 {
 		t.Fatalf("reserved %d cap slots, want exactly 1", enqueued)
+	}
+}
+
+// TestCaptureAutoEnrichSweepQueuesDomainTriageAtHousekeepingPriorityToo proves
+// the same housekeeping priority for the OTHER sweep-sourced caller sharing
+// siteDeepReadInsertOpts, over the same real River runner this file's sibling
+// test uses. sweepWorkspace runs sweepDomainTriage unconditionally before the
+// auto-enrich loop (captureautoenrich.go), so an open domain question with no
+// captured org queues through startDomainTriageRead, not startAutoEnrichRead —
+// the call site capturedomaintriage_integration_test.go's own header comment
+// names as untestable without an ambient River client this runner now supplies.
+func TestCaptureAutoEnrichSweepQueuesDomainTriageAtHousekeepingPriorityToo(t *testing.T) {
+	e := integration.Setup(t)
+	const domain = "unjudged.example"
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO organization_domain_disposition (domain, status, owner_id)
+			VALUES ($1, 'pending', $2)`, domain, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the open domain question: %v", err)
+	}
+
+	integration.ApplyRiverSchema(t)
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+	runner, err := compose.NewJobRunner(e.Pool, quiet, compose.JobRunnerConfig{
+		CloseDateInterval: time.Hour,
+		ReconcileInterval: time.Hour,
+		TimeScanInterval:  time.Hour,
+	})
+	if err != nil {
+		t.Fatalf("NewJobRunner: %v", err)
+	}
+	sub, cancelSub := runner.SubscribeCompleted()
+	defer cancelSub()
+
+	ctx := context.Background()
+	if err := runner.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := runner.Stop(stopCtx); err != nil {
+			t.Errorf("Stop: %v", err)
+		}
+	}()
+
+	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	integration.AwaitKindCompleted(waitCtx, t, sub, compose.CaptureAutoEnrichSweepArgs{}.Kind())
+
+	var readID string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT id::text FROM site_read WHERE seed_url = $1 AND target_kind = 'domain_triage'`,
+			"https://"+domain,
+		).Scan(&readID)
+	}); err != nil {
+		t.Fatalf("reading the triage dossier: %v", err)
+	}
+
+	var priority int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT priority FROM river_job WHERE kind = $1 AND args ->> 'site_read_id' = $2`,
+			compose.SiteDeepReadArgs{}.Kind(), readID,
+		).Scan(&priority)
+	}); err != nil {
+		t.Fatalf("reading the triage read's priority: %v", err)
+	}
+	if priority != compose.DeepReadPriorityHousekeeping {
+		t.Fatalf("sweep-enqueued domain triage read priority = %d, want %d (housekeeping)", priority, compose.DeepReadPriorityHousekeeping)
 	}
 }
