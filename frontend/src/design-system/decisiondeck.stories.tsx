@@ -17,7 +17,7 @@ import {
   type DecisionSharedFacts,
   type StagedDecision,
 } from "./decisiondeck";
-import { Panel } from "./panel";
+import { Panel, PanelBody } from "./panel";
 import { AutonomyDot } from "./trust";
 
 // The morning queue. Every frame here is about the same question: can a contact
@@ -355,7 +355,7 @@ export const FramedCompactList: Story = {
     },
     listCap: 3,
     // The count goes through the formatter like every other magnitude drawn
-    // for a person, on the locale this catalog is pinned to.
+    // for a contact, on the locale this catalog is pinned to.
     listRest: (hidden: number) => (
       <p className="ddeck-list-rest">
         <a className="entity-link" href="#/worklist?filter=decisions">
@@ -363,11 +363,40 @@ export const FramedCompactList: Story = {
         </a>
       </p>
     ),
-    frame: ({ toggle, content }) => (
-      <Panel title="Waiting on you" titleAction={toggle}>
-        {content}
+    // THE THREE PARTS, each in the band that is for it: the toggle in the
+    // header, the queue in a body that pays the panel's inset, and the tray in
+    // the foot — edge to edge under a hairline, which is where a line that
+    // belongs to the whole zone goes.
+    frame: ({ toggle, content, tray }) => (
+      <Panel title="Waiting on you" titleAction={toggle} footer={tray}>
+        {content === null ? null : <PanelBody>{content}</PanelBody>}
       </Panel>
     ),
+  },
+};
+
+// THE DECK inside the same frame, which is the other half of what `frame` has
+// to get right: the plate pays the panel's inset like the rows do, and the
+// count of what is behind and the keyboard legend sit under it at the body's
+// own interval rather than hanging off the pane's edge.
+export const FramedDeck: Story = {
+  args: FramedCompactList.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Deck" }));
+  },
+};
+
+// THE TRAY IN THE FOOT. One band, the panel's own chrome, a hairline over it —
+// and the body above it draws NOTHING, because with every card staged "nothing
+// is waiting on you" would contradict the count one line below.
+export const FramedTrayInTheFoot: Story = {
+  args: { ...FramedCompactList.args, items: [single(1)] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Accept" }),
+    );
   },
 };
 

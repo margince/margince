@@ -1825,12 +1825,16 @@
 
    For a row read as ONE glance: the Brief's morning plate takes in five
    readings together, and at the default floor the day's own work started below
-   the fold. 98px is the three lines at their own sizes plus this padding, which
-   is what the content actually needs — the default's 138px is air. */
+   the fold. 126px is what the content actually needs and not a round number
+   picked to look tight: the label at 15, the figure at 22, two clamped basis
+   lines at 30, the foot's 24px AA target, three intervals and this padding.
+   The default's 138px is air on top of that. A reading WITHOUT a door needs 28
+   fewer, and the floor is a floor — the row stretches every slot to the tallest
+   anyway, so pinning it lower would only let a lone doorless card collapse. */
 .stat-card-compact {
   padding: var(--space-3);
   gap: var(--space-1);
-  min-block-size: 98px;
+  min-block-size: 126px;
 }
 
 /* Nothing left to declare between two adjacent StatCards. A free-standing card

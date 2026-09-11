@@ -149,6 +149,53 @@ describe("waiting on you", () => {
     expect(screen.queryByRole("link", { name: /more/ })).toBeNull();
   });
 
+  // EVERYTHING THE QUEUE DRAWS PAYS THE PANEL'S INSET. These rows are cards
+  // rather than `PanelRow`s, so without a body around them the deck's plate ran
+  // to the pane's own edges and the count behind it and the keyboard legend hung
+  // at the panel's x=0.
+  it("draws the queue inside the panel's body", () => {
+    const { container } = render(section(2));
+
+    const body = container.querySelector(".panel .panel-body");
+    expect(body).toBeTruthy();
+    expect(body?.querySelector(".ddeck-list")).toBeTruthy();
+  });
+
+  // THE TRAY IS THE PANEL'S FOOT: one band, edge to edge, a hairline over it.
+  // Held in the body it drew its own floating box and read as a second card
+  // overlapping the pane's bottom corners.
+  it("puts the staging tray in the panel's foot, inside the same panel", async () => {
+    const user = userEvent.setup();
+    const { container } = render(section(2));
+
+    const [accept] = screen.getAllByRole("button", {
+      name: en["trust.accept"],
+    });
+    await user.click(accept);
+
+    const panel = container.querySelector(".panel");
+    const foot = panel?.querySelector(".panel-foot");
+    expect(foot?.querySelector(".ddeck-tray")).toBeTruthy();
+    // ONE panel, not a box beside it: the tray is inside the pane that names it.
+    expect(container.querySelectorAll(".panel")).toHaveLength(1);
+  });
+
+  // With every decision staged the body says NOTHING rather than "nothing is
+  // waiting on you" — which would contradict the reader's own unsent verdicts
+  // counted in the foot one line below it.
+  it("never says nothing is waiting while the tray holds the answers", async () => {
+    const user = userEvent.setup();
+    const { container } = render(section(1));
+
+    await user.click(screen.getByRole("button", { name: en["trust.accept"] }));
+
+    expect(screen.queryByText(en["brief.deck.empty"])).toBeNull();
+    expect(container.querySelector(".panel-body")).toBeNull();
+    expect(
+      container.querySelector(".panel-foot .ddeck-tray")?.textContent,
+    ).toContain(en["brief.deck.staged_one"]);
+  });
+
   // A read that has not landed is not an empty queue. Saying "nothing is
   // waiting on you" over a failed read would send a reader away believing
   // nobody was blocked on them.

@@ -2783,6 +2783,7 @@ export const de = {
   "teamweekly.noSnapshot":
     "Für dieses Team wurde noch keine Woche abgeschlossen. Die erste Momentaufnahme entsteht am Montag nach der ersten vollen Woche.",
   "teamweekly.pickTeam": "Team auswählen",
+  "teamweekly.chooseTeam": "Wähle ein Team, um dessen Woche zu lesen.",
   "teamweekly.repsUnread":
     "{count} Mitglied(er) konnten nicht gelesen werden. Alle Zahlen hier decken {counted} ab.",
   "teamweekly.ofTotal": "{part} von {whole}",
@@ -2998,7 +2999,7 @@ export const de = {
     "jemand kommt erst weiter, wenn du antwortest",
   "brief.readings.pipeline": "Pipeline · {quarter}",
   "brief.readings.pipelinePlain": "Pipeline",
-  "brief.readings.pipelineTipWorkspace": "{period} · gesamte Organisation",
+  "brief.readings.pipelineTipWorkspace": "{period} · gesamte Firma",
   "brief.readings.pipelineBasis": "{weighted} gewichtet · {priced} bewertet",
   "brief.readings.pipelineUnread": "die Pipeline war nicht lesbar",
   "brief.readings.pipelineReading": "Pipeline wird gelesen",

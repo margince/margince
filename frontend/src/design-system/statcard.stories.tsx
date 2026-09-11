@@ -58,7 +58,7 @@ export const ReadingsWithADoor: Story = {
   render: () => (
     <div style={row}>
       <StatCard
-        label="The people"
+        label="The contacts"
         value="1 of 3 engaged"
         detail="a champion is named"
         meter={{ filled: 1, total: 3 }}

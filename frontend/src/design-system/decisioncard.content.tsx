@@ -75,7 +75,7 @@ export function DraftBody({
 // then the values that would move, then the rest.
 //
 // The reason comes FIRST and unlabelled. It is a sentence the server wrote for
-// a person — the close-date sweep calls its own field "the plain-language
+// a contact — the close-date sweep calls its own field "the plain-language
 // derivation" — so captioning it would frame an explanation as a data point,
 // and burying it under the values it explains asks the reader to work out the
 // question from the answer.
@@ -137,7 +137,7 @@ export function DecisionContent({
 }
 
 // The receipts, always on the card and never behind a popover: this is the one
-// surface where a person has to be able to check a claim BEFORE agreeing to it.
+// surface where a contact has to be able to check a claim BEFORE agreeing to it.
 // Collapsed in the row layout, where a queue of verbatim snippets would bury
 // the verbs; open in the deck, where there is one card and room to read it.
 export function DecisionEvidence({

@@ -214,14 +214,14 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
           has no list surface at all and keeps no door. */}
       <DigestCount
         label={t("brief.digestContacts")}
-        value={capture.people_created ?? 0}
+        value={capture.contacts_created ?? 0}
         onOpen={() =>
           navigate({ screen: "contacts" }, new Map([["sort", "-created_at"]]))
         }
       />
       <DigestCount
-        label={t("brief.digestOrgs")}
-        value={capture.organizations_created ?? 0}
+        label={t("brief.digestCompanies")}
+        value={capture.companies_created ?? 0}
         onOpen={() =>
           navigate({ screen: "companies" }, new Map([["sort", "-created_at"]]))
         }

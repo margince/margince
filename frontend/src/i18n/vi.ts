@@ -2756,6 +2756,7 @@ export const vi = {
   "teamweekly.noSnapshot":
     "Chưa có tuần nào khép lại cho nhóm này. Ảnh chụp đầu tiên được ghi vào thứ Hai sau tuần đầy đủ đầu tiên.",
   "teamweekly.pickTeam": "Chọn một nhóm",
+  "teamweekly.chooseTeam": "Chọn một nhóm để đọc tuần của nhóm đó.",
   "teamweekly.repsUnread":
     "Không đọc được {count} thành viên. Mọi con số ở đây bao phủ {counted}.",
   "teamweekly.ofTotal": "{part} trên {whole}",

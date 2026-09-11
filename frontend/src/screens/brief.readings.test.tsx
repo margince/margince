@@ -354,17 +354,19 @@ describe("the brief readings strip", () => {
     draw();
 
     // The title has room for a quarter and nothing else, so the scope rides the
-    // cell's hover line — reached by FOCUS here rather than by hover, because a
-    // pointer tip waits on hover intent and a reader who tabbed to the cell has
-    // said what they want outright.
-    const cell = await screen.findByRole("button", {
-      name: new RegExp(
-        en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
-      ),
+    // cell's hover line. Reached through the card's own DOOR, because that is
+    // the one focusable thing on the cell and a focus event bubbles up to the
+    // wrapper the tip hangs off — a pointer tip waits on hover intent, and a
+    // reader who tabbed here has said what they want outright.
+    const door = await screen.findByRole("button", {
+      name: en["stat.open"],
+      description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
     });
-    cell.focus();
+    door.focus();
     const tip = await screen.findByRole("tooltip");
-    expect(tip.textContent).toContain("whole organization");
+    expect(tip.textContent).toContain(
+      en["brief.readings.pipelineTipWorkspace"].replace("{period} · ", ""),
+    );
     expect(tip.textContent).toContain("1 Jul 2026 – 30 Sept 2026");
   });
 
@@ -445,10 +447,14 @@ describe("the brief readings strip", () => {
     // explanation — the cell this asks would have nothing to say.
     draw({ more_available: true }, undefined, undefined, { urgent: 4 });
 
-    const cell = screen.getByRole("link", {
-      name: new RegExp(en["brief.readings.urgent"]),
-    });
-    cell.focus();
+    // Through the reading's own door: it is the cell's only focusable element,
+    // and a focus event bubbles to the wrapper carrying the tip.
+    screen
+      .getByRole("button", {
+        name: en["stat.open"],
+        description: en["brief.readings.urgent"],
+      })
+      .focus();
 
     expect((await screen.findByRole("tooltip")).textContent).toBe(
       en["brief.readings.floorTip"],
@@ -589,12 +595,11 @@ describe("the pipeline period", () => {
     // outright where a pointer waits on hover intent.
     async function rangeSaid(zone: string): Promise<string> {
       drawInZone(zone);
-      const cell = await screen.findByRole("button", {
-        name: new RegExp(
-          en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
-        ),
+      const door = await screen.findByRole("button", {
+        name: en["stat.open"],
+        description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
       });
-      cell.focus();
+      door.focus();
       return (await screen.findByRole("tooltip")).textContent ?? "";
     }
 
@@ -607,37 +612,34 @@ describe("the pipeline period", () => {
       "1 Jul 2026 – 30 Sept 2026",
     );
   });
-  // THE CELL IS THE DOOR, and its name is the reading's own words.
+  // ONE WORD, ONE DOOR PER READING. Every door on this strip is named "Open"
+  // and nothing more. Sighted, the card above each one says open WHAT — a
+  // screen reader tabbing the strip hears the same word over and over and
+  // cannot tell the lanes apart, unless each door's DESCRIPTION carries its own
+  // reading's label.
   //
-  // It used to be a word: every slot drew an "Open →" line in its foot, so five
-  // doors on one page were five identical rows in a screen reader's list and
-  // each needed a DESCRIPTION to be told apart. A cell that is itself the
-  // control announces the label, the figure and the basis it carries, so the
-  // names are distinct because the readings are.
-  //
-  // Asserted as a SET rather than cell by cell: the defect being guarded
-  // against is two doors that cannot be told apart.
-  it("names every reading's door by its own reading", async () => {
+  // Asserted as a SET rather than card by card: the defect is duplication, and
+  // a per-card check passes on four doors described identically.
+  it("describes every reading's door by its own reading", async () => {
     drawInZone("Europe/Berlin");
 
     await screen.findByText(en["brief.readings.urgent"]);
-    // Four of the five lanes come from the worklist answer and each is a link
-    // into it — the pipeline slot's read has not landed under this stub, and an
-    // unread figure is offered no way out at all.
-    const doors = screen.getAllByRole("link");
+    const doors = screen.getAllByRole("button", { name: en["stat.open"] });
+    const descriptions = doors.map((door) =>
+      (door.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .map((id) => document.getElementById(id)?.textContent?.trim() ?? "")
+        .join(" "),
+    );
 
+    // Four of the five lanes come from the worklist answer and each has a door,
+    // so the role query must find exactly four here — the pipeline slot's read
+    // has not landed under this stub, and an unread figure is offered no way
+    // out. Asserting only distinctness would pass on a strip where two doors
+    // gained a longer name and fell out of the set entirely.
     expect(doors).toHaveLength(4);
-    const names = doors.map((door) => door.textContent?.trim() ?? "");
-    expect(names.every((text) => text.length > 0)).toBe(true);
-    expect(new Set(names).size).toBe(4);
-    // And the lane each one opens is the lane its figure counted, never the
-    // whole queue: a reading that sent a reader to forty rows with no way to
-    // tell which five it counted shares nothing with its own door.
-    expect(
-      doors.every((door) =>
-        (door.getAttribute("href") ?? "").startsWith("#/worklist?filter="),
-      ),
-    ).toBe(true);
+    expect(descriptions.every((text) => text.length > 0)).toBe(true);
+    expect(new Set(descriptions).size).toBe(4);
   });
 
   // The fifth reading's door, and the two states it must tell apart. The
@@ -670,9 +672,8 @@ describe("the pipeline period", () => {
     await screen.findByText(/420k|420,000/i);
 
     const door = screen.getByRole("button", {
-      name: new RegExp(
-        en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
-      ),
+      name: en["stat.open"],
+      description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
     });
     try {
       await userEvent.setup().click(door);
@@ -691,7 +692,8 @@ describe("the pipeline period", () => {
     await screen.findByText(en["brief.readings.pipelineNoRead"]);
     expect(
       screen.queryByRole("button", {
-        name: new RegExp(en["brief.readings.pipelinePlain"]),
+        name: en["stat.open"],
+        description: en["brief.readings.pipelinePlain"],
       }),
     ).toBeNull();
   });

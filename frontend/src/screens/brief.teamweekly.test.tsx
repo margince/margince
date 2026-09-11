@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import {
@@ -191,6 +191,46 @@ describe("the week's movement counts what advanced", () => {
   });
 });
 
+// `Meter` draws the bar and nothing else — its `label` is an `aria-label`,
+// which is the only place the words exist. Five bars under one heading were
+// therefore five unlabelled tracks to everybody who could SEE them, and on a
+// quiet week that is a single grey band with a heading over it.
+it("names every movement row on the page, not only to a screen reader", async () => {
+  stubApi({
+    "GET /weekly-reviews/team": () => jsonResponse(review()),
+  });
+  render(<TeamWeeklySection teamId="t1" />);
+
+  await screen.findByText(en["teamweekly.movement.title"]);
+  // `leads` is the one movement label no stat card repeats, so finding it
+  // proves the ROW carries its name rather than the strip above.
+  expect(screen.getByText(en["teamweekly.movement.leads"])).toBeTruthy();
+});
+
+// A week in which nothing happened has no baseline to draw against: every
+// bar is an empty track, and a column of empty tracks reads as a reading
+// that failed to load rather than as a quiet week. The strip above still
+// reports the zeros, because a zero is a count.
+it("draws no bars at all when nothing moved", async () => {
+  stubApi({
+    "GET /weekly-reviews/team": () =>
+      jsonResponse(
+        review({
+          deals_won: 0,
+          deals_lost: 0,
+          deals_moved: 0,
+          meetings_held: 0,
+          leads_routed: 0,
+        }),
+      ),
+  });
+  const { container } = render(<TeamWeeklySection teamId="t1" />);
+
+  await screen.findByText(en["teamweekly.card.reps"]);
+  expect(screen.queryByText(en["teamweekly.movement.title"])).toBeNull();
+  expect(container.querySelectorAll('[role="meter"]')).toHaveLength(0);
+});
+
 describe("the scorecard says what the wins were worth", () => {
   // The count alone says a week of five small renewals and a week of one
   // company-making deal are the same week. The money was computed, converted
@@ -362,6 +402,74 @@ describe("the team picker", () => {
 
     await screen.findByText(en["teamweekly.movement.title"]);
     expect(screen.queryByLabelText(en["teamweekly.pickTeam"])).toBeNull();
+  });
+});
+
+// Before a team is chosen there is nothing to read, and a page that says so is
+// not the same as a page that is blank: blank, a reader cannot tell a surface
+// waiting on them from one whose content failed to arrive.
+describe("the page before a team is chosen", () => {
+  it("gives the page a body rather than leaving it empty under the picker", async () => {
+    stubApi({
+      "GET /teams": () =>
+        jsonResponse({
+          data: [
+            { id: "t1", name: "Nord" },
+            { id: "t2", name: "Sued" },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(<TeamWeeklyPanel offered />);
+
+    // The picker is a real choice with two teams, so it is drawn — and the
+    // pane under it is drawn WITH it rather than after the reader answers.
+    expect(
+      await screen.findByLabelText(en["teamweekly.pickTeam"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: en["teamweekly.title"] }),
+    ).toBeTruthy();
+  });
+
+  // A read still in flight, and a scope that reaches no team, both leave the
+  // picker undrawn — so the page must not tell somebody to choose from a
+  // control that is not there.
+  it("says nothing at all when there is no picker to answer", async () => {
+    stubApi({
+      "GET /teams": () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    const { container } = render(<TeamWeeklyPanel offered />);
+
+    await waitFor(() =>
+      expect(screen.queryByLabelText(en["teamweekly.pickTeam"])).toBeNull(),
+    );
+    expect(
+      container.querySelector('[aria-labelledby], [role="region"]'),
+    ).toBeNull();
+  });
+
+  it("asks the server for no week until a team is named", async () => {
+    const calls = stubApi({
+      "GET /teams": () =>
+        jsonResponse({
+          data: [
+            { id: "t1", name: "Nord" },
+            { id: "t2", name: "Sued" },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(<TeamWeeklyPanel offered />);
+
+    await screen.findByLabelText(en["teamweekly.pickTeam"]);
+    expect(
+      calls.filter((call) => call.path.startsWith("/weekly-reviews/team")),
+    ).toHaveLength(0);
   });
 });
 

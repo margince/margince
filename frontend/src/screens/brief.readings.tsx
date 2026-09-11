@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { useRecordZone } from "../app/recordzone";
+import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { useTooltip } from "../design-system/tooltip";
@@ -25,8 +26,8 @@ import {
 import { openAnalyticsSection } from "./analytics.address";
 import { useAnalyticsContext } from "./analytics.context";
 import { useForecastReadings } from "./forecast.queries";
+import { WORKLIST_FILTER_PARAM } from "./worklist";
 import { isUnprepared } from "./worklist.copy";
-import { worklistLaneHref } from "./worklist.header";
 import type {
   Worklist,
   WorklistFilter,
@@ -63,6 +64,14 @@ import type {
 const MEETINGS = "meetings";
 const LEADS = "leads";
 
+// Open the worklist on the lane a reading counted.
+//
+// Each figure in this strip IS one of the queue's filter pills counted, so the
+// reading's door is that lane.
+function openLane(filter: WorklistFilter): void {
+  navigate({ screen: "worklist" }, new Map([[WORKLIST_FILTER_PARAM, filter]]));
+}
+
 /**
  * One reading: what it is, the figure, and what the figure rests on.
  *
@@ -85,7 +94,12 @@ type Reading = Readonly<{
 }>;
 
 /**
- * A reading whose whole cell is a link into the lane it counted.
+ * One reading, with the door in the card's own foot.
+ *
+ * The DOOR IS A WORD, not the cell. `StatCard onOpen` is the one spelling of
+ * that control in the product and it stretches its own press target over the
+ * whole tile, so the reading is still one thing to press — and a stat card's
+ * appearance is a question for the card, not for the five screens that draw one.
  *
  * The lane goes in the QUERY rather than the path because `#/worklist/<owner>`
  * is already an address the team board navigates to, and `routeIdentity`
@@ -100,12 +114,11 @@ function LaneReading({ label, count, basis, warn, floor, lane }: Reading) {
   // that counts something and nowhere else. A bounded read that found none of
   // a kind is a reading of zero, and the `+` was noise on it.
   const marked = floor === true && count > 0;
-  // The tip rides the CELL, which is already the press target: a dense slot has
-  // no room for a second anchor, and a mark on the figure that explains itself
-  // only to a pointer resting on three characters is a mark most readers never
-  // read. Wired only where the figure is a floor — an `aria-describedby`
-  // pointing at a tip nobody renders is a dangling reference.
-  const floorTip = useTooltip<HTMLAnchorElement>(t("brief.readings.floorTip"));
+  // The tip rides the whole CELL rather than the three characters that carry
+  // the mark: a `+` that explains itself only to a pointer resting on it is a
+  // mark most readers never read. Focus reaches it too — the card's own door is
+  // inside this element, and a focus event bubbles.
+  const floorTip = useTooltip<HTMLSpanElement>(t("brief.readings.floorTip"));
 
   const figure = formatNumber(count, locale);
   const card = (
@@ -118,16 +131,21 @@ function LaneReading({ label, count, basis, warn, floor, lane }: Reading) {
       // same air. At the tile's default floor the day's own work started below
       // the fold on a laptop.
       density="compact"
+      onOpen={() => openLane(lane)}
     />
   );
-  const href = worklistLaneHref(lane);
+  // A plain SPAN and nothing more where the figure is a floor: it carries the
+  // tip and no behaviour of its own, because the card inside it already holds
+  // the only control on the cell. An unmarked reading gets no wrapper at all —
+  // an `aria-describedby` pointing at a tip nobody renders is a dangling
+  // reference.
   return marked ? (
-    <a href={href} ref={floorTip.ref} {...floorTip.trigger}>
+    <span ref={floorTip.ref} {...floorTip.trigger}>
       {card}
       {floorTip.tip}
-    </a>
+    </span>
   ) : (
-    <a href={href}>{card}</a>
+    card
   );
 }
 
@@ -347,7 +365,7 @@ function PipelineOutlook() {
     data === undefined
       ? ""
       : `${formatDateAbbrev(middayInstant(data.period_start, recordZone), locale, recordZone)} – ${formatDateAbbrev(middayInstant(data.period_end, recordZone), locale, recordZone)}`;
-  const tip = useTooltip<HTMLButtonElement>(
+  const tip = useTooltip<HTMLSpanElement>(
     data?.scope_kind === "workspace"
       ? t("brief.readings.pipelineTipWorkspace", { period: range })
       : range,
@@ -387,20 +405,9 @@ function PipelineOutlook() {
   }
   const quarter = quarterLabel(data.period_start);
   return (
-    // The forecast section, which is where this figure is read from: the same
-    // query key, under the same scope the server named for this reader. Not the
-    // deals list — the reading is a period's weighted outlook, and a list of
-    // open deals is a different question that happens to share a sum.
-    //
-    // A button rather than a link, because `openAnalyticsSection` is the ONE
-    // spelling of that move: the tab strip and a reading's door are the same
-    // navigation, and a second address built here could disagree with it.
-    <button
-      type="button"
-      onClick={() => openAnalyticsSection("forecast")}
-      ref={tip.ref}
-      {...tip.trigger}
-    >
+    // The range and, where the figure is the whole organization's, whose
+    // pipeline it is: a dense title has room for a quarter and nothing more.
+    <span ref={tip.ref} {...tip.trigger}>
       <StatCard
         label={
           quarter === null
@@ -411,6 +418,14 @@ function PipelineOutlook() {
         // has about 110px and a full euro figure wraps mid-number or clips.
         density="compact"
         value={formatMoneyCompact(data.open_minor, data.base_currency, locale)}
+        // THE FORECAST SECTION, which is where this figure is read from: the
+        // same query key, under the same scope the server named for this
+        // reader. Not the deals list — the reading is a period's weighted
+        // outlook, and a list of open deals is a different question that
+        // happens to share a sum. `openAnalyticsSection` is the ONE spelling of
+        // that move, shared with the tab strip, so a second address built here
+        // could not disagree with it.
+        onOpen={() => openAnalyticsSection("forecast")}
         // The weighted figure and how much of the population carries a price,
         // because they are read together: a weighted number over a partly
         // priced population is a floor, and a reader who cannot see the second
@@ -425,6 +440,6 @@ function PipelineOutlook() {
         })}
       />
       {tip.tip}
-    </button>
+    </span>
   );
 }

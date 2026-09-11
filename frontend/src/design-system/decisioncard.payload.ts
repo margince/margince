@@ -119,7 +119,7 @@ export function diffsOf(
 //
 // A kind that declares a display policy shows exactly what it declared: the
 // caller resolved those fields, so the payload's remaining keys are identifiers
-// and bookkeeping that answer nothing a person was asked. Printing them was how
+// and bookkeeping that answer nothing a contact was asked. Printing them was how
 // a business question came to read as a database row — `deal_id`,
 // `target_version`, `flags: ["unrealistic_stale"]` under a headline about a
 // deal going quiet.

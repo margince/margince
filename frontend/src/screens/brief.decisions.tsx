@@ -22,7 +22,7 @@ import {
   type DecisionDeckItem,
   type DecisionDeckLabels,
 } from "../design-system/decisiondeck";
-import { Panel } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import type { SectionState } from "../design-system/surfacestate";
 import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -215,9 +215,24 @@ export function DecisionsSection({
       <DecisionDeck
         items={items}
         now={nowMs}
-        frame={({ toggle, content }) => (
-          <Panel title={t("brief.panel.decisions")} titleAction={toggle}>
-            {content}
+        frame={({ toggle, content, tray }) => (
+          <Panel
+            title={t("brief.panel.decisions")}
+            titleAction={toggle}
+            // THE TRAY IS THE PANEL'S FOOT. It belongs to the whole zone rather
+            // than to the queue — one line saying what is held and the two
+            // controls that answer it — so it takes the band that is the
+            // panel's own chrome: edge to edge, a hairline over it, the panel's
+            // inset. In the body it drew its floating shape and read as a
+            // second card overlapping the pane's bottom corners.
+            footer={tray}
+          >
+            {/* PanelBody, because these rows are cards rather than `PanelRow`s:
+                without it the deck's plate ran to the pane's own edges and the
+                count behind it and the keyboard legend hung at x=0. Null while
+                every card is staged, so the panel is its head and its foot
+                rather than a band of empty padding. */}
+            {content === null ? null : <PanelBody>{content}</PanelBody>}
           </Panel>
         )}
         listCap={LISTED}

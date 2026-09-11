@@ -59,41 +59,31 @@
   grid-column: span var(--stat-strip-tail, 1);
 }
 
-/* A SLOT MAY BE A CONTROL, and either kind: a BUTTON where the slot makes a
- * move (a filter over the same readings it is comparing) and a LINK where the
- * slot is a door into the rows its figure was read from. Both are the slot
- * ITSELF rather than something inside it, which is the whole claim — a dense
- * reading has no room for a separate word to press, and a row of five slots
- * each carrying its own "Open" is five identical rows in a screen reader's
- * list, where the CELL announces the reading's own name.
+/* A SLOT MAY BE A CONTROL. A strip of filters is still one comparison — the
+ * reader is choosing between the same readings they are comparing — so the
+ * press target is the slot itself rather than something inside it. The button
+ * brings no chrome of its own: the card inside it is the whole of what a
+ * reader sees, and the state lands on that card.
  *
- * Neither brings chrome of its own: the card inside is the whole of what a
- * reader sees, and any state lands on that card. A link loses its underline
- * for the same reason — it is a pane, not a phrase. */
-/* `a[href]` and not a bare `a`, and the reason is a specificity tie rather than
- * a taste: base.css draws the product's prose links through `a:not([class])`,
- * which scores exactly what `.stat-strip > a` does — so which of the two
- * painted a door came down to which sheet the bundler emitted first, and the
- * readings shipped as five green underlined hyperlinks. A door is the one
- * anchor in the tree whose whole box is the affordance, so the plate has to win
- * outright. `[href]` is also what a door IS: an anchor without one navigates
- * nowhere and is no slot control. */
-.stat-strip > :is(button, a[href]) {
+ * A reading that OPENS something is NOT this: its door is a word in the card's
+ * own foot (`StatCard onOpen`), which is one spelling for every reading in the
+ * product and stretches its own press target over the tile. A slot wrapped in
+ * an anchor was tried on the Brief and taken out. */
+.stat-strip > button {
   font: inherit;
   color: inherit;
   text-align: inherit;
-  /* Not inherited away by the card's own text: `text-decoration` propagates
-     from an ancestor to every descendant and cannot be cancelled further down,
-     so the label, the figure and the basis line were all underlined by this one
-     element. It has to be refused HERE or not at all. */
-  text-decoration: none;
   padding: 0;
   border: 0;
   background: none;
   border-radius: var(--r-lg);
   cursor: pointer;
 }
-.stat-strip > :is(button, a[href]) > .stat-card {
+/* The slot stretches to the row's height, so a card inside a WRAPPER has to
+   stretch with it — a filter's button, and equally a plain span a screen puts
+   round a tile to hang a tooltip on. `> *` rather than `> button`, because the
+   property belongs to being a wrapper and not to being pressable. */
+.stat-strip > * > .stat-card {
   block-size: 100%;
 }
 
@@ -158,9 +148,14 @@
     min-block-size: 0;
     display: grid;
     grid-template-columns: 1fr auto;
+    /* The reading's own words lead, the figure and its door stack on the
+       trailing edge. Two rows rather than one so the door keeps its 24px AA
+       target without setting the row's height: a foot beside a figure on one
+       line would be the widest thing on the row and push the label to a
+       second. */
     grid-template-areas:
       "label figure"
-      "basis figure";
+      "basis foot";
     align-items: center;
     column-gap: var(--space-4);
     row-gap: 0;
@@ -174,6 +169,10 @@
        it runs to. `tabular-nums` is the tile's own and does the rest. */
     text-align: right;
   }
+  .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-foot {
+    grid-area: foot;
+    justify-self: end;
+  }
   .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-detail {
     grid-area: basis;
     /* ONE line in a row this short: at two it doubles the row's height, and a
@@ -184,31 +183,21 @@
   .stat-strip:has(.stat-card-compact) > * + * {
     border-block-start: 1px solid var(--paneEdge);
   }
-  /* A door's own corner goes with its box: a radius on a full-bleed row clips
-     the hairline it sits against. */
-  .stat-strip:has(.stat-card-compact) > :is(button, a[href]) {
+  /* A wrapper's own corner goes with its box: a radius on a full-bleed row
+     clips the hairline it sits against. */
+  .stat-strip:has(.stat-card-compact) > button {
     border-radius: 0;
   }
 }
 
-/* A slot that can be pressed answers the press: a selected filter arrives with
-   its wash in a single frame, and a door under the pointer lights the whole
-   pane rather than a word inside it. */
-.stat-strip > :is(button, a[href]) > .stat-card {
+/* A strip of figures where one is selectable: the selected slot arrived with
+   its wash in a single frame. */
+.stat-strip > button > .stat-card {
   transition:
     background-color var(--dur-state) var(--ease-out),
     border-color var(--dur-state) var(--ease-out);
 }
-/* THE SURFACE ANSWERS, not the words. A door here is a card that happens to
-   open something, so what says "pressable" is the pane lifting off the page —
-   its ground and its hairline together, because a ground shift alone on a
-   translucent surface is almost invisible in dark. Never an underline: that is
-   a claim about a phrase, and this is a claim about a box. */
-.stat-strip > :is(button, a[href]):hover > .stat-card {
-  background-color: var(--bgCard);
-  border-color: var(--borderStrong);
-}
-.stat-strip > :is(button, a[href]):active:not(:disabled) > .stat-card {
+.stat-strip > button:active:not(:disabled) > .stat-card {
   background-color: var(--bgCard);
   transition-duration: var(--dur-tap);
 }

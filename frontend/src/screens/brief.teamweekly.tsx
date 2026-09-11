@@ -3,7 +3,8 @@
 
 import { useState } from "react";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, StatCard } from "../design-system/atoms";
+import { Badge, EmptyState, StatCard } from "../design-system/atoms";
+import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { Select } from "../design-system/select";
@@ -163,12 +164,18 @@ export function TeamWeeklySection({
           )}
           {review && (
             <>
-              <PanelBody>
+              <PanelBody className="teamweekly-reading">
                 <Headline review={review} />
                 <AgendaSummary review={review} />
                 <Coverage review={review} />
               </PanelBody>
-              <Scorecard review={review} />
+              {/* The strip pays the pane's inset like everything else in it.
+                  As a direct child of the panel it ran edge to edge, so the
+                  readings sat a pixel off the pane's own border while the
+                  sentence above them was inset by the body's gutter. */}
+              <PanelBody>
+                <Scorecard review={review} />
+              </PanelBody>
               <Movement review={review} />
             </>
           )}
@@ -294,6 +301,7 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   return (
     <StatStrip testId="teamweekly-strip">
       <StatCard
+        density="compact"
         label={t("teamweekly.card.firstResponse")}
         value={ofTotal(counts.leads_answered_in_target, counts.leads_routed)}
         detail={t("teamweekly.card.firstResponseBasis", {
@@ -301,16 +309,19 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         })}
       />
       <StatCard
+        density="compact"
         label={t("teamweekly.card.meetings")}
         value={ofTotal(counts.meetings_with_next_step, counts.meetings_held)}
         detail={t("teamweekly.card.meetingsBasis")}
       />
       <StatCard
+        density="compact"
         label={t("teamweekly.card.commitments")}
         value={ofTotal(counts.commitments_kept, counts.commitments_due)}
         detail={t("teamweekly.card.commitmentsBasis")}
       />
       <StatCard
+        density="compact"
         label={t("teamweekly.card.won")}
         value={n(counts.deals_won)}
         // What the wins were WORTH, beside how many were lost. The count alone
@@ -331,6 +342,7 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         }
       />
       <StatCard
+        density="compact"
         label={t("teamweekly.card.reps")}
         value={n(counts.reps_counted)}
         detail={t("teamweekly.card.repsBasis")}
@@ -345,9 +357,21 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
  * Length follows magnitude and the figure carries the reading — a bar whose
  * length alone said "good" or "bad" would be making a claim the snapshot does
  * not, since a team that lost four deals and won four drew two equal bars.
+ *
+ * ONE ROW PER DIMENSION, and the row carries the words: the name leading, the
+ * bar taking the room between, the count trailing. `Meter` draws the bar and
+ * nothing else — its `label` is an `aria-label` — so five bars under one
+ * heading were five unlabelled tracks to everybody who could see them, which
+ * on a quiet week is a single grey band with a heading over it.
+ *
+ * A WEEK IN WHICH NOTHING HAPPENED DRAWS NO BARS. With every count at zero
+ * there is no baseline to draw against: the bars are empty tracks, and a row of
+ * empty tracks reads as a reading that failed to load rather than as a week
+ * that was quiet. The strip above already reports the zeros as figures.
  */
 function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
+  const { locale } = useLocale();
   const counts = review.counts;
   const rows = [
     { key: "teamweekly.movement.won" as const, value: counts.deals_won },
@@ -366,20 +390,22 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   ];
   // One baseline for every bar. A per-row max would draw four full bars and say
   // nothing about which number is the big one.
-  const max = Math.max(...rows.map((row) => row.value), 1);
+  const max = Math.max(...rows.map((row) => row.value));
+  if (max === 0) {
+    return null;
+  }
 
   return (
-    <PanelBody>
-      <h3 className="teamweekly-subhead">{t("teamweekly.movement.title")}</h3>
+    <PanelBody className="teamweekly-movement">
+      <Eyebrow as="h3">{t("teamweekly.movement.title")}</Eyebrow>
       {rows.map((row) => (
-        <Meter
-          key={row.key}
-          label={t(row.key)}
-          value={row.value}
-          max={max}
-          dense
-          flat
-        />
+        <div className="teamweekly-movement-row" key={row.key}>
+          <span className="teamweekly-movement-name">{t(row.key)}</span>
+          <Meter label={t(row.key)} value={row.value} max={max} dense flat />
+          <span className="teamweekly-movement-count">
+            {formatNumber(row.value, locale)}
+          </span>
+        </div>
       ))}
     </PanelBody>
   );
@@ -406,18 +432,41 @@ export function TeamWeeklyPanel({ offered }: Readonly<{ offered: boolean }>) {
   // One team is not a choice. Reading it straight skips a control whose only
   // option is the one already showing.
   const chosen = teamId || (options.length === 1 ? options[0].value : "");
+  // Whether the reader is actually being ASKED. A read still in flight and a
+  // scope that reaches no team both leave the picker undrawn, and the page
+  // under it must not then tell somebody to choose from a control that is not
+  // there — an instruction nobody can follow is worse than a quiet page.
+  const asking = options.length > 1;
   return (
-    <>
-      {options.length > 1 && (
-        <Select
-          options={options}
-          value={chosen}
-          onChange={setTeamId}
-          placeholder={t("teamweekly.pickTeam")}
-          aria-label={t("teamweekly.pickTeam")}
-        />
+    <div className="teamweekly-view">
+      {asking && (
+        // Held to a reading width. A dropdown stretched across the work column
+        // is a 1400px control whose face carries four words, and the page under
+        // it then reads as a toolbar with nothing beneath.
+        <div className="teamweekly-pick">
+          <Select
+            options={options}
+            value={chosen}
+            onChange={setTeamId}
+            placeholder={t("teamweekly.pickTeam")}
+            aria-label={t("teamweekly.pickTeam")}
+          />
+        </div>
       )}
       {chosen !== "" && <TeamWeeklySection teamId={chosen} />}
-    </>
+      {/* The page while the question is still open. Blank, it read as a
+          surface whose content had failed to arrive; this says the page is
+          waiting on the reader and names what it is waiting for. */}
+      {asking && chosen === "" && (
+        <Panel title={t("teamweekly.title")}>
+          {/* In a BODY: an empty state is a sentence here, not a stage, and
+              `panel.css` caps it to the body's interval and drops the inset
+              card's own ground — a second surface inside the pane. */}
+          <PanelBody>
+            <EmptyState>{t("teamweekly.chooseTeam")}</EmptyState>
+          </PanelBody>
+        </Panel>
+      )}
+    </div>
   );
 }

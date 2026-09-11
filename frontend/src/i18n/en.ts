@@ -2883,6 +2883,7 @@ export const en = {
   "teamweekly.noSnapshot":
     "No week has closed for this team yet. The first snapshot is written on the Monday after their first full week.",
   "teamweekly.pickTeam": "Choose a team",
+  "teamweekly.chooseTeam": "Choose a team to read its week.",
   "teamweekly.repsUnread":
     "{count} member(s) could not be read. Every figure here covers {counted}.",
   "teamweekly.ofTotal": "{part} of {whole}",
@@ -3107,8 +3108,8 @@ export const en = {
   "brief.readings.pipelinePlain": "Pipeline",
   // The cell's hover line. The title has room for a quarter and nothing more,
   // so the full range lives here — and where the figure is the whole
-  // organization's rather than this reader's, whose pipeline it is.
-  "brief.readings.pipelineTipWorkspace": "{period} · whole organization",
+  // company's rather than this reader's, whose pipeline it is.
+  "brief.readings.pipelineTipWorkspace": "{period} · whole company",
   "brief.readings.pipelineBasis": "{weighted} weighted · {priced} priced",
   "brief.readings.pipelineUnread": "the pipeline could not be read",
   "brief.readings.pipelineReading": "reading the pipeline",

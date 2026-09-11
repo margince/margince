@@ -251,18 +251,16 @@ export const GlanceWeeklyUnread: Story = {
 
 // ── The readings strip ──────────────────────────────────────────────────────
 
-// ONE DENSE ROW: label, figure, basis line, and the whole cell is the door into
-// the lane its figure counted. Each slot used to carry an "Open →" line in its
-// foot — a decorative row on a plate whose argument is that five readings are
-// taken in at one glance, and five doors all reading "Open" were five identical
-// rows in a screen reader's list.
+// ONE DENSE ROW: label, figure, basis line, and the way into the lane the
+// figure counted in the card's own foot. The density is the change here — the
+// tile keeps every line at the size every stat card in the product draws it,
+// and gives up only air, so five readings are taken in at one glance instead of
+// pushing the day's own work below the fold.
 //
-// Hover a cell to see it: the press target is the pane, its ground and hairline
-// both answer, and the figure is in NEUTRAL ink unless the reading counts
-// something breaching — four coloured numbers in a row are a traffic light
-// rather than a comparison. A door here looks like a card that happens to open
-// something: no green, no underline. It shipped as five hyperlinks, because
-// base.css's prose-link rule and the plate's slot reset scored the same.
+// The figure is in NEUTRAL ink unless the reading counts something BREACHING:
+// four coloured numbers in a row are a traffic light rather than a comparison.
+// Press anywhere on a cell — the foot's word names the destination and the tile
+// stretches that button over itself, so the reading is one thing to press.
 export const Readings: Story = {
   render: part(<BriefReadingsStrip day={readingsDay()} />),
 };
@@ -293,11 +291,12 @@ export const ReadingsCapped: Story = {
 };
 
 // The same plate at a phone's width, where it is one full-width ROW per
-// reading: label and basis leading, figure trailing, one hairline between, and
-// no boxes at all. Two-up it was five 190px cards and 600px of readings before
-// a reader reached the day's own work. The shape belongs to `StatStrip` and
-// keys off the slots declaring `density="compact"`, so no other strip in the
-// product folds this way — `Design System/StatStrip` has both side by side.
+// reading: label and basis leading, figure and its door stacked on the trailing
+// edge, one hairline between, and no boxes at all. Two-up it was five 190px
+// cards and 600px of readings before a reader reached the day's own work. The
+// shape belongs to `StatStrip` and keys off the slots declaring
+// `density="compact"`, so no other strip in the product folds this way —
+// `Design System/StatStrip` has both side by side.
 export const ReadingsOnAPhone: Story = {
   globals: { viewport: { value: "phone" } },
   render: part(

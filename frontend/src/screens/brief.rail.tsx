@@ -12,7 +12,7 @@ import type { MessageKey } from "../i18n/en";
 import { type Deal, useMorningDigest, usePipelineValue } from "./brief.queries";
 import { overnightIsEmpty } from "./brief.rail.overnight";
 import { scheduleIsEmpty, tasksIsEmpty } from "./brief.schedule";
-import { toBoardDeal, useOrgMarks } from "./deals";
+import { toBoardDeal, useCompanyMarks } from "./deals";
 import { rosterOwnerNaming, useRoster } from "./entityref";
 import type { Worklist } from "./worklist.queries";
 

@@ -1,5 +1,7 @@
-/* The week ahead. Rows are a checkbox beside a stack: label, then the meta line
-   under it, then whatever the rep and their lead have said to each other. */
+/* The week ahead, and what it is up against. Both panels are lists of rows, so
+   both take the panel's own row: the plan's is a checkbox beside a stack, the
+   contract's is a question on the leading edge and its answer on the trailing
+   one. */
 .plan-row {
   display: flex;
   align-items: flex-start;
@@ -50,4 +52,59 @@
 .plan-readonly {
   margin: 0;
   color: var(--textMeta);
+}
+
+/* ── What the week is up against ───────────────────────────────────────────
+ * One half of the contract per row: what it is on the leading edge, what the
+ * rep wrote and the verb that changes it on the trailing one. The hairline
+ * between rows is `PanelRow`'s own — before this the two halves were headings
+ * and paragraphs stacked in a body, six lines of text with nothing saying
+ * which line answered which. */
+
+.plan-contract-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  width: 100%;
+}
+
+/* The question. It never gives way: a name squeezed to buy the answer room
+   stops being the thing the row is scanned by. */
+.plan-contract-name {
+  flex: 0 0 auto;
+}
+
+/* The answer and its verb, held to the trailing edge so the two rows line up
+   whatever length the labels beside them run to. `min-width: 0` so a long
+   note wraps inside the column rather than pushing the verb off the row. */
+.plan-contract-answer {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 auto;
+  color: var(--textContent);
+}
+
+/* The editor takes the whole row: a textarea in the answer's column would be a
+   writing surface a third of a sentence wide. */
+.plan-contract-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+/* ── The two panels of the week ahead ──────────────────────────────────────
+ * The plan and the contract are two cards of one column, so they are spaced
+ * as cards are. Without this they touched, and a reader met the second panel's
+ * header band a pixel under the first panel's edge. */
+#brief-plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
 }

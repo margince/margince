@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { type DecisionApproval, decisionLapsed } from "./decisioncard";
-import type { DecisionDeckItem, DeckVerdict } from "./decisiondeck";
+import type {
+  DecisionDeckItem,
+  DeckVerdict,
+  StagedDecision,
+} from "./decisiondeck";
 
 // What an INPUT means, and what an ITEM can truthfully say about itself.
 //
@@ -133,4 +138,65 @@ function agreed<T>(
   return first != null && values.every((value) => value === first)
     ? first
     : undefined;
+}
+
+/**
+ * THE KEYBOARD SURFACE, wired to the four things it can do.
+ *
+ * A factory rather than a hook or a branch inside the deck: what a key MEANS is
+ * this module's question — `keyVerdict` above answers half of it — and the
+ * other half is that two keys mean something the verdict vocabulary cannot say,
+ * `U` for the last one back and Enter for send. Keeping the dispatch here puts
+ * all six answers in one place, where a reader checking the legend against the
+ * behaviour reads one function rather than a component's render.
+ *
+ * Only a press on the SURFACE ITSELF counts. The card inside it holds buttons
+ * and an expander, and an arrow pressed while one of those has focus is a
+ * reader moving through a control rather than answering the proposal.
+ */
+export function deckKeyHandler({
+  live,
+  onStage,
+  onUnstage,
+  onCommit,
+}: Readonly<{
+  live: DecisionDeckItem | undefined;
+  onStage: (item: DecisionDeckItem, verdict: DeckVerdict) => void;
+  onUnstage: () => void;
+  onCommit: () => void;
+}>) {
+  return (event: ReactKeyboardEvent<HTMLFieldSetElement>) => {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    const verdict = keyVerdict(event.key);
+    if (verdict && live) {
+      event.preventDefault();
+      onStage(live, verdict);
+      return;
+    }
+    if (event.key === "u" || event.key === "U") {
+      event.preventDefault();
+      onUnstage();
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      onCommit();
+    }
+  };
+}
+
+/**
+ * Whether a staged verdict is one the caller will actually SEND.
+ *
+ * Accept and reject leave the browser; later and edit-elsewhere do not — later
+ * means the proposal is offered again next time, and an edited payload re-enters
+ * the admission gate as a form rather than as a swipe. The split belongs to the
+ * verdict vocabulary rather than to the commit that reads it: it is a fact about
+ * what the four words MEAN, and a second spelling of it inside a handler is how
+ * a tray comes to hold a verdict forever that nothing will ever send.
+ */
+export function verdictSends(entry: StagedDecision): boolean {
+  return entry.verdict === "accept" || entry.verdict === "reject";
 }

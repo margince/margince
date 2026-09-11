@@ -123,6 +123,43 @@ describe("the week ahead", () => {
     ).toBeTruthy();
   });
 
+  // An empty footer band is a band nobody asked for. `Panel` draws the strip
+  // whenever `footer` is a node at all, so a foot component that returned null
+  // underneath it left a bordered strip under "Nothing on the plan yet" — a
+  // rule with nothing above or below it.
+  it("draws no footer band on a week with nothing to save", async () => {
+    stubApi({
+      ...KEEPS_A_PLAN,
+      "GET /weekly-plans/current": () =>
+        jsonResponse(plan({ commitments: [] })),
+    });
+    const { container } = render(<PlanSection />);
+
+    await screen.findByText(en["plan.empty"]);
+    expect(container.querySelector(".panel-foot")).toBeNull();
+  });
+
+  // And it comes back the moment there is something in it, so the absence
+  // above is the foot being EMPTY rather than the foot being gone for good.
+  it("draws the footer band once a tick is staged", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      ...KEEPS_A_PLAN,
+      "GET /weekly-plans/current": () => jsonResponse(plan()),
+    });
+    const { container } = render(<PlanSection />);
+
+    await user.click(
+      await screen.findByRole("checkbox", {
+        name: "Call the Aster buyer back",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(container.querySelector(".panel-foot")).toBeTruthy(),
+    );
+  });
+
   it("settles the staged commitment on Save, and only that one", async () => {
     const calls = stubApi({
       ...KEEPS_A_PLAN,

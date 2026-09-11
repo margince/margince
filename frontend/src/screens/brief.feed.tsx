@@ -42,7 +42,7 @@ import "./brief.feed.css";
 // now" row ranked below a "move revenue" one — which is ordinary and correct,
 // because a customer waiting an hour does not outrank a deal closing today.
 
-/** At most this many rows. A morning a person can finish, not a list. */
+/** At most this many rows. A morning a contact can finish, not a list. */
 const FEED = 5;
 
 /**

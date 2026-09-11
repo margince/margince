@@ -75,7 +75,7 @@ Ada`;
 
 // A SEND-SHAPED payload: the words somebody is about to put their name on, with
 // the reason above them. The reason is unlabelled on purpose — it is a sentence
-// the server wrote for a person, and captioning it would frame an explanation
+// the server wrote for a contact, and captioning it would frame an explanation
 // as a data point.
 export const ADraftedMessage: Story = {
   render: () => (
@@ -148,7 +148,7 @@ export const AClampedBodyWithNoExpander: Story = {
   ),
 };
 
-// THE RECEIPTS, open: this is the one surface where a person has to be able to
+// THE RECEIPTS, open: this is the one surface where a contact has to be able to
 // check a claim before agreeing to it, so the deck draws them where there is
 // room to read them.
 export const EvidenceOpen: Story = {

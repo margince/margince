@@ -475,6 +475,21 @@ describe("DecisionDeck — the states it can honestly be in", () => {
     expect(screen.getByText("2 more behind")).toBeInTheDocument();
   });
 
+  // AND SAYS NOTHING AT ZERO. On the last card there is nothing behind it to
+  // count, and the plate already says so by having no edges peeking out from
+  // under it — "0 more behind" is a line of furniture over the one card the
+  // reader is being asked to answer.
+  it("says nothing about what is behind the last card", async () => {
+    const user = userEvent.setup();
+    render(deck({ items: [THREE[0]] }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
+
+    expect(
+      screen.getByText("Arrow keys decide, Enter commits"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("0 more behind")).not.toBeInTheDocument();
+  });
+
   // The cleared plate is the deck REMEMBERING what it watched leave: a staged
   // verdict whose item is gone from `items` was decided, which is a better signal
   // than a success callback because it cannot claim a decision the list still
@@ -683,6 +698,80 @@ describe("DecisionDeck — framed by its surface", () => {
     );
 
     expect(screen.getByTestId("band")).toBeEmptyDOMElement();
+  });
+});
+
+// THE TRAY IS THE SURFACE'S TO PLACE, apart from the queue: it belongs to the
+// whole zone rather than to the list, and a surface that holds it in the body
+// draws it as a second box inside its own pane.
+describe("DecisionDeck — the tray the frame is handed", () => {
+  function framed(over: Partial<Parameters<typeof DecisionDeck>[0]> = {}) {
+    return deck({
+      frame: ({ toggle, content, tray }) => (
+        <div>
+          <header data-testid="band">{toggle}</header>
+          <div data-testid="body">{content}</div>
+          <footer data-testid="foot">{tray}</footer>
+        </div>
+      ),
+      ...over,
+    });
+  }
+
+  it("hands the frame no tray while nothing is staged", () => {
+    render(framed());
+
+    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("body")).not.toBeEmptyDOMElement();
+  });
+
+  it("hands the tray to the foot once a verdict is staged", async () => {
+    const user = userEvent.setup();
+    render(framed());
+
+    const [accept] = screen.getAllByRole("button", { name: "Accept" });
+    await user.click(accept);
+
+    const foot = screen.getByTestId("foot");
+    expect(foot).not.toBeEmptyDOMElement();
+    expect(foot.textContent).toContain("1 staged");
+    // And the queue keeps the rest: two of the three are still to answer.
+    expect(screen.getByTestId("body")).not.toBeEmptyDOMElement();
+  });
+
+  // WITH EVERY CARD STAGED the queue has nothing to draw — and must not draw
+  // the empty arm, which says nothing is waiting over the reader's own unsent
+  // verdicts. The tray is what says what is true, by counting them.
+  it("draws no queue at all while every card is staged, and never says nothing is waiting", async () => {
+    const user = userEvent.setup();
+    render(framed({ items: [THREE[0]] }));
+
+    await user.click(screen.getByRole("button", { name: "Accept" }));
+
+    expect(screen.getByTestId("body")).toBeEmptyDOMElement();
+    expect(
+      screen.queryByText("Nothing is waiting on you."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("foot").textContent).toContain("1 staged");
+  });
+
+  // A refused commit keeps the tray AND says what stopped, in the same band:
+  // the notice is about the press the tray started.
+  it("keeps the notice with the tray", async () => {
+    const user = userEvent.setup();
+    render(
+      framed({
+        commitState: "failed",
+        notice: <p>The send was refused.</p>,
+      }),
+    );
+
+    const [accept] = screen.getAllByRole("button", { name: "Accept" });
+    await user.click(accept);
+
+    expect(screen.getByTestId("foot").textContent).toContain(
+      "The send was refused.",
+    );
   });
 });
 
