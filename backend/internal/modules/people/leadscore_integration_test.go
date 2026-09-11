@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -272,6 +273,60 @@ func TestAManualSignalCountsAndStaysItsOwnFactor(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("the human's input is not its own factor: %+v", *after.Current.Factors)
+	}
+}
+
+// The `manual:` prefix says a HUMAN supplied a factor. AC-S7a asks for two more
+// things a reader needs before trusting the number: which human, and how
+// certain they said they were. Without them the explanation is an
+// unattributed claim — the defect class this programme exists to remove — and
+// the columns were already holding the answers while the read did not ask.
+//
+// The machine factors beside it must stay silent on all three, which is the
+// half that would otherwise pass by accident: a mapper that filled these in
+// for everything would make every auto-captured signal look like somebody's
+// judgement.
+func TestAManualFactorSaysWhoseJudgementItIsAndAMachineFactorDoesNot(t *testing.T) {
+	ctx, store := newLeadScoreEnv(t)
+	leadID := seedScoredLead(ctx, t, store)
+
+	if _, err := store.SetLeadManualSignal(ctx, leadID, SetLeadManualSignalInput{
+		Factor: "employees", Band: "201+", SignalKind: "assumption",
+		Reason: "they list four offices on the site",
+	}); err != nil {
+		t.Fatalf("entering a manual signal: %v", err)
+	}
+
+	out, err := store.ExplainLeadScore(ctx, leadID, ExplainLeadScoreInput{Limit: 10})
+	if err != nil {
+		t.Fatalf("explaining the score: %v", err)
+	}
+	var manual, machine *crmcontracts.LeadScoreFactor
+	for i, f := range *out.Current.Factors {
+		switch {
+		case f.Factor == "manual:employees":
+			manual = &(*out.Current.Factors)[i]
+		case machine == nil && !strings.HasPrefix(f.Factor, "manual:"):
+			machine = &(*out.Current.Factors)[i]
+		}
+	}
+	if manual == nil {
+		t.Fatalf("the human's input is not its own factor: %+v", *out.Current.Factors)
+	}
+	if manual.SetBy == nil || *manual.SetBy == (openapitypes.UUID{}) {
+		t.Error("the manual factor does not say who supplied it, so the explanation is unattributed")
+	}
+	if manual.SignalKind == nil || *manual.SignalKind != crmcontracts.LeadManualSignalKindAssumption {
+		t.Errorf("signal_kind = %v, want assumption — an estimate and a verified figure are not read the same way", manual.SignalKind)
+	}
+	if manual.Reason == nil || *manual.Reason != "they list four offices on the site" {
+		t.Errorf("reason = %v, want the rep's own words", manual.Reason)
+	}
+	if machine == nil {
+		t.Fatalf("this lead has no machine factor to compare against: %+v", *out.Current.Factors)
+	}
+	if machine.SetBy != nil || machine.SignalKind != nil || machine.Reason != nil {
+		t.Errorf("the machine factor %q carries a human's provenance: %+v", machine.Factor, machine)
 	}
 }
 

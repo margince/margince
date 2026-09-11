@@ -50,6 +50,24 @@ type ScoreFactor struct {
 	Points            float64          `json:"points"`
 	BasePoints        float64          `json:"base_points,omitempty"`
 	SourceActivityIDs []ids.ActivityID `json:"source_activity_ids,omitempty"`
+	// WHO said it, and with what certainty — on a human-provided factor only.
+	//
+	// A score explanation that cannot say whose judgement it rests on is an
+	// unattributed claim, and the `manual:` prefix only says that SOME human
+	// supplied it. AC-S7a asks for the author and the kind as well, and the
+	// three kinds are not interchangeable: a rep weighing whether to trust a
+	// number reads a verified figure differently from a colleague's estimate.
+	//
+	// Retained WITH the entry rather than resolved at read time. The series is
+	// a record of what the score was and why, and a later edit to the signal —
+	// or its deletion — must not rewrite an explanation that was true when it
+	// was computed.
+	//
+	// omitempty throughout: a machine factor OMITS these, which is a different
+	// statement from carrying them empty.
+	SetBy      *ids.UUID `json:"set_by,omitempty"`
+	SignalKind string    `json:"signal_kind,omitempty"`
+	Reason     *string   `json:"reason,omitempty"`
 }
 
 // LeadScoring is one run of §3.1 with its arithmetic left visible.

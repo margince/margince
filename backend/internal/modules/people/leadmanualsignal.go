@@ -270,7 +270,7 @@ func factorIsAutoSourced(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, fact
 // leadManualFactors reads the live human-provided factors for the score.
 func leadManualFactors(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) ([]ScoreFactor, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT factor, points FROM lead_manual_signal
+		`SELECT factor, points, set_by, signal_kind, reason FROM lead_manual_signal
 		  WHERE lead_id = $1 AND superseded_at IS NULL
 		  ORDER BY factor`, leadID)
 	if err != nil {
@@ -279,14 +279,20 @@ func leadManualFactors(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) ([]Sco
 	defer rows.Close()
 	var out []ScoreFactor
 	for rows.Next() {
+		var f ScoreFactor
 		var factor string
 		var points int
-		if err := rows.Scan(&factor, &points); err != nil {
+		if err := rows.Scan(&factor, &points, &f.SetBy, &f.SignalKind, &f.Reason); err != nil {
 			return nil, fmt.Errorf("scan manual signal: %w", err)
 		}
 		// Prefixed so a reader never mistakes a human's input for something
-		// the system observed — the two are shown apart (AC-S7a).
-		out = append(out, ScoreFactor{Factor: "manual:" + factor, Points: float64(points)})
+		// the system observed — the two are shown apart (AC-S7a). The prefix
+		// says a human said it; the three columns beside it say WHICH human
+		// and how certain they were, which the same criterion asks for and
+		// which a reader deciding whether to trust the number needs.
+		f.Factor = "manual:" + factor
+		f.Points = float64(points)
+		out = append(out, f)
 	}
 	return out, rows.Err()
 }
