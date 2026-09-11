@@ -17,10 +17,13 @@ package integration
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A project's phase orders by how LIVE the work is, not by the word.
@@ -158,6 +161,106 @@ func TestAnUnreadableEmployerOrdersTheContactsListByNothing(t *testing.T) {
 	// ordering the page would move to the other end.
 	assertIDOrder(t, listed("-employer"), []ids.UUID{visible, secret},
 		"employer descending — still the tail, because there is nothing to order by")
+}
+
+// A reader who may see NO employer at all is ordered by none.
+//
+// The employer is bounded three ways and a caller can lose it entirely — no
+// relationship grant, or no organization grant. The column is then absent on
+// every row, so the sort must be too: a page arranged by a company nobody on
+// screen names would order the list by something the reader cannot check.
+func TestAReaderWhoSeesNoEmployerIsOrderedByNone(t *testing.T) {
+	e := Setup(t)
+
+	zeta := e.SeedPerson(t, "Zeta Person", &e.Rep1)
+	alma := e.SeedPerson(t, "Alma Person", &e.Rep1)
+	employPerson(t, e, zeta, e.SeedOrg(t, "Alma Werke", &e.Rep1), nil)
+	employPerson(t, e, alma, e.SeedOrg(t, "Zeta Holding", &e.Rep1), nil)
+
+	// No `relationship` grant: the edge is what an employer is read through.
+	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"person":       {Read: true},
+			"organization": {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
+	})
+	rows, _, err := e.People.ListPeople(blind, people.ListPeopleInput{Sort: strPtr("employer")})
+	if err != nil {
+		t.Fatalf("listing contacts by employer without the edge grant: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("the reader sees %d contacts, want 2 — they may read people", len(rows))
+	}
+	for _, p := range rows {
+		if p.Employer != nil {
+			t.Fatalf("a reader without relationship.read was shown employer %v", p.Employer)
+		}
+	}
+	// Both rows in the tail, so the page falls back to its tie-breaker. Newest
+	// first is what that gives, and Alma Person was seeded last.
+	assertIDOrder(t, []ids.UUID{ids.UUID(rows[0].Id), ids.UUID(rows[1].Id)},
+		[]ids.UUID{alma, zeta}, "employer ascending, for a reader shown none")
+}
+
+// A lead's Next task header orders by the DEADLINE, and its Last activity by
+// the last-touch clock — both derived, both read from the expression the row is
+// printed from.
+func TestTheLeadsListSortsByTheDerivedColumnsItDraws(t *testing.T) {
+	e := Setup(t)
+	ctx := e.Admin()
+	seedLeadSource(t, e, "manual_key", "Manual")
+
+	soon := seedLeadFromSource(t, e, "Due soon", "manual_key")
+	later := seedLeadFromSource(t, e, "Due later", "manual_key")
+	quiet := seedLeadFromSource(t, e, "Nothing owed", "manual_key")
+
+	// Task deadlines in the reverse of the leads' creation order.
+	taskOn(t, e, later, "Call them", time.Now().Add(72*time.Hour))
+	taskOn(t, e, soon, "Send the quote", time.Now().Add(2*time.Hour))
+
+	got := leadIDsIn(ctx, t, e, "next_task_due_at")
+	assertIDOrder(t, got, []ids.UUID{soon, later, quiet},
+		"next task ascending — the nearest deadline first, no task last")
+
+	// The last-touch clock. The two tasks above are activity too, filed just
+	// now, so the reply goes on the third lead AN HOUR AGO and the assertion
+	// runs ascending: oldest touch first, which only the reply's instant can
+	// put there.
+	replyTo(t, e, quiet, time.Now().Add(-time.Hour))
+	byTouch := leadIDsIn(ctx, t, e, "last_activity_at")
+	if len(byTouch) != 3 || byTouch[0] != quiet {
+		t.Errorf("last activity ascending put %v first, want the lead touched an hour ago", byTouch)
+	}
+}
+
+// taskOn files an open task against a lead, through the real writer.
+func taskOn(t *testing.T, e *Env, lead ids.UUID, subject string, due time.Time) {
+	t.Helper()
+	leadID := lead
+	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &due,
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: leadID}},
+	})
+	if err != nil {
+		t.Fatalf("filing %q: %v", subject, err)
+	}
+	_ = logged
+}
+
+// replyTo files an inbound email against a lead at one instant — the last-touch
+// clock counts engagement, not the product's own filing.
+func replyTo(t *testing.T, e *Env, lead ids.UUID, at time.Time) {
+	t.Helper()
+	subject, body := "Re: your note", "Sounds good."
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Body: &body,
+		Direction: strPtr("inbound"), OccurredAt: &at,
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead}},
+	}); err != nil {
+		t.Fatalf("filing the reply: %v", err)
+	}
 }
 
 // seedProjectInPhase creates one project and moves it to a phase through the
