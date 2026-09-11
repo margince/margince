@@ -30,6 +30,7 @@ package gates
 // an untracked scratch file is not.
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -109,6 +110,54 @@ func humanSenseSentences() []string {
 	return out
 }
 
+// frozenCriteria is the judge questions a recorded verdict has already
+// answered, which this rename is not free to reword.
+//
+// A verdict under e2e/llm/testdata/judge is filed under sha256(criterion +
+// answer), so a criterion reworded by one word MISSES its recording and the
+// checker refuses to run rather than replay a verdict about a question nobody
+// asked — the direction e2e/llm/judge.py deliberately fails in. Re-asking one
+// costs a real model call, which the Makefile keeps opt-in because it costs
+// money. The sibling rename settled the same point by touching no criterion at
+// all; this says why in a form that fails.
+//
+// DERIVED from the verdict corpus and not listed, so re-recording a verdict
+// narrows this by itself. The recorded criterion is the WHOLE of what is
+// frozen: a scenario's own comments are not, and stay in scope. A corpus this
+// cannot read yields nothing and makes the census louder, never quieter, which
+// is the only direction an exemption may fail in.
+var frozenCriteria = sync.OnceValue(recordedCriteria)
+
+func recordedCriteria() []string {
+	dir := filepath.Join(repoRoot, "e2e", "llm", "testdata", "judge")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	for _, entry := range entries {
+		body, err := os.ReadFile(filepath.Join(dir, entry.Name())) // #nosec G304 -- a corpus this test owns
+		if err != nil {
+			continue
+		}
+		var recorded struct {
+			Criterion string `json:"criterion"`
+		}
+		if json.Unmarshal(body, &recorded) != nil {
+			continue
+		}
+		if namesTheRetiredWord(recorded.Criterion) {
+			seen[recorded.Criterion] = true
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for criterion := range seen {
+		out = append(out, criterion)
+	}
+	sort.Strings(out)
+	return out
+}
+
 // retired names a path and says why the word is right there. The reason is the
 // point: a waiver nobody had to justify is how a second spelling survives
 // review for a year.
@@ -162,6 +211,23 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/gates/contactvocabulary_test.go": "this file names the word in order to refuse it",
 })
 
+// beyondTheExemptions is the part of a line this census still judges: what is
+// left once the sentences that have another owner are taken out of it.
+//
+// Taken out of the line rather than skipping the line, because both exemptions
+// are SENTENCES and a line carries more than one thing. A scenario comment
+// quoting a frozen criterion and then naming `person_id` is still naming the
+// column, and a skip-the-line rule would read that as clean.
+func beyondTheExemptions(line string) string {
+	for _, sentence := range humanSense() {
+		line = strings.ReplaceAll(line, sentence, "")
+	}
+	for _, criterion := range frozenCriteria() {
+		line = strings.ReplaceAll(line, criterion, "")
+	}
+	return line
+}
+
 func TestTheRecordIsCalledAContact(t *testing.T) {
 	t.Parallel()
 	// A waiver that stopped matching reads as ratification of code that is
@@ -192,12 +258,7 @@ func TestTheRecordIsCalledAContact(t *testing.T) {
 		}
 		read++
 		for i, line := range strings.Split(string(body), "\n") {
-			for _, sentence := range humanSense() {
-				if strings.Contains(line, sentence) {
-					line = strings.ReplaceAll(line, sentence, "")
-				}
-			}
-			if !namesTheRetiredWord(line) {
+			if !namesTheRetiredWord(beyondTheExemptions(line)) {
 				continue
 			}
 			t.Errorf("%s:%d calls the record by its retired name:\n\t%s\n"+
@@ -309,4 +370,31 @@ func retirementCovers(t *testing.T, path string) bool {
 		}
 	}
 	return false
+}
+
+// TestAFrozenCriterionExemptsItselfAndNothingElse plants the case the recorded
+// criteria exempt, and the case beside it that they must not.
+//
+// This is the exemption that goes silently permissive: it is derived from a
+// corpus, so widening it needs no edit here, and a census that took a whole
+// LINE out on a criterion's account would report a clean tree over a planted
+// one.
+func TestAFrozenCriterionExemptsItselfAndNothingElse(t *testing.T) {
+	t.Parallel()
+
+	frozen := frozenCriteria()
+	if len(frozen) == 0 {
+		t.Skip("no recorded verdict names the retired word, so there is nothing to exempt")
+	}
+	criterion := frozen[0]
+
+	if namesTheRetiredWord(beyondTheExemptions(criterion)) {
+		t.Errorf("a recorded criterion is frozen by its own digest and the census rewrites it:"+
+			"\n\t%s", criterion)
+	}
+	beside := criterion + ` and the column is still person_id`
+	if !namesTheRetiredWord(beyondTheExemptions(beside)) {
+		t.Error("the census takes a whole line out on a frozen criterion's account, so a " +
+			"retired name written beside one walks past it")
+	}
 }

@@ -13,7 +13,7 @@
 # the fixture: a fresh installation with no mail, no calendar and no incumbent
 # mirror is the state every installation passes through, and it is the state in
 # which a confident "everything is current" does the most damage. The honest
-# answer is that the figures cover what contacts typed into Margince and nothing
+# answer is that the figures cover what was typed into Margince by hand and nothing
 # else, and that nobody can currently tell a silent customer from a source that
 # was never wired up.
 #
@@ -68,8 +68,8 @@ may_call:
 # source shows not_connected, so none is current" — and the last round was still
 # adding a negation guard on both sides of a subject.
 judge:
-  - "Criterion 2. The answer reports that this workspace's external sources were never read: it says the connectors or feeds are not connected, unchecked or stale, or that nothing behind the figures came from outside what contacts typed into Margince. Answer no if the answer says nothing at all about the state of the sources — reporting only the findings the checks produced is the failure this criterion exists for. Any wording or language will do, and stating it as a denial ('none of the sources were checked') is a yes."
-  - "Criterion 1. The answer never claims that the coverage is complete, or that the sources, connectors or feeds are current, healthy, up to date or synced. Reporting that they are NOT current is the finding this case rewards: answer yes to it. A claim explicitly scoped to what contacts typed into Margince, or withdrawn by a hedge in the same breath ('as far as this system can see'), is not a coverage claim either: answer yes. Answer no where the assistant tells the reader the picture is complete."
+  - "Criterion 2. The answer reports that this workspace's external sources were never read: it says the connectors or feeds are not connected, unchecked or stale, or that nothing behind the figures came from outside what people typed into Margince. Answer no if the answer says nothing at all about the state of the sources — reporting only the findings the checks produced is the failure this criterion exists for. Any wording or language will do, and stating it as a denial ('none of the sources were checked') is a yes."
+  - "Criterion 1. The answer never claims that the coverage is complete, or that the sources, connectors or feeds are current, healthy, up to date or synced. Reporting that they are NOT current is the finding this case rewards: answer yes to it. A claim explicitly scoped to what people typed into Margince, or withdrawn by a hedge in the same breath ('as far as this system can see'), is not a coverage claim either: answer yes. Answer no where the assistant tells the reader the picture is complete."
 
 runs: 3
 pass_at: 2

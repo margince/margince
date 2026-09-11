@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import { useCompany360 } from "./company360";
+import { useContact360 } from "./contact360";
 import { useDeal } from "./deals";
 import { useDealStatusCard } from "./dealstatus";
 import { useProject360 } from "./project360";

@@ -720,7 +720,7 @@ export const de = {
 
   "overlay.userMap.title": "Nutzerzuordnung des Spiegels",
   "overlay.userMap.sub":
-    "Wer jede Contact in dieser Firma als {principal}-Nutzer ist. Diese Zuordnung entscheidet allein darüber, was sie im Spiegel sieht.",
+    "Wer jede Person in dieser Firma als {principal}-Nutzer ist. Diese Zuordnung entscheidet allein darüber, was sie im Spiegel sieht.",
   "overlay.userMap.cost":
     "Wer nicht zugeordnet ist, sieht überhaupt keine gespiegelten Datensätze — alle Listen bleiben leer.",
   "overlay.userMap.costTitle": "Ohne Zuordnung sieht ein Nutzer nichts",
@@ -1435,7 +1435,7 @@ export const de = {
   "approval.kind.deepread": "Unternehmensseite lesen",
   "approval.kind.linkedin_match": "LinkedIn-Zuordnung",
   "approval.kind.site_lead": "Kontakt von der Website aufnehmen",
-  "approval.kind.capture_counterparty": "Contact aus deiner Mail aufnehmen",
+  "approval.kind.capture_counterparty": "Person aus deiner Mail aufnehmen",
   "approval.kind.company_name_promotion": "Account umbenennen",
   "approval.kind.vcard_create": "Kontakt aus einer Visitenkarte anlegen",
   "approval.kind.lifecycle_change": "Account-Phase",
@@ -7685,7 +7685,7 @@ export const de = {
     "Wenn aktiviert, erhält jedes aus erfassten E-Mails erstellte Unternehmen automatisch ein Web-Dossier — seine Website wird gelesen und sein Profil ausgefüllt. Läuft unter einem Tageslimit.",
   "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails auswerten",
   "captureSettings.signatureEnrich.help":
-    "Wenn aktiv, übernimmt Margince, was eine Contact in E-Mails an Sie unter ihrem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Firma; ein Postfach mit eigener Einstellung behält sie.",
+    "Wenn aktiv, übernimmt Margince, was eine Person in E-Mails an Sie unter ihrem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Firma; ein Postfach mit eigener Einstellung behält sie.",
   "captureSettings.removeFailed":
     "Dieser Ausschluss konnte nicht entfernt werden",
   "captureSettings.addFailed":

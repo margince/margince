@@ -7231,7 +7231,7 @@ export const en = {
   "users.deactivateConfirmBody":
     "They'll be signed out everywhere and their agent passports revoked immediately. You can reactivate them later, but they'll need to sign in again.",
   "users.deactivateAgentConfirmBody":
-    "This is the company's agent identity. It signs in nowhere and no contact loses access. Scheduled extension jobs keep running: each one acts as the job it is, and captures under the authority of the member whose connection produced the record.",
+    "This is the company's agent identity. It signs in nowhere and no person loses access. Scheduled extension jobs keep running: each one acts as the job it is, and captures under the authority of the member whose connection produced the record.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Acts under a passport, not a role",
   "users.roleLabel": "Role for the new user",
@@ -7560,7 +7560,7 @@ export const en = {
     "This deployment has no external provider configured, so there is nothing to offer besides a password.",
   "oauthApp.google.title": "Google app",
   "oauthApp.google.sub":
-    "Mailboxes are connected, and contacts sign in with Google, through a Google OAuth app you own. Your company’s own credentials are used rather than ours.",
+    "Mailboxes are connected, and people sign in with Google, through a Google OAuth app you own. Your company’s own credentials are used rather than ours.",
   "oauthApp.google.absent":
     "No app is available from any source. Gmail and Calendar cannot be connected, and Google sign-in cannot be offered.",
   "oauthApp.google.redirectSub":
@@ -7572,7 +7572,7 @@ export const en = {
     "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
   "oauthApp.microsoft.title": "Microsoft app",
   "oauthApp.microsoft.sub":
-    "Outlook mailboxes and calendars are connected, and contacts sign in with Microsoft, through an Entra app registration you own. Your company’s own credentials are used rather than ours.",
+    "Outlook mailboxes and calendars are connected, and people sign in with Microsoft, through an Entra app registration you own. Your company’s own credentials are used rather than ours.",
   "oauthApp.microsoft.absent":
     "No app is available from any source. Outlook mail and calendar cannot be connected, and Microsoft sign-in cannot be offered.",
   "oauthApp.microsoft.redirectSub":
@@ -7775,7 +7775,7 @@ export const en = {
     "When on, each new company created from captured mail gets an automatic web dossier — its site is read and its profile filled in. Runs under a daily limit.",
   "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "When on, Margince reads what a contact states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the company's default; a mailbox that set its own switch keeps it.",
+    "When on, Margince reads what a person states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the company's default; a mailbox that set its own switch keeps it.",
   "captureSettings.removeFailed": "That exclusion could not be removed",
   "captureSettings.addFailed": "That exclusion could not be added",
   "captureSettings.adminOnly": "Only an admin or ops can change this.",
@@ -9493,7 +9493,7 @@ export const en = {
   "firstRun.google.eyebrow": "It thinks. It cannot reach anyone yet",
   "firstRun.platform.title": "What does your company run on?",
   "firstRun.platform.sub":
-    "One answer decides how mail reaches Margince and how contacts sign in. You can change it later under Settings.",
+    "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",
   "firstRun.platform.legend": "The platform this company runs on",
   "firstRun.platform.google": "Google Workspace",
   "firstRun.platform.googleWhat":
