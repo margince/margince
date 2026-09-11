@@ -57,6 +57,11 @@ issue only when the fix lives in another module, needs a product or architecture
 decision, or would double the diff. Say in the PR body what you fixed along the
 way.
 
+**Size the task before you start.** A change that keeps pulling in new files
+and modules mid-session was never scoped, not merely large. Cut it at what you
+can finish, test and PR in one sitting; a genuinely bigger change is several of
+those in sequence, not one unbounded session.
+
 **One PR per piece of work.** Do not split related work across several small PRs
 — each one costs a full CI run. One branch, one PR.
 
