@@ -19,7 +19,7 @@ describe("sendReviewOf", () => {
   });
 
   // An agent, or a refusal with no message to decide about. The reference still
-  // travels so a person reading the transcript can pick the review up; what is
+  // travels so a human reading the transcript can pick the review up; what is
   // absent is the shortcut.
   it("keeps the reference when the server offers no action", () => {
     const review = sendReviewOf(

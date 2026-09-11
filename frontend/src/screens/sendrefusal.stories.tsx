@@ -31,7 +31,7 @@ type Story = StoryObj<typeof SendRefusal>;
 
 // The engine refused, and this rep may ask somebody who can override it.
 export const ConsentWithAnAsk: Story = {
-  args: { refusal: "consent", personId: "p-1", review },
+  args: { refusal: "consent", contactId: "p-1", review },
 };
 
 // The same refusal where the server offers nothing — an agent, or a message
@@ -39,7 +39,7 @@ export const ConsentWithAnAsk: Story = {
 export const ConsentWithOnlyAReference: Story = {
   args: {
     refusal: "consent",
-    personId: "p-1",
+    contactId: "p-1",
     review: { ...review, actions: [] },
   },
 };
