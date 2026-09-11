@@ -252,11 +252,28 @@ func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerI
 	if err != nil {
 		return fmt.Errorf("people: applying an approved LinkedIn match: %w", err)
 	}
+	return confirmMatchWriteTail(ctx, tx, connectionID, ownerID, personID, wasStatus, wasPerson)
+}
+
+// confirmMatchWriteTail is the write a confirmation releases, whichever path
+// released it: the profile URL onto the contact, and the audit rows and events
+// the write shape owes for both the connection and the person. The human apply
+// above and the matcher's automatic confirm (linkedinautoconfirm.go) both land
+// here, so "the same write" is true by construction rather than by a comment
+// somebody has to keep honest.
+//
+// wasStatus/wasPerson are the connection's values BEFORE this confirmation, for
+// the field image: 'unmatched'/nil for an automatic confirm, the prior
+// suggestion for a human apply. The caller must already HOLD the person — the
+// handle write takes no lock of its own, and that hold is what stops a handle
+// landing after an Art. 17 erasure cleared it.
+func confirmMatchWriteTail(ctx context.Context, tx pgx.Tx, connectionID, ownerID, personID ids.UUID, wasStatus string, wasPerson *ids.UUID) error {
 	wrote, err := writeLinkedInHandle(ctx, tx, connectionID, personID)
 	if err != nil {
 		return err
 	}
-	return auditLinkedInMatch(ctx, tx, connectionID, ownerID, personID, matchImages(wasStatus, wasPerson, matchConfirmed, &personID), wrote)
+	return auditLinkedInMatch(ctx, tx, connectionID, ownerID, personID,
+		matchImages(wasStatus, wasPerson, matchConfirmed, &personID), wrote)
 }
 
 // matchImagePair is the connection's own columns on either side of a confirmed
