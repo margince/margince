@@ -2196,6 +2196,9 @@ export const de = {
   "lead.boardTerminalOnly":
     "Keiner dieser Leads ist noch offen \u2014 sie z\u00e4hlen unter Qualifiziert und Disqualifiziert.",
   "person.fromLead": "Aus Lead übernommen",
+  "lead.mergedTitle": "Mit einem anderen Lead zusammengeführt",
+  "lead.mergedBody":
+    "Dieser Lead war derselbe Interessent wie ein anderer. Verlauf, Einwilligung und Score liegen jetzt dort; dieser Datensatz bleibt als Nachweis.",
   "lead.promotedTitle": "Als Kontakt übernommen",
   "lead.promotedMerged":
     "Dieser Lead wurde mit einem bereits bekannten Kontakt zusammengeführt — es entstand kein Duplikat.",
@@ -2234,6 +2237,7 @@ export const de = {
   "lead.statusPromoted": "Qualifiziert",
   "lead.statusDisqualified": "Disqualifiziert",
   "lead.disqualified": "Disqualifiziert",
+  "lead.merged": "Zusammengeführt",
   "lead.status.new": "Neu",
   "lead.status.contacted": "Kontaktiert",
   "lead.status.engaged": "Im Gespräch",
@@ -9421,6 +9425,9 @@ export const de = {
   "lead.standing.qualifiedOn":
     "Qualifiziert am {at}. Dieser Lead ist jetzt ein Kontakt.",
   "lead.standing.qualifiedUndated": "Dieser Lead ist jetzt ein Kontakt.",
+  "lead.standing.merged": "Zusammengeführt",
+  "lead.standing.mergedBecause":
+    "Derselbe Interessent wie ein anderer Lead. Lies dort weiter \u2014 dieser Datensatz bleibt als Nachweis.",
   "lead.standing.closed": "Geschlossen",
   "lead.standing.closedFor":
     "Geschlossen: {reason}. Der Datensatz bleibt als Spur.",
@@ -9435,6 +9442,7 @@ export const de = {
   "lead.standing.engagedBecause":
     "Der Lead hat geantwortet, oder ein Termin steht im Kalender.",
   "lead.standing.rests.promoted": "Zu einem Kontakt befördert.",
+  "lead.standing.rests.merged": "Mit einem anderen Lead zusammengeführt.",
   "lead.standing.rests.closed": "Disqualifiziert, kein Grund erfasst.",
   "lead.standing.rests.ladder": "Lead-Leiter",
   "lead.standing.rests.record": "Lead-Datensatz",

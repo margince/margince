@@ -2179,6 +2179,9 @@ export const vi = {
   "lead.boardTerminalOnly":
     "Không còn mục nào đang mở — chúng được tính ở cột Đã chuyển đổi và Đã loại.",
   "person.fromLead": "Từ khách hàng tiềm năng",
+  "lead.mergedTitle": "Đã gộp vào một khách hàng tiềm năng khác",
+  "lead.mergedBody":
+    "Khách hàng tiềm năng này hoá ra trùng với một mục khác. Dòng thời gian, chấp thuận và điểm số đã chuyển sang đó; bản ghi này ở lại làm dấu vết.",
   "lead.promotedTitle": "Đã chuyển thành liên hệ",
   "lead.promotedMerged":
     "Khách hàng tiềm năng này đã được gộp vào một liên hệ đã biết — không tạo bản trùng.",
@@ -2216,6 +2219,7 @@ export const vi = {
   "lead.statusPromoted": "Đã đủ điều kiện",
   "lead.statusDisqualified": "Đã loại",
   "lead.disqualified": "Đã loại",
+  "lead.merged": "Đã gộp",
   "lead.status.new": "Mới",
   "lead.status.contacted": "Đã liên hệ",
   "lead.status.engaged": "Đang trao đổi",
@@ -9280,6 +9284,9 @@ export const vi = {
     "Đủ điều kiện ngày {at}. Khách hàng tiềm năng này giờ là liên hệ trong CRM.",
   "lead.standing.qualifiedUndated":
     "Khách hàng tiềm năng này giờ là liên hệ trong CRM.",
+  "lead.standing.merged": "Đã gộp",
+  "lead.standing.mergedBecause":
+    "Trùng với một khách hàng tiềm năng khác. Hãy đọc mục đó \u2014 bản ghi này ở lại làm dấu vết.",
   "lead.standing.closed": "Đã đóng",
   "lead.standing.closedFor":
     "Đã đóng: {reason}. Hồ sơ vẫn giữ lại làm dấu vết.",
@@ -9293,6 +9300,7 @@ export const vi = {
   "lead.standing.engagedBecause":
     "Họ đã trả lời, hoặc đã có cuộc họp trong lịch.",
   "lead.standing.rests.promoted": "Đã chuyển thành liên hệ.",
+  "lead.standing.rests.merged": "Đã gộp vào một khách hàng tiềm năng khác.",
   "lead.standing.rests.closed": "Đã loại, không ghi lý do.",
   "lead.standing.rests.ladder": "Bậc thang khách hàng tiềm năng",
   "lead.standing.rests.record": "Hồ sơ khách hàng tiềm năng",

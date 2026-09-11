@@ -522,26 +522,6 @@ export function promoteEligible(lead: Lead): boolean {
   return isOpenStatus(lead.status) && Boolean(lead.email);
 }
 
-// The terminal badge a lead status earns (null = live/open, no badge). A lead
-// is archived iff it is promoted or disqualified; keying the label off the
-// status — not a bare archived_at — is what stops a promoted lead reading
-// "Disqualified". Exhaustive over the four statuses: a new value is a compile
-// error here, not a silently-unlabelled row.
-export function terminalBadge(
-  status: Lead["status"],
-): { label: MessageKey; tone: "warn" } | null {
-  switch (status) {
-    case "disqualified":
-      return { label: "lead.disqualified", tone: "warn" };
-    case "promoted":
-      return { label: "record.archived", tone: "warn" };
-    case "new":
-    case "contacted":
-    case "engaged":
-      return null;
-  }
-}
-
 // The open ladder, as the page's open-step predicate reads it.
 export const LEAD_OPEN_STATUSES = ["new", "contacted", "engaged"] as const;
 type LeadOpenStatus = (typeof LEAD_OPEN_STATUSES)[number];

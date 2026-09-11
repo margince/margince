@@ -2276,6 +2276,9 @@ export const en = {
   "lead.boardTerminalOnly":
     "None of these leads are still open \u2014 they are counted under Qualified and Disqualified.",
   "person.fromLead": "From lead",
+  "lead.mergedTitle": "Merged into another lead",
+  "lead.mergedBody":
+    "This lead turned out to be the same prospect as another one. Its timeline, its consent and its score moved there; this record stays as the trail.",
   "lead.promotedTitle": "Promoted to a contact",
   "lead.promotedMerged":
     "This lead merged into a contact we already knew — no duplicate was created.",
@@ -2311,6 +2314,7 @@ export const en = {
   "lead.statusPromoted": "Qualified",
   "lead.statusDisqualified": "Disqualified",
   "lead.disqualified": "Disqualified",
+  "lead.merged": "Merged",
   "lead.status.new": "New",
   "lead.status.contacted": "Contacted",
   "lead.status.engaged": "Engaged",
@@ -9533,6 +9537,9 @@ export const en = {
   "lead.standing.qualified": "Qualified",
   "lead.standing.qualifiedOn": "Qualified on {at}. This lead is a contact now.",
   "lead.standing.qualifiedUndated": "This lead is a contact now.",
+  "lead.standing.merged": "Merged away",
+  "lead.standing.mergedBecause":
+    "The same prospect as another lead. Read that one instead \u2014 this record stays as the trail.",
   "lead.standing.closed": "Closed",
   "lead.standing.closedFor": "Closed: {reason}. The record stays as the trail.",
   "lead.standing.closedUnreasoned": "Closed. The record stays as the trail.",
@@ -9544,6 +9551,7 @@ export const en = {
   "lead.standing.engagedBecause":
     "They answered, or a meeting is on the calendar.",
   "lead.standing.rests.promoted": "Promoted to a contact.",
+  "lead.standing.rests.merged": "Merged into another lead.",
   "lead.standing.rests.closed": "Disqualified, no reason recorded.",
   "lead.standing.rests.ladder": "Lead ladder",
   "lead.standing.rests.record": "Lead record",

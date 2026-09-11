@@ -81,6 +81,7 @@ import {
 } from "./entityref";
 import { RecordHistoryTab, useRecordHistory } from "./history";
 import { leadBand } from "./leadband";
+import { MergedLeadPanel } from "./leadmerged";
 import {
   promoteEligible,
   scoreFactorLabel,
@@ -127,11 +128,8 @@ import {
   useLeadSources,
 } from "./leadsources";
 
-export {
-  promoteEligible,
-  scoreTone,
-  terminalBadge,
-} from "./leadpresentation";
+export { promoteEligible, scoreTone } from "./leadpresentation";
+export { terminalBadge } from "./leadstanding";
 
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
 import { invalidateRecord } from "./recordwritekeys";
@@ -1530,6 +1528,11 @@ function LeadOverviewPane({
     <div className="record-stack">
       {/* The readings open the overview, as they do on every record page. */}
       <LeadReadings lead={lead} />
+      {/* A merged-away lead's page leads with where it went, for the same
+          reason: the reader arrived asking what happened to this prospect. */}
+      {lead.merged_into_id && (
+        <MergedLeadPanel mergedIntoId={lead.merged_into_id} />
+      )}
       {/* A promoted lead's page leads with what the promotion did — the
           reader arrived asking whether this became a contact, and which one. */}
       {lead.promoted_person_id && (

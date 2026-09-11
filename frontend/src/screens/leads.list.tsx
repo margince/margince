@@ -33,7 +33,6 @@ import {
   StatusBadge,
   scoreFactorLabel,
   scoreTone,
-  terminalBadge,
 } from "./leadpresentation";
 import {
   sourceFilterOptions,
@@ -42,6 +41,7 @@ import {
   useLeadSettings,
   useLeadSources,
 } from "./leadsources";
+import { terminalBadge } from "./leadstanding";
 import {
   type ListPage,
   type ListQuery,
@@ -376,7 +376,7 @@ function LeadsWorkbench({
             key: "name",
             header: t("people.name"),
             cell: (lead: Lead) => {
-              const terminal = terminalBadge(lead.status);
+              const terminal = terminalBadge(lead);
               return (
                 <span>
                   <strong>{leadIdentityName(lead) || t("lead.unnamed")}</strong>

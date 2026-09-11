@@ -1,6 +1,7 @@
 import type { components } from "../api/schema";
 import { formatDateAbbrev, formatDateTime } from "../format/format";
 import type { Locale, Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import type { Grounding, StandingTone } from "./record360";
 
 type Lead = components["schemas"]["Lead"];
@@ -37,6 +38,35 @@ export function firstResponseClock(
   return { deadline: lead.sla_deadline_at, state: lead.sla_state };
 }
 
+// The terminal badge a lead earns (null = live/open, no badge). Keying the
+// label off the ENDING rather than a bare archived_at is what stops a promoted
+// lead reading "Disqualified".
+//
+// The merge is read first because it is the ending the ladder does not record:
+// it archives the lead, points it at the survivor and leaves `status` exactly
+// where it stood. Read from the status alone, a lead merged away mid
+// conversation wears no badge at all and every surface draws it as open work.
+//
+// Exhaustive over the four statuses below: a new value is a compile error
+// here, not a silently-unlabelled row.
+export function terminalBadge(
+  lead: Pick<Lead, "status" | "merged_into_id">,
+): { label: MessageKey; tone: "warn" } | null {
+  if (lead.merged_into_id) {
+    return { label: "lead.merged", tone: "warn" };
+  }
+  switch (lead.status) {
+    case "disqualified":
+      return { label: "lead.disqualified", tone: "warn" };
+    case "promoted":
+      return { label: "record.archived", tone: "warn" };
+    case "new":
+    case "contacted":
+    case "engaged":
+      return null;
+  }
+}
+
 export function leadStanding(
   lead: Lead,
   t: Translator,
@@ -47,6 +77,27 @@ export function leadStanding(
   // The first-response target is set in hours, so its deadline is an instant
   // and prints with its time — the same precision the readings card gives it.
   const instant = (at: string) => formatDateTime(at, locale, zone);
+  // Merged away is read FIRST, because it is the one ending the ladder does
+  // not record: the merge archives the loser and points it at the survivor
+  // and leaves `status` exactly where it stood. A lead merged away while it
+  // was being worked therefore still says `contacted`, and every branch below
+  // would call it open work — or, once something did call it terminal, call
+  // it disqualified, which says a human judged the prospect not worth
+  // pursuing rather than that it was the same prospect as another one.
+  if (lead.merged_into_id) {
+    return {
+      label: t("lead.standing.merged"),
+      tone: "unknown",
+      because: t("lead.standing.mergedBecause"),
+      restsOn: [
+        {
+          key: "merged",
+          quote: t("lead.standing.rests.merged"),
+          from: t("lead.standing.rests.record"),
+        },
+      ],
+    };
+  }
   if (lead.status === "promoted") {
     return {
       label: t("lead.standing.qualified"),
