@@ -117,7 +117,7 @@ func TestTheScanReadsTheAccountForTheReaderAndTheReaderCanPutAFindingOff(t *test
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
-	if done.State != crmcontracts.OrganizationScanStateDone || done.GeneratedBy == nil || *done.GeneratedBy != crmcontracts.Model {
+	if done.State != crmcontracts.OrganizationScanStateDone || done.GeneratedBy == nil || *done.GeneratedBy != crmcontracts.WrittenByModel {
 		t.Fatalf("state %q by %v, want done by the model", done.State, done.GeneratedBy)
 	}
 	if done.Stale != nil && *done.Stale {

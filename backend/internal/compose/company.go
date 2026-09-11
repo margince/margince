@@ -327,7 +327,7 @@ func toContractCompanyContext(c people.CompanyContext) crmcontracts.CompanyConte
 		})
 	}
 	return crmcontracts.CompanyContext{
-		OrganizationId: openapi_types.UUID(c.OrganizationID.UUID), SchemaVersion: crmcontracts.N1,
+		OrganizationId: openapi_types.UUID(c.OrganizationID.UUID), SchemaVersion: crmcontracts.CompanyContextSchemaVersionN1,
 		Scopes: scopes, Fingerprint: c.Fingerprint, GeneratedAt: c.GeneratedAt,
 	}
 }

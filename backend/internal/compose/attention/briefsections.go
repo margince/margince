@@ -45,13 +45,13 @@ func BriefSectionOf(item crmcontracts.WorklistItem) crmcontracts.WorklistItemBri
 	// from the category alone.
 	switch {
 	case respondsNow(item):
-		return crmcontracts.BriefSectionRespondNow
+		return crmcontracts.WorklistItemBriefSectionBriefSectionRespondNow
 	case closesOffAConversation(item):
-		return crmcontracts.BriefSectionReviewAndRepair
+		return crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair
 	case preparesAConversation(item):
-		return crmcontracts.BriefSectionPrepareConversations
+		return crmcontracts.WorklistItemBriefSectionBriefSectionPrepareConversations
 	case sectionBuildsPipeline(item):
-		return crmcontracts.BriefSectionBuildPipeline
+		return crmcontracts.WorklistItemBriefSectionBriefSectionBuildPipeline
 	}
 	return sectionOfCategory(item.Category)
 }
@@ -72,17 +72,17 @@ func BriefSectionOf(item crmcontracts.WorklistItem) crmcontracts.WorklistItemBri
 func sectionOfCategory(category crmcontracts.WorklistItemCategory) crmcontracts.WorklistItemBriefSection {
 	switch category {
 	case crmcontracts.WorklistItemCategoryCustomerWaiting:
-		return crmcontracts.BriefSectionRespondNow
+		return crmcontracts.WorklistItemBriefSectionBriefSectionRespondNow
 	case crmcontracts.WorklistItemCategoryLeads:
-		return crmcontracts.BriefSectionBuildPipeline
+		return crmcontracts.WorklistItemBriefSectionBriefSectionBuildPipeline
 	case crmcontracts.WorklistItemCategoryMeetings:
-		return crmcontracts.BriefSectionPrepareConversations
+		return crmcontracts.WorklistItemBriefSectionBriefSectionPrepareConversations
 	case crmcontracts.WorklistItemCategoryDecisions, crmcontracts.WorklistItemCategorySystem:
-		return crmcontracts.BriefSectionReviewAndRepair
+		return crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair
 	case crmcontracts.WorklistItemCategoryDealsAtRisk, crmcontracts.WorklistItemCategoryTasks:
 		// The two that are revenue to move: a deal drifting, and the work
 		// somebody agreed to do about one.
-		return crmcontracts.BriefSectionMoveRevenue
+		return crmcontracts.WorklistItemBriefSectionBriefSectionMoveRevenue
 	default:
 		// A category this build does not place. Empty rather than a guess, so
 		// the census gate says so out loud.

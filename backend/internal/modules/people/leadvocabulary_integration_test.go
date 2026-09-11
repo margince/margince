@@ -61,7 +61,7 @@ func TestLeadSourceCRUDRefusesWhatTheContractPromises(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	if created.Key != "trade_show" || created.Intent != crmcontracts.LeadSourceIntentHigh || created.System == nil || *created.System {
+	if created.Key != "trade_show" || created.Intent != crmcontracts.LeadSourceIntentLeadSourceIntentHigh || created.System == nil || *created.System {
 		t.Fatalf("created = %+v, want key trade_show, intent high, not system", created)
 	}
 	if _, err := e.store.CreateLeadSource(e.ctx, CreateLeadSourceInput{Label: "Trade Show"}); !errors.Is(err, apperrors.ErrConflict) {

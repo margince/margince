@@ -27,14 +27,14 @@ import (
 const (
 	// destinationToday is work a seller executes: a reply to write, a task to
 	// finish, a meeting to prepare, a deal to move.
-	destinationToday = crmcontracts.WorklistDestinationToday
+	destinationToday = crmcontracts.WorklistItemDestinationWorklistDestinationToday
 	// destinationReview is a judgement a human makes before work can continue —
 	// an approval, a duplicate pair, an introduction to accept.
-	destinationReview = crmcontracts.WorklistDestinationReview
+	destinationReview = crmcontracts.WorklistItemDestinationWorklistDestinationReview
 	// destinationSystemHealth is a source or an automation an administrator
 	// restores. A seller can rarely act on one, and a queue that asked them to
 	// spent their attention on somebody else's job.
-	destinationSystemHealth = crmcontracts.WorklistDestinationSystemHealth
+	destinationSystemHealth = crmcontracts.WorklistItemDestinationWorklistDestinationSystemHealth
 )
 
 // destinationOfSource is the whole mapping, and the only one.

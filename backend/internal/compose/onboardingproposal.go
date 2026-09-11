@@ -45,7 +45,7 @@ func (e *onboardingProposalEngine) get(w http.ResponseWriter, r *http.Request, p
 	}
 	// Locale mirrors the message endpoint's posture: an explicit client
 	// concern, defaulting to English when absent.
-	locale := string(crmcontracts.OnboardingProposalLocaleEN)
+	locale := string(crmcontracts.GetOnboardingCompanyProposalParamsLocaleOnboardingProposalLocaleEN)
 	if params.Locale != nil {
 		if !params.Locale.Valid() {
 			httperr.Write(w, r, httperr.Validation("locale", "invalid", "locale must be en or de"))

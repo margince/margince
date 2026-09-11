@@ -38,27 +38,27 @@ func advanceLines(typ MeetingType, in Input) (string, string, string) {
 		who = in.Attendees[0].FullName
 	}
 	switch typ.Value {
-	case crmcontracts.MeetingPlanTypeRelationship, crmcontracts.MeetingPlanTypeUnknown:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown:
 		return "A named next step with an owner and a date, even if the answer is 'not this quarter'.",
 			fmt.Sprintf("A working session booked with %s and whoever else has to be in it.", who),
 			"Agreement on what you will send, and who decides what happens with it."
-	case crmcontracts.MeetingPlanTypeFirstDiscovery, crmcontracts.MeetingPlanTypeFollowupDiscovery:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFollowupDiscovery:
 		return "One quantified problem, and who owns it today.",
 			"The two outcomes that matter most, and a booked session to scope them.",
 			"A written summary they agree with, and the name of the person who has to approve it."
-	case crmcontracts.MeetingPlanTypeDemo:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDemo:
 		return "Their reaction to the two things they said they needed.",
 			"Agreement that it fits, and a date to talk commercials.",
 			"The one objection that stopped it, in their own words."
-	case crmcontracts.MeetingPlanTypeCommercial:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial:
 		return "The remaining gap between our number and theirs, stated.",
 			"Agreed terms and a signature date.",
 			"What has to be true for them to sign, and by when."
-	case crmcontracts.MeetingPlanTypeDecision:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDecision:
 		return "The date the decision gets made, and who makes it.",
 			"The decision itself.",
 			"The one unresolved objection, and who has to answer it."
-	case crmcontracts.MeetingPlanTypeDelivery:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery:
 		return "Agreement on what is done and what is next.",
 			"The next milestone dated, with an owner on each side.",
 			"A written list of what is blocked and who unblocks it."
@@ -86,19 +86,19 @@ func scenariosFor(in Input, typ MeetingType) []Scenario {
 
 func scenarioLines(typ MeetingType) [][2]string {
 	switch typ.Value {
-	case crmcontracts.MeetingPlanTypeRelationship, crmcontracts.MeetingPlanTypeUnknown:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown:
 		return [][2]string{
 			{"It stays social", "Let it. Ask one 'what has changed' question and earn a separate working session."},
 			{"They raise the work", "Follow it: prioritise two outcomes, then propose a scoping session."},
 			{"They raise a complaint", "Hear it out fully before answering. Do not defend the internal history."},
 		}
-	case crmcontracts.MeetingPlanTypeCommercial, crmcontracts.MeetingPlanTypeDecision:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDecision:
 		return [][2]string{
 			{"It becomes a price negotiation", "Anchor on the outcome agreed, not the list. Trade scope for price, never price alone."},
 			{"A new stakeholder appears", "Stop selling and qualify them: what do they need to believe, and what do they decide?"},
 			{"The decision slips", "Get the new date and the reason in the room, before it becomes an email."},
 		}
-	case crmcontracts.MeetingPlanTypeDelivery, crmcontracts.MeetingPlanTypeRenewalRisk:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRenewalRisk:
 		return [][2]string{
 			{"It becomes an escalation", "Take it seriously in the room. Name what you will fix and by when; commit to nothing else."},
 			{"They ask for more scope", "Welcome it and price it. Agreeing to it here is how a delivery goes red."},

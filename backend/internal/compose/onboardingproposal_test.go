@@ -129,7 +129,7 @@ func TestOnboardingProposalSpeaksTheRequestedLocale(t *testing.T) {
 		}}},
 		rollout: companyContextRolloutOnboarding,
 	}
-	de := crmcontracts.OnboardingProposalLocaleDE
+	de := crmcontracts.GetOnboardingCompanyProposalParamsLocaleOnboardingProposalLocaleDE
 	recorder := onboardingProposalRequest(engine, &de)
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())

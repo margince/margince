@@ -201,7 +201,7 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
-	if collides && w.onDuplicate == string(crmcontracts.Skip) {
+	if collides && w.onDuplicate == string(crmcontracts.ImportOnDuplicateSkip) {
 		// discloseOnly, so a collision this caller may not see is answered as no
 		// collision — and the row CREATES.
 		//

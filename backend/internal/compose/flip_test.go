@@ -69,7 +69,7 @@ func TestParseFlipRequestIsConfirmFirst(t *testing.T) {
 
 func TestFlipBlockedNamesEveryUnsatisfiedGate(t *testing.T) {
 	err := flipBlocked([]crmcontracts.OverlayFlipPreflightBlocking{
-		crmcontracts.IncumbentUnreachable, crmcontracts.ExportMissing,
+		crmcontracts.OverlayFlipPreflightBlockingIncumbentUnreachable, crmcontracts.OverlayFlipPreflightBlockingExportMissing,
 	})
 	if !errors.Is(err, apperrors.ErrOverlayFlipBlocked) {
 		t.Fatalf("err = %v, want the ErrOverlayFlipBlocked identity (the 409 mapping reads it)", err)

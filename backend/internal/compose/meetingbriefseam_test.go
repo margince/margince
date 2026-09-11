@@ -35,7 +35,7 @@ func wireBrief() crmcontracts.MeetingBrief {
 	return crmcontracts.MeetingBrief{
 		ActivityId:  meetingID(),
 		GeneratedAt: time.Date(2026, time.August, 22, 9, 0, 0, 0, time.UTC),
-		GeneratedBy: crmcontracts.Deterministic,
+		GeneratedBy: crmcontracts.WrittenByDeterministic,
 		Sections: []crmcontracts.MeetingBriefSection{{
 			Kind: crmcontracts.MeetingBriefSectionKindHeader,
 			Sentences: []crmcontracts.OrganizationBriefSentence{{

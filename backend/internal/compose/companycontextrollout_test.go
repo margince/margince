@@ -93,7 +93,7 @@ func TestSiteReadResolutionsPreserveDecisions(t *testing.T) {
 	}
 	value := "Owner-entered value"
 	input := []crmcontracts.CompanySiteReadResolution{{
-		Key: "profile:industry", Action: crmcontracts.UseValue, Value: &value,
+		Key: "profile:industry", Action: crmcontracts.CompanySiteReadResolutionActionUseValue, Value: &value,
 	}}
 	got := siteReadResolutions(&input)
 	if len(got) != 1 || got[0].Key != input[0].Key || got[0].Action != string(input[0].Action) ||

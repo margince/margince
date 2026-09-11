@@ -18,7 +18,7 @@ import (
 
 func TestMeResponseCarriesSystemOfRecordMode(t *testing.T) {
 	for _, mode := range []crmcontracts.MeResponseSystemOfRecordMode{
-		crmcontracts.Native, crmcontracts.Overlay,
+		crmcontracts.MeResponseSystemOfRecordModeNative, crmcontracts.MeResponseSystemOfRecordModeOverlay,
 	} {
 		got := NewHandlers(&Service{}).meResponse(Identity{}, mode)
 		if got.SystemOfRecord == nil {
@@ -36,13 +36,13 @@ func TestResolveSorModeDefaultsAndDegradesToNative(t *testing.T) {
 		resolve func(context.Context) (bool, error)
 		want    crmcontracts.MeResponseSystemOfRecordMode
 	}{
-		{"nil resolver (no overlay wiring)", nil, crmcontracts.Native},
-		{"native workspace", func(context.Context) (bool, error) { return false, nil }, crmcontracts.Native},
-		{"overlay workspace", func(context.Context) (bool, error) { return true, nil }, crmcontracts.Overlay},
+		{"nil resolver (no overlay wiring)", nil, crmcontracts.MeResponseSystemOfRecordModeNative},
+		{"native workspace", func(context.Context) (bool, error) { return false, nil }, crmcontracts.MeResponseSystemOfRecordModeNative},
+		{"overlay workspace", func(context.Context) (bool, error) { return true, nil }, crmcontracts.MeResponseSystemOfRecordModeOverlay},
 		{
 			"resolver error degrades to native",
 			func(context.Context) (bool, error) { return true, errors.New("mode probe failed") },
-			crmcontracts.Native,
+			crmcontracts.MeResponseSystemOfRecordModeNative,
 		},
 	}
 	for _, tt := range tests {

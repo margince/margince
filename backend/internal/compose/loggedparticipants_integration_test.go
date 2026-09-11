@@ -119,7 +119,7 @@ func TestAHandLoggedMailNamesTheRepAndEveryContactOnIt(t *testing.T) {
 	alice := e.SeedPerson(t, "Alice Müller", &e.Rep1)
 	bob := e.SeedPerson(t, "Bob Schmidt", &e.Rep1)
 
-	activity := logMail(ctx, t, e, crmcontracts.CreateActivityRequestKindEmail,
+	activity := logMail(ctx, t, e, crmcontracts.CreateActivityRequestKindCreateActivityRequestKindEmail,
 		crmcontracts.CreateActivityRequestDirectionOutbound, alice, bob)
 
 	parties := partiesOn(t, e, activity)
@@ -164,7 +164,7 @@ func TestAnInboundMailPutsTheContactOnItAsTheSender(t *testing.T) {
 	ctx := loggingRep(e)
 	alice := e.SeedPerson(t, "Alice Müller", &e.Rep1)
 
-	activity := logMail(ctx, t, e, crmcontracts.CreateActivityRequestKindEmail,
+	activity := logMail(ctx, t, e, crmcontracts.CreateActivityRequestKindCreateActivityRequestKindEmail,
 		crmcontracts.CreateActivityRequestDirectionInbound, alice)
 
 	// COUNTED, not merely walked. A loop over the rows accepts an empty result,
@@ -204,7 +204,7 @@ func TestANoteAboutSomebodyNamesNobodyAsHavingSpoken(t *testing.T) {
 	ctx := loggingRep(e)
 	alice := e.SeedPerson(t, "Alice Müller", &e.Rep1)
 
-	activity := logMail(ctx, t, e, crmcontracts.CreateActivityRequestKindNote,
+	activity := logMail(ctx, t, e, crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
 		crmcontracts.CreateActivityRequestDirectionOutbound, alice)
 
 	if parties := partiesOn(t, e, activity); len(parties) != 0 {

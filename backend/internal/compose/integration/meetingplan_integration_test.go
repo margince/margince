@@ -116,7 +116,7 @@ func TestTheMeetingPlanRecognisesWhatTheAccountAskedFor(t *testing.T) {
 
 	// An informal subject over a commercial history: the plan must not read the
 	// coffee as a negotiation, and must say the intent is not captured.
-	if plan.MeetingType.Value != crmcontracts.MeetingPlanTypeRelationship {
+	if plan.MeetingType.Value != crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship {
 		t.Errorf("meeting kind = %q, want relationship for a meeting called Coffee",
 			plan.MeetingType.Value)
 	}
@@ -229,7 +229,7 @@ func TestThePlanNamesTheAbsenceOfADeal(t *testing.T) {
 	plan := planFor(t, ctx, e, meeting)
 	found := false
 	for _, unknown := range plan.Unknowns {
-		if unknown.Kind == crmcontracts.MeetingPlanUnknownNoOpenDeal {
+		if unknown.Kind == crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal {
 			found = true
 		}
 	}

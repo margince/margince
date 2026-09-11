@@ -33,15 +33,15 @@ const (
 
 func caveatFor(typ MeetingType) string {
 	switch typ.Value {
-	case crmcontracts.MeetingPlanTypeRelationship:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship:
 		return caveatRelationship
-	case crmcontracts.MeetingPlanTypeFirstDiscovery, crmcontracts.MeetingPlanTypeFollowupDiscovery:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFollowupDiscovery:
 		return caveatDiscovery
-	case crmcontracts.MeetingPlanTypeCommercial, crmcontracts.MeetingPlanTypeDecision:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDecision:
 		return caveatCommercial
-	case crmcontracts.MeetingPlanTypeDelivery, crmcontracts.MeetingPlanTypeRenewalRisk:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRenewalRisk:
 		return caveatDelivery
-	case crmcontracts.MeetingPlanTypeDemo:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDemo:
 		return caveatDemo
 	default:
 		return caveatUnknown
@@ -84,7 +84,7 @@ func objectiveFor(in Input, typ MeetingType, ranked *rankedClaims) *Objective {
 // objectiveLine turns the sharpest claim into an outcome, softened where the
 // room is not the place to press it.
 func objectiveLine(ask ClaimIn, typ MeetingType, now time.Time) string {
-	if typ.Value == crmcontracts.MeetingPlanTypeRelationship {
+	if typ.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship {
 		return fmt.Sprintf(
 			"Confirm whether %s is still a priority, and leave with one dated next step on it: %s",
 			ask.PersonName, ask.Body)
@@ -99,24 +99,24 @@ func objectiveLine(ask ClaimIn, typ MeetingType, now time.Time) string {
 
 func objectiveByType(typ MeetingType, in Input) string {
 	switch typ.Value {
-	case crmcontracts.MeetingPlanTypeUnknown:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown:
 		return "Establish what this meeting is for before planning the rest of the hour."
-	case crmcontracts.MeetingPlanTypeFirstDiscovery:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery:
 		return "Learn what prompted this conversation and who else decides, and earn a second meeting."
-	case crmcontracts.MeetingPlanTypeRelationship:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship:
 		return "Keep the relationship warm and find out what has changed since you last spoke."
-	case crmcontracts.MeetingPlanTypeDelivery:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery:
 		if in.Project != nil {
 			return projectGoalLine(*in.Project)
 		}
 		return "Agree what is done, what is next, and who owns it."
-	case crmcontracts.MeetingPlanTypeCommercial:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial:
 		return "Agree the shape of the commercial terms, or name what is blocking them."
-	case crmcontracts.MeetingPlanTypeDecision:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDecision:
 		return "Get the decision, or the date and the name of whoever makes it."
-	case crmcontracts.MeetingPlanTypeRenewalRisk:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRenewalRisk:
 		return "Understand what went wrong, and agree one thing that changes before the renewal."
-	case crmcontracts.MeetingPlanTypeDemo:
+	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDemo:
 		return "Show the two things they said they needed, and agree what happens after."
 	default:
 		return "Agree a dated next step before the meeting ends."
@@ -141,7 +141,7 @@ func openingFor(in Input, typ MeetingType) *Sentence {
 		}
 	}
 	text := "Open by asking what prompted the meeting and what would make the hour worth their time."
-	if typ.Value != crmcontracts.MeetingPlanTypeUnknown && in.LastTouchAt != nil {
+	if typ.Value != crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown && in.LastTouchAt != nil {
 		text = "Open on what has changed since you last spoke, before proposing anything."
 	}
 	return &Sentence{

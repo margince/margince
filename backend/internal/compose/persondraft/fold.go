@@ -276,7 +276,7 @@ func snippetOf(body string) string {
 // A due date exactly equal to now is not yet overdue. The boundary favours the
 // side that says less.
 func isOverdueOurs(claim crmcontracts.ConversationClaim, now time.Time) bool {
-	if claim.Kind != crmcontracts.CommitmentOurs {
+	if claim.Kind != crmcontracts.ConversationClaimKindCommitmentOurs {
 		return false
 	}
 	if claim.Status != crmcontracts.ConversationClaimStatusOpen {

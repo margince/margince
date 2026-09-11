@@ -439,7 +439,7 @@ func ContractSearchResults(res datasource.SearchResult) []crmcontracts.SearchRes
 			Type: crmcontracts.SearchResultType(rec.Ref.Type),
 		}
 		if !rec.Freshness.Authoritative {
-			tt := crmcontracts.SearchResultTrustTierExternal
+			tt := crmcontracts.SearchResultTrustTierSearchResultTrustTierExternal
 			r.TrustTier = &tt
 		}
 		out = append(out, r)

@@ -243,7 +243,7 @@ func taskAttention(task overdueTask) *crmcontracts.Organization360WorkAttention 
 	}
 	due := task.DueAt
 	return &crmcontracts.Organization360WorkAttention{
-		Kind:  crmcontracts.WorkAttentionOverdueTask,
+		Kind:  crmcontracts.Organization360WorkAttentionKindWorkAttentionOverdueTask,
 		Title: task.Subject,
 		Who:   namedOrNobody(task.Who),
 		DueAt: &due,
@@ -265,7 +265,7 @@ func commitmentAttention(commitment people.ProjectCommitment) *crmcontracts.Orga
 	}
 	source := openapi_types.UUID(commitment.ActivityID)
 	return &crmcontracts.Organization360WorkAttention{
-		Kind:             crmcontracts.WorkAttentionCommitmentTheirs,
+		Kind:             crmcontracts.Organization360WorkAttentionKindWorkAttentionCommitmentTheirs,
 		Title:            commitment.Body,
 		Who:              namedOrNobody(commitment.Who),
 		DueAt:            commitment.DueAt,

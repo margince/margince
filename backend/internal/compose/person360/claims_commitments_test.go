@@ -20,7 +20,7 @@ import (
 func TestAnOpenPromiseOffTheNewestPageStillReachesTheLadder(t *testing.T) {
 	older := crmcontracts.ConversationClaim{
 		Id:     openapi_types.UUID(ids.NewV7()),
-		Kind:   crmcontracts.CommitmentOurs,
+		Kind:   crmcontracts.ConversationClaimKindCommitmentOurs,
 		Status: crmcontracts.ConversationClaimStatusOpen,
 		Body:   "Send the revised quote",
 	}
@@ -28,7 +28,7 @@ func TestAnOpenPromiseOffTheNewestPageStillReachesTheLadder(t *testing.T) {
 	for range sectionCap {
 		newest = append(newest, crmcontracts.ConversationClaim{
 			Id:     openapi_types.UUID(ids.NewV7()),
-			Kind:   crmcontracts.Decision,
+			Kind:   crmcontracts.ConversationClaimKindDecision,
 			Status: crmcontracts.ConversationClaimStatusOpen,
 			Body:   "They picked the annual plan",
 		})
@@ -55,7 +55,7 @@ func TestAnOpenPromiseOffTheNewestPageStillReachesTheLadder(t *testing.T) {
 func TestAPromiseAlreadyOnThePageIsNotRepeated(t *testing.T) {
 	promise := crmcontracts.ConversationClaim{
 		Id:     openapi_types.UUID(ids.NewV7()),
-		Kind:   crmcontracts.CommitmentOurs,
+		Kind:   crmcontracts.ConversationClaimKindCommitmentOurs,
 		Status: crmcontracts.ConversationClaimStatusOpen,
 		Body:   "Send the questionnaire",
 	}

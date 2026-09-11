@@ -101,7 +101,7 @@ func doneSince(
 		return nil, nil, err
 	}
 	if unplaceable > 0 {
-		notShown[string(crmcontracts.MagicNotShownUnknownEntityType)] = unplaceable
+		notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnknownEntityType)] = unplaceable
 	}
 	return found, notShown, nil
 }

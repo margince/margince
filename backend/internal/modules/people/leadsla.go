@@ -45,12 +45,12 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 		return &deadline, nil
 	}
 	now := leadSLAClock().UTC()
-	state := crmcontracts.LeadSlaStateWithinTarget
+	state := crmcontracts.LeadSlaStateLeadSlaStateWithinTarget
 	switch {
 	case now.After(deadline):
-		state = crmcontracts.LeadSlaStateBreached
+		state = crmcontracts.LeadSlaStateLeadSlaStateBreached
 	case deadline.Sub(now) <= policy.atRisk():
-		state = crmcontracts.LeadSlaStateAtRisk
+		state = crmcontracts.LeadSlaStateLeadSlaStateAtRisk
 	}
 	return &deadline, &state
 }
@@ -100,9 +100,9 @@ func slaStateClause(policy leadSLAPolicy, state crmcontracts.ListLeadsParamsSlaS
 	minutes := policy.targetMinutes()
 	now := leadSLAClock().UTC()
 	switch crmcontracts.LeadSlaState(state) {
-	case crmcontracts.LeadSlaStateBreached:
+	case crmcontracts.LeadSlaStateLeadSlaStateBreached:
 		return storekit.SQLf(open+deadline+" < $%d", arg(minutes), arg(now))
-	case crmcontracts.LeadSlaStateAtRisk:
+	case crmcontracts.LeadSlaStateLeadSlaStateAtRisk:
 		return storekit.SQLf(open+deadline+" >= $%d AND "+deadline+" - $%d * interval '1 minute' <= $%d",
 			arg(minutes), arg(now), arg(minutes), arg(int(policy.atRisk()/time.Minute)), arg(now))
 	default:

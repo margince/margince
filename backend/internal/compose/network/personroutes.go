@@ -103,7 +103,7 @@ func candidateFor(
 		return crmcontracts.PersonGraphRouteCandidate{}, false
 	}
 	candidate := crmcontracts.PersonGraphRouteCandidate{
-		RouteType:      crmcontracts.PersonGraphRouteTypeDirect,
+		RouteType:      crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeDirect,
 		ViaUserId:      *via,
 		ViaDisplayName: idx.labels[e.From],
 		StrengthBucket: bucketOf(e.StrengthBucket),
@@ -125,7 +125,7 @@ func candidateFor(
 		return crmcontracts.PersonGraphRouteCandidate{}, false
 	}
 	name := idx.labels[e.To]
-	candidate.RouteType = crmcontracts.PersonGraphRouteTypeThroughContact
+	candidate.RouteType = crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeThroughContact
 	candidate.RouteId = fmt.Sprintf("through:%s:%s", *via, *through)
 	candidate.ThroughPersonId = through
 	candidate.ThroughDisplayName = &name
@@ -149,8 +149,8 @@ func sortCandidates(candidates []crmcontracts.PersonGraphRouteCandidate) {
 
 // beatsCandidate is the whole preference order, in one place.
 func beatsCandidate(a, b crmcontracts.PersonGraphRouteCandidate) bool {
-	aDirect := a.RouteType == crmcontracts.PersonGraphRouteTypeDirect
-	bDirect := b.RouteType == crmcontracts.PersonGraphRouteTypeDirect
+	aDirect := a.RouteType == crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeDirect
+	bDirect := b.RouteType == crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeDirect
 	if aDirect != bDirect {
 		return aDirect
 	}

@@ -129,10 +129,10 @@ func (s *Store) Retrieve(ctx context.Context, corpusID ids.UUID, question string
 	// corpus: a workspace told its corpus is not ready would go and look at
 	// documents that are perfectly fine.
 	if identity == "" {
-		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeRetrievalUnavailable
+		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeRetrievalUnavailable
 		return state, nil, nil
 	}
-	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
 		return state, nil, nil
 	}
 
@@ -154,7 +154,7 @@ func (s *Store) Retrieve(ctx context.Context, corpusID ids.UUID, question string
 		// question the lane could only answer with a zero vector — is a lane
 		// malfunction, and it is already the outcome that spends nothing and
 		// claims nothing.
-		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeNotCovered
+		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered
 		return state, nil, nil
 	}
 
@@ -181,11 +181,11 @@ func (s *Store) Retrieve(ctx context.Context, corpusID ids.UUID, question string
 	if err != nil {
 		return state, nil, err
 	}
-	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
 		return state, nil, nil
 	}
 	if len(grounded) == 0 {
-		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeNotCovered
+		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered
 		return state, nil, nil
 	}
 	return state, grounded, nil
@@ -200,7 +200,7 @@ func groundedIn(
 	if err != nil {
 		return state, nil, err
 	}
-	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
 		return state, nil, nil
 	}
 	passages, err := rankIn(ctx, tx, corpusID, vec, identity)
@@ -279,7 +279,7 @@ func readinessIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, identity str
 		corpusID, identity).Scan(&retrievable); err != nil {
 		return state, fmt.Errorf("count the corpus's retrievable passages: %w", err)
 	}
-	state.Outcome = crmcontracts.KnowledgeAnswerOutcomeAnswered
+	state.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered
 	switch {
 	case corpus.Reindexing != nil && *corpus.Reindexing,
 		inFlight > 0,
@@ -289,7 +289,7 @@ func readinessIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, identity str
 		// a superseded binding retrieve nothing, and saying not_covered
 		// would blame the question for prose the corpus is holding.
 		retrievable < corpus.Coverage.ChunksTotal:
-		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeNotReady
+		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotReady
 	}
 	return state, nil
 }

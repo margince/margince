@@ -156,7 +156,7 @@ func viewFixture(t *testing.T) crmcontracts.Person360 {
 	view := crmcontracts.Person360{
 		Person: crmcontracts.Person{FullName: "Anna Weber"},
 		Claims: &[]crmcontracts.ConversationClaim{{
-			Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.Objection,
+			Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ConversationClaimKindObjection,
 			Body:             "One listed sub-processor blocks legal sign-off.",
 			Status:           crmcontracts.ConversationClaimStatusOpen,
 			SourceQuote:      "we cannot go ahead while the analytics vendor is on it",

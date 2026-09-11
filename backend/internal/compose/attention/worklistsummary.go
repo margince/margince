@@ -158,8 +158,8 @@ func bucketOf(row ranked, level int, buckets *crmcontracts.WorklistBuckets) {
 // deadline is still inside today by construction.
 func dueToday(row ranked) bool {
 	if group := row.item.DueGroup; group != nil {
-		return *group == crmcontracts.WorklistDueGroupToday ||
-			*group == crmcontracts.WorklistDueGroupOverdue
+		return *group == crmcontracts.WorklistItemDueGroupWorklistDueGroupToday ||
+			*group == crmcontracts.WorklistItemDueGroupWorklistDueGroupOverdue
 	}
 	if !row.deadlineAt.IsZero() {
 		return true

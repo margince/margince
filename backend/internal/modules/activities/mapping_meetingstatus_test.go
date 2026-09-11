@@ -21,7 +21,7 @@ func TestLogActivityInputCarriesAMeetingsStatus(t *testing.T) {
 	status := crmcontracts.CreateActivityRequestMeetingStatusHeld
 
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind:          crmcontracts.CreateActivityRequestKindMeeting,
+		Kind:          crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
 		MeetingStatus: &status,
 		Source:        "human",
 	})
@@ -37,7 +37,7 @@ func TestLogActivityInputRefusesAMeetingStatusOnANote(t *testing.T) {
 	status := crmcontracts.CreateActivityRequestMeetingStatusHeld
 
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind:          crmcontracts.CreateActivityRequestKindNote,
+		Kind:          crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
 		MeetingStatus: &status,
 		Source:        "human",
 	})

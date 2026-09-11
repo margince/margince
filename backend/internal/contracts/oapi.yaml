@@ -7,3 +7,13 @@ generate:
   chi-server: true
 output-options:
   skip-prune: false
+# Every enum constant carries its type's name, always.
+#
+# Without this the generator prefixes only where a bare name would COLLIDE, and
+# which of two contending enums keeps the bare name is not stable: adding a
+# schema whose values collide with another enum's can rewrite constants in an
+# enum the change never touched, and can do it differently on two runs over the
+# same contract. That made `make drift` answer one way locally and another in
+# CI, which is the one property that gate exists to have.
+compatibility:
+  always-prefix-enum-values: true

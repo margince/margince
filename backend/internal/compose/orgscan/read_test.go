@@ -55,12 +55,12 @@ func (l *checkedLane) CompleteValidated(_ context.Context, _ model.Request, vali
 func TestWithNoLaneOrNothingToReadTheFloorAnswers(t *testing.T) {
 	in, _ := scanInput()
 	org := ids.New[ids.OrganizationKind]()
-	if got, by, err := Read(t.Context(), nil, org, in, "en"); got != nil || by != crmcontracts.Deterministic || err != nil {
+	if got, by, err := Read(t.Context(), nil, org, in, "en"); got != nil || by != crmcontracts.WrittenByDeterministic || err != nil {
 		t.Errorf("no lane: %v by %q, err %v; want the deterministic floor", got, by, err)
 	}
 	lane := &cannedLane{reply: reply()}
 	silent := Input{Account: in.Account}
-	if got, by, err := Read(t.Context(), lane, org, silent, "en"); got != nil || by != crmcontracts.Deterministic || err != nil || lane.asked != 0 {
+	if got, by, err := Read(t.Context(), lane, org, silent, "en"); got != nil || by != crmcontracts.WrittenByDeterministic || err != nil || lane.asked != 0 {
 		t.Errorf("no exchanges: %v by %q, err %v after %d calls; want the floor without a call", got, by, err, lane.asked)
 	}
 }
@@ -72,7 +72,7 @@ func TestReadKeepsWhatTheLaneGrounded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	if by != crmcontracts.Model || len(got) != 1 {
+	if by != crmcontracts.WrittenByModel || len(got) != 1 {
 		t.Errorf("%d findings by %q, want the one grounded finding by the model", len(got), by)
 	}
 }
@@ -92,7 +92,7 @@ func TestALaneThatBreaksIsATypedErrorCarryingItsCause(t *testing.T) {
 			if !errors.As(err, &lane) {
 				t.Fatalf("err = %v, want a LaneError", err)
 			}
-			if got != nil || by != crmcontracts.Deterministic {
+			if got != nil || by != crmcontracts.WrittenByDeterministic {
 				t.Errorf("%v by %q alongside the error; want nothing, on the floor", got, by)
 			}
 			if lane.Cause == nil || !errors.Is(err, lane.Cause) || !strings.HasPrefix(err.Error(), "account scan lane: ") {

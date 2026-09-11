@@ -478,7 +478,7 @@ func statusSetByFor(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if actor.Type == principal.PrincipalSystem {
-		return string(crmcontracts.LeadStatusSetBySystem), nil
+		return string(crmcontracts.LeadStatusSetByLeadStatusSetBySystem), nil
 	}
-	return string(crmcontracts.LeadStatusSetByHuman), nil
+	return string(crmcontracts.LeadStatusSetByLeadStatusSetByHuman), nil
 }

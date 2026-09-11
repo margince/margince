@@ -241,7 +241,7 @@ func enumKeysOf(lit *ast.CompositeLit, qualifier string, dotImported bool, byNam
 	return members, len(enums) == 1
 }
 
-// contractConstNamed unwraps the `string(crmcontracts.Member)` a map key is
+// contractConstNamed unwraps the `string(crmcontracts.OnboardingStatePathMember)` a map key is
 // written as and answers which generated constant it names.
 func contractConstNamed(expr ast.Expr, qualifier string, dotImported bool, byName map[string]string) (string, bool) {
 	if call, ok := expr.(*ast.CallExpr); ok && len(call.Args) == 1 {

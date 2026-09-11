@@ -25,7 +25,7 @@ func WritePlan(
 	ctx context.Context, lane Completer, in Input, floor Plan, lang string,
 ) (Plan, crmcontracts.WrittenBy) {
 	if lane == nil {
-		return floor, crmcontracts.Deterministic
+		return floor, crmcontracts.WrittenByDeterministic
 	}
 	written, err := writePlanWithModel(ctx, lane, in, floor, lang)
 	if err != nil {
@@ -33,9 +33,9 @@ func WritePlan(
 		// unavailable, over budget or answering unparseable JSON must not take
 		// the preparation down with it: the reader gets the floor, and
 		// generated_by tells them which of the two they are reading.
-		return floor, crmcontracts.Deterministic
+		return floor, crmcontracts.WrittenByDeterministic
 	}
-	return withPlanFloor(written, floor), crmcontracts.Model
+	return withPlanFloor(written, floor), crmcontracts.WrittenByModel
 }
 
 func writePlanWithModel(

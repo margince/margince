@@ -165,7 +165,7 @@ func coachingFailureMode(plan Plan) string {
 		return "Defending the history instead of owning it and naming a date."
 	case len(plan.LikelyAsks) >= 2:
 		return "Answering the asks one by one and never getting to a question of their own."
-	case plan.Type.Value == crmcontracts.MeetingPlanTypeUnknown:
+	case plan.Type.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown:
 		return "Assuming what the meeting is for, and finding out at the end that it was not."
 	case len(plan.Arc) == 0:
 		return "Filling the silence with product rather than asking what is actually going on."

@@ -90,7 +90,7 @@ func TestAReaderLaneNamesTheReader(t *testing.T) {
 	if owner == nil {
 		t.Fatal("a personal lane's row carries no owner, which reads as a lane that never answered")
 	}
-	if owner.Kind != crmcontracts.WorklistOwnerUser {
+	if owner.Kind != crmcontracts.WorklistOwnerKindWorklistOwnerUser {
 		t.Errorf("a personal lane's row answers %q, want a named user", owner.Kind)
 	}
 	if owner.Id == nil || ids.UUID(*owner.Id) != reader {
@@ -133,7 +133,7 @@ func TestUnassignedIsSaidRatherThanImplied(t *testing.T) {
 	silent := ranked{item: crmcontracts.WorklistItem{Source: crmcontracts.WorklistItemSourceTask}}
 
 	said := ownerOnTheWire(stated, ids.UUID{})
-	if said == nil || said.Kind != crmcontracts.WorklistOwnerUnassigned {
+	if said == nil || said.Kind != crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned {
 		t.Errorf("a lane that found no owner answered %v, want an explicit unassigned", said)
 	}
 	if quiet := ownerOnTheWire(silent, ids.UUID{}); quiet != nil {
@@ -167,7 +167,7 @@ func TestATasksOwnerAgreesWithItsOwnReason(t *testing.T) {
 				}
 			}
 			owner := ownerOnTheWire(row, ids.UUID{})
-			ownerSaysUnassigned := owner != nil && owner.Kind == crmcontracts.WorklistOwnerUnassigned
+			ownerSaysUnassigned := owner != nil && owner.Kind == crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned
 			if saysUnassigned != ownerSaysUnassigned {
 				t.Errorf("the row's reasons say unassigned=%v and its owner says %v: "+
 					"a reader is told two different things about one fact",

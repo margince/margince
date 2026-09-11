@@ -16,12 +16,12 @@ func TestWireCarriesTheVoiceDegradedFlag(t *testing.T) {
 	t.Parallel()
 	draft := Draft{Subject: "s", Body: "b"}
 
-	degraded := Wire(draft, crmcontracts.Model, true, "en")
+	degraded := Wire(draft, crmcontracts.WrittenByModel, true, "en")
 	if degraded.VoiceDegraded == nil || !*degraded.VoiceDegraded {
 		t.Fatal("a degraded voice load must be stamped on the wire draft")
 	}
 
-	clean := Wire(draft, crmcontracts.Model, false, "en")
+	clean := Wire(draft, crmcontracts.WrittenByModel, false, "en")
 	if clean.VoiceDegraded == nil || *clean.VoiceDegraded {
 		t.Fatal("a clean load must stamp voice_degraded=false, not omit it")
 	}

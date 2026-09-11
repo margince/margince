@@ -28,10 +28,10 @@ func TestAMeetingThatHappenedIsNotSomethingToPrepareFor(t *testing.T) {
 		Source:   crmcontracts.WorklistItemSourceMeetingOutcome,
 		Category: crmcontracts.WorklistItemCategoryMeetings,
 	}
-	if got := BriefSectionOf(row); got != crmcontracts.BriefSectionReviewAndRepair {
+	if got := BriefSectionOf(row); got != crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair {
 		t.Errorf("a meeting that happened is filed under %q, want %q — the row asks what "+
 			"the meeting came to, and preparing for it is no longer possible",
-			got, crmcontracts.BriefSectionReviewAndRepair)
+			got, crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair)
 	}
 	// And the lane it is the counterpart of still prepares, so the rule above
 	// separates the two rather than emptying the section.
@@ -39,9 +39,9 @@ func TestAMeetingThatHappenedIsNotSomethingToPrepareFor(t *testing.T) {
 		Source:   crmcontracts.WorklistItemSourceMeeting,
 		Category: crmcontracts.WorklistItemCategoryMeetings,
 	}
-	if got := BriefSectionOf(ahead); got != crmcontracts.BriefSectionPrepareConversations {
+	if got := BriefSectionOf(ahead); got != crmcontracts.WorklistItemBriefSectionBriefSectionPrepareConversations {
 		t.Errorf("a meeting still ahead is filed under %q, want %q", got,
-			crmcontracts.BriefSectionPrepareConversations)
+			crmcontracts.WorklistItemBriefSectionBriefSectionPrepareConversations)
 	}
 }
 
