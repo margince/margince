@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // LocalDayAt is the calendar date the given instant falls on in the
@@ -44,8 +45,7 @@ func LocalDayAt(ctx context.Context, tx pgx.Tx, now time.Time) (day time.Time, l
 	if err != nil {
 		return time.Time{}, time.Time{}, fmt.Errorf("brief: the installation timezone %q does not resolve: %w", zone, err)
 	}
-	local = now.In(loc)
-	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC), local, nil
+	return storekit.WorkspaceDay(now, loc), now.In(loc), nil
 }
 
 // localDay is LocalDayAt for the callers in this package, which need only the
