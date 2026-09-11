@@ -371,12 +371,12 @@ func RelationshipEndpointScope(ctx context.Context, alias string, arg func(any) 
 // the table it points at. Two columns point at `company`, which is why this
 // is a slice and not a map.
 var relationshipEndpointColumns = []struct{ column, table string }{
-	{"person_id", tablePerson},
+	{personIDColumn, tablePerson},
 	{"counterparty_person_id", tablePerson},
 	{companyIDColumn, tableCompany},
 	{"counterparty_company_id", tableCompany},
-	{"deal_id", tableDeal},
-	{"project_id", tableProject},
+	{dealIDColumn, tableDeal},
+	{projectIDColumn, tableProject},
 }
 
 // relationshipEndpoints is the distinct endpoint TABLES, for the unbounded

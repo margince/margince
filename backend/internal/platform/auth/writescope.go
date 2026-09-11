@@ -28,7 +28,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -325,6 +324,40 @@ func writeAuthorityPredicateAs(p principal.Principal, table, alias string, arg f
 	// An ownerless row is nobody's to change: it is claimed first
 	// (EnsureClaimable), then written under the owner scope like any other.
 	owner := ownerPredicate(p, arg, unownedIsNobodys)(alias)
+	// A READ SEAT IS NOT HANDED A WRITE GRANT BY THIS ARM, and the rule this
+	// keeps is AAD-AC-4: a read-seat member may not hold write authority over a
+	// record, whatever a stored grant says.
+	//
+	// Its only guard was refuseWriteGrantToReadSeat, at grant CREATION. Nothing
+	// revokes a standing write grant when a seat is downgraded, so between the
+	// downgrade and a cleanup nobody has written yet, the stored data says the
+	// opposite of the rule. The seat ceiling makes that inert on the doors that
+	// exist today — a REST mutation dies at the ceiling, an agent call at the
+	// admission gate — which is exactly the state that stops being inert when a
+	// third door arrives, and a seat-change endpoint is what would create the
+	// window in the first place.
+	//
+	// Read from the PRINCIPAL rather than joined from app_user: the seat is
+	// already resolved on every call, it is the same value the ceiling reads,
+	// and a join would put a second answer to one question inside the hottest
+	// predicate in the tree.
+	//
+	// Compared against SeatRead rather than asked CanMutate, and the difference
+	// is the UNSET seat. CanMutate is fail-closed — an unset seat reads as a
+	// read one — which is right at the ceiling, where the question is whether
+	// to admit a mutation at all. Here it would narrow the authority of every
+	// internal principal whose loader has no seat to resolve, which is most of
+	// them: a job, a relay, a worker. Those calls are already refused at the
+	// ceiling if they are somebody's, and narrowing them here would trade a
+	// rule about read seats for a behaviour change nobody asked for. So this
+	// removes the arm for exactly the principal the rule names.
+	//
+	// The owner arm is untouched: owning a record is not a grant, and a read
+	// seat's own records are refused by the ceiling like everything else it
+	// might write.
+	if p.SeatType == principal.SeatRead {
+		return "(" + owner + ")"
+	}
 	me, teams := arg(p.UserID), arg(p.TeamIDs)
 	return fmt.Sprintf(`(%s OR EXISTS (
 		   SELECT 1 FROM record_grant rg
@@ -334,133 +367,6 @@ func writeAuthorityPredicateAs(p principal.Principal, table, alias string, arg f
 		     AND ((rg.subject_type = 'user' AND rg.subject_id = $%d)
 		       OR (rg.subject_type = 'team' AND rg.subject_id = ANY($%d)))))`,
 		owner, table, alias, grantAccessWrite, me, teams)
-}
-
-// EnsureActivityWritable is EnsureWritable for an activity, which has no
-// owner_id of its own. The caller must READ it (the content gate — a limited
-// conversation is nobody else's to edit), and their authority to CHANGE it is
-// any of:
-//
-//   - they authored or captured it (captured_by names their user id);
-//   - it is their task or their meeting (assignee_id / host_user_id);
-//   - it is a link-less, workspace-shared note;
-//   - at least one linked record is theirs to change — the same own/team
-//     scope or `write` grant EnsureWritable takes on that record.
-//
-// Reads of customer identity are shared across the workspace, so the read
-// gate alone would let every seat rewrite every colleague's correspondence;
-// this is the arm that keeps activity writes team-shaped. An unbounded human
-// edits every activity they can read, as they edit every record.
-func EnsureActivityWritable(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	return EnsureActivityWritableIn(ctx, tx, id, true)
-}
-
-// EnsureActivityWritableIn is EnsureActivityWritable against a chosen row
-// liveness. live=false serves a caller that already resolved the row past
-// its own LiveOnly lock and confirmed it is held under a statutory
-// retention obligation (activities.lockActivityForWrite).
-//
-// It skips the content-visible gate's LIVENESS half rather than passing live
-// through to it: ActivityAvailableClause is `restricted_at IS NULL`
-// UNCONDITIONALLY — by design, a restricted row reads as gone to everyone
-// through that gate, live argument or not (ensureActivity's own doc). A
-// caller reaching this function with live=false already proved the row
-// exists by another means (the row lock, taken directly against the table),
-// so re-asking the liveness half would only reproduce the same false 404
-// this exists to remove. What it does NOT earn a skip from is the OTHER
-// half ActivityContentClause folds in for every non-system caller —
-// ActivityAudienceArm, the row's own participants/selected narrowing —
-// which the ownership check below cannot stand in for: ownership answers
-// "is this the caller's team's record", audience answers "did a human limit
-// who reads this ONE message", and a caller who owns a record is not
-// thereby a participant on every limited message under it. An unbounded
-// human is bound by this too — ActivityContentClause's own doc says only
-// the system principal reads the audience arm away, so Unbounded below must
-// not become a bypass a held row's write-authority check does not have to
-// answer for.
-func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live bool) error {
-	if live {
-		if err := ensureActivity(ctx, tx, id, ActivityContentClause, true); err != nil {
-			return err
-		}
-	} else {
-		included, err := activityAudienceIncludes(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		if !included {
-			return apperrors.ErrNotFound
-		}
-	}
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return err
-	}
-	if Unbounded(p) {
-		return nil
-	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos, me, author := arg(id), arg(p.UserID), arg("%:"+p.UserID.String())
-
-	var permitted bool
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $%[1]d AND (
-		   a.captured_by LIKE $%[3]d
-		   OR a.assignee_id = $%[2]d
-		   OR a.host_user_id = $%[2]d
-		   OR NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id)
-		   OR EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND %[4]s)))`,
-		idPos, me, author, linkTargetWritable(p, "l", arg)), args...).Scan(&permitted); err != nil {
-		return err
-	}
-	if !permitted {
-		if !live {
-			return apperrors.ErrNotFound
-		}
-		return apperrors.ErrPermissionDenied
-	}
-	return nil
-}
-
-// activityAudienceIncludes probes ONLY ActivityAudienceArm — no liveness, no
-// discoverability — for a caller in EnsureActivityWritableIn's live=false
-// branch, whose row existence and archived state were already settled by
-// its own lock. A row the caller cannot find at all answers false, not an
-// error: the same not-found the audience arm itself would give inside the
-// ordinary content-visible probe.
-func activityAudienceIncludes(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos := arg(id)
-	audience, err := ActivityAudienceArm(ctx, "a", arg)
-	if err != nil {
-		return false, err
-	}
-	var included bool
-	err = tx.QueryRow(ctx, fmt.Sprintf(
-		`SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $%d AND (%s))`, idPos, audience),
-		args...).Scan(&included)
-	return included, err
-}
-
-// linkTargetWritable is linkTargetVisible's write twin: one arm per
-// activity_link column, each asking whether the record it points at is the
-// caller's to change.
-func linkTargetWritable(p principal.Principal, alias string, arg func(any) int) string {
-	arms := make([]string, 0, len(linkTargetTables))
-	for _, t := range []struct{ column, table, probe string }{
-		{"person_id", tablePerson, "wp"},
-		{companyIDColumn, tableCompany, "wo"},
-		{"deal_id", tableDeal, "wd"},
-		{"lead_id", tableLead, "wl"},
-		{"project_id", tableProject, "wpr"},
-	} {
-		arms = append(arms, fmt.Sprintf(
-			`(%[1]s.%[2]s IS NOT NULL AND EXISTS (SELECT 1 FROM %[3]s %[4]s WHERE %[4]s.id = %[1]s.%[2]s AND %[5]s))`,
-			alias, t.column, t.table, t.probe, writeAuthorityPredicateAs(p, t.table, t.probe, arg)))
-	}
-	return "(" + strings.Join(arms, " OR ") + ")"
 }
 
 // EnsureClaimable is the gate in front of taking ownership of a row. A claim

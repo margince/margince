@@ -93,6 +93,49 @@ func (f sharedPersonFixture) share(t *testing.T, access string) {
 	}
 }
 
+// AAD-AC-4 against the database: a read-seat member holding a WRITE share is
+// still refused.
+//
+// The rule had one guard, at grant creation (refuseWriteGrantToReadSeat), and
+// nothing revokes a standing grant when a seat is downgraded. So the stored
+// row can say the opposite of the rule, and the only thing making that inert
+// is the seat ceiling on the doors that exist today — which is exactly the
+// state that stops being inert when a seat-change endpoint arrives and creates
+// the window in the first place. This is the second guard, and it is the one
+// that holds whatever the stored data says.
+//
+// The pair is the point: the same row, the same caller, the same grant, and
+// only the seat moves.
+func TestAWriteShareIsInertOnAReadSeat(t *testing.T) {
+	f := seedSharedPerson(t, "Downgraded Holder")
+	store := people.NewStore(f.env.DB())
+	id := PersonIDOf(f.person)
+	f.share(t, "write")
+
+	onSeat := func(seat principal.SeatType) error {
+		ctx := recordActor(f.env, f.env.Rep1, principal.RowScopeTeam, []ids.UUID{f.env.Team1})
+		actor, _ := principal.Actor(ctx)
+		actor.SeatType = seat
+		to := "Renamed On A " + string(seat) + " Seat"
+		_, err := store.UpdatePerson(principal.WithActor(ctx, actor), id,
+			people.UpdatePersonInput{FullName: &to, Source: "manual"})
+		return err
+	}
+
+	if err := onSeat(principal.SeatRead); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a read seat wrote under a standing write share → %v, want permission-denied", err)
+	}
+	if got := f.fullName(t); got != "Downgraded Holder" {
+		t.Fatalf("the person reads %q after a refused edit, want it untouched", got)
+	}
+
+	// The allow arm, on the same grant: the share works, and it is the SEAT
+	// that decided the refusal above rather than anything about the share.
+	if err := onSeat(principal.SeatFull); err != nil {
+		t.Fatalf("a full seat could not write under the same write share → %v", err)
+	}
+}
+
 func TestAReadShareOpensAPersonButCannotEditIt(t *testing.T) {
 	f := seedSharedPerson(t, "Read Share Subject")
 	store := people.NewStore(f.env.DB())

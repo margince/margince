@@ -30,6 +30,35 @@ func writeArm(p principal.Principal, table string) string {
 	return writeAuthorityPredicate(p, table, arg)
 }
 
+// AAD-AC-4: a read-seat member may not hold write authority over a record.
+//
+// Its only guard was at grant CREATION, and nothing revokes a standing write
+// grant when a seat is downgraded — so between the downgrade and a cleanup
+// nobody has written yet, the stored data says the opposite of the rule. The
+// seat ceiling makes that inert on the doors that exist today, which is exactly
+// the state that stops being inert when a third door arrives.
+//
+// Both directions, because an arm that vanished for everybody would pass the
+// refusal half on its own: a FULL seat still reaches its grants, and only the
+// seat moved between the two.
+func TestAReadSeatReachesNoWriteGrant(t *testing.T) {
+	for _, table := range []string{"person", "company", "deal", "lead", "project"} {
+		reader := human(principal.RowScopeTeam)
+		reader.SeatType = principal.SeatRead
+		if sql := writeArm(reader, table); strings.Contains(sql, "record_grant") {
+			t.Errorf("a read seat's %s write arm still counts a record_grant, so a share written "+
+				"before the downgrade still confers write: %s", table, sql)
+		}
+
+		writer := human(principal.RowScopeTeam)
+		writer.SeatType = principal.SeatFull
+		if sql := writeArm(writer, table); !strings.Contains(sql, "record_grant") {
+			t.Errorf("a full seat's %s write arm reaches no grant at all, so the share this "+
+				"product sells does nothing: %s", table, sql)
+		}
+	}
+}
+
 func TestTheWriteArmCountsOnlyAWriteGrant(t *testing.T) {
 	for _, table := range []string{"person", "company", "deal", "lead", "project"} {
 		for _, scope := range []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam} {
