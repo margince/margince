@@ -83,29 +83,29 @@ func factSuspectReason(field crmcontracts.OrganizationFactField, value string) s
 		// The one seen in the wild: a contact page's phone number filed as a
 		// location, because that page's menu offers both fields.
 		if phoneShaped(v) {
-			return string(crmcontracts.OrganizationFactSuspectReasonPhoneShapedLocation)
+			return string(crmcontracts.OrganizationFactSuspectReasonOrganizationFactSuspectReasonPhoneShapedLocation)
 		}
 	case crmcontracts.OrganizationFactFieldPhone:
 		if !phoneShaped(v) {
-			return string(crmcontracts.OrganizationFactSuspectReasonNotAPhone)
+			return string(crmcontracts.OrganizationFactSuspectReasonOrganizationFactSuspectReasonNotAPhone)
 		}
 	case crmcontracts.OrganizationFactFieldFoundedYear:
 		if !yearShaped.MatchString(v) {
-			return string(crmcontracts.OrganizationFactSuspectReasonNotAYear)
+			return string(crmcontracts.OrganizationFactSuspectReasonOrganizationFactSuspectReasonNotAYear)
 		}
 	case crmcontracts.OrganizationFactFieldContactEmail:
 		// Shape only, not deliverability: one @, something either side of it,
 		// and a dot INSIDE the domain. Anything stricter starts rejecting real
 		// addresses; anything looser accepts "@." as one.
 		if !emailShaped(v) {
-			return string(crmcontracts.OrganizationFactSuspectReasonNotAnEmail)
+			return string(crmcontracts.OrganizationFactSuspectReasonOrganizationFactSuspectReasonNotAnEmail)
 		}
 	case crmcontracts.OrganizationFactFieldEmployeeRange:
 		// A register number IS digits, so digits alone cannot separate them.
 		// What separates them is what the value LEADS with: a headcount leads
 		// with its number or a qualifier, and "HRB 123456 B" leads with neither.
 		if !sizeShaped.MatchString(v) {
-			return string(crmcontracts.OrganizationFactSuspectReasonNotASize)
+			return string(crmcontracts.OrganizationFactSuspectReasonOrganizationFactSuspectReasonNotASize)
 		}
 	}
 	return ""

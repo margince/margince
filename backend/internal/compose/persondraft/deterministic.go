@@ -133,7 +133,7 @@ var openingClaimKinds = []string{"open_question", "objection", "priority"}
 // signed order" is a real fact and a different message from "we owe you the
 // scope document" - chasing them is not what this rule is for, and the prompt
 // beside it says the overdue item is ours.
-var ourCommitment = string(crmcontracts.CommitmentOurs)
+var ourCommitment = string(crmcontracts.ConversationClaimKindCommitmentOurs)
 
 // leadClaim picks the claim the opener refers to: the first one of the
 // highest-ranked kind present. The 360 hands claims over newest-first, so

@@ -106,8 +106,8 @@ func meaningOf(action string) (admittedAction, bool) {
 // machinery would be a lie about who did it.
 func machineActors() []string {
 	return []string{
-		string(crmcontracts.MagicActorAgent),
-		string(crmcontracts.MagicActorSystem),
-		string(crmcontracts.MagicActorConnector),
+		string(crmcontracts.MagicActorTypeMagicActorAgent),
+		string(crmcontracts.MagicActorTypeMagicActorSystem),
+		string(crmcontracts.MagicActorTypeMagicActorConnector),
 	}
 }

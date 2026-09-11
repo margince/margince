@@ -282,7 +282,7 @@ func grantImage(g grantRow) map[string]any {
 // their own admission, so no authority leaks — the grant is just less
 // useful to them than to their colleagues.
 func refuseWriteGrantToReadSeat(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {
-	if in.Access != string(crmcontracts.RecordGrantAccessWrite) || in.SubjectType == "team" {
+	if in.Access != string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite) || in.SubjectType == "team" {
 		return nil
 	}
 	var seat string

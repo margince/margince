@@ -25,8 +25,8 @@ func TestTheMeetingKindIsReadFromWhatTheRecordsSay(t *testing.T) {
 				in.Subject = "Angebot besprechen"
 				in.Deal.Stage = "Proposal"
 			},
-			want:       crmcontracts.MeetingPlanTypeCommercial,
-			confidence: crmcontracts.MeetingPlanTierHigh,
+			want:       crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial,
+			confidence: crmcontracts.MeetingPlanTierMeetingPlanTierHigh,
 		},
 		{
 			name: "a subject with nothing agreeing is believed, less strongly",
@@ -34,8 +34,8 @@ func TestTheMeetingKindIsReadFromWhatTheRecordsSay(t *testing.T) {
 				in.Subject = "Coffee with Lars"
 				in.Deal = nil
 			},
-			want:       crmcontracts.MeetingPlanTypeRelationship,
-			confidence: crmcontracts.MeetingPlanTierMedium,
+			want:       crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship,
+			confidence: crmcontracts.MeetingPlanTierMeetingPlanTierMedium,
 		},
 		{
 			name: "a stage with no subject to confirm it is the weakest reading",
@@ -43,8 +43,8 @@ func TestTheMeetingKindIsReadFromWhatTheRecordsSay(t *testing.T) {
 				in.Subject = "Sync"
 				in.Deal.Stage = "Negotiation"
 			},
-			want:       crmcontracts.MeetingPlanTypeCommercial,
-			confidence: crmcontracts.MeetingPlanTierLow,
+			want:       crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial,
+			confidence: crmcontracts.MeetingPlanTierMeetingPlanTierLow,
 		},
 		{
 			name: "a German subject reads the same as its English sibling",
@@ -52,8 +52,8 @@ func TestTheMeetingKindIsReadFromWhatTheRecordsSay(t *testing.T) {
 				in.Subject = "Kickoff Retrofit"
 				in.Deal = nil
 			},
-			want:       crmcontracts.MeetingPlanTypeDelivery,
-			confidence: crmcontracts.MeetingPlanTierMedium,
+			want:       crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery,
+			confidence: crmcontracts.MeetingPlanTierMeetingPlanTierMedium,
 		},
 		{
 			name: "work in flight with nothing being sold is a delivery meeting",
@@ -62,8 +62,8 @@ func TestTheMeetingKindIsReadFromWhatTheRecordsSay(t *testing.T) {
 				in.Deal = nil
 				in.Project = &ProjectIn{ID: projectID, Name: "Retrofit", Key: "RET"}
 			},
-			want:       crmcontracts.MeetingPlanTypeDelivery,
-			confidence: crmcontracts.MeetingPlanTierHigh,
+			want:       crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery,
+			confidence: crmcontracts.MeetingPlanTierMeetingPlanTierHigh,
 		},
 		{
 			name: "nothing to read is unknown, which is an answer",
@@ -71,8 +71,8 @@ func TestTheMeetingKindIsReadFromWhatTheRecordsSay(t *testing.T) {
 				in.Subject = "Sync"
 				in.Deal = nil
 			},
-			want:       crmcontracts.MeetingPlanTypeUnknown,
-			confidence: crmcontracts.MeetingPlanTierLow,
+			want:       crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown,
+			confidence: crmcontracts.MeetingPlanTierMeetingPlanTierLow,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -96,7 +96,7 @@ func TestAConflictingSubjectIsReadInAFixedOrder(t *testing.T) {
 	in.Subject = "Demo and pricing"
 	in.Deal = nil
 	for range 20 {
-		if got := classifyMeeting(in); got.Value != crmcontracts.MeetingPlanTypeCommercial {
+		if got := classifyMeeting(in); got.Value != crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial {
 			t.Fatalf("meeting kind = %q, want the first family in the table (commercial)", got.Value)
 		}
 	}
@@ -111,12 +111,12 @@ func TestDiscoverySplitsOnWhetherTheRoomHasMet(t *testing.T) {
 	in.Deal = nil
 	in.Attendees = []AttendeeIn{{PersonID: personID, FullName: "Ana Roth", FirstTime: true}}
 	in.PriorMeetings = nil
-	if got := classifyMeeting(in); got.Value != crmcontracts.MeetingPlanTypeFirstDiscovery {
+	if got := classifyMeeting(in); got.Value != crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery {
 		t.Errorf("a room that has never met = %q, want first_discovery", got.Value)
 	}
 
 	in.PriorMeetings = []PriorMeetingIn{{ID: activityID, Subject: "Last time", StartsAt: at(2)}}
-	if got := classifyMeeting(in); got.Value != crmcontracts.MeetingPlanTypeFollowupDiscovery {
+	if got := classifyMeeting(in); got.Value != crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFollowupDiscovery {
 		t.Errorf("a room that has met = %q, want followup_discovery", got.Value)
 	}
 }

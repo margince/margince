@@ -57,7 +57,7 @@ func TestTheLadderSelectsExactlyOneMoment(t *testing.T) {
 		LastInboundAt:  &replied,
 		LastOutboundAt: ptr(at(40)),
 		Claims: &[]crmcontracts.ConversationClaim{{
-			Kind:             crmcontracts.CommitmentOurs,
+			Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 			Status:           crmcontracts.ConversationClaimStatusOpen,
 			Body:             "Send the revised ROI model",
 			DueAt:            ptr(at(5)),
@@ -179,7 +179,7 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 		// Rung 4 wants an open commitment OF OURS whose date has passed.
 		"overdue promise": {
 			Claims: &[]crmcontracts.ConversationClaim{{
-				Kind:             crmcontracts.CommitmentOurs,
+				Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 				Status:           crmcontracts.ConversationClaimStatusOpen,
 				Body:             "Send the revised dispatch quote",
 				SourceQuote:      "Ich schicke dir das Angebot bis Freitag.",
@@ -380,7 +380,7 @@ func TestARuleDoesNotClaimAbsenceForASectionItCouldNotRead(t *testing.T) {
 	withheldSchedule := &crmcontracts.Person360{
 		Commercial: deal,
 		SectionsOmitted: []crmcontracts.Person360SectionsOmitted{
-			crmcontracts.Person360SectionsOmittedNextMeeting,
+			crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedNextMeeting,
 		},
 	}
 	if got := deriveMoment(readerCtx(), now, withheldSchedule).Rule; got == crmcontracts.PersonMomentRuleMissingNextStep {
@@ -398,7 +398,7 @@ func TestNothingNeededAdmitsWhenItCouldNotSeeEverything(t *testing.T) {
 
 	partial := deriveMoment(readerCtx(), now, &crmcontracts.Person360{
 		SectionsOmitted: []crmcontracts.Person360SectionsOmitted{
-			crmcontracts.Person360SectionsOmittedActivities,
+			crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedActivities,
 		},
 	})
 	if partial.WhyNow == full.WhyNow {
@@ -592,7 +592,7 @@ func TestReassigningAPromiseRearmsItsDismissal(t *testing.T) {
 func TestTheLatestOverduePromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 	claimDue := now.Add(-10 * 24 * time.Hour)
 	overdueClaim := []crmcontracts.ConversationClaim{{
-		Kind:             crmcontracts.CommitmentOurs,
+		Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 		Status:           crmcontracts.ConversationClaimStatusOpen,
 		Body:             "Send the revised quote",
 		SourceQuote:      "Ich schicke dir das Angebot bis Freitag.",
@@ -644,12 +644,12 @@ func TestTheRungLooksPastTheOldestOverduePromise(t *testing.T) {
 	}
 	claims := []crmcontracts.ConversationClaim{
 		{
-			Kind: crmcontracts.CommitmentOurs, Status: crmcontracts.ConversationClaimStatusOpen,
+			Kind: crmcontracts.ConversationClaimKindCommitmentOurs, Status: crmcontracts.ConversationClaimStatusOpen,
 			Body: "Send the ancient quote", SourceQuote: "Bis Montag.",
 			SourceActivityId: openapi_types.UUID(ids.NewV7()), DueAt: claimDue(10),
 		},
 		{
-			Kind: crmcontracts.CommitmentOurs, Status: crmcontracts.ConversationClaimStatusOpen,
+			Kind: crmcontracts.ConversationClaimKindCommitmentOurs, Status: crmcontracts.ConversationClaimStatusOpen,
 			Body: "Send yesterday's quote", SourceQuote: "Bis gestern.",
 			SourceActivityId: openapi_types.UUID(ids.NewV7()), DueAt: claimDue(1),
 		},
@@ -720,7 +720,7 @@ func TestAnUpcomingCommitmentIsTheMomentWithNoTaskFiled(t *testing.T) {
 	said := now.Add(-48 * time.Hour)
 	page := &crmcontracts.Person360{
 		Claims: &[]crmcontracts.ConversationClaim{{
-			Kind:             crmcontracts.CommitmentOurs,
+			Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 			Status:           crmcontracts.ConversationClaimStatusOpen,
 			Body:             "Send the security questionnaire",
 			SourceQuote:      "Ich schicke Ihnen den Fragebogen diese Woche.",
@@ -757,7 +757,7 @@ func TestTheNearestUpcomingPromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 		taskDue := now.Add(time.Duration(taskDays) * 24 * time.Hour)
 		return &crmcontracts.Person360{
 			Claims: &[]crmcontracts.ConversationClaim{{
-				Kind:             crmcontracts.CommitmentOurs,
+				Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 				Status:           crmcontracts.ConversationClaimStatusOpen,
 				Body:             "Send the questionnaire",
 				SourceQuote:      "Diese Woche.",
@@ -797,7 +797,7 @@ func TestTwoPromisesFromOneMessageDismissApart(t *testing.T) {
 	claim := func(body string) crmcontracts.ConversationClaim {
 		return crmcontracts.ConversationClaim{
 			Id:               openapi_types.UUID(ids.NewV7()),
-			Kind:             crmcontracts.CommitmentOurs,
+			Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 			Status:           crmcontracts.ConversationClaimStatusOpen,
 			Body:             body,
 			SourceQuote:      "Ich schicke Ihnen die Unterlagen.",
@@ -834,7 +834,7 @@ func TestDismissingOnePromiseShowsTheNext(t *testing.T) {
 		due := now.Add(time.Duration(dueInDays) * 24 * time.Hour)
 		return crmcontracts.ConversationClaim{
 			Id:               openapi_types.UUID(ids.NewV7()),
-			Kind:             crmcontracts.CommitmentOurs,
+			Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 			Status:           crmcontracts.ConversationClaimStatusOpen,
 			Body:             body,
 			SourceQuote:      "Ich schicke Ihnen beides.",
@@ -873,7 +873,7 @@ func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
 	page := &crmcontracts.Person360{
 		Claims: &[]crmcontracts.ConversationClaim{{
 			Id:               openapi_types.UUID(ids.NewV7()),
-			Kind:             crmcontracts.CommitmentOurs,
+			Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 			Status:           crmcontracts.ConversationClaimStatusOpen,
 			Body:             "Send the NDA",
 			SourceQuote:      "Ich schicke die NDA.",

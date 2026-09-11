@@ -35,7 +35,7 @@ func (s *Store) PreviewLeadPromotion(ctx context.Context, id ids.LeadID) (crmcon
 	if err != nil {
 		return crmcontracts.PromoteLeadPreview{}, err
 	}
-	out := crmcontracts.PromoteLeadPreview{Outcome: crmcontracts.PromoteLeadPreviewOutcomeCreate}
+	out := crmcontracts.PromoteLeadPreview{Outcome: crmcontracts.PromoteLeadPreviewOutcomePromoteLeadPreviewOutcomeCreate}
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisible(ctx, tx, "lead", id.UUID); err != nil {
 			return err
@@ -71,7 +71,7 @@ func (s *Store) PreviewLeadPromotion(ctx context.Context, id ids.LeadID) (crmcon
 		if match.Decision != DecisionExactCollision {
 			return nil
 		}
-		out.Outcome = crmcontracts.PromoteLeadPreviewOutcomeMerge
+		out.Outcome = crmcontracts.PromoteLeadPreviewOutcomePromoteLeadPreviewOutcomeMerge
 		// Two gates before a person is returned: the object grant (may this
 		// role read people at all) and WRITE authority over the row — the
 		// same probe promotion itself takes, because merging changes the

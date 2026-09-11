@@ -62,7 +62,7 @@ func TestTheWireCarriesEachPieceOfCopySeparately(t *testing.T) {
 	}
 	// Provenance has to survive the wire or the reader cannot see that a model
 	// wrote the words they are about to send under their own name.
-	if got.NoteGeneratedBy != crmcontracts.IntroNoteOriginModel || !got.NoteAiGenerated {
+	if got.NoteGeneratedBy != crmcontracts.IntroNoteOriginIntroNoteOriginModel || !got.NoteAiGenerated {
 		t.Errorf("provenance went out as %q / %v", got.NoteGeneratedBy, got.NoteAiGenerated)
 	}
 	if got.ThroughPersonId == nil || ids.UUID(*got.ThroughPersonId) != through {
@@ -109,7 +109,7 @@ func TestANameDroppedAskCarriesNoIntroducedAt(t *testing.T) {
 		Status:         StatusNameDropped,
 		NameDroppedAt:  &at,
 	})
-	if got.Status != crmcontracts.IntroRequestStatusNameDropped {
+	if got.Status != crmcontracts.IntroRequestStatusIntroRequestStatusNameDropped {
 		t.Errorf("status went out as %q", got.Status)
 	}
 	if got.IntroducedAt != nil {
@@ -127,7 +127,7 @@ func TestUnstatedProvenanceIsHuman(t *testing.T) {
 	if got := noteOriginOf(nil); got != "human" {
 		t.Errorf("an unstated origin defaulted to %q", got)
 	}
-	model := crmcontracts.IntroNoteOriginModel
+	model := crmcontracts.IntroNoteOriginIntroNoteOriginModel
 	if got := noteOriginOf(&model); got != "model" {
 		t.Errorf("a stated origin became %q", got)
 	}
@@ -139,7 +139,7 @@ func TestUnstatedFallbackIsNone(t *testing.T) {
 	if got := fallbackOf(nil); got != "none" {
 		t.Errorf("an unstated fallback defaulted to %q", got)
 	}
-	drop := crmcontracts.IntroFallbackPolicyNameDrop
+	drop := crmcontracts.IntroFallbackPolicyIntroFallbackPolicyNameDrop
 	if got := fallbackOf(&drop); got != "name_drop" {
 		t.Errorf("a stated fallback became %q", got)
 	}
@@ -156,10 +156,10 @@ func TestARouteNamesItsIntermediaryOrIsDirect(t *testing.T) {
 		through *openapi_types.UUID
 		refused bool
 	}{
-		{"direct with nobody named", crmcontracts.PersonGraphRouteTypeDirect, nil, false},
-		{"through a named contact", crmcontracts.PersonGraphRouteTypeThroughContact, &id, false},
-		{"direct that names somebody", crmcontracts.PersonGraphRouteTypeDirect, &id, true},
-		{"through nobody", crmcontracts.PersonGraphRouteTypeThroughContact, nil, true},
+		{"direct with nobody named", crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeDirect, nil, false},
+		{"through a named contact", crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeThroughContact, &id, false},
+		{"direct that names somebody", crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeDirect, &id, true},
+		{"through nobody", crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeThroughContact, nil, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

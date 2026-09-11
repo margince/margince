@@ -486,7 +486,7 @@ func TestModelBriefKeepsWhatItGroundsAndDropsWhatItDoesNot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Write: %v", err)
 	}
-	if by != crmcontracts.Model {
+	if by != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want the model path", by)
 	}
 	byKind := map[string][]Sentence{}

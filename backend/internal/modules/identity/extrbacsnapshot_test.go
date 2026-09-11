@@ -44,7 +44,7 @@ func meObjects(t *testing.T, perms principal.Permissions) map[string]map[string]
 		Email:       "rep@example.com",
 		SeatType:    "full",
 		Permissions: perms,
-	}, crmcontracts.Native))
+	}, crmcontracts.MeResponseSystemOfRecordModeNative))
 	if err != nil {
 		t.Fatalf("marshalling /me: %v", err)
 	}

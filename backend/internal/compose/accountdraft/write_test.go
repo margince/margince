@@ -61,7 +61,7 @@ func TestTheReasonsNeverAppearInTheBody(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if by != crmcontracts.Model {
+	if by != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want model", by)
 	}
 	if len(draft.Reasoning) != 1 || draft.Reasoning[0].Label != "expansion offer" {
@@ -152,7 +152,7 @@ func TestAFailedLaneDegradesToTheFloorRatherThanErroring(t *testing.T) {
 			if err != nil {
 				t.Fatalf("a bad answer must degrade, not error: %v", err)
 			}
-			if by != crmcontracts.Deterministic {
+			if by != crmcontracts.WrittenByDeterministic {
 				t.Fatalf("generated_by = %q, want deterministic", by)
 			}
 			if draft.Subject == "" || draft.Body == "" {
@@ -220,7 +220,7 @@ func TestTheCallersOwnIntentIsOutsideTheFence(t *testing.T) {
 func TestDraftingNeverReturnsADraftRef(t *testing.T) {
 	// draft_ref exists so a served draft can be scored later, which is a
 	// write. This operation performs none, so the field stays null.
-	out := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, false, "en")
+	out := wire(Deterministic(sampleInput()), crmcontracts.WrittenByDeterministic, false, "en")
 	if out.DraftRef != nil {
 		t.Fatalf("draft_ref = %v, want null: recording a served draft is a write", out.DraftRef)
 	}
@@ -230,11 +230,11 @@ func TestDraftingNeverReturnsADraftRef(t *testing.T) {
 // so the degraded flag is pinned here too — in both states, because a client
 // reading an absent field as false must not see "fine" for a lost voice.
 func TestWireCarriesTheVoiceDegradedFlag(t *testing.T) {
-	degraded := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, true, "en")
+	degraded := wire(Deterministic(sampleInput()), crmcontracts.WrittenByDeterministic, true, "en")
 	if degraded.VoiceDegraded == nil || !*degraded.VoiceDegraded {
 		t.Fatal("a degraded voice load must be stamped on the wire draft")
 	}
-	clean := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, false, "en")
+	clean := wire(Deterministic(sampleInput()), crmcontracts.WrittenByDeterministic, false, "en")
 	if clean.VoiceDegraded == nil || *clean.VoiceDegraded {
 		t.Fatal("a clean load must stamp voice_degraded=false, not omit it")
 	}
@@ -254,7 +254,7 @@ func TestAFencedAnswerIsRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if by != crmcontracts.Model {
+	if by != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want model: a fenced answer degraded to the floor", by)
 	}
 	if draft.Subject != "Next steps" {

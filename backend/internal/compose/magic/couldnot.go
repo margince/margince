@@ -88,7 +88,7 @@ func troubledLine(run automation.TroubledAutomationRun) crmcontracts.MagicLine {
 	return crmcontracts.MagicLine{
 		Id:         openapi_types.UUID(run.ID),
 		OccurredAt: run.CreatedAt,
-		Lane:       crmcontracts.MagicLaneCouldNotComplete,
+		Lane:       crmcontracts.MagicLineLaneMagicLaneCouldNotComplete,
 		Summary: crmcontracts.MagicSentence{
 			Key:    "magic.action.automation_troubled",
 			Values: &values,
@@ -99,7 +99,7 @@ func troubledLine(run automation.TroubledAutomationRun) crmcontracts.MagicLine {
 		},
 		Consequence: &consequence,
 		Actor: crmcontracts.MagicActor{
-			Type: crmcontracts.MagicActorSystem,
+			Type: crmcontracts.MagicActorTypeMagicActorSystem,
 			Id:   "system:automation",
 		},
 		// A firing that did not happen has nothing to take back. Saying so

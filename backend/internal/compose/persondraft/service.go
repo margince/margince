@@ -169,7 +169,7 @@ func (s *Service) Draft(
 // rather than read here because the two callers resolve their own, and a wire
 // mapper that went looking for one would be a second resolver.
 func Wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang string) crmcontracts.AccountEmailDraft {
-	aiWritten := by == crmcontracts.Model
+	aiWritten := by == crmcontracts.WrittenByModel
 	out := crmcontracts.AccountEmailDraft{
 		Subject:       draft.Subject,
 		Body:          draft.Body,

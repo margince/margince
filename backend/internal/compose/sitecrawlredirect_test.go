@@ -125,7 +125,7 @@ func TestCrawlDiscardsALaterPageThatRedirectsOffSite(t *testing.T) {
 			t.Fatalf("an off-site-redirecting page was committed as %q", page.URL)
 		}
 	}
-	want := crawlSkip{URL: partner, Reason: crmcontracts.SiteReadSkipReasonOffDomain}
+	want := crawlSkip{URL: partner, Reason: crmcontracts.SiteReadSkipReasonSiteReadSkipReasonOffDomain}
 	var recorded bool
 	for _, skip := range crawl.Skipped {
 		if skip == want {

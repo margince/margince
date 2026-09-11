@@ -222,7 +222,7 @@ func (s *Service) queue(ctx context.Context, userID ids.UserID, orgID ids.Organi
 		out = &queued
 		if s.enqueue == nil {
 			return settle(ctx, tx, queued.ID, nil, outcome{
-				Status: StatusDegraded, GeneratedBy: crmcontracts.Deterministic,
+				Status: StatusDegraded, GeneratedBy: crmcontracts.WrittenByDeterministic,
 				DegradeReason: "No worker runs account scans in this deployment, so the rules' own advice stands alone.",
 			})
 		}

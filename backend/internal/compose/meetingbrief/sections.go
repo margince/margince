@@ -53,14 +53,14 @@ const (
 // here, instead of silently emptying the section that reads it — a section that
 // quietly stops having anything to say is invisible to every gate.
 const (
-	kindCommitmentOurs   = string(crmcontracts.CommitmentOurs)
-	kindCommitmentTheirs = string(crmcontracts.CommitmentTheirs)
-	kindOpenQuestion     = string(crmcontracts.OpenQuestion)
-	kindDecision         = string(crmcontracts.Decision)
-	kindDecisionProcess  = string(crmcontracts.DecisionProcess)
-	kindObjection        = string(crmcontracts.Objection)
-	kindPriority         = string(crmcontracts.Priority)
-	kindSuccessCriterion = string(crmcontracts.SuccessCriterion)
+	kindCommitmentOurs   = string(crmcontracts.ConversationClaimKindCommitmentOurs)
+	kindCommitmentTheirs = string(crmcontracts.ConversationClaimKindCommitmentTheirs)
+	kindOpenQuestion     = string(crmcontracts.ConversationClaimKindOpenQuestion)
+	kindDecision         = string(crmcontracts.ConversationClaimKindDecision)
+	kindDecisionProcess  = string(crmcontracts.ConversationClaimKindDecisionProcess)
+	kindObjection        = string(crmcontracts.ConversationClaimKindObjection)
+	kindPriority         = string(crmcontracts.ConversationClaimKindPriority)
+	kindSuccessCriterion = string(crmcontracts.ConversationClaimKindSuccessCriterion)
 )
 
 // statusOpen is the claim status the risk and goal rules test. A claim already

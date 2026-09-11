@@ -104,7 +104,7 @@ func TestDispatcherRoutesOverlayWorkspaceReadsToTheOverlayProvider(t *testing.T)
 		t.Fatalf("expected exactly one contract search result, got %d", len(contractResults))
 	}
 	tier := contractResults[0].TrustTier
-	if tier == nil || *tier != crmcontracts.SearchResultTrustTierExternal {
+	if tier == nil || *tier != crmcontracts.SearchResultTrustTierSearchResultTrustTierExternal {
 		t.Fatalf("overlay-served contract SearchResult must carry TrustTier=external, got %v", tier)
 	}
 }

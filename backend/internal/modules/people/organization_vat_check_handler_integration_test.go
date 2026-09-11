@@ -65,7 +65,7 @@ func TestGetOrganizationVatCheckHandler(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("decode the VAT check response: %v", err)
 	}
-	if got.Status != crmcontracts.OrganizationVatCheckStatusValid {
+	if got.Status != crmcontracts.OrganizationVatCheckStatusOrganizationVatCheckStatusValid {
 		t.Fatalf("status = %q, want valid", got.Status)
 	}
 	if got.VatNumber != "DE123456789" {

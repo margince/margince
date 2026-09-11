@@ -341,7 +341,7 @@ func chooseRoute(candidates []crmcontracts.PersonGraphRouteCandidate) *crmcontra
 		ViaDisplayName: best.ViaDisplayName,
 		Why:            proofLineFor(best.Evidence),
 	}
-	if best.RouteType == crmcontracts.PersonGraphRouteTypeThroughContact {
+	if best.RouteType == crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeThroughContact {
 		route.ThroughPersonId = best.ThroughPersonId
 		route.ThroughDisplayName = best.ThroughDisplayName
 	}

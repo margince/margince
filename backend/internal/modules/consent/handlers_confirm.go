@@ -140,7 +140,7 @@ func wireConfirmCard(card ConfirmCard) crmcontracts.RecordConfirmationPage {
 		// again. Both bodies used to arrive carrying nothing that said which
 		// they were, so a client had to guess from which fields happened to be
 		// present — and the published schema described only this one.
-		Kind:           crmcontracts.RecordConfirmation,
+		Kind:           crmcontracts.RecordConfirmationPageKindRecordConfirmation,
 		FullName:       card.FullName,
 		Title:          card.Title,
 		Company:        card.Company,
@@ -165,7 +165,7 @@ func wireSubscriptionCard(card SubscriptionCard) crmcontracts.SubscriptionConfir
 		state = "unknown"
 	}
 	return crmcontracts.SubscriptionConfirmationPage{
-		Kind:         crmcontracts.SubscriptionConfirmation,
+		Kind:         crmcontracts.SubscriptionConfirmationPageKindSubscriptionConfirmation,
 		PurposeKey:   card.PurposeKey,
 		PurposeLabel: card.PurposeLabel,
 		State:        crmcontracts.SubscriptionConfirmationPageState(state),

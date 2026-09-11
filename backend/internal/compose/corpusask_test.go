@@ -76,7 +76,7 @@ func corpusQuietLog() *slog.Logger {
 
 func answeredState() knowledge.Readiness {
 	return knowledge.Readiness{
-		Outcome: crmcontracts.KnowledgeAnswerOutcomeAnswered,
+		Outcome: crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered,
 		Corpus:  crmcontracts.KnowledgeAnswerCorpus{Name: "How-to", TopicStatement: "How this product is operated."},
 	}
 }
@@ -206,7 +206,7 @@ func TestAnAnswerWhoseClaimsAllFailIsNotCovered(t *testing.T) {
 	answer := AnswerCorpus(t.Context(), lane, answeredState(), "what does it cost", passages,
 		string(textlang.English), corpusQuietLog())
 
-	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeNotCovered {
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered {
 		t.Fatalf("outcome = %q, want not_covered", answer.Outcome)
 	}
 	if answer.Claims != nil {
@@ -225,10 +225,10 @@ func TestWithNoLaneThePassagesComeBackUnreviewed(t *testing.T) {
 	answer := AnswerCorpus(t.Context(), nil, answeredState(), "how long are messages kept", passages,
 		string(textlang.English), corpusQuietLog())
 
-	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeUnreviewed {
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeUnreviewed {
 		t.Fatalf("outcome = %q, want unreviewed", answer.Outcome)
 	}
-	if answer.GeneratedBy != crmcontracts.Deterministic {
+	if answer.GeneratedBy != crmcontracts.WrittenByDeterministic {
 		t.Fatalf("generated_by = %q, want deterministic", answer.GeneratedBy)
 	}
 	if answer.Claims == nil || len(*answer.Claims) != 1 {
@@ -255,10 +255,10 @@ func TestAFailedLaneDegradesToUnreviewedPassages(t *testing.T) {
 	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept", passages,
 		string(textlang.English), corpusQuietLog())
 
-	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeUnreviewed {
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeUnreviewed {
 		t.Fatalf("outcome = %q, want unreviewed", answer.Outcome)
 	}
-	if answer.GeneratedBy != crmcontracts.Deterministic {
+	if answer.GeneratedBy != crmcontracts.WrittenByDeterministic {
 		t.Fatalf("generated_by = %q, want deterministic", answer.GeneratedBy)
 	}
 	if answer.Claims == nil || len(*answer.Claims) != 1 {
@@ -272,10 +272,10 @@ func TestAFailedLaneDegradesToUnreviewedPassages(t *testing.T) {
 func TestARefusalNeverReachesTheLane(t *testing.T) {
 	lane := &fixedLane{text: corpusReply()}
 	for _, outcome := range []crmcontracts.KnowledgeAnswerOutcome{
-		crmcontracts.KnowledgeAnswerOutcomeNotReady,
-		crmcontracts.KnowledgeAnswerOutcomeNotCovered,
-		crmcontracts.KnowledgeAnswerOutcomeRetrievalUnavailable,
-		crmcontracts.KnowledgeAnswerOutcomeUnreviewed,
+		crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotReady,
+		crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered,
+		crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeRetrievalUnavailable,
+		crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeUnreviewed,
 	} {
 		state := answeredState()
 		state.Outcome = outcome
@@ -380,10 +380,10 @@ func TestAWrittenAnswerIsNeverUnreviewed(t *testing.T) {
 	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept",
 		passages, string(textlang.English), corpusQuietLog())
 
-	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
 		t.Fatalf("outcome = %q, want answered", answer.Outcome)
 	}
-	if answer.GeneratedBy != crmcontracts.Model {
+	if answer.GeneratedBy != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want model", answer.GeneratedBy)
 	}
 }
@@ -431,10 +431,10 @@ func TestAnUnreadableReplyIsReAskedThroughTheSitesOwnRefusal(t *testing.T) {
 	if lane.refused == nil {
 		t.Fatal("the validator accepted a reply GroundCorpusAnswer refuses, so nothing was re-asked")
 	}
-	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
 		t.Fatalf("outcome = %q, want answered from the second reply", answer.Outcome)
 	}
-	if answer.GeneratedBy != crmcontracts.Model {
+	if answer.GeneratedBy != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want model", answer.GeneratedBy)
 	}
 	if answer.Claims == nil || len(*answer.Claims) != 1 {
@@ -457,7 +457,7 @@ func TestAnAnswerWithNoClaimsIsNotReAsked(t *testing.T) {
 	if lane.refused != nil {
 		t.Fatalf("an empty answer was refused: %v", lane.refused)
 	}
-	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeNotCovered {
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered {
 		t.Fatalf("outcome = %q, want not_covered", answer.Outcome)
 	}
 }
@@ -510,7 +510,7 @@ func TestAReplyWithoutAClaimsKeyIsReAsked(t *testing.T) {
 	if lane.refused == nil {
 		t.Fatal("a reply with no claims key was accepted, so nothing was re-asked")
 	}
-	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
 		t.Fatalf("outcome = %q, want answered from the second reply", answer.Outcome)
 	}
 }

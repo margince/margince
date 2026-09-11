@@ -222,7 +222,7 @@ func TestWriteFallsBackRatherThanFailing(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Write: %v", err)
 			}
-			if by != crmcontracts.Deterministic {
+			if by != crmcontracts.WrittenByDeterministic {
 				t.Errorf("generated_by = %q, want the floor named honestly", by)
 			}
 			if len(written) == 0 {
@@ -247,7 +247,7 @@ func TestWriteKeepsWhatItGroundsAndNamesTheModel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Write: %v", err)
 	}
-	if by != crmcontracts.Model {
+	if by != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want the model path", by)
 	}
 	if len(written) != 2 {

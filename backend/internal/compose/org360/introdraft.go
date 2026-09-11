@@ -230,7 +230,7 @@ func (s *Service) introDealName(
 func wireIntroRequest(
 	draft introDraft, by crmcontracts.WrittenBy, facts introFacts,
 ) crmcontracts.AccountEmailDraft {
-	aiWritten := by == crmcontracts.Model
+	aiWritten := by == crmcontracts.WrittenByModel
 	out := crmcontracts.AccountEmailDraft{
 		Subject: draft.subject,
 		Body:    draft.body,

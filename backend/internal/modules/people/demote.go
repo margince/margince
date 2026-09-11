@@ -273,7 +273,7 @@ func unwindPerson(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, personID id
 			personID, leadID); err != nil {
 			return "", fmt.Errorf("null merge lineage: %w", err)
 		}
-		return crmcontracts.DemoteUnwindMergeLineageOnly, nil
+		return crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly, nil
 	}
 	if err := archivePersonRows(ctx, tx, personID, time.Now().UTC(), nil); err != nil {
 		return "", fmt.Errorf("archive promoted person: %w", err)
@@ -282,7 +282,7 @@ func unwindPerson(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, personID id
 		`UPDATE person SET converted_from_lead_id = NULL WHERE id = $1`, personID); err != nil {
 		return "", fmt.Errorf("null created lineage: %w", err)
 	}
-	return crmcontracts.DemoteUnwindReversed, nil
+	return crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed, nil
 }
 
 // isSharedByOthers answers whether records beyond this promotion depend on

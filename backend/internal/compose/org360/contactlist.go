@@ -118,7 +118,7 @@ func (s *Service) rankedContactRows(
 	// must mint the same cursor: two spellings of one order would make a token
 	// from either refuse the other, for a difference no caller can see.
 	if q.Sort == "" {
-		q.Sort = string(crmcontracts.Recommended)
+		q.Sort = string(crmcontracts.ListOrganizationContactsParamsSortRecommended)
 	}
 	kept := filterByStatus(all, q.Status)
 	identity, err := s.matchingIdentity(ctx, tx, orgID, kept, q.Query)

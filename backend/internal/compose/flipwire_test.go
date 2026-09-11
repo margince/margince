@@ -25,15 +25,15 @@ import (
 
 func TestBlockingContains(t *testing.T) {
 	blocking := []crmcontracts.OverlayFlipPreflightBlocking{
-		crmcontracts.ForceFreshIncomplete, crmcontracts.ExportMissing,
+		crmcontracts.OverlayFlipPreflightBlockingForceFreshIncomplete, crmcontracts.OverlayFlipPreflightBlockingExportMissing,
 	}
-	if !blockingContains(blocking, crmcontracts.ExportMissing) {
+	if !blockingContains(blocking, crmcontracts.OverlayFlipPreflightBlockingExportMissing) {
 		t.Error("a present reason was not found; the emergency block and the export gate both branch on this")
 	}
-	if blockingContains(blocking, crmcontracts.IncumbentUnreachable) {
+	if blockingContains(blocking, crmcontracts.OverlayFlipPreflightBlockingIncumbentUnreachable) {
 		t.Error("an absent reason was reported present — the emergency cutover would be offered while the incumbent is reachable")
 	}
-	if blockingContains(nil, crmcontracts.ExportMissing) {
+	if blockingContains(nil, crmcontracts.OverlayFlipPreflightBlockingExportMissing) {
 		t.Error("a green verdict must contain no reason at all")
 	}
 }

@@ -113,7 +113,7 @@ func TestPerson360NamesABouncedAddressAndWithholdsWithoutTheGrant(t *testing.T) 
 	if blind.DeadAddresses != nil {
 		t.Fatalf("dead_addresses = %v for a caller without the grant, want the section absent", blind.DeadAddresses)
 	}
-	if !slices.Contains(blind.SectionsOmitted, crmcontracts.Person360SectionsOmittedDeadAddresses) {
+	if !slices.Contains(blind.SectionsOmitted, crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedDeadAddresses) {
 		t.Fatalf("sections_omitted = %v, want dead_addresses named", blind.SectionsOmitted)
 	}
 

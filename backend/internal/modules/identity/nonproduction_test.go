@@ -18,10 +18,10 @@ import (
 
 func TestMeResponseCarriesNonProduction(t *testing.T) {
 	id := Identity{Roles: []string{"admin"}}
-	if got := NewHandlers(&Service{}).WithNonProduction(true).meResponse(id, crmcontracts.Native); !got.NonProduction {
+	if got := NewHandlers(&Service{}).WithNonProduction(true).meResponse(id, crmcontracts.MeResponseSystemOfRecordModeNative); !got.NonProduction {
 		t.Fatal("want NonProduction true")
 	}
-	if NewHandlers(&Service{}).meResponse(id, crmcontracts.Native).NonProduction {
+	if NewHandlers(&Service{}).meResponse(id, crmcontracts.MeResponseSystemOfRecordModeNative).NonProduction {
 		t.Fatal("want NonProduction false")
 	}
 }
@@ -41,11 +41,11 @@ func TestMeResponseCarriesTheDataResetSwitchSeparately(t *testing.T) {
 	id := Identity{Roles: []string{"admin"}}
 	// Non-production ALONE must not offer the action. This is the case that used
 	// to be conflated, and the one a staging installation lived in.
-	posture := NewHandlers(&Service{}).WithNonProduction(true).meResponse(id, crmcontracts.Native)
+	posture := NewHandlers(&Service{}).WithNonProduction(true).meResponse(id, crmcontracts.MeResponseSystemOfRecordModeNative)
 	if posture.DataResetAvailable == nil || *posture.DataResetAvailable {
 		t.Fatal("a non-production installation that never armed the reset was offered it anyway")
 	}
-	armed := NewHandlers(&Service{}).WithDataResetAvailable(true).meResponse(id, crmcontracts.Native)
+	armed := NewHandlers(&Service{}).WithDataResetAvailable(true).meResponse(id, crmcontracts.MeResponseSystemOfRecordModeNative)
 	if armed.DataResetAvailable == nil || !*armed.DataResetAvailable {
 		t.Fatal("an armed installation was not offered the reset")
 	}

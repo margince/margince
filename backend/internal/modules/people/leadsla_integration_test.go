@@ -111,10 +111,10 @@ func TestSLAStateReadsAndFiltersAlike(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
-	if lead.SlaState == nil || *lead.SlaState != crmcontracts.LeadSlaStateBreached || lead.SlaDeadlineAt == nil {
+	if lead.SlaState == nil || *lead.SlaState != crmcontracts.LeadSlaStateLeadSlaStateBreached || lead.SlaDeadlineAt == nil {
 		t.Errorf("overdue lead sla_state=%v deadline=%v, want breached with a deadline", lead.SlaState, lead.SlaDeadlineAt)
 	}
-	breached := crmcontracts.ListLeadsParamsSlaState(crmcontracts.LeadSlaStateBreached)
+	breached := crmcontracts.ListLeadsParamsSlaState(crmcontracts.LeadSlaStateLeadSlaStateBreached)
 	page, _, err := e.store.ListLeads(e.ctx, ListLeadsInput{SLAState: &breached})
 	if err != nil {
 		t.Fatalf("list breached: %v", err)
@@ -122,7 +122,7 @@ func TestSLAStateReadsAndFiltersAlike(t *testing.T) {
 	if len(page) != 1 || page[0].Id != lead.Id {
 		t.Errorf("sla_state=breached lists %d leads, want only %s", len(page), overdue)
 	}
-	within := crmcontracts.ListLeadsParamsSlaState(crmcontracts.LeadSlaStateWithinTarget)
+	within := crmcontracts.ListLeadsParamsSlaState(crmcontracts.LeadSlaStateLeadSlaStateWithinTarget)
 	page, _, err = e.store.ListLeads(e.ctx, ListLeadsInput{SLAState: &within})
 	if err != nil {
 		t.Fatalf("list within: %v", err)
@@ -560,7 +560,7 @@ func TestTheScanReadsTheActivitiesRatherThanTheProjection(t *testing.T) {
 				t.Error("the scan found the response and did not record it, so the next scan re-reads " +
 					"every activity on this lead to reach the same answer")
 			}
-			if after.SlaState != nil && *after.SlaState == crmcontracts.LeadSlaStateBreached {
+			if after.SlaState != nil && *after.SlaState == crmcontracts.LeadSlaStateLeadSlaStateBreached {
 				t.Error("the lead reads sla_state=breached")
 			}
 		})

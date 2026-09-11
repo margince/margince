@@ -52,10 +52,10 @@ type Teammates interface {
 // blank headline, and the write refuses a blank subject, so the failure would
 // be a 500 on a request the contract said was valid.
 var coachSubjects = map[crmcontracts.NoticeKind]string{
-	crmcontracts.CoachReplyAging:        "A customer reply is getting old",
-	crmcontracts.CoachDealNeedsNextStep: "A deal needs its next step",
-	crmcontracts.CoachReviewBacklog:     "There is review work waiting",
-	crmcontracts.CoachGeneral:           "Your lead left you a note",
+	crmcontracts.NoticeKindCoachReplyAging:        "A customer reply is getting old",
+	crmcontracts.NoticeKindCoachDealNeedsNextStep: "A deal needs its next step",
+	crmcontracts.NoticeKindCoachReviewBacklog:     "There is review work waiting",
+	crmcontracts.NoticeKindCoachGeneral:           "Your lead left you a note",
 }
 
 // RaiseCoachNotice records one person's nudge to a teammate.

@@ -51,7 +51,7 @@ func TestOrganizationAskAnswersFromTheModelAndReportsTheWriter(t *testing.T) {
 	if answer.Question != crmcontracts.OrganizationQuestionWhatsOpen {
 		t.Errorf("question = %q, want the one that was asked", answer.Question)
 	}
-	if answer.GeneratedBy != crmcontracts.Model {
+	if answer.GeneratedBy != crmcontracts.WrittenByModel {
 		t.Errorf("generated_by = %q, want model", answer.GeneratedBy)
 	}
 	if len(answer.Sentences) != 1 || answer.Sentences[0].Text != "One open deal, in Discovery." {
@@ -82,7 +82,7 @@ func TestOrganizationAskFallsBackWhenTheReplyCitesNothingReal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ask: %v", err)
 	}
-	if answer.GeneratedBy != crmcontracts.Deterministic {
+	if answer.GeneratedBy != crmcontracts.WrittenByDeterministic {
 		t.Errorf("generated_by = %q, want the deterministic floor after an ungrounded reply", answer.GeneratedBy)
 	}
 	for _, sentence := range answer.Sentences {
@@ -103,7 +103,7 @@ func TestOrganizationAskServesTheFloorWithoutALane(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ask: %v", err)
 	}
-	if answer.GeneratedBy != crmcontracts.Deterministic {
+	if answer.GeneratedBy != crmcontracts.WrittenByDeterministic {
 		t.Errorf("generated_by = %q with no lane wired, want deterministic", answer.GeneratedBy)
 	}
 	if len(answer.Sentences) == 0 {

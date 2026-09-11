@@ -56,7 +56,7 @@ func TestCompanySiteReadMessageUsesTheStoredDossierAndReturnsRuntime(t *testing.
 		t.Fatal(err)
 	}
 	if reply.Message == "" || len(reply.ProposedChanges) != 1 || len(reply.Citations) != 1 ||
-		reply.Citations[0].Url != seedURL || reply.AiRuntime.Currency != crmcontracts.USD ||
+		reply.Citations[0].Url != seedURL || reply.AiRuntime.Currency != crmcontracts.AiRunSummaryCurrencyUSD ||
 		reply.AiRuntime.CallAttempts != 1 || reply.AiRuntime.TokensIn != 1_000 ||
 		reply.AiRuntime.TokensOut != 100 || reply.AiRuntime.EstimatedCostMicrousd != 1_450 ||
 		len(reply.AiRuntime.Models) != 1 || reply.AiRuntime.Models[0].ServedModel != "claude-workbench-test-202607" {

@@ -264,7 +264,7 @@ func (s *Store) AdvanceLeadStatus(ctx context.Context, leadID ids.LeadID, target
 		}
 		p := storekit.NewPatch()
 		p.Set(leadStatusColumn, current, string(target))
-		p.Set(leadStatusSetByColumn, setBy, string(crmcontracts.LeadStatusSetBySystem))
+		p.Set(leadStatusSetByColumn, setBy, string(crmcontracts.LeadStatusSetByLeadStatusSetBySystem))
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}

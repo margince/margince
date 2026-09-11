@@ -84,7 +84,7 @@ func (h rateRefreshHandlers) enqueueRefresh(w http.ResponseWriter, r *http.Reque
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusAccepted, crmcontracts.RefreshAccepted{Status: crmcontracts.Enqueued})
+	httperr.WriteJSON(w, http.StatusAccepted, crmcontracts.RefreshAccepted{Status: crmcontracts.RefreshAcceptedStatusEnqueued})
 }
 
 // WithRateRefresh wires the api role's insert-only runner into the two

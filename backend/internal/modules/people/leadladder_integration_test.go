@@ -35,7 +35,7 @@ func TestLadderClimbsFromActivityAndNeverDescends(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Status != crmcontracts.LeadStatusContacted || got.StatusSetBy == nil || *got.StatusSetBy != crmcontracts.LeadStatusSetBySystem {
+	if got.Status != crmcontracts.LeadStatusContacted || got.StatusSetBy == nil || *got.StatusSetBy != crmcontracts.LeadStatusSetByLeadStatusSetBySystem {
 		t.Fatalf("after outbound: status=%s set_by=%v, want contacted by system", got.Status, got.StatusSetBy)
 	}
 
@@ -57,7 +57,7 @@ func TestLadderClimbsFromActivityAndNeverDescends(t *testing.T) {
 	if err != nil {
 		t.Fatalf("human step down: %v", err)
 	}
-	if byHand.Status != crmcontracts.LeadStatusContacted || byHand.StatusSetBy == nil || *byHand.StatusSetBy != crmcontracts.LeadStatusSetByHuman {
+	if byHand.Status != crmcontracts.LeadStatusContacted || byHand.StatusSetBy == nil || *byHand.StatusSetBy != crmcontracts.LeadStatusSetByLeadStatusSetByHuman {
 		t.Errorf("after the human's edit: status=%s set_by=%v, want contacted by human", byHand.Status, byHand.StatusSetBy)
 	}
 
@@ -125,7 +125,7 @@ func TestFirstResponseTargetIsOptIn(t *testing.T) {
 	if err != nil || len(breaches) != 0 {
 		t.Errorf("scan with the target off = %d breaches err=%v, want none", len(breaches), err)
 	}
-	breached := crmcontracts.ListLeadsParamsSlaState(crmcontracts.LeadSlaStateBreached)
+	breached := crmcontracts.ListLeadsParamsSlaState(crmcontracts.LeadSlaStateLeadSlaStateBreached)
 	listed, _, err := e.store.ListLeads(e.ctx, ListLeadsInput{SLAState: &breached})
 	if err != nil || len(listed) != 0 {
 		t.Errorf("sla_state=breached with the target off lists %d leads err=%v, want none", len(listed), err)
@@ -156,7 +156,7 @@ func TestFirstResponseTargetIsOptIn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if onLead.SlaState == nil || *onLead.SlaState != crmcontracts.LeadSlaStateBreached || onLead.SlaDeadlineAt == nil {
+	if onLead.SlaState == nil || *onLead.SlaState != crmcontracts.LeadSlaStateLeadSlaStateBreached || onLead.SlaDeadlineAt == nil {
 		t.Fatalf("with the target on the overdue lead reads %v / %v, want breached with a deadline", onLead.SlaState, onLead.SlaDeadlineAt)
 	}
 	if want := onLead.CreatedAt.Add(60 * time.Minute); !onLead.SlaDeadlineAt.Equal(want) {

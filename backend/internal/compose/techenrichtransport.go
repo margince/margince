@@ -114,7 +114,7 @@ func (h technicalHandlers) startTechnicalEnrich(
 		// Queued is what this call did. River's uniqueness makes a second press
 		// join the first rather than queue again, so the honest word for both
 		// is the same: the lookup this rep asked for is on its way.
-		Status: crmcontracts.TechnicalEnrichStartedStatusQueued,
+		Status: crmcontracts.TechnicalEnrichStartedStatusTechnicalEnrichStartedStatusQueued,
 	}, nil
 }
 

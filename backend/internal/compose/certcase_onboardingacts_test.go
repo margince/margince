@@ -44,7 +44,7 @@ func onboardingActEnvelope(kind, message string) string {
 // question, the turn it refers back to, and the server's own corpus numbers.
 func actFixture() onboardingActFixture {
 	return onboardingActFixture{
-		Act:     string(crmcontracts.OnboardingActVoice),
+		Act:     string(crmcontracts.OnboardingActOnboardingActVoice),
 		Message: "And how many more words do I need?",
 		History: []crmcontracts.CompanySiteReadConversationTurn{
 			{Role: crmcontracts.CompanySiteReadConversationTurnRoleUser, Message: "How is my voice corpus doing?"},
@@ -53,7 +53,7 @@ func actFixture() onboardingActFixture {
 		Context: json.RawMessage(
 			`{"has_profile":true,"corpus_total_words":1240,"corpus_target_words":6000,"build_floor_words":800,"corpus_source_count":3}`,
 		),
-		Locale: string(crmcontracts.OnboardingCompanyLocaleEN),
+		Locale: string(crmcontracts.OnboardingCompanyMessageRequestLocaleOnboardingCompanyLocaleEN),
 	}
 }
 
@@ -264,7 +264,7 @@ func TestOnboardingActCaseRefusesAFixtureTheTransportWould(t *testing.T) {
 			// role — and be judged by a validator that refuses the very changes
 			// the company act exists to propose.
 			name:    "the company act, which this site never serves",
-			mutate:  func(f *onboardingActFixture) { f.Act = string(crmcontracts.OnboardingActCompany) },
+			mutate:  func(f *onboardingActFixture) { f.Act = string(crmcontracts.OnboardingActOnboardingActCompany) },
 			wantMsg: "voice, results or connect",
 		},
 		{

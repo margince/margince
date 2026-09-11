@@ -43,7 +43,7 @@ func omittedFactors(gathered briefFacts, warmthReadable bool) []string {
 	if gathered.seatsReadable && warmthReadable {
 		return []string{}
 	}
-	return []string{string(crmcontracts.Warmth)}
+	return []string{string(crmcontracts.MorningBriefFactorsOmittedWarmth)}
 }
 
 // seatEvidenceBound resolves the seat edge's admission for the stakeholder

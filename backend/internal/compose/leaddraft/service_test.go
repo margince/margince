@@ -164,7 +164,7 @@ func TestWithNoModelLaneTheFloorWrites(t *testing.T) {
 	if draft.Body == "" {
 		t.Error("the floor wrote no body")
 	}
-	if draft.GeneratedBy == crmcontracts.Model {
+	if draft.GeneratedBy == crmcontracts.WrittenByModel {
 		t.Error("a draft with no lane claims a model wrote it")
 	}
 	// The Art. 50 disclosure rides only a model-written draft. A deterministic

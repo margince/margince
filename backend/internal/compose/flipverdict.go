@@ -37,20 +37,20 @@ func (f *flipRunner) verdict(ctx context.Context) (flipVerdict, error) {
 	// The same guard the direct importer runs (one constant, one rule):
 	// a live-read import cannot pass with the connection revoked/error.
 	if err := migration.GuardIncumbentSource(checks.ConnectionStatus); err != nil {
-		v.blocking = append(v.blocking, crmcontracts.IncumbentUnreachable)
+		v.blocking = append(v.blocking, crmcontracts.OverlayFlipPreflightBlockingIncumbentUnreachable)
 	}
 	if !checks.ForceFreshDone {
-		v.blocking = append(v.blocking, crmcontracts.ForceFreshIncomplete)
+		v.blocking = append(v.blocking, crmcontracts.OverlayFlipPreflightBlockingForceFreshIncomplete)
 	}
 	if checks.PendingSyncCount > 0 {
-		v.blocking = append(v.blocking, crmcontracts.PendingSyncDraining)
+		v.blocking = append(v.blocking, crmcontracts.OverlayFlipPreflightBlockingPendingSyncDraining)
 	}
 	exported, err := f.exportSince(ctx, exportCutoff(checks))
 	if err != nil {
 		return flipVerdict{}, err
 	}
 	if !exported {
-		v.blocking = append(v.blocking, crmcontracts.ExportMissing)
+		v.blocking = append(v.blocking, crmcontracts.OverlayFlipPreflightBlockingExportMissing)
 	}
 	return v, nil
 }

@@ -39,7 +39,7 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 	})
 
 	var store *Store
-	_, err := store.RaiseCoachNotice(ctx, teammatesAlways{}, ids.UserID{}, crmcontracts.CoachGeneral, "a word")
+	_, err := store.RaiseCoachNotice(ctx, teammatesAlways{}, ids.UserID{}, crmcontracts.NoticeKindCoachGeneral, "a word")
 
 	var parse *values.ParseError
 	if !errors.As(err, &parse) {

@@ -121,7 +121,7 @@ func (s *Service) ProposeRoles(
 	return crmcontracts.DealRoleProposalResult{
 		Written:     written,
 		Skipped:     len(proposals) - len(kept),
-		GeneratedBy: crmcontracts.Model,
+		GeneratedBy: crmcontracts.WrittenByModel,
 	}, nil
 }
 
@@ -134,7 +134,7 @@ func emptyProposalResult() crmcontracts.DealRoleProposalResult {
 	return crmcontracts.DealRoleProposalResult{
 		Written:     []crmcontracts.DealRoleProposalWritten{},
 		Skipped:     0,
-		GeneratedBy: crmcontracts.Deterministic,
+		GeneratedBy: crmcontracts.WrittenByDeterministic,
 	}
 }
 

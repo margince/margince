@@ -157,16 +157,16 @@ func Write(
 	floor Draft,
 ) (Draft, crmcontracts.WrittenBy) {
 	if lane == nil {
-		return floor, crmcontracts.Deterministic
+		return floor, crmcontracts.WrittenByDeterministic
 	}
 	written, err := writeChecked(ctx, lane, surface, in, voice)
 	if err != nil {
 		// The error is deliberately swallowed rather than returned — it is a
 		// fact about the lane, not about the record, and there is nothing the
 		// caller could do with it. The floor is a real message they can edit.
-		return floor, crmcontracts.Deterministic
+		return floor, crmcontracts.WrittenByDeterministic
 	}
-	return written, crmcontracts.Model
+	return written, crmcontracts.WrittenByModel
 }
 
 func writeChecked(

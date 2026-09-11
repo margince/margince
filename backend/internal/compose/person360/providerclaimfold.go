@@ -190,7 +190,7 @@ func foldEmails(c storedClaim, out *crmcontracts.PersonProviderProfile) error {
 			// Labeled from what we ASKED for, and marked as such: the
 			// professional cascade returned it, so it is professional by
 			// request rather than by the provider's word.
-			email.EmailType = providerPtr(crmcontracts.PersonProviderEmailEmailTypeProfessional)
+			email.EmailType = providerPtr(crmcontracts.PersonProviderEmailEmailTypePersonProviderEmailEmailTypeProfessional)
 			email.EmailTypeSource = providerPtr(crmcontracts.PersonProviderEmailEmailTypeSourceRequestedCascade)
 		}
 		out.Emails = append(out.Emails, email)
