@@ -66,9 +66,9 @@ func readContractStrip(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
 	if err != nil {
 		return contractStrip{}, fmt.Errorf("resolve the installation's timezone: %w", err)
 	}
-	loc, err := time.LoadLocation(tzName)
+	loc, err := storekit.LoadZone(tzName)
 	if err != nil {
-		return contractStrip{}, fmt.Errorf("the installation's timezone %q: %w", tzName, err)
+		return contractStrip{}, err
 	}
 	asOfPos := arg(storekit.WorkspaceDay(asOf, loc))
 
@@ -99,6 +99,14 @@ func readContractStrip(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
 	}
 	defer rows.Close()
 
+	return scanContractStrip(rows, baseCcy)
+}
+
+// scanContractStrip folds the active-contract rows into the strip: it counts
+// every agreement, tracks the nearest renewal and any pending cancellation, and
+// sums the ones it can price by basis (a row it cannot convert is counted but
+// not summed, so the two figures stay honest about what they cover).
+func scanContractStrip(rows pgx.Rows, baseCcy string) (contractStrip, error) {
 	strip := contractStrip{baseCurrency: baseCcy}
 	var totalBasis, annualized int64
 	var haveTotal, haveAnnualized bool

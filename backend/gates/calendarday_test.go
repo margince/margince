@@ -177,8 +177,15 @@ func TestOnlyOnePlaceDerivesACalendarDay(t *testing.T) {
 			t.Fatalf("walking %s: %v", root, err)
 		}
 	}
-	if judged < 500 {
-		t.Fatalf("the census read only %d Go files, so it covered almost nothing", judged)
+	// The floor sits just under the real corpus (~2800 non-test .go files), not
+	// at a token 500: under-recognition is the one way this must not break
+	// (rule 8), and a walk that silently stopped reading internal/compose —
+	// where org360 and briefs live — would still clear a low floor and report
+	// PASS over a planted truncation. If a refactor legitimately drops the count
+	// below this, lower it deliberately rather than widening the blind spot.
+	if judged < 2500 {
+		t.Fatalf("the census read only %d Go files, far below the ~2800 it should — it covered "+
+			"a fraction of the tree and a truncation outside what it read would pass unseen", judged)
 	}
 	sort.Strings(sites)
 	if len(sites) > 0 {

@@ -130,9 +130,9 @@ func (s *Store) today(ctx context.Context, tx pgx.Tx) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, fmt.Errorf("resolve the installation's timezone: %w", err)
 	}
-	loc, err := time.LoadLocation(tzName)
+	loc, err := storekit.LoadZone(tzName)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("the installation's timezone %q: %w", tzName, err)
+		return time.Time{}, err
 	}
 	return storekit.WorkspaceDay(s.clock(), loc), nil
 }
