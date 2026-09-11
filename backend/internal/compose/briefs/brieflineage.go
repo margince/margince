@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -86,6 +87,15 @@ func briefLineage(
 	if err != nil {
 		return nil, err
 	}
+	// The deal ids come back out of this read, so the deal's own scope binds on
+	// it rather than being trusted from the candidate query that chose them.
+	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	if err != nil {
+		return nil, err
+	}
+	if dealScope == "" {
+		dealScope = "TRUE"
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH last_mark AS (
 			SELECT DISTINCT ON (bi.deal_id)
@@ -99,6 +109,7 @@ func briefLineage(
 		)
 		SELECT m.deal_id, m.state_at, MIN(a.occurred_at)
 		  FROM last_mark m
+		  JOIN deal d ON d.id = m.deal_id AND %s
 		  JOIN activity_link l ON l.deal_id = m.deal_id
 		  JOIN activity a ON a.id = l.activity_id
 		 WHERE m.state = 'dismissed'
@@ -110,7 +121,7 @@ func briefLineage(
 		   -- would put a deal back with no line explaining it.
 		   AND a.occurred_at <= $%d
 		   AND %s
-		 GROUP BY m.deal_id, m.state_at`, orderPos, userPos, nowPos, readable),
+		 GROUP BY m.deal_id, m.state_at`, orderPos, userPos, dealScope, nowPos, readable),
 		args...)
 	if err != nil {
 		return nil, err

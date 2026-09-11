@@ -51,7 +51,9 @@ func briefActivityClause(ctx context.Context, alias string, arg func(any) int) (
 //
 // The run recorded both under the reader's access at the time, and an audience
 // narrowed since then binds on the next read — the same way the deal's scope is
-// re-applied rather than inherited from the snapshot.
+// re-applied rather than inherited from the snapshot. An activity archived since
+// (an Art. 17 erasure archives its rows) is gone from both, as the run's own
+// gathering never admitted one.
 //
 //   - evidence is the ids the run cited, less every activity the reader can no
 //     longer read. The deal's own id stays: it is the evidence for winnability,
@@ -69,12 +71,13 @@ func servedActivityRefsSQL(ctx context.Context, arg func(any) int) (evidence, re
 	evidence = fmt.Sprintf(`ARRAY(
 		SELECT ev.id FROM unnest(bi.evidence_ids) WITH ORDINALITY AS ev(id, n)
 		 WHERE ev.id = bi.deal_id
-		    OR EXISTS (SELECT 1 FROM activity ev_a WHERE ev_a.id = ev.id AND %s)
+		    OR EXISTS (SELECT 1 FROM activity ev_a
+		                WHERE ev_a.id = ev.id AND ev_a.archived_at IS NULL AND %s)
 		 ORDER BY ev.n)`, readable)
 	returnedWith = fmt.Sprintf(`(CASE WHEN EXISTS (
 		SELECT 1 FROM activity ev_a
 		JOIN activity_link ev_l ON ev_l.activity_id = ev_a.id AND ev_l.deal_id = bi.deal_id
-		 WHERE ev_a.occurred_at = bi.returned_with_activity_at AND %s)
+		 WHERE ev_a.occurred_at = bi.returned_with_activity_at AND ev_a.archived_at IS NULL AND %s)
 		THEN bi.returned_with_activity_at END)`, readable)
 	return evidence, returnedWith, nil
 }
