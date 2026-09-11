@@ -3,9 +3,7 @@ import {
   BriefcaseBusiness,
   ChevronRight,
   Link as LinkIcon,
-  Mail,
   MapPin,
-  Phone,
   User,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
