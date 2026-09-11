@@ -54,6 +54,36 @@ function isLive(run: BackfillStatus | undefined): run is BackfillStatus {
 }
 
 /**
+ * The share of a window an import has read, or null when no honest share can be
+ * drawn. ONE rule, because two surfaces draw this bar — the chrome's orb and
+ * the settings card's — and a fraction that differed between them would be two
+ * answers to one question on one screen.
+ *
+ * An EXACT denominator that was overrun clamps to 1: the mailbox grew between
+ * the preview and the scan, and the run really is at its end. A FLOOR that has
+ * been passed does not — the provider stopped counting at its cap, so nothing
+ * knows how much is left, and a bar pinned full for the rest of a long import
+ * says the import is complete when it is not. Past that point the surfaces fall
+ * back to the absolute counts, which are true either way.
+ */
+export function progressFraction(
+  reading: Readonly<{
+    scanned: number;
+    estimated: number | null;
+    estimatedIsFloor: boolean;
+  }>,
+): number | null {
+  const { scanned, estimated, estimatedIsFloor } = reading;
+  if (estimated === null || estimated <= 0) {
+    return null;
+  }
+  if (estimatedIsFloor && scanned >= estimated) {
+    return null;
+  }
+  return Math.max(0, Math.min(1, scanned / estimated));
+}
+
+/**
  * The capture in flight, or null when no connection is importing.
  *
  * Null rather than a zero-progress reading, for the rail's standing rule: a

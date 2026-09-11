@@ -4940,9 +4940,12 @@ export const vi = {
   "backfill.window24m": "2 năm",
   "backfill.window60m": "5 năm",
   "backfill.previewLoading": "Đang đếm hộp thư của bạn…",
-  "backfill.scopeIs": "Sẽ nhập {window} hộp thư của bạn.",
-  "backfill.estimateMessagesExact": "{count} thư trong khoảng đó.",
-  "backfill.estimateMessagesAtLeast":
+  "backfill.scopeIs": "Sẽ nhập thư trong {window} gần đây từ hộp thư của bạn.",
+  "backfill.estimateMessagesExact_one": "{count} thư trong khoảng đó.",
+  "backfill.estimateMessagesExact_other": "{count} thư trong khoảng đó.",
+  "backfill.estimateMessagesAtLeast_one":
+    "Ít nhất {count} thư trong khoảng đó — việc đếm dừng ở đây, nên có thể còn nhiều hơn.",
+  "backfill.estimateMessagesAtLeast_other":
     "Ít nhất {count} thư trong khoảng đó — việc đếm dừng ở đây, nên có thể còn nhiều hơn.",
   "backfill.estimateCost": "Chi phí AI ước tính:",
   "backfill.estimateNote":

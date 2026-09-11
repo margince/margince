@@ -5,7 +5,7 @@ import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { formatMoney, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
 import { RunView } from "./backfillrunview";
@@ -279,6 +279,7 @@ function EstimateCard({
   onStart: () => void;
 }) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const costMinor = preview?.estimated_cost_minor ?? 0;
   return (
@@ -291,13 +292,16 @@ function EstimateCard({
       <p>{t("backfill.scopeIs", { window: t(windowLabel(window)) })}</p>
       {preview && (
         <p className="t-caption">
-          {preview.estimate_is_floor
-            ? t("backfill.estimateMessagesAtLeast", {
-                count: formatNumber(preview.estimated_messages, locale),
-              })
-            : t("backfill.estimateMessagesExact", {
-                count: formatNumber(preview.estimated_messages, locale),
-              })}
+          {/* Selected on the RAW count and printed with the formatted one: a
+              mailbox with a single message in the window is a real answer, and
+              "1 messages" is the sentence a reader trusts least. */}
+          {plural(
+            preview.estimate_is_floor
+              ? "backfill.estimateMessagesAtLeast"
+              : "backfill.estimateMessagesExact",
+            preview.estimated_messages,
+            { count: formatNumber(preview.estimated_messages, locale) },
+          )}
         </p>
       )}
       {preview && costMinor > 0 && (

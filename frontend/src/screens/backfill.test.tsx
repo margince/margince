@@ -436,7 +436,28 @@ describe("honest capability and staleness", () => {
   // and a multi-year window reaches that cap far more often. A run that scans
   // past its own denominator has no percentage to show, and a full bar over a
   // still-running import would be the one number on this screen that lies.
-  it("drops the percentage once a run scans past its own estimate", () => {
+  // An overrun used to mean one thing because the estimate always was a floor.
+  // It is now two, and they read differently: a mailbox that grew past an EXACT
+  // count leaves a run at its end, while a FLOOR that has been passed leaves
+  // nobody knowing how much is left.
+  it("drops the percentage once a run scans past a FLOOR it cannot see beyond", () => {
+    render(
+      <BackfillPanel
+        provider="gmail"
+        initial={{
+          ...countsStatus("running", { captured: 900, messages_scanned: 900 }),
+          estimated_messages: 500,
+          estimate_is_floor: true,
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    // The absolute counts stay: scanned and captured, both past the bound.
+    expect(screen.getAllByText(/900/).length).toBeGreaterThan(0);
+  });
+
+  it("keeps the bar full when an EXACT estimate was overrun by a growing mailbox", () => {
     render(
       <BackfillPanel
         provider="gmail"
@@ -447,9 +468,12 @@ describe("honest capability and staleness", () => {
       />,
     );
 
-    expect(screen.queryByRole("progressbar")).toBeNull();
-    // The absolute counts stay: scanned and captured, both past the floor.
-    expect(screen.getAllByText(/900/).length).toBeGreaterThan(0);
+    // Drawn rather than dropped: the provider counted every message in the
+    // window, so what is left is the handful that arrived during the import —
+    // and withholding the bar there would say the run's progress is unknowable
+    // when it is nearly finished.
+    const bar = screen.getByRole("progressbar");
+    expect(bar.getAttribute("aria-valuenow")).toBe("100");
   });
 
   it("does not animate a running run whose updated_at is stale", () => {

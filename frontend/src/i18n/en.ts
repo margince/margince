@@ -5143,8 +5143,11 @@ export const en = {
   "backfill.window60m": "5 years",
   "backfill.previewLoading": "Counting your mailbox…",
   "backfill.scopeIs": "This imports {window} of your mailbox.",
-  "backfill.estimateMessagesExact": "{count} messages in that period.",
-  "backfill.estimateMessagesAtLeast":
+  "backfill.estimateMessagesExact_one": "{count} message in that period.",
+  "backfill.estimateMessagesExact_other": "{count} messages in that period.",
+  "backfill.estimateMessagesAtLeast_one":
+    "At least {count} message in that period — counting stopped there, so there may be more.",
+  "backfill.estimateMessagesAtLeast_other":
     "At least {count} messages in that period — counting stopped there, so there may be more.",
   "backfill.estimateCost": "Estimated AI cost:",
   "backfill.estimateNote":

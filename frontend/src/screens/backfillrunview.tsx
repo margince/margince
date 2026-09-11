@@ -3,6 +3,7 @@
 
 import { Building2, CheckCircle2, History, Mail, Users } from "lucide-react";
 import type { components } from "../api/schema";
+import { progressFraction } from "../app/capture-progress";
 import { Badge, Button } from "../design-system/atoms";
 import { CountUp } from "../design-system/countup";
 import { formatDuration, formatNumber, formatPercent } from "../format/format";
@@ -125,18 +126,21 @@ export function RunView({
   // indigo is a claim about who is doing the work, so a queued run that has
   // not started and a stalled one that has stopped both stay on plain ground.
   const reading = run.state === "running" && !stale;
-  // A percentage needs a denominator that is still true. The provider-side
-  // count is a FLOOR — Gmail's exact count is capped at a page budget, and a
-  // multi-year window reaches that cap far more often than a 12-month one —
-  // so a run can scan past its own estimate. Clamping to 100% there would
-  // show a full bar for an hour while the import kept going; the honest move
-  // is the absolute counts this screen already falls back to when there is no
-  // estimate at all, because at that moment there effectively is none. A run
-  // that is not moving forward does not get a bar that implies otherwise.
-  const denominator = run.estimated_messages ?? 0;
+  // A percentage needs a denominator that is still true, and whether this one
+  // is depends on what kind of number the provider gave: Gmail counts by
+  // paging under a cap and answers a FLOOR on a large mailbox, Graph answers
+  // an exact count. progressFraction is the one rule — shared with the
+  // chrome's own orb, because a bar that differed between the two would be two
+  // answers to one question on one screen. A run that is not moving forward
+  // gets no bar at all, which is this screen's own addition to it: a stalled
+  // import must not draw something that implies progress.
   const fraction =
-    live && !stale && denominator > 0 && scanned <= denominator
-      ? scanned / denominator
+    live && !stale
+      ? progressFraction({
+          scanned,
+          estimated: run.estimated_messages ?? null,
+          estimatedIsFloor: run.estimate_is_floor === true,
+        })
       : null;
   const heroClass = ["capture-hero", done && "done", reading && "reading"]
     .filter(Boolean)

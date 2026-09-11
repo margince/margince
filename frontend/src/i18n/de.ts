@@ -5010,8 +5010,12 @@ export const de = {
   "backfill.window60m": "5 Jahre",
   "backfill.previewLoading": "Postfach wird gezählt…",
   "backfill.scopeIs": "Importiert wird {window} deines Postfachs.",
-  "backfill.estimateMessagesExact": "{count} Nachrichten in diesem Zeitraum.",
-  "backfill.estimateMessagesAtLeast":
+  "backfill.estimateMessagesExact_one": "{count} Nachricht in diesem Zeitraum.",
+  "backfill.estimateMessagesExact_other":
+    "{count} Nachrichten in diesem Zeitraum.",
+  "backfill.estimateMessagesAtLeast_one":
+    "Mindestens {count} Nachricht in diesem Zeitraum — dort wurde zu zählen aufgehört, es können mehr sein.",
+  "backfill.estimateMessagesAtLeast_other":
     "Mindestens {count} Nachrichten in diesem Zeitraum — dort wurde zu zählen aufgehört, es können mehr sein.",
   "backfill.estimateCost": "Geschätzte KI-Kosten:",
   "backfill.estimateNote":

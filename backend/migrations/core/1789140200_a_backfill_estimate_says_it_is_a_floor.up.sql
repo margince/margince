@@ -9,10 +9,16 @@ SET LOCAL lock_timeout = '3s';
 -- this column it cannot tell a total from a bound — so it divides by a floor
 -- and runs past its own end on exactly the mailboxes where the cap binds.
 --
--- NOT NULL DEFAULT false, which states the right thing about existing rows:
--- every run recorded before this column existed was previewed under a cap that
--- nobody asked about, and the number it stored was treated as exact. Calling
--- them exact keeps them reading as they always have, and a run that ends is
--- measured by its own counters anyway.
+-- NOT NULL DEFAULT false, and the rows it would describe wrongly do not exist.
+-- No installation predates this column: there is no production deployment, and
+-- a fresh install runs the baseline and then every migration in order, so the
+-- column is there before any run is. The default is what NEW rows get until a
+-- preview sets it, which is the honest reading for a run nobody previewed.
+--
+-- Backfilling a truer value is not available even in principle. The fact lives
+-- with the provider at preview time — Gmail's page cap either bound or it did
+-- not — and nothing in this database records it, so a migration could only
+-- guess. Carrying the unknown as NULL instead would buy a third state every
+-- reader has to answer for, to describe a population of zero.
 ALTER TABLE capture_backfill
     ADD COLUMN total_estimate_is_floor boolean NOT NULL DEFAULT false;
