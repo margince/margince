@@ -290,7 +290,13 @@ function EstimateCard({
           agreed to. It also degrades better — the scope sentence is true while
           the count is still arriving, or when it never does. */}
       <p>{t("backfill.scopeIs", { window: t(windowLabel(window)) })}</p>
-      {preview && (
+      {/* The count is its own line and its own condition. `estimated_messages`
+          is required on the wire, so an answer without it is a server too old
+          to send one or a response nothing routed — and the scope sentence
+          above is still true in both cases, which is the whole reason the
+          window leads. Rendering a count nobody produced is how `~undefined`
+          reaches a consent surface. */}
+      {typeof preview?.estimated_messages === "number" && (
         <p className="t-caption">
           {/* Selected on the RAW count and printed with the formatted one: a
               mailbox with a single message in the window is a real answer, and
