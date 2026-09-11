@@ -800,8 +800,13 @@ func TestNamingTheKindIsEnoughWithoutTheLegacyKey(t *testing.T) {
 	}, nil, nil)
 	if status >= 300 {
 		var reason string
-		_ = c.Owner.QueryRow(context.Background(),
-			`SELECT reason_code FROM communication_review WHERE resolved_at IS NULL`).Scan(&reason)
+		// Read to sharpen the failure below, so a refusal that wrote no review
+		// row says so instead of reporting an empty reason as if one had been
+		// recorded — which is the same "answered nothing" this case is about.
+		if err := c.Owner.QueryRow(context.Background(),
+			`SELECT reason_code FROM communication_review WHERE resolved_at IS NULL`).Scan(&reason); err != nil {
+			reason = "no open review to read: " + err.Error()
+		}
 		t.Errorf("a reply naming its kind and no legacy key answered %d (%s), want it accepted — an agent "+
 			"that knows what it is sending should not also have to name a key it does not "+
 			"understand", status, reason)
