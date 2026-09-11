@@ -42,7 +42,7 @@ func writeArm(p principal.Principal, table string) string {
 // refusal half on its own: a FULL seat still reaches its grants, and only the
 // seat moved between the two.
 func TestAReadSeatReachesNoWriteGrant(t *testing.T) {
-	for _, table := range []string{"person", "company", "deal", "lead", "project"} {
+	for _, table := range []string{"contact", "company", "deal", "lead", "project"} {
 		reader := human(principal.RowScopeTeam)
 		reader.SeatType = principal.SeatRead
 		if sql := writeArm(reader, table); strings.Contains(sql, "record_grant") {
