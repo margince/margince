@@ -166,7 +166,12 @@ func (e *pendingReviewError) Unwrap() error { return e.cause }
 // way, and answering a storage fault instead would tell the rep their message
 // was fine and the database was not. The original refusal is what they need to
 // see; the missing review is an operator's problem, not theirs.
-func (s commsStager) RecordPendingReview(ctx context.Context, err error) error {
+// intentID names the held scheduled_send the sender froze this message into, so
+// the review binds to something a human can resume. It is zero when nothing was
+// held — a channel reply, or a hold that failed — and the review is then opened
+// without an intent, which is every review this module wrote before the holder
+// existed.
+func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentID ids.UUID) error {
 	var pending *pendingReviewError
 	if !errors.As(err, &pending) {
 		return err
@@ -174,7 +179,7 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error) error {
 	if s.authority == nil {
 		return pending.cause
 	}
-	review, recordErr := s.authority.RecordRefusal(ctx, pending.set, ids.UUID{})
+	review, recordErr := s.authority.RecordRefusal(ctx, pending.set, intentID)
 	if recordErr != nil || review.ID.IsZero() {
 		return pending.cause
 	}

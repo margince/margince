@@ -1479,12 +1479,13 @@ function dealColumns(
       // apart from a deal nobody has linked.
       //
       // No `sort`, for the reason the partner column below carries none: the
-      // company is a JOINED column and the list machinery orders by one column
-      // of the row's own table, so the API cannot offer it yet. A header that
-      // looked sortable and refused would be worse than one that never
-      // offered.
+      // Ordered by the company's NAME, not by the id the field is called
+      // after: the sort vocabulary names the reference and the server decides
+      // what ordering it means. A company this reader may not open sorts last,
+      // with the rest, because ordering by a name is reading it.
       key: "company",
       header: t("create.relatedCompany"),
+      sort: "company_id",
       cell: (deal) => <CompanyCell deal={deal} field="company_id" />,
     },
     {
@@ -1493,18 +1494,18 @@ function dealColumns(
       // per-row is worse in a list than an empty cell — a column that comes
       // and goes cannot be scanned down.
       //
-      // It carries no `sort` because the partner is a JOINED column: ordering
-      // by it means ordering by the company's name, and the list
-      // machinery renders one quoted identifier of the row's own table. That
-      // limitation is not this column's to fix, and a header that looked
-      // sortable and refused would be worse than one that never offered.
       key: "partner",
       header: t("deal.partnerCompany"),
+      sort: "partner_company_id",
       cell: (deal) => <CompanyCell deal={deal} field="partner_company_id" />,
     },
     {
       key: "stage",
       header: t("deals.stage"),
+      // Ordered by the stage's place in its PIPELINE. Alphabetical stages are
+      // the funnel shuffled, which is never what somebody sorting by stage
+      // means.
+      sort: "stage_id",
       // stage_id is null for an overlay-mirror deal (OVA-MAP-6) — no native
       // stage row to name; a native deal always has one.
       cell: (deal) =>

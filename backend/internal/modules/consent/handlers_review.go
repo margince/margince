@@ -61,11 +61,19 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 		}
 		refusals = append(refusals, wire)
 	}
-	return crmcontracts.CommunicationReview{
+	out := crmcontracts.CommunicationReview{
 		Id:         openapi_types.UUID(review.ID),
 		State:      crmcontracts.CommunicationReviewState(review.State),
 		Kind:       crmcontracts.CommunicationReviewKind(review.Kind),
 		ReasonCode: review.ReasonCode,
 		Refusals:   refusals,
 	}
+	// Null rather than a zero uuid when nothing was held. A caller reading
+	// 00000000-… would have an id it could take to a lookup that answers not
+	// found, which reads as a broken reference rather than as an absent one.
+	if !review.IntentID.IsZero() {
+		intent := openapi_types.UUID(review.IntentID)
+		out.DeliveryIntentId = &intent
+	}
+	return out
 }

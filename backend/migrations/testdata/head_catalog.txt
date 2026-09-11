@@ -5197,6 +5197,7 @@ public.scheduled_send.scheduled_tz text NOT NULL gen=- def=-
 public.scheduled_send.status text NOT NULL gen=- def='scheduled'::text
 public.scheduled_send.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.scheduled_send.version bigint NOT NULL gen=- def=1
+public.scheduled_send_one_held_message_per_seat CREATE UNIQUE INDEX scheduled_send_one_held_message_per_seat ON public.scheduled_send USING btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, COALESCE(agent_actor_id, ''::text), COALESCE(agent_passport_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(anchor_activity_id, '00000000-0000-0000-0000-000000000000'::uuid), md5((COALESCE(origin_links, '[]'::jsonb))::text), md5((COALESCE(also_links, '[]'::jsonb))::text), md5((payload)::text)) WHERE ((status = 'held'::text) AND (held_reason = 'send_refused'::text))
 public.scheduled_send_pkey CREATE UNIQUE INDEX scheduled_send_pkey ON public.scheduled_send USING btree (id)
 public.sdr_handoff acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sdr_handoff.assigned_to uuid gen=- def=-

@@ -20,6 +20,7 @@ package storekit
 // cf_<name>=<value> list parameters.
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strconv"
@@ -62,16 +63,38 @@ const (
 	CodeSortUnsupported     = "sort_unsupported"
 )
 
-// SortVocabulary merges a resource's fixed core sortable fields (name →
-// kind) with the workspace's active custom columns. Retired columns left
-// ActiveColumns, so they leave the vocabulary — and its 422 — for free.
-func SortVocabulary(core map[string]string, active []fieldcatalog.Column) map[string]string {
-	vocab := make(map[string]string, len(core)+len(active))
-	for name, kind := range core {
-		vocab[name] = kind
+// SortField is one field a resource will order by: the kind its cursor key
+// round-trips as, and — when the ordering is not the row's own column — the
+// expression that renders it.
+type SortField struct {
+	Kind string
+	// Expr renders the ORDER BY and cursor-key expression. Nil is the ordinary
+	// case: the column of this field's own name.
+	//
+	// A FUNCTION rather than a string because the sorts that need one are
+	// reference sorts, and a reference the caller may not read must not order
+	// the page by a name it is refusing to show — so the expression asks the
+	// caller's own row scope, which needs the context and binds parameters.
+	//
+	// Whatever it renders is used for the ordering AND for the keyset
+	// continuation, so a page cannot be ordered by one expression and
+	// continued by another.
+	Expr func(ctx context.Context, arg func(any) int) (string, error)
+}
+
+// Column is the ordinary sortable field: the row's own column of that name.
+func Column(kind string) SortField { return SortField{Kind: kind} }
+
+// SortVocabulary merges a resource's fixed core sortable fields with the
+// workspace's active custom columns. Retired columns left ActiveColumns, so
+// they leave the vocabulary — and its 422 — for free.
+func SortVocabulary(core map[string]SortField, active []fieldcatalog.Column) map[string]SortField {
+	vocab := make(map[string]SortField, len(core)+len(active))
+	for name, field := range core {
+		vocab[name] = field
 	}
 	for _, c := range active {
-		vocab[c.Name] = c.Type
+		vocab[c.Name] = Column(c.Type)
 	}
 	return vocab
 }
@@ -84,6 +107,10 @@ type ListSort struct {
 	name string
 	kind string
 	desc bool
+	// expr is the rendered ordering expression, empty for a plain column.
+	// Rendered ONCE, at parse time, because it may bind parameters and every
+	// clause that orders or continues this page has to name the same ones.
+	expr string
 }
 
 // ParseListSort validates a list's sort spec against the resource's
@@ -92,7 +119,7 @@ type ListSort struct {
 // spec the keyset cursor cannot continue — is a typed refusal.
 //
 //nolint:nilnil // the nil *ListSort IS the default sort by design: every ListSort method answers its default shape on a nil receiver, so callers thread one value unconditionally
-func ParseListSort(spec *string, vocab map[string]string) (*ListSort, error) {
+func ParseListSort(ctx context.Context, spec *string, vocab map[string]SortField, arg func(any) int) (*ListSort, error) {
 	if spec == nil {
 		return nil, nil
 	}
@@ -107,14 +134,37 @@ func ParseListSort(spec *string, vocab map[string]string) (*ListSort, error) {
 		}
 	}
 	name := strings.TrimPrefix(raw, "-")
-	kind, ok := vocab[name]
+	field, ok := vocab[name]
 	if !ok || name == "" {
 		return nil, &SortError{
 			Code:    CodeSortFieldNotAllowed,
 			Message: fmt.Sprintf("field %q is not sortable on this resource", name),
 		}
 	}
-	return &ListSort{name: name, kind: kind, desc: strings.HasPrefix(raw, "-")}, nil
+	sorted := &ListSort{name: name, kind: field.Kind, desc: strings.HasPrefix(raw, "-")}
+	if field.Expr != nil {
+		// A caller with no binder is one whose vocabulary is plain columns —
+		// a fixed internal sort, not a client's. Reaching an expression there
+		// is a wiring mistake, and saying so beats a nil call.
+		if arg == nil {
+			return nil, fmt.Errorf("storekit: sort %q renders an expression and this caller binds no parameters", name)
+		}
+		rendered, err := field.Expr(ctx, arg)
+		if err != nil {
+			return nil, err
+		}
+		sorted.expr = rendered
+	}
+	return sorted, nil
+}
+
+// orderExpr is what this sort orders and continues by: the field's own
+// expression, or the column of its name.
+func (s *ListSort) orderExpr() string {
+	if s.expr != "" {
+		return s.expr
+	}
+	return quoteColumnIdentifier(s.name)
 }
 
 // OrderBy renders the ORDER BY clause: the sort field first (NULLS LAST
@@ -129,7 +179,7 @@ func (s *ListSort) OrderBy() string {
 	if s.desc {
 		dir = "DESC"
 	}
-	return " ORDER BY " + quoteColumnIdentifier(s.name) + " " + dir + " NULLS LAST, created_at DESC, id DESC"
+	return " ORDER BY " + s.orderExpr() + " " + dir + " NULLS LAST, created_at DESC, id DESC"
 }
 
 // CursorKeySuffix is the trailing SELECT expression a sorted list scans
@@ -143,7 +193,7 @@ func (s *ListSort) CursorKeySuffix() string {
 	if s == nil {
 		return ""
 	}
-	return ", (" + quoteColumnIdentifier(s.name) + `)::text AS "__cursor_key"`
+	return ", (" + s.orderExpr() + `)::text AS "__cursor_key"`
 }
 
 // EncodePageCursor mints the next-page token: the house (created_at, id)
@@ -182,7 +232,7 @@ func (s *ListSort) KeysetClause(token string, arg func(any) int) (string, error)
 		return "", &CursorSortMismatchError{}
 	}
 
-	col := quoteColumnIdentifier(s.name)
+	col := s.orderExpr()
 	if c.SortKey == nil {
 		return SQLf("(%s IS NULL AND (created_at, id) < ($%d, $%d))", col, arg(c.CreatedAt), arg(c.ID)), nil
 	}

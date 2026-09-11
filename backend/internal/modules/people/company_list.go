@@ -36,7 +36,7 @@ type ListCompaniesInput struct {
 	// The predicate is storekit's, shared with the person and deal lists.
 	TagIDs  []ids.UUID
 	TagMode storekit.TagMode
-	// IncludeAnchor admits the installation's own company (ADR-0082).
+	// IncludeAnchor admits the installation's own company (ADR-0082/A127).
 	IncludeAnchor bool
 	Cursor        *string
 	Limit         *int
@@ -47,7 +47,7 @@ type ListCompaniesInput struct {
 	// listFilters.ownershipClause, which also refuses two of them at once.
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
-	// Classification is RETIRED with the column (ADR-0079) and reaches no
+	// Classification is RETIRED with the column (ADR-0079/A124) and reaches no
 	// wire parameter; Lifecycle and RelationshipType replace it.
 	Classification   *string
 	Lifecycle        *string
@@ -60,7 +60,7 @@ type ListCompaniesInput struct {
 	// company_domain rows the page attaches.
 	Domain          *string
 	IncludeArchived bool
-	// CapturedByKind filters on the captured_by prefix (ADR-0075 §3a).
+	// CapturedByKind filters on the captured_by prefix (ADR-0075/A121 §3a).
 	CapturedByKind *string
 	// AiWritten filters on whether an AI wrote into the record (§3a).
 	AiWritten *bool
@@ -75,12 +75,12 @@ type ListCompaniesInput struct {
 // companyListFields is the company list's core sortable
 // vocabulary — exactly the data-model §13.5 DM-VOCAB-2 set; active cf_
 // columns join it per request.
-var companyListFields = map[string]string{
-	createdAtColumn:    storekit.KindTimestamp,
-	updatedAtColumn:    storekit.KindTimestamp,
-	companyNameColumn:  fieldcatalog.TypeText,
-	ownerIDColumn:      storekit.KindUUID,
-	lastActivityColumn: storekit.KindTimestamp,
+var companyListFields = map[string]storekit.SortField{
+	createdAtColumn:    storekit.Column(storekit.KindTimestamp),
+	updatedAtColumn:    storekit.Column(storekit.KindTimestamp),
+	companyNameColumn:  storekit.Column(fieldcatalog.TypeText),
+	ownerIDColumn:      storekit.Column(storekit.KindUUID),
+	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 }
 
 // companyDomainClause narrows the page to the account that lists one
@@ -136,8 +136,13 @@ func foldDomainQuery(raw string) string {
 // ListCompanies is the row-scoped company list read:
 // quick-find, owner, domain, classification and custom-field filters,
 // keyset pagination under the validated sort.
-// companyCommonFilters is the shared filter set for an account list: every dial the
-// person and lead lists also carry, plus the domain an account is found by.
+// companyCommonFilters is the shared filter set for an account list: every dial
+// the person and lead lists also carry, plus the domain an account is found by.
+//
+// Named for what it holds rather than for its list, because the rename put it
+// next to listfilters.go's companyListFilters — the wire-name FilterSet — and
+// two things called the same thing in one package is the defect this rename
+// exists to remove.
 func companyCommonFilters(in ListCompaniesInput) listFilters {
 	return listFilters{
 		IncludeArchived: in.IncludeArchived,
@@ -172,7 +177,7 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 			}
 			// The installation's own company is not one of the accounts this
 			// list answers about, so it is excluded unless asked for
-			// (ADR-0082). Appended here beside the other company-only
+			// (ADR-0082/A127). Appended here beside the other company-only
 			// filters rather than in the shared set: the anchor is a fact about
 			// companies, and no person or deal has one.
 			if !in.IncludeAnchor {

@@ -20983,8 +20983,17 @@ type CommunicationEvidence struct {
 // given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
 // what the consent rows say today.
 type CommunicationReview struct {
-	Id   openapi_types.UUID      `json:"id"`
-	Kind CommunicationReviewKind `json:"kind"`
+	// DeliveryIntentId The held message this review can resume. A refused send freezes the message into a held
+	// `scheduled_send` — subject, body, recipients, attachments and the claimed purpose — so
+	// resolving the review fires what the rep wrote rather than something retyped from memory.
+	// The signature and the unsubscribe footer are re-derived when it fires, as they are for any
+	// scheduled send, so a resumed message is not byte-identical to the one that was refused.
+	// Null for a review whose message could not be held: a channel reply, which the held row's
+	// shape cannot carry; a recipient the installation has since been asked to forget; or a hold
+	// that failed while the refusal still had to be answered.
+	DeliveryIntentId *openapi_types.UUID     `json:"delivery_intent_id,omitempty"`
+	Id               openapi_types.UUID      `json:"id"`
+	Kind             CommunicationReviewKind `json:"kind"`
 
 	// ReasonCode The strongest reason across the recipients, so a queue can order without opening the snapshot.
 	ReasonCode string `json:"reason_code"`
