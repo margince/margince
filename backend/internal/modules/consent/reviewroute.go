@@ -380,7 +380,7 @@ const maxAwaitingDecision = 100
 // ON initiated_by, which is the rep who pressed send and therefore the rep the
 // held message belongs to. Consent cannot read scheduled_send to check
 // ownership directly — that is activities' table — and it does not need to:
-// the review records who was refused, and that is the same person.
+// the review records who was refused, and that is the same rep.
 //
 // ONE READ FOR EVERY ID, because the surface that needs this is a list.
 func (s *Store) LiveReviewsForIntents(
