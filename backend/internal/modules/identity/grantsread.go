@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // ListRecordGrants answers one page of the active manual grants.
@@ -117,21 +118,32 @@ func (s *Service) grantPage(ctx context.Context, tx pgx.Tx, in ListGrantsInput, 
 
 // visibleGrants drops the grants whose target the caller cannot read.
 //
-// It runs AFTER the page's cursor is drained and closed, never inside the scan
-// loop: it issues its own query on this same transaction, and pgx refuses a
-// second query while rows are open ("conn busy"). The probe used to be a no-op
-// for an unbounded caller, which hid the collision until a caller whose row
-// scope renders a real clause came along.
+// Through auth.VisibleSubset, which asks BOTH halves of "could this caller read
+// that record": the object grant on the record's type, then its row scope. The
+// row-scope probe alone is no answer on the tables every seat reads whole — it
+// admits every id without a query — so it is the object grant that keeps a seat
+// whose role holds no deal.read from listing every deal share and who holds it.
+//
+// One statement per record type on the page rather than one per grant, and all
+// of it AFTER the page's cursor is drained and closed: each probe is its own
+// query on this transaction, and pgx refuses a second query while rows are open
+// ("conn busy").
 func visibleGrants(ctx context.Context, tx pgx.Tx, candidates []grantRow) ([]grantRow, error) {
-	out := make([]grantRow, 0, len(candidates))
+	byType := map[string][]ids.UUID{}
 	for _, g := range candidates {
-		// A grant row names a row-scoped record: only grants whose target the
-		// caller could read are disclosed.
-		visible, err := auth.VisibleTo(ctx, tx, g.RecordType, g.RecordID)
+		byType[g.RecordType] = append(byType[g.RecordType], g.RecordID)
+	}
+	readable := make(map[string]map[ids.UUID]bool, len(byType))
+	for recordType, recordIDs := range byType {
+		subset, err := auth.VisibleSubset(ctx, tx, recordType, recordIDs)
 		if err != nil {
 			return nil, err
 		}
-		if visible {
+		readable[recordType] = subset
+	}
+	out := make([]grantRow, 0, len(candidates))
+	for _, g := range candidates {
+		if readable[g.RecordType][g.RecordID] {
 			out = append(out, g)
 		}
 	}
