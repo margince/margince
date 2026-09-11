@@ -1159,7 +1159,14 @@
 .co-rail .co-sect > summary .badge {
   margin-left: auto;
 }
-.co-rail .co-sect .disclosure-body {
+/* The SECTION's own body, by child combinator rather than by descent: a
+   disclosure nested inside a slice — the Details grid's postal address is one —
+   took this inset a second time as a descendant, so its labels and values
+   started a pane's padding right of the rows above them and the value column
+   lost that width twice over, breaking a street name mid-syllable. A nested
+   disclosure keeps the atom's own body, which is what puts both grids on one
+   left edge. */
+.co-rail .co-sect > .disclosure-body {
   margin-top: 0;
   padding: 0 var(--padPanel) var(--padPanel);
 }

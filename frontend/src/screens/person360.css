@@ -411,7 +411,7 @@
   top: var(--space-2);
   right: var(--space-5);
 }
-.pe-rail .pe-sect .disclosure-body {
+.pe-rail .pe-sect > .disclosure-body {
   margin-top: 0;
   padding: 0 var(--padPanel) var(--padPanel);
 }
