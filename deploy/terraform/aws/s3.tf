@@ -180,9 +180,17 @@ resource "aws_iam_user_policy" "blobstore" {
         # whether this user may use the key every object in it is now
         # encrypted under. Without this, every GetObject/PutObject the
         # blobstore client makes fails.
+        #
+        # kms:DescribeKey specifically: blobstore/s3.go's PutObject now names
+        # this key explicitly (x-amz-server-side-encryption-aws-kms-key-id,
+        # required by s3.tf's DenyWrongKMSKey below) rather than relying on
+        # the bucket's implicit default encryption — S3 validates the named
+        # key against the caller's own kms:DescribeKey permission before
+        # generating a data key, a check the implicit-default path never
+        # triggers. Without it, every explicit-key PutObject is denied.
         Sid      = "UseDataKey"
         Effect   = "Allow"
-        Action   = ["kms:GenerateDataKey", "kms:Decrypt"]
+        Action   = ["kms:GenerateDataKey", "kms:Decrypt", "kms:DescribeKey"]
         Resource = [aws_kms_key.data.arn]
       },
     ]

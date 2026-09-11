@@ -120,6 +120,38 @@ means api/worker/web should always move together; applying only one role's
 change (e.g. hand-editing a service's desired count without touching
 `image_tag`) does not trigger a new deployment for the others.
 
+### Turning on the Redis-TLS / S3-SSE-KMS enforcement, safely
+
+`elasticache.tf`'s `transit_encryption_mode = "required"` and `s3.tf`'s
+`DenyWrongEncryption`/`DenyWrongKMSKey` bucket-policy statements only work
+because the api/worker images now negotiate TLS and send an SSE-KMS header
+(`MARGINCE_REDIS_TLS`, `MARGINCE_BLOBSTORE_KMS_KEY_ID`, both in `ecs.tf`).
+Terraform has no way to express "wait until every old task has drained" —
+`aws_ecs_service` returns as soon as the API call to update it succeeds, not
+once the rollout finishes — so a single untargeted `apply` can flip
+ElastiCache to `required` or the S3 policy to enforcing while an OLD task
+revision (no TLS, no SSE header) is still serving traffic. That old task
+loses Redis connectivity, or has every upload denied, until it's replaced.
+
+Two-step apply avoids it:
+
+```bash
+# 1. Roll the new images out and WAIT for the rollout to finish before
+#    touching ElastiCache/S3 enforcement.
+CLUSTER="$(terraform output -raw ecs_cluster_name)"
+PREFIX="${CLUSTER%-cluster}"   # cluster is "${name_prefix}-cluster"; services are "${name_prefix}-api"/"-worker"
+terraform apply -target=aws_ecs_service.api -target=aws_ecs_service.worker
+aws ecs wait services-stable --cluster "$CLUSTER" --services "${PREFIX}-api" "${PREFIX}-worker"
+
+# 2. Only now apply everything else — this is what actually flips
+#    transit_encryption_mode and the S3 deny statements live.
+terraform apply
+```
+
+This only matters the FIRST time you turn either flag on (or after any gap
+where an old, non-TLS/non-SSE image was running). A steady-state release
+that already has both flags set can apply untargeted as usual.
+
 ## Security posture
 
 **Encryption at rest** — one customer-managed KMS key (`kms.tf`, rotation
