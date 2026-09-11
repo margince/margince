@@ -78,6 +78,16 @@ func (s *Store) Decide(ctx context.Context, id ids.CommissionEntryID, in DecideI
 }
 
 func decideTx(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID, in DecideInput, by string) (crmcontracts.CommissionEntry, error) {
+	// The row lock comes BEFORE the read the transition is decided from. Without
+	// it two concurrent decisions both read `paid`, both pass the lifecycle check
+	// below, and each then writes its own reversal — two clawbacks for one entry,
+	// or two payout events for one payment. Under the lock the second decision
+	// reads the first one's result and is refused as the illegal transition it
+	// now is. An id that does not exist answers ErrNotFound here, which is the
+	// same answer the scoped read gives an id the caller may not see.
+	if _, err := storekit.LockRow(ctx, tx, "commission_entry", id.UUID, storekit.NoArchiveColumn); err != nil {
+		return crmcontracts.CommissionEntry{}, err
+	}
 	// Read under the caller's scope first: a row they cannot see must read as
 	// not-found rather than as a refusal that confirms it exists.
 	//
