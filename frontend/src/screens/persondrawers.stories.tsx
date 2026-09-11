@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { PersonResearchDrawer } from "./persondrawers";
+import "./person360.css";
 import {
   installFetchStub,
   jsonResponse,
