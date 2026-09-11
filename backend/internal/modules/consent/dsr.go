@@ -202,9 +202,21 @@ type CreateDSRInput struct {
 	DueAt      time.Time
 }
 
+// CreateDSR files a request into the queue, behind the queue's own gate.
+//
+// Filing is working the queue, not a lesser act beside it. An erasure request is
+// the instruction FulfilErasure later carries out irreversibly, and the officer
+// who fulfils it trusts that whoever filed it could. person.update is not that
+// authority: every rep holds it for their own contact edits, and none of them
+// may read the queue a request lands in.
 func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error) {
-	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+	if err := requireDSRAdmin(ctx, principal.ActionUpdate); err != nil {
 		return dsrRow{}, err
+	}
+	// The kind decides what fulfilling the request does, so an unknown one is
+	// refused here rather than stored as a request no path knows how to answer.
+	if !crmcontracts.CreateDataSubjectRequestKind(in.Kind).Valid() {
+		return dsrRow{}, &ValidationError{Field: fieldKind, Reason: "not a request kind"}
 	}
 	if strings.TrimSpace(in.SubjectRef) == "" {
 		return dsrRow{}, &ValidationError{Field: fieldSubjectRef, Reason: "required"}
@@ -228,8 +240,8 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 	return out, err
 }
 
-// GetDSR reads one request (staff surface — the person.update gate the
-// whole DSR surface carries).
+// GetDSR reads one request, behind the queue's own gate like every other
+// entry point here.
 func (s *Store) GetDSR(ctx context.Context, id ids.UUID) (dsrRow, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionUpdate); err != nil {
 		return dsrRow{}, err
