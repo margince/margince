@@ -155,6 +155,19 @@ variable "log_retention_days" {
   default = 30
 }
 
+variable "ecr_tagged_image_retain_count" {
+  description = <<-EOT
+    ecs.tf's ECR lifecycle policy expires all but the most recent N tagged
+    (released) images per repo, once IMMUTABLE tag mutability (ecs.tf) means
+    none of them are ever reclaimed by a later push to the same tag. 30 is a
+    generous rollback window for a CRM's release cadence, not a tuned value
+    — raise it if you release more often than that and still want that many
+    rollback targets on hand.
+  EOT
+  type        = number
+  default     = 30
+}
+
 # ---- Database ---------------------------------------------------------------
 
 variable "db_instance_class" {

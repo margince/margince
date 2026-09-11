@@ -45,4 +45,5 @@ image_tag = "2026.09.01"
 # db_backup_retention_days = 7
 # redis_node_type          = "cache.t4g.small"
 # log_retention_days       = 30
+# ecr_tagged_image_retain_count = 30
 # license_token            = ""

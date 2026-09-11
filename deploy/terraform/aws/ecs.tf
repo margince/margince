@@ -43,19 +43,42 @@ resource "aws_ecr_repository" "web" {
 # keep it. `sinceImagePulled` cannot pair with `expire` (it only drives
 # `transition`, per ECR's own lifecycle semantics), so this is the direct
 # `expire untagged after N days` rule rather than a pull-activity-based one.
+#
+# Untagged cleanup alone still leaves every TAGGED (released) image growing
+# forever — IMMUTABLE means a tag is never reused, so nothing ever naturally
+# frees one, unlike a mutable "latest"-style repo where a new push already
+# reclaims the old digest's tag. Rule 2 is the tagged-image half of the same
+# cleanup: keep the most recent var.ecr_tagged_image_retain_count releases
+# (rollback material), expire the rest. tagPatternList = ["*"] matches every
+# tag rather than naming release-version tags one at a time, since this
+# stack's own var.image_tag is an open-ended release identifier, not a fixed
+# set of prefixes to enumerate.
 locals {
   untagged_expiry_policy = jsonencode({
-    rules = [{
-      rulePriority = 1
-      description  = "Expire untagged images after 14 days"
-      selection = {
-        tagStatus   = "untagged"
-        countType   = "sinceImagePushed"
-        countUnit   = "days"
-        countNumber = 14
-      }
-      action = { type = "expire" }
-    }]
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Expire untagged images after 14 days"
+        selection = {
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = 14
+        }
+        action = { type = "expire" }
+      },
+      {
+        rulePriority = 2
+        description  = "Keep only the most recent ${var.ecr_tagged_image_retain_count} tagged (released) images"
+        selection = {
+          tagStatus      = "tagged"
+          tagPatternList = ["*"]
+          countType      = "imageCountMoreThan"
+          countNumber    = var.ecr_tagged_image_retain_count
+        }
+        action = { type = "expire" }
+      },
+    ]
   })
 }
 
