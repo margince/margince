@@ -97,7 +97,26 @@ func (s *Store) ResumeHeldSend(
 		if err != nil {
 			return err
 		}
-		return s.releaseHeldInTx(ctx, tx, id, ids.UUID(sent.Id))
+		if err := s.releaseHeldInTx(ctx, tx, id, ids.UUID(sent.Id)); err != nil {
+			return err
+		}
+		// AND THE REVIEW, because this message has now gone.
+		//
+		// THE HOLE THIS CLOSES. Consuming an instruction resolves the review it
+		// answered, which covers every DIRECTED resume. A resume the engine now
+		// ALLOWS — the evidence arrived, the stop was lifted, the cap rolled
+		// over — consumes no instruction and so took that path's exit without
+		// passing its door. The message went out and its review stayed live,
+		// showing a decider a refusal about a message already in somebody's
+		// inbox; approving it mints an instruction for a delivery that has been
+		// made.
+		//
+		// SAFE TO CALL FOR BOTH. The closer only touches a review that is still
+		// live, so a directed resume finds its own review already resolved and
+		// this does nothing. Asking "was an instruction consumed" here would
+		// mean reaching into consent's own bookkeeping to avoid a statement
+		// that is already a no-op.
+		return s.closeReview(ctx, tx, id, ReviewOutcomeSent)
 	})
 	if err != nil {
 		return crmcontracts.Activity{}, err

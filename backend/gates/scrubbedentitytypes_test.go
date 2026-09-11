@@ -72,6 +72,24 @@ var scrubbedEntityTypes = map[string]bool{
 	"attachment":            true,
 	"deal_room_participant": true,
 	"scheduled_send":        true,
+	// The review over a message the erasure just cancelled. It rides in beside
+	// scheduled_send because it is the same act: the held message is emptied
+	// and its review is closed in one transaction, so a reader that stops at
+	// one stops at the other.
+	//
+	// THE NAMED READER IS UNAFFECTED. The weekly review's deal block
+	// reconstructs a DEAL from its own audit images (compose/weekly), and a
+	// review is not a deal and never appears in that reconstruction — so a
+	// review tombstone cannot turn a frozen week into a shortfall it never
+	// reported.
+	//
+	// The other readers of the boundary (compose/undoabilitypage.go,
+	// recordrestoreseam.go, magic/done.go, export.go) are each parameterised by
+	// the entity the caller named, so this tombstone is only ever seen by
+	// somebody asking about that review — and no surface offers undo or restore
+	// on one. The decider's queue and the review endpoints read the row
+	// directly and never reverse-apply an image.
+	"communication_review":  true,
 	"voice_learning_signal": true,
 	"ai_call":               true,
 	"ai_call_payload":       true,

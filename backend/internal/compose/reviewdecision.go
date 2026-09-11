@@ -28,7 +28,9 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -258,14 +260,73 @@ func returnRoutedReview(ctx context.Context, tx pgx.Tx, proposedChange json.RawM
 	return consent.ReturnToAskerTx(ctx, tx, reviewID, why)
 }
 
-// reviewCloser closes the review a cancelled message leaves behind.
+// retractionRouter is a router built for RETRACTION ALONE, on an approvals
+// service with no effects registered.
+//
+// WHY NOT approvalsServiceWithEffects, which every other router here uses. That
+// constructor registers the held-message effects, and registering those builds
+// a send store — which is the store this router is being wired INTO. The two
+// constructions call each other and the process overflows its stack before it
+// finishes booting, which is how this was found: a stack overflow inside
+// newCounterpartyStore, thirty frames from anything about reviews.
+//
+// A BARE SERVICE IS THE RIGHT ANSWER RATHER THAN A WORKAROUND, because
+// WithdrawInTx runs no effect. It locks the row, moves it to a terminal status
+// and records why. Effects are what an APPROVAL does; a retraction is the
+// question being taken off the table, and there is nothing to run.
+//
+// IT MUST NEVER BE USED FOR ROUTING, which does need the full service: a card
+// staged through this one would be answered by a service that cannot run what
+// approving it means, so the decider would press approve and nothing would
+// send. Nothing routes through it today — reviewCloser's only call is
+// WithdrawCardTx — and the type is unexported and built at exactly the two
+// wiring sites below, so widening it is a deliberate edit rather than an
+// accident.
+func retractionRouter(pool *pgxpool.Pool) reviewRouter {
+	return reviewRouter{approvals: approvals.NewService(InstallationDB(pool))}
+}
+
+// reviewCloser closes the review a settled message leaves behind.
 //
 // A seam rather than a direct call because activities may not import consent.
-// It carries no state: the work is one statement on the caller's transaction,
-// and the review is found through the held row's own id.
-type reviewCloser struct{}
+// It carries the ROUTER, which is the half the old spelling was missing: a
+// review handed to a decider names an approval card, and ending the review
+// without retracting that card leaves somebody being asked to send a message
+// that is cancelled, moved, erased or already delivered.
+type reviewCloser struct {
+	router consent.ReviewRouter
+}
 
-// CancelReviewForIntentTx implements activities.ReviewCloser.
-func (reviewCloser) CancelReviewForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) error {
-	return consent.CancelReviewForIntentTx(ctx, tx, intentID)
+// CloseReviewForIntentTx implements activities.ReviewCloser.
+//
+// THE TRANSLATION LIVES HERE, at the seam, because each side owns half of it.
+// activities knows what happened to the message and may not name consent's
+// states; consent knows what the review row should say and has never heard of a
+// scheduled send. Compose is the one place that has both.
+func (c reviewCloser) CloseReviewForIntentTx(
+	ctx context.Context, tx pgx.Tx, intentID ids.UUID, outcome activities.ReviewOutcome,
+) error {
+	closure, known := reviewClosureFor(outcome)
+	if !known {
+		// A vocabulary this build does not understand, which can only mean
+		// activities grew an outcome and this map was not extended. Refusing is
+		// the safe direction: closing it as something else would write the
+		// wrong account of why a message stopped, and
+		// TestEveryReviewOutcomeHasAClosure keeps it from reaching a build.
+		return fmt.Errorf(
+			"compose: %q is not an outcome this build knows how to close a review for", outcome)
+	}
+	return consent.CloseReviewForIntentTx(ctx, tx, intentID, closure, c.router)
+}
+
+// reviewClosureFor maps one module's word for what happened onto the other's
+// word for what the row should say.
+func reviewClosureFor(outcome activities.ReviewOutcome) (consent.ReviewClosure, bool) {
+	switch outcome {
+	case activities.ReviewOutcomeCancelled:
+		return consent.ClosedByCancellation(), true
+	case activities.ReviewOutcomeSent:
+		return consent.ClosedBySending(), true
+	}
+	return consent.ReviewClosure{}, false
 }
