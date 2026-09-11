@@ -328,7 +328,7 @@ func (w *scheduledSendWorker) fireAs(ctx context.Context, sched schedulerOf) (co
 			// name its actor, so this is a row the database says cannot exist.
 			// It refuses rather than deriving `agent:<human-uuid>`, which is
 			// what stood here: that id names an actor that never existed and
-			// collapses every agent acting for one person into one identity,
+			// collapses every agent acting for one human into one identity,
 			// and a message firing under it is worse than a message held.
 			return nil, "", fmt.Errorf(
 				"comms_scheduled_send: an agent-kind scheduled send for %s names no agent", userID)

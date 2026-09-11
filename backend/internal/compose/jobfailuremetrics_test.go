@@ -39,8 +39,8 @@ func TestAFailureIsPublishedUnderTheClassTheScreenShows(t *testing.T) {
 	if !ok {
 		t.Fatal("the core vocabulary no longer answers for record_gone, so this case is testing nothing")
 	}
-	got := renderFailures(t, jobs.FailureCount{Kind: "person_enrich", Stored: detail.Sentence, Count: 3})
-	want := `margince_job_failures{kind="person_enrich",class="record_gone"} 3`
+	got := renderFailures(t, jobs.FailureCount{Kind: "contact_enrich", Stored: detail.Sentence, Count: 3})
+	want := `margince_job_failures{kind="contact_enrich",class="record_gone"} 3`
 	if !strings.Contains(got, want) {
 		t.Errorf("the exposition does not publish the screen's own class\nwant: %s\ngot:\n%s", want, got)
 	}
@@ -51,13 +51,13 @@ func TestAFailureIsPublishedUnderTheClassTheScreenShows(t *testing.T) {
 // the screen — the surface going quiet in the one case it exists for.
 func TestAFailureNobodyClassifiedStillCounts(t *testing.T) {
 	got := renderFailures(t,
-		jobs.FailureCount{Kind: "person_enrich", Stored: "dial tcp 10.0.0.1:443: i/o timeout", Count: 2},
+		jobs.FailureCount{Kind: "contact_enrich", Stored: "dial tcp 10.0.0.1:443: i/o timeout", Count: 2},
 		// And a row that recorded no cause at all, which lands on the same
 		// class: the difference matters to somebody reading one failure and
 		// not to a count of how many are failing unnamed.
-		jobs.FailureCount{Kind: "person_enrich", Stored: "", Count: 1},
+		jobs.FailureCount{Kind: "contact_enrich", Stored: "", Count: 1},
 	)
-	want := `margince_job_failures{kind="person_enrich",class="` + unclassifiedFailureClass + `"} 3`
+	want := `margince_job_failures{kind="contact_enrich",class="` + unclassifiedFailureClass + `"} 3`
 	if !strings.Contains(got, want) {
 		t.Errorf("an unrecognised failure was not counted\nwant: %s\ngot:\n%s", want, got)
 	}
@@ -68,8 +68,8 @@ func TestAFailureNobodyClassifiedStillCounts(t *testing.T) {
 // would make the class label mean nothing.
 func TestTwoSentencesOfOneClassAreOneSeries(t *testing.T) {
 	got := renderFailures(t,
-		jobs.FailureCount{Kind: "person_enrich", Stored: "one unrecognised thing", Count: 2},
-		jobs.FailureCount{Kind: "person_enrich", Stored: "another unrecognised thing", Count: 5},
+		jobs.FailureCount{Kind: "contact_enrich", Stored: "one unrecognised thing", Count: 2},
+		jobs.FailureCount{Kind: "contact_enrich", Stored: "another unrecognised thing", Count: 5},
 	)
 	if strings.Count(got, "margince_job_failures{kind=") != 1 {
 		t.Errorf("want one series for one kind and class, got:\n%s", got)
@@ -84,7 +84,7 @@ func TestTwoSentencesOfOneClassAreOneSeries(t *testing.T) {
 // somebody adds a composed unit, which is the growth this turns from a
 // surprise into a number a reviewer sees.
 func TestTheFailureSeriesBoundIsWhatTheVocabulariesAllow(t *testing.T) {
-	kinds := []string{"person_enrich", "company_enrich"}
+	kinds := []string{"contact_enrich", "company_enrich"}
 	var failures []jobs.FailureCount
 	for _, kind := range kinds {
 		for _, class := range jobs.CoreFailureClasses() {
