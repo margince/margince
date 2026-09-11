@@ -93,6 +93,28 @@ export function createdColumn<Row extends OwnedRecord>(
  * The Last activity column: the timeline's clock, maintained in the schema so
  * the server can sort on it; empty until something has happened.
  */
+/**
+ * The Last activity CELL, without a column around it.
+ *
+ * Split out for the one record whose last activity is DERIVED rather than
+ * stored: a lead's comes from activity_link, and the list machinery orders by a
+ * column of the row's own table, so that header must not offer a sort. It draws
+ * the same cell as everyone else, and taking the cell rather than the column is
+ * how it says so without a second renderer.
+ */
+export function lastActivityCell<Row extends OwnedRecord>(
+  locale: Locale,
+  recordZone: string,
+): (row: Row) => ReactNode {
+  return (row) => (
+    <span className="t-caption">
+      {row.last_activity_at
+        ? formatDateAbbrev(row.last_activity_at, locale, recordZone)
+        : ""}
+    </span>
+  );
+}
+
 export function lastActivityColumn<Row extends OwnedRecord>(
   t: Translate,
   locale: Locale,
@@ -101,13 +123,7 @@ export function lastActivityColumn<Row extends OwnedRecord>(
   return {
     key: "lastActivity",
     header: t("list.lastActivity"),
-    cell: (row) => (
-      <span className="t-caption">
-        {row.last_activity_at
-          ? formatDateAbbrev(row.last_activity_at, locale, recordZone)
-          : ""}
-      </span>
-    ),
+    cell: lastActivityCell<Row>(locale, recordZone),
     sort: "last_activity_at",
   };
 }

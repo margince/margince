@@ -40,9 +40,15 @@ const (
 	lastActivityColumn = "last_activity_at"
 )
 
-// leadListFields is the lead list's core sortable vocabulary. Every column
-// the list surface shows is here, so a header the reader can click is a
-// header the server can answer; active cf_ columns join it per request.
+// leadListFields is the lead list's core sortable vocabulary; active cf_
+// columns join it per request.
+//
+// It used to say every column the list shows is here, which was not true and
+// nothing held: the list draws Last activity, and a lead's is DERIVED from
+// activity_link rather than stored, so it is not a column this vocabulary can
+// name. That header no longer offers a sort, and
+// TestEverySortAListOffersIsOneItsResourceAccepts is what keeps the two
+// answering together.
 var leadListFields = map[string]string{
 	createdAtColumn:   storekit.KindTimestamp,
 	updatedAtColumn:   storekit.KindTimestamp,

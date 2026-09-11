@@ -117,6 +117,11 @@ var projectListFields = map[string]string{
 	"last_activity_at": storekit.KindTimestamp,
 	projectNameField:   fieldcatalog.TypeText,
 	"target_end_date":  fieldcatalog.TypeDate,
+	// The Owner header has offered this sort for as long as the list has drawn
+	// the column, and the server refused it: `project.owner_id` is a column of
+	// the row like any other, so the refusal was the vocabulary's omission
+	// rather than anything about the field.
+	filterOwnerID: storekit.KindUUID,
 }
 
 // ListProjects answers one page under the caller's row scope.
