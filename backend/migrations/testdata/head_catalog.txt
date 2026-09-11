@@ -1820,7 +1820,6 @@ END
 public.communication_instruction_review_id_key CREATE UNIQUE INDEX communication_instruction_review_id_key ON public.communication_instruction USING btree (review_id)
 public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_review.approval_id uuid gen=- def=-
-public.communication_review.communication_review_approval_id_fkey FOREIGN KEY (approval_id) REFERENCES approval(id) ON DELETE SET NULL
 public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE
 public.communication_review.communication_review_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.communication_review.communication_review_kind CHECK ((kind = 'single'::text))
