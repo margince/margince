@@ -29,6 +29,9 @@ type Answers = Readonly<{
   connectorStatus: "connected" | "reauth_required";
   licenseState: "valid" | "absent" | "rejected";
   approvals: number;
+  /** What `/ai/calls` answers. It feeds the runtime row's served model and
+   *  nothing else — the recap is the feed's, below — so one row is the whole
+   *  fixture and an empty list is the installation that has never called. */
   calls: readonly Readonly<{ task: string; minutesAgo: number }>[];
   /** What `/me/ai-activity` answers. The agent's own states come from here and
    *  from nowhere else, so a story for one is a story about this feed. */
@@ -52,6 +55,16 @@ function occurrence(over: Readonly<Record<string, unknown>>) {
     started_at: new Date(NOW - 4 * 60_000).toISOString(),
     ...over,
   };
+}
+
+/** A settled occurrence, as the recap reads them: finished, and newest first. */
+function settled(minutesAgo: number, over: Readonly<Record<string, unknown>>) {
+  return occurrence({
+    state: "done",
+    started_at: new Date(NOW - (minutesAgo + 1) * 60_000).toISOString(),
+    finished_at: new Date(NOW - minutesAgo * 60_000).toISOString(),
+    ...over,
+  });
 }
 
 // The two objects the section actually asks about: `license` gates the posture
@@ -223,12 +236,36 @@ const HEALTHY: Answers = {
   connectorStatus: "connected",
   licenseState: "valid",
   approvals: 0,
-  calls: [
-    { task: "growth_fit", minutesAgo: 12 },
-    { task: "summarize", minutesAgo: 47 },
-    { task: "brief_ranking", minutesAgo: 190 },
-  ],
+  calls: [{ task: "summarize", minutesAgo: 12 }],
 };
+
+/**
+ * A day of finished work, as the panel's recap reads it.
+ *
+ * Two of the three name the record they were about, which is the half of a
+ * recap row a reader can act on — the name is the way back to the account. The
+ * third names none, because most occurrences are about no single record and the
+ * row has to read well without one.
+ *
+ * It is the PanelOpen story's alone rather than HEALTHY's: `recent` also feeds
+ * the card's resting rotation, so putting it in the shared fixture would put a
+ * finished run into the line of every story in this file.
+ */
+const A_DAYS_WORK = [
+  settled(12, {
+    kind: "site_read",
+    subject_label: "Acme GmbH",
+    subject_type: "organization",
+    subject_id: "019f7e65-0000-7000-8000-0000000000b2",
+  }),
+  settled(47, {
+    kind: "summarize",
+    subject_label: "Ana Roth",
+    subject_type: "person",
+    subject_id: "019f7e65-0000-7000-8000-0000000000b3",
+  }),
+  settled(190, { kind: "morning_brief" }),
+];
 
 const meta: Meta<typeof AgentRail> = {
   title: "Shell/Agent rail",
@@ -388,7 +425,7 @@ export const LeveledRail: Story = {
  * story in the catalog after it. Its two appearances are `Switch`'s own.
  */
 export const PanelOpen: Story = {
-  render: story({ ...HEALTHY, approvals: 3 }),
+  render: story({ ...HEALTHY, approvals: 3, recent: A_DAYS_WORK }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(

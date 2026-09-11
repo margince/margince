@@ -32,7 +32,7 @@ import {
   currentAgentEdge,
 } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
-import { LABELS, TASK_SAID, VOCABULARY } from "./agentrail-copy";
+import { LABELS, VOCABULARY } from "./agentrail-copy";
 import { type GrantSpec, meFixture } from "./mefixture";
 import type { Route } from "./router";
 import { stubPhoneViewport } from "./testing/shellharness";
@@ -908,52 +908,6 @@ describe("AgentRail", () => {
     ).toBe(false);
   });
 
-  // The wire carries the invocation-site token (`capture_classify`); the
-  // recap owes the reader the plain-language line, never the token itself —
-  // a recap that leaked the token would tell a salesperson something ran five
-  // times and nothing about what.
-  it("recaps a call in plain words, not the raw task token", async () => {
-    const user = userEvent.setup();
-    stubAgentRailApi({
-      aiCalls: () =>
-        jsonResponse({
-          data: [AI_CALL],
-          page: emptyPage,
-          payload_capture_enabled: false,
-          tasks: [AI_CALL.task],
-        }),
-    });
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    await waitFor(() =>
-      expect(screen.getByText(TASK_SAID.capture_classify)).toBeTruthy(),
-    );
-    expect(panel().textContent).not.toContain("capture_classify");
-    expect(
-      screen.getByRole("link", { name: LABELS.fullLog }).getAttribute("href"),
-    ).toBe("#/settings/ai");
-  });
-
-  // A task named `constructor` is a plain string off the wire, but a bare
-  // lookup into an object answers it from `Object.prototype` with a function
-  // React then tries to render — `saidFor` guards with `Object.hasOwn`
-  // precisely so the recap still shows the humanised token.
-  it("shows the humanised token, not a function, for a task named constructor", async () => {
-    const user = userEvent.setup();
-    stubAgentRailApi({
-      aiCalls: () =>
-        jsonResponse({
-          data: [{ ...AI_CALL, task: "constructor" }],
-          page: emptyPage,
-          payload_capture_enabled: false,
-          tasks: ["constructor"],
-        }),
-    });
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    await waitFor(() => expect(screen.getByText("constructor")).toBeTruthy());
-  });
-
   // Only a company record serves a 360 read; every other screen must not ask
   // for one at all, not just decline to show it.
   it("never asks for the 360 read when the route is not a company record", async () => {
@@ -1467,22 +1421,22 @@ describe("AgentRail", () => {
     expect(panel().textContent).not.toContain("telepathic_prospecting");
   });
 
-  // A settled run reaches the reader through the RESTING ROTATION on the card
-  // and nowhere else: the panel lists live work only, so a day of finished
-  // runs draws no list there. `recent` is bounded to today, so the rotation
-  // never pins a "ready" that would still be announcing this morning at six
-  // in the evening.
-  it("reads a run that finished today in the resting line, not as a panel list", async () => {
+  // A settled run reaches the reader twice, answering two questions: the
+  // RESTING ROTATION on the card says the one true thing this installation has
+  // to say now, and the recap lists what got done. It reaches the RUNNING
+  // section in neither case. `recent` is bounded to today, so the rotation
+  // never pins a "ready" still announcing this morning at six in the evening.
+  it("reads a run that finished today in the resting line and in the recap, never as live work", async () => {
     withSettled(RUN({ state: "done" }));
     const user = userEvent.setup();
     const { container } = render(ROUTE);
-    // Nothing is live, so the orb rests — and the line is the settled run,
-    // which is the only true thing this installation has to say.
     await settlesOnLine(container, "Your morning brief is ready.");
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
     await openPanel(user, container);
     expect(runLines()).toEqual([]);
-    expect(panel().textContent).not.toContain("Finished today");
     expect(panel().textContent).not.toContain("Running now");
+    expect(
+      panel().querySelector(".aritem:not(.arempty)")?.textContent,
+    ).toContain("Your morning brief is ready.");
   });
 });
