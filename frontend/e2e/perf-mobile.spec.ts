@@ -40,8 +40,26 @@ const FAST_3G = {
 const SAMPLES = 20;
 const PERCEIVED_BUDGET_MS = 300;
 
-/** One measured open: the click, the heading, and what sat between them. */
-type Open = { from: number; to: number; ms: number };
+/**
+ * One measured open, split into the phases the single number used to hide.
+ *
+ * `clickMs` is Playwright's actionability plus the dispatch — a click does not
+ * land until the target is STABLE (its box unchanged across two consecutive
+ * animation frames), so a screen still moving is paid here. `renderMs` is what
+ * the app then took to put the record's own heading on screen, which is the
+ * cost MOBILE-AC-2 is actually about. `settleMs` is outside the window entirely
+ * and is reported as evidence rather than measured as latency: it says how long
+ * the screen went on moving AFTER the row appeared, which is what used to be
+ * charged to the open that followed.
+ */
+type Open = {
+  from: number;
+  to: number;
+  ms: number;
+  clickMs: number;
+  renderMs: number;
+  settleMs: number;
+};
 
 /** One request's LIFE on the wire, rather than the moment it was issued. */
 type Exchange = { path: string; from: number; to: number };
@@ -183,9 +201,28 @@ async function openOneRecord(page: Page): Promise<Open> {
   // of it joined and the person's name is a fragment of that by construction.
   const row = page.getByRole("row", { name: "Anna Weber" });
   await expect(row).toBeVisible();
+  // A VISIBLE screen is not yet a settled one, and the difference is the whole
+  // of this lane's reported breach. The shell transitions the rail's width over
+  // `--dur-move` on a route change (src/app/shell.css), which relayouts every
+  // row of the table under it; a click dispatched while that is travelling
+  // waits out the remainder as actionability, inside the measured window, as
+  // neither a request nor a long task. This file already says it anchors on a
+  // settled screen — `networkidle` and a visible row were the wrong two tests
+  // for that, because neither of them is about MOVEMENT.
+  //
+  // Timed out loudly rather than bounded and ignored: nothing on this screen
+  // animates forever, so a wait that does not finish is a finding.
+  const settleFrom = Date.now();
+  await page.waitForFunction(
+    () => document.getAnimations().every((a) => a.playState !== "running"),
+    undefined,
+    { timeout: 5_000 },
+  );
+  const settleMs = Date.now() - settleFrom;
 
   const from = Date.now();
   await row.click();
+  const clicked = Date.now();
   // The record's OWN header, not the shell's: the head shows only the trail
   // on a record route and renders from the router before any record read
   // returns, so waiting on it would measure routing rather than the open.
@@ -200,7 +237,14 @@ async function openOneRecord(page: Page): Promise<Open> {
   // drop is what the click issued in its first milliseconds, which is precisely
   // what the window is being measured to catch.
   const to = Date.now();
-  return { from, to, ms: to - from };
+  return {
+    from,
+    to,
+    ms: to - from,
+    clickMs: clicked - from,
+    renderMs: to - clicked,
+    settleMs,
+  };
 }
 
 /**
@@ -242,6 +286,19 @@ function report(
     `perfbench [fast-3g/390px]: record_open_perceived ` +
       `span_ms=${opens[opens.length - 1].to - opens[0].from} ` +
       `in_order=${JSON.stringify(samples)}`,
+  );
+  // WHERE in the open the time went, aligned index-for-index with `in_order`.
+  // This is the reading that separates a cost the product pays from a cost the
+  // harness pays: `click_ms` is Playwright waiting for the screen to hold still
+  // before it may click, `render_ms` is the app drawing the record. A step that
+  // lands in the first is the anchor; a step that lands in the second is the
+  // product. `settle_ms` sits OUTSIDE the window and says how long the screen
+  // kept moving after the row appeared — the movement this anchor now absorbs.
+  console.log(
+    `perfbench [fast-3g/390px]: record_open_perceived ` +
+      `click_ms=${JSON.stringify(opens.map((o) => o.clickMs))} ` +
+      `render_ms=${JSON.stringify(opens.map((o) => o.renderMs))} ` +
+      `settle_ms=${JSON.stringify(opens.map((o) => o.settleMs))}`,
   );
   // The two things an open can WAIT for, aligned index-for-index with
   // `in_order` above: requests in flight across the window, and milliseconds
