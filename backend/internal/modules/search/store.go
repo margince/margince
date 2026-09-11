@@ -150,6 +150,12 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 
 	var page Page
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Contract /search and the retrieval lane both call Store.Search without
+		// going through QueryExecutor; give the ranking statement the same 5s
+		// ceiling planStatementBudget uses for query_workspace.
+		if err := database.BoundStatement(ctx, tx, planStatementBudget); err != nil {
+			return err
+		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
