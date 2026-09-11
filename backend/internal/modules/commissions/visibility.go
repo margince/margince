@@ -20,6 +20,7 @@ package commissions
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -80,6 +81,16 @@ func entriesOfVisibleDeals(ctx context.Context, alias string, arg func(any) int,
 	if err != nil {
 		return "", err
 	}
+	// And the deal must be one the caller WORKS, not merely one they may read.
+	// A deal is workspace-readable identity, so its read clause admits every
+	// deal to every seat — and an entry is the partner's compensation on it, not
+	// a fact about the customer, so read access to the deal admits nothing here:
+	// a rep sees what THEIR partner-sourced deal earned. The owner arm narrows to the deals
+	// the caller owns, shares a team with the owner of, or was granted.
+	dealOwner, err := auth.OwnerScopeClauseFor(ctx, "deal", "d", arg)
+	if err != nil {
+		return "", err
+	}
 
 	qualified := alias
 	if qualified != "" {
@@ -87,9 +98,15 @@ func entriesOfVisibleDeals(ctx context.Context, alias string, arg func(any) int,
 	}
 	// An unbounded caller still gets whatever the anchor arm requires: the
 	// archived-anchor rule is about what the row means, not about who is asking.
-	scope := dealScope
-	if scope == "" {
-		scope = unboundedScope
+	var arms []string
+	for _, clause := range []string{dealScope, dealOwner} {
+		if clause != "" {
+			arms = append(arms, clause)
+		}
+	}
+	scope := unboundedScope
+	if len(arms) > 0 {
+		scope = strings.Join(arms, " AND ")
 	}
 	return storekit.SQLf(`EXISTS (
 		SELECT 1 FROM deal d WHERE d.id = %[1]sdeal_id AND %[2]s%[3]s)`,
