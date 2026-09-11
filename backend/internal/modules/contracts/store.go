@@ -90,9 +90,12 @@ type Store struct {
 }
 
 // FreezeRateFunc answers what one currency converts to the installation's base
-// at, as of a day, inside a transaction the caller already holds. It reports
-// the rate and the day it is the rate FOR, which are two facts: the rate a
-// contract froze and the date that rate was published on.
+// at, as of an INSTANT, inside a transaction the caller already holds. The
+// calendar day the rate is looked up against is that instant read in the
+// installation's zone — resolved by the seam, because a contract does not know
+// the zone and must not compute the day in UTC. It reports the rate and the day
+// it is the rate FOR, which are two facts: the rate a contract froze and the
+// date that rate was published on.
 type FreezeRateFunc func(ctx context.Context, tx pgx.Tx, currency string, asOf time.Time) (string, time.Time, error)
 
 // NewStore builds the contract store.

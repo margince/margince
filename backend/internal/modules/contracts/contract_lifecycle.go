@@ -210,7 +210,9 @@ func (s *Store) freezeRateForActivation(ctx context.Context, tx pgx.Tx,
 	if existing.FxRateToBase != nil {
 		return nil, nil
 	}
-	rate, on, err := s.freezeRate(ctx, tx, *existing.Currency, s.today())
+	// The clock, not s.today(): the seam resolves the calendar day in the
+	// installation's zone, and a day truncated here would be UTC's.
+	rate, on, err := s.freezeRate(ctx, tx, *existing.Currency, s.clock())
 	if err != nil {
 		return nil, err
 	}
