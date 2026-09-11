@@ -128,7 +128,7 @@ func (s *VoiceStore) CompleteBuild(ctx context.Context, buildID ids.UUID, claime
 		if err != nil {
 			return err
 		}
-		return emitVoiceBuild(ctx, tx, auditID, finished)
+		return emitVoiceBuild(ctx, tx, auditID, finished, 0)
 	})
 	return result, err
 }

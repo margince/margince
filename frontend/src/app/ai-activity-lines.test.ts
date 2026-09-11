@@ -6,14 +6,13 @@ import { de } from "../i18n/de";
 import { en } from "../i18n/en";
 import { vi } from "../i18n/vi";
 import { NAMED, SAID, WROTE } from "./agentrail-copy";
+import { ACTIVITY_LINE, NAMED_LINE } from "./ai-activity-lines";
 import {
-  ACTIVITY_LINE,
   displayedKinds,
   displayedLines,
-  NAMED_LINE,
   speak,
   spokenText,
-} from "./ai-activity-lines";
+} from "./ai-activity-speak";
 
 /** The line as one string, which is what the unnamed cases are about. */
 function lineFor(
@@ -374,6 +373,14 @@ describe("the kinds the rail asks for", () => {
       // week, and uq_transcript_read_inflight allows one in flight per
       // transcript however often the button is pressed.
       "transcript_propose",
+      // Learning the reader's own writing voice. It reaches one person's feed:
+      // the build names the requester and visibleProfile admits only the
+      // profile's owner, so the occurrence can belong to nobody else. And it
+      // fits: a voice is learned when a rep asks for it or when their corpus
+      // has drifted, which is a handful of builds in a profile's life, and
+      // activeVoiceBuild refuses a second build over the same corpus while one
+      // is in flight.
+      "voice_build",
       // What the week TAUGHT, on the same terms as the sentence above it: one
       // occurrence per rep per week, scoped to that rep by ResolveActor. It
       // earns real copy rather than the system-sweep line for the same reason —

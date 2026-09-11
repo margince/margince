@@ -10,7 +10,7 @@ import {
 } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { useAiActivity, watchStartedAiRun } from "./ai-activity";
-import { displayedKinds, speak } from "./ai-activity-lines";
+import { displayedKinds, speak } from "./ai-activity-speak";
 
 // What the rail asks the runner, and how often. Three things here can only be
 // wrong invisibly, which is why each has its own case: a poll left running for

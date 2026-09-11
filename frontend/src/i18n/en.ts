@@ -4052,6 +4052,14 @@ export const en = {
   "agent.activity.transcriptRead.degraded":
     "I stopped before finishing the transcript.",
   "agent.activity.transcriptRead.failed": "I couldn't read the transcript.",
+  "agent.activity.voiceBuild.queued": "Learning your writing voice is queued.",
+  "agent.activity.voiceBuild.running": "I'm learning your writing voice.",
+  "agent.activity.voiceBuild.stalled":
+    "Learning your writing voice has taken unusually long. It may have stopped.",
+  "agent.activity.voiceBuild.done": "I've learned your writing voice.",
+  "agent.activity.voiceBuild.degraded":
+    "I stopped before learning your writing voice.",
+  "agent.activity.voiceBuild.failed": "I couldn't learn your writing voice.",
   "agent.activity.siteRead.queued": "The company website is queued to be read.",
   "agent.activity.siteRead.running": "I'm reading the company website.",
   "agent.activity.siteRead.stalled":

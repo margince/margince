@@ -43,14 +43,9 @@ import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";
 import { useAgentTicker } from "./agentrail-ticker";
 import { type AiActivity, useAiActivity } from "./ai-activity";
-import {
-  PANEL_HEADING,
-  plain,
-  type SpokenLine,
-  speak,
-  spokenText,
-} from "./ai-activity-lines";
+import { PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
+import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
 import { useAgentTierMap } from "./autonomy";
 import { useCan, useHoldsAdminRole } from "./capability";
 import { type CaptureProgress, liveCapture } from "./capture-progress";

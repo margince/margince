@@ -3983,6 +3983,16 @@ export const de = {
     "Ich habe das Transkript nicht zu Ende gelesen.",
   "agent.activity.transcriptRead.failed":
     "Ich konnte das Transkript nicht lesen.",
+  "agent.activity.voiceBuild.queued":
+    "Das Erlernen Ihres Schreibstils steht an.",
+  "agent.activity.voiceBuild.running": "Ich lerne Ihren Schreibstil.",
+  "agent.activity.voiceBuild.stalled":
+    "Das Erlernen Ihres Schreibstils dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.voiceBuild.done": "Ich habe Ihren Schreibstil gelernt.",
+  "agent.activity.voiceBuild.degraded":
+    "Ich habe aufgehört, bevor ich Ihren Schreibstil gelernt hatte.",
+  "agent.activity.voiceBuild.failed":
+    "Ich konnte Ihren Schreibstil nicht lernen.",
   "agent.activity.siteRead.queued":
     "Die Firmenwebsite steht zum Lesen in der Warteschlange.",
   "agent.activity.siteRead.running": "Ich lese die Firmenwebsite.",
