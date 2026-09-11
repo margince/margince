@@ -16,6 +16,7 @@ package compose
 // outcome no-ops.
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -590,6 +591,26 @@ func TestDeepReadJoiningAHousekeepingReadPromotesItsPriority(t *testing.T) {
 	}
 	if got := riverJobPriority(t, e, readID); got != DeepReadPriorityLive {
 		t.Fatalf("joined read's priority = %d after a live request, want %d (promoted to live)", got, DeepReadPriorityLive)
+	}
+}
+
+// TestDeepReadPromoteQueuedPriorityLogsWhenTheUpdateFails holds the honest
+// hard case the happy-path test above cannot reach: a promotion is
+// best-effort, and best-effort still has to say what it could not do rather
+// than fail silently. An already-cancelled context is the deterministic way
+// to force pool.Exec to fail without needing a broken database.
+func TestDeepReadPromoteQueuedPriorityLogsWhenTheUpdateFails(t *testing.T) {
+	e := integration.Setup(t)
+	var logs bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&logs, nil))
+
+	cancelledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	promoteQueuedSiteReadPriority(cancelledCtx, e.Pool, log, ids.NewV7())
+
+	if !strings.Contains(logs.String(), "could not promote a joined read's priority") {
+		t.Fatalf("a failed promotion logged nothing; want a warning naming what could not be done. Got: %s", logs.String())
 	}
 }
 

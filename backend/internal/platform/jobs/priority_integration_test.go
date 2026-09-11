@@ -99,6 +99,20 @@ func TestPromotePriorityLeavesAJobPastItsQueuedStatesAlone(t *testing.T) {
 	}
 }
 
+func TestPromotePriorityReportsTheUnderlyingErrorRatherThanSwallowingIt(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	cancelledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	changed, err := jobs.PromotePriority(cancelledCtx, pool, "promote_test_kind", "dossier_id", "d4", 1)
+	if err == nil {
+		t.Fatal("PromotePriority against an already-cancelled context returned no error, want the pool's own failure surfaced")
+	}
+	if changed {
+		t.Fatal("changed = true alongside a non-nil error — a failed UPDATE must never report a change")
+	}
+}
+
 func TestPromotePriorityMatchesNoRowWithoutError(t *testing.T) {
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
