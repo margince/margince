@@ -23,15 +23,10 @@
 # pattern or judged criterion — would be judging wording. It is asserted through
 # the fact that the call has to succeed for the answer to report the close at all.
 #
-# ON APPROVAL, and it is a REAL DISCREPANCY rather than a note to self: the
-# tool DESCRIPTION says "a person approves the move before it runs", while the
-# contract's own policy row for this operation is `auto_execute`
-# (backend/internal/compose/agentpolicy_gen.go). One of the two is wrong and
-# whichever it is belongs to the product, not to this file. Which of them the
-# running stack does is therefore not this scenario's question, and nothing
-# here asserts either — no assertion depends on the write having landed, only
-# on the call having been made with the right phase and on what the assistant
-# read before making it.
+# NOTHING HERE DEPENDS ON THE WRITE HAVING LANDED — only on the call having been
+# made with the right phase, and on what the assistant read before making it.
+# The phase move is `auto_execute` on this contract, and a scenario that asserted
+# the applied state would be asserting that policy rather than the errand.
 name: case41_close_the_project
 criteria: [1, 2]
 
@@ -79,6 +74,20 @@ must_mention:
   # enum from the tool schema is not what was asked for.
   - "initiative"
   - "pursuing"
+  # AND THE LADDER'S ENUM IS NOT THE WALK-THROUGH. Both words above are handed
+  # over by advance_project_phase's own argument list, so a run that never
+  # opened the project could write them from the schema alone — the same false
+  # green case 8 answers with "Werkzeugbau".
+  #
+  # The reasons recorded on the two transitions are the only thing that carries
+  # any of the words below: the offer released after the site visit in Wismar,
+  # the order placed with the installation planned for Wismar and Greifswald.
+  # They are on no record, in no tool description and in no other fixture, so an
+  # answer reaching one of them has read WHY the project moved rather than the
+  # names of the rungs. Wide on purpose and in the direction under-recognition
+  # must not fail in: a place name survives translation, and a walk-through
+  # written in English from German reasons still says where the visit was.
+  - "Wismar|Greifswald|Standorttermin|Standortbesuch|site visit"
 
 # THE SEMANTIC HALF. Each entry is one criterion in plain words, and the sentence
 # is BOTH the question put to the judge and the documentation of what this case

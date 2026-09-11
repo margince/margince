@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 75 |
+| Tools | 76 |
 | Resources | 12 |
-| Tool catalog | 214.4 KB |
+| Tool catalog | 218.0 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 56021 |
+| Approx. wire tokens | 56962 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 98.7 KB | 46% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 55.4 KB | 25% | Yes, every step |
-| Input schemas | 44.5 KB | 20% | Yes, every step |
-| _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
-| **Description + input schema** | **99.8 KB** | **46%** | **the recurring cost** |
+| Output schemas | 99.6 KB | 45% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 57.6 KB | 26% | Yes, every step |
+| Input schemas | 44.7 KB | 20% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.1 KB | 7% | Partly |
+| **Description + input schema** | **102.4 KB** | **46%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -60,7 +60,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (75)
+### Tools (76)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -73,11 +73,11 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.8 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 2.8 KB |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.2 KB |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.5 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
-| [`commit_import`](#commit_import) | Commit an import |  |  | 1.8 KB |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 2.1 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.8 KB |
-| [`create_record`](#create_record) | Create a record |  |  | 3.5 KB |
+| [`create_record`](#create_record) | Create a record |  |  | 3.6 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.0 KB |
@@ -86,6 +86,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`demote_lead`](#demote_lead) | Reverse a lead promotion |  |  | 2.4 KB |
 | [`describe_analytics_vocabulary`](#describe_analytics_vocabulary) | Describe the analytics vocabulary | yes |  | 2.2 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
+| [`describe_record_fields`](#describe_record_fields) | Describe the record write vocabulary | yes |  | 2.4 KB |
 | [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
@@ -110,7 +111,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 4.2 KB |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 4.6 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.6 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
@@ -128,7 +129,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.2 KB |
-| [`run_report`](#run_report) | Run a report | yes |  | 5.2 KB |
+| [`run_report`](#run_report) | Run a report | yes |  | 5.3 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
 | [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 4.3 KB |
@@ -2015,7 +2016,7 @@ Answer "what has been going on with this?" for one person, company, deal, lead, 
 
 **Check calendar availability**
 
-Find when a host is free, so a time can be proposed to someone. It reads free/busy over the window you ask for and books nothing. It answers for one host — the acting user unless another is named — not for the invitees. Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already exists and the goal is walking in ready. Keep the exact start and end of the slot you intend to take; book_meeting takes those, and a slot re-derived later may no longer be free. (Governance: runs immediately; requires passport scope "read".)
+Find when a host is free, so a time can be proposed to someone. It reads free/busy over the window you ask for and books nothing. It answers for one host — the acting user unless another is named — not for the invitees. With no calendar connected for that host the slots are only what meetings recorded in this CRM leave open, and the answer says so: a free window is then no evidence the host is free, and none at all that a meeting they told you about is missing from their diary. Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already exists and the goal is walking in ready. Keep the exact start and end of the slot you intend to take; book_meeting takes those, and a slot re-derived later may no longer be free. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -2061,6 +2062,9 @@ Find when a host is free, so a time can be proposed to someone. It reads free/bu
   "properties": {
     "data": {
       "properties": {
+        "calendar_connected": {
+          "type": "boolean"
+        },
         "slots": {
           "items": {
             "properties": {
@@ -2084,6 +2088,7 @@ Find when a host is free, so a time can be proposed to someone. It reads free/bu
         }
       },
       "required": [
+        "calendar_connected",
         "slots",
         "truncated"
       ],
@@ -2301,7 +2306,7 @@ Renders its result in [`ui://margince/geo-probe.html`](#geo_probe_view), visible
 
 **Commit an import**
 
-Write a checked import into the workspace. The dry run is the check; by default this commits when it answers. Only from awaiting_approval. Undoing one needs the web app. read_import_report first; nobody should approve what they have not read. (Governance: runs immediately; requires passport scope "write".)
+Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, which is the PERSON's approval and not this call's to give: nothing stages it, and an import cannot be undone from here — undoing one needs the web app. Put the dry run's counts in front of them and let them say go. The exception is a person who has already been through the file and asked for it to be loaded; they have approved it, and asking a second time is not diligence. read_import_report first, and report what it says — numbers nobody read are not a check. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -2631,7 +2636,7 @@ Create a person, organization, deal, lead, project, activity or relationship tha
       "type": "string"
     },
     "fields": {
-      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by describe_record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "idempotency_key": {
@@ -4025,6 +4030,122 @@ Answer what a query plan may SAY in this workspace: the record types that can be
       },
       "required": [
         "vocabulary"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### describe_record_fields
+
+**Describe the record write vocabulary**
+
+Answer what a create_record or update_record `fields` body may SAY: for each record_type, the fields that write accepts, which of them are REQUIRED, the shape each takes, and the things a field list cannot show — where a deal's pipeline ids come from, which endpoints a relationship kind needs, which types carry no custom fields. It is the vocabulary the two write tools refuse against, so it holds the spelling of a field a write got wrong. It describes the writes; it creates and changes nothing — create_record and update_record do that. It is NOT a prerequisite: an unknown field is refused BY NAME with that record_type's whole accepted list, so a first attempt costs one refusal rather than a lookup. Create and update are separate sections because they disagree: a field one accepts the other may not. Call create_record or update_record directly when the names are already known, and read the refusal when one is wrong. This tool answers the same document as the margince://schema/record-fields resource, for a caller that reads tools rather than resources. Take the field names verbatim — a name outside the document is refused rather than approximated — and mind the notation: a key with no `?` is REQUIRED. An extra key must be spelled cf_<slug> or it is not a custom field at all. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {},
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "fields": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "fields"
       ],
       "type": "object"
     },
@@ -8942,7 +9063,7 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
 
 **Preview an import**
 
-Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is organization, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link people to their employers, map the company column to `organization_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope "write".)
+Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. A column header is matched to a field NAME and never guessed, so an ordinary header row — `name`, `company`, `city` — places nothing without a mapping and is refused with the field list to map onto. `object` is organization, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link people to their employers, map the company column to `organization_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the person weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -12885,7 +13006,7 @@ Compute a grouped aggregate — counts, sums, averages, medians — over a gover
 
 **Run a report**
 
-Answer a question about totals, counts or breakdowns — pipeline by stage, deals won by owner, activity volume over time — by running one of this workspace's prebuilt reports. Only the named reports exist, each with its own filter, grouping and measure names; anything else is refused. It aggregates: how many and how much, never which record. Use search_records or whats_slipping_this_week when the answer wanted is the records themselves rather than a number over them. Reach for run_analytics_query only when NO prebuilt report answers the question: a report already carries the filter and the grouping, so it is one call where a query is a vocabulary lookup and a query. Call a report with no plan first to see its default answer, then narrow with the names its catalog entry lists. (Governance: runs immediately; requires passport scope "read".)
+Answer a question about totals, counts or breakdowns by running one of this workspace's prebuilt reports. Only the named reports exist, each with its own filter, grouping and measure names; anything else is refused. It aggregates: how many and how much, never which record. Use search_records or whats_slipping_this_week when the answer wanted is the records themselves rather than a number over them. Reach for run_analytics_query only when NO prebuilt report answers the question: a report already carries the filter and the grouping, so it is one call where a query is a vocabulary lookup and a query. Call a report with no plan first to see its default answer, then narrow with the names describe_report_vocabulary gives for it. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -12939,7 +13060,7 @@ Answer a question about totals, counts or breakdowns — pipeline by stage, deal
       "type": "array"
     },
     "report": {
-      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by organization_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
+      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by organization_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
@@ -14184,7 +14305,7 @@ Change stored field values on a record that already exists — a corrected title
       "type": "string"
     },
     "fields": {
-      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by describe_record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "id": {

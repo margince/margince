@@ -18,10 +18,18 @@ package compose
 //   - An OPEN deal is absent from win-loss, not a zero in it.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -378,6 +386,80 @@ func TestAnUnsetFilterMeansTheSameThingOnBothDoors(t *testing.T) {
 	}
 }
 
+// periodFilterDoor is one surface a caller reaches this engine through, asked
+// the SAME question: how many win-loss deals closed in a given year.
+//
+// A table rather than a test per door, because the invariant below is the
+// door-independent one — a filter value that cannot bind is the CALLER's
+// mistake — and a case written against one door is a second copy of a rule the
+// others carry. run_analytics_query held the numeric spelling open for as long
+// as it did because this case named run_report and nothing asked the rest.
+type periodFilterDoor struct {
+	name string
+	// refusalStatus is the code THIS door's contract declares for a request
+	// that is unanswerable as written. The two differ — crm.yaml scopes
+	// runReport's 422 to a plan's fields and declares 400 for the analytics
+	// engine's typed refusals — and the invariant is not the number: it is
+	// that the caller is told their own request was wrong, and how.
+	refusalStatus int
+	// ask puts the year through this door, spelled as this door spells a plan,
+	// and answers what the caller was told: the status every surface derives
+	// from httperr.Classify, and the message that rides with it.
+	ask func(t *testing.T, e *forecastEnv, year any) (int, string)
+}
+
+// periodFilterDoors carries the doors this invariant is asserted through.
+//
+// It does NOT claim to be all of them, and the distinction is why the table
+// exists: the invariant was asserted through run_report alone, a second door
+// shipped without it, and every text-valued dimension on that door answered an
+// opaque fault. A row here is one door proved; nothing here fails when a third
+// appears, so adding a door means adding its row.
+var periodFilterDoors = []periodFilterDoor{
+	{
+		name:          "run_report",
+		refusalStatus: http.StatusUnprocessableEntity,
+		ask: func(t *testing.T, e *forecastEnv, year any) (int, string) {
+			t.Helper()
+			status, body := e.runReportStatus(e.Admin(), t, "win-loss", fmt.Sprintf(
+				`{"filters":{"period_year":%s},"aggregates":[{"fn":"count","as":"deals"}]}`,
+				jsonLiteral(t, year)))
+			return status, problemDetail(t, status, body)
+		},
+	},
+	{
+		// The tool and POST /analytics/query are one engine — the property
+		// TestTheAnalyticsToolAndTheHTTPEngineServeOneAnswer holds — so the
+		// door is entered at that engine and both transports are covered by
+		// the one row.
+		name:          "run_analytics_query",
+		refusalStatus: http.StatusBadRequest,
+		ask: func(t *testing.T, e *forecastEnv, year any) (int, string) {
+			t.Helper()
+			return e.analyticsStatus(e.Admin(), analyticsquery.Query{
+				Entity:   "win-loss",
+				Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
+				Filters: []analyticsquery.Filter{
+					{Field: fieldPeriodYear, Op: analyticsquery.OpEq, Value: year},
+				},
+			})
+		},
+	},
+}
+
+// jsonLiteral spells a Go value the way a caller would have typed it into a
+// plan, so one table can hand both doors the same year.
+//
+//craft:ignore naked-any the point of the case is a value whose JSON shape is wrong, so the shape cannot be typed here
+func jsonLiteral(t *testing.T, value any) string {
+	t.Helper()
+	out, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("spelling %v as JSON: %v", value, err)
+	}
+	return string(out)
+}
+
 // A year is spelled 2026 in JSON far more naturally than "2026", and the period
 // grains are the first filters whose values look numeric. That call must come
 // back as the caller's own mistake with the fix in it, never as an opaque 500
@@ -386,15 +468,64 @@ func TestANumericPeriodFilterIsRefusedAsTheCallersMistake(t *testing.T) {
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "A", "won", "2026-03-04T10:00:00Z", 10000)
 
-	if got := e.reportStatus(e.Admin(), "win-loss",
-		`{"filters":{"period_year":2026},"aggregates":[{"fn":"count","as":"deals"}]}`); got != 422 {
-		t.Errorf("a numeric period filter answered %d, want 422", got)
+	for _, door := range periodFilterDoors {
+		t.Run(door.name, func(t *testing.T) {
+			status, message := door.ask(t, e, 2026)
+			if status != door.refusalStatus {
+				t.Errorf("a numeric period filter answered %d, want %d — the caller's own mistake: %s",
+					status, door.refusalStatus, message)
+			}
+			// The refusal has to carry the spelling that works. Without it a
+			// model reads "that was wrong" and has nothing to change.
+			if !strings.Contains(message, `"2026"`) {
+				t.Errorf("the refusal does not name the quoted spelling, so it is a dead end: %s", message)
+			}
+			// The quoted spelling is the one that works, so the advice is
+			// actionable rather than merely polite.
+			if status, message := door.ask(t, e, "2026"); status != http.StatusOK {
+				t.Errorf("the quoted spelling answered %d, want 200: %s", status, message)
+			}
+		})
 	}
-	// The quoted spelling is the one that works, so the advice is actionable.
-	if got := e.reportStatus(e.Admin(), "win-loss",
-		`{"filters":{"period_year":"2026"},"aggregates":[{"fn":"count","as":"deals"}]}`); got != 200 {
-		t.Errorf("the quoted spelling answered %d, want 200", got)
+}
+
+// problemDetail reads the sentence out of a problem+json body, so a case can
+// assert on what a caller READS rather than on the escaping the transport put
+// around it.
+func problemDetail(t *testing.T, status int, body string) string {
+	t.Helper()
+	if status == http.StatusOK {
+		return ""
 	}
+	var problem struct {
+		Detail string `json:"detail"`
+	}
+	if err := json.Unmarshal([]byte(body), &problem); err != nil {
+		t.Fatalf("decoding the refusal body %q: %v", body, err)
+	}
+	return problem.Detail
+}
+
+// analyticsStatus asks the generic engine — the door run_analytics_query rides
+// — and reports what a caller is told, through httperr.Classify: the ONE
+// taxonomy every surface renders from, so this reads the same verdict the tool
+// dispatcher and the HTTP handler each read.
+func (e *forecastEnv) analyticsStatus(ctx context.Context, q analyticsquery.Query) (int, string) {
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, runErr := RunAnalyticsQuery(ctx, tx, q, analyticsquery.DefaultFloor)
+		return runErr
+	})
+	if err == nil {
+		return http.StatusOK, ""
+	}
+	fault, classified := httperr.Classify(err)
+	if !classified {
+		// Unclassified is the defect this case is about: it reaches a caller
+		// as an opaque 500 carrying nothing they can act on, so it is reported
+		// as one here rather than as a test failure about an error value.
+		return http.StatusInternalServerError, err.Error()
+	}
+	return fault.Status, fault.Detail
 }
 
 // A group key that is EMPTY TEXT is not a group key that is ABSENT, and the

@@ -96,3 +96,83 @@ func makeCapturePrivate(t *testing.T, e *Env, person ids.UUID, owner ids.UUID) {
 		t.Fatalf("making the capture private: %v", err)
 	}
 }
+
+// A RETIRED WORD COMES OFF THE RECORD IT IS STILL SITTING ON.
+//
+// Retiring a tag takes it out of the vocabulary; it does not take it off the
+// records already carrying it, and RecordTagsFor returns those assignments
+// deliberately — flagged and sorted after the live ones, because a retired word
+// is history a reader is owed. RemoveTag refused them as NOT FOUND, so the
+// surface handed a caller a tag and then denied it existed when they tried to
+// take it off, and nothing else could take it off either: retiring the word is
+// what put it in that state.
+//
+// Removing is the opposite case from applying, which is why it does not share
+// the archived check: applying a retired word coins it again, and taking one
+// off is the cleanup retiring it left behind.
+func TestARetiredTagCanStillBeTakenOffARecord(t *testing.T) {
+	e := Setup(t)
+	store := collections.NewStore(e.DB())
+	ctx := e.As(e.Rep1, nil, curatePersonAndTagPerms())
+
+	person := e.SeedPerson(t, "Still Carries A Retired Word", &e.Rep1)
+	tag, err := store.CreateTag(ctx, "Retired Conference", nil, nil)
+	if err != nil {
+		t.Fatalf("coining the word: %v", err)
+	}
+	if _, err := store.ApplyTag(ctx, tag.ID, "person", person); err != nil {
+		t.Fatalf("putting the word on the record: %v", err)
+	}
+	if _, err := store.ArchiveTag(ctx, tag.ID); err != nil {
+		t.Fatalf("retiring the word: %v", err)
+	}
+
+	// The read still reports it, which is what makes the refusal a contradiction
+	// rather than merely a limitation.
+	carried, err := store.RecordTagsFor(ctx, "person", person)
+	if err != nil {
+		t.Fatalf("reading the record's tags: %v", err)
+	}
+	if !carriesTag(carried, tag.ID) {
+		t.Fatalf("the record stopped reporting the retired word, so this case no longer "+
+			"describes the surface: %+v", carried)
+	}
+
+	if err := store.RemoveTag(ctx, tag.ID, "person", person); err != nil {
+		t.Fatalf("taking the retired word off the record answered %v — the read hands it back "+
+			"and nothing can remove it, so the record is stuck with it", err)
+	}
+
+	left, err := store.RecordTagsFor(ctx, "person", person)
+	if err != nil {
+		t.Fatalf("re-reading the record's tags: %v", err)
+	}
+	if carriesTag(left, tag.ID) {
+		t.Errorf("the retired word is still on the record after removal: %+v", left)
+	}
+}
+
+// curatePersonAndTagPerms may write the person and curate the vocabulary.
+//
+// RowScopeAll because retiring a word is a workspace-wide act — the vocabulary
+// gate refuses a bounded seat outright — and this case is about what happens
+// AFTER the word is retired, not about who may retire one.
+func curatePersonAndTagPerms() principal.Permissions {
+	return principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{
+			"person": {Read: true, Create: true, Update: true},
+			"tag":    {Read: true, Create: true, Update: true, Delete: true},
+		},
+		RowScope: principal.RowScopeAll,
+	}
+}
+
+// carriesTag reports whether a record's tag list names this tag.
+func carriesTag(carried collections.RecordTags, tag ids.TagID) bool {
+	for _, got := range carried.Data {
+		if got.TagID == tag.UUID {
+			return true
+		}
+	}
+	return false
+}

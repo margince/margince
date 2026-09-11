@@ -4,11 +4,11 @@
   "per_agent_listing_budget": 23210,
   "whole_catalog_floor": 28672,
   "catalog": {
-    "tools": 75,
+    "tools": 76,
     "system_frame_tokens": 353,
-    "tokens": 23542,
-    "median_tool_tokens": 267,
-    "mean_tool_tokens": 313
+    "tokens": 24185,
+    "median_tool_tokens": 272,
+    "mean_tool_tokens": 317
   },
   "agents": [
     {
@@ -72,7 +72,11 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 990
+      "tokens": 1011
+    },
+    {
+      "name": "preview_import",
+      "tokens": 779
     },
     {
       "name": "send_account_email",
@@ -87,12 +91,8 @@
       "tokens": 677
     },
     {
-      "name": "preview_import",
-      "tokens": 677
-    },
-    {
       "name": "update_record",
-      "tokens": 572
+      "tokens": 582
     },
     {
       "name": "send_message",
@@ -119,12 +119,12 @@
       "tokens": 484
     },
     {
-      "name": "run_analytics_query",
-      "tokens": 476
+      "name": "create_record",
+      "tokens": 483
     },
     {
-      "name": "create_record",
-      "tokens": 473
+      "name": "run_analytics_query",
+      "tokens": 476
     },
     {
       "name": "forecast_movement",
@@ -163,12 +163,20 @@
       "tokens": 349
     },
     {
+      "name": "describe_record_fields",
+      "tokens": 345
+    },
+    {
       "name": "search_context",
       "tokens": 345
     },
     {
       "name": "advance_project_phase",
       "tokens": 340
+    },
+    {
+      "name": "check_availability",
+      "tokens": 329
     },
     {
       "name": "prep_for_meeting",
@@ -231,10 +239,6 @@
       "tokens": 266
     },
     {
-      "name": "check_availability",
-      "tokens": 263
-    },
-    {
       "name": "account_coverage",
       "tokens": 245
     },
@@ -261,6 +265,10 @@
     {
       "name": "read_record",
       "tokens": 222
+    },
+    {
+      "name": "commit_import",
+      "tokens": 217
     },
     {
       "name": "whats_slipping_this_week",
@@ -345,10 +353,6 @@
     {
       "name": "get_record_tags",
       "tokens": 142
-    },
-    {
-      "name": "commit_import",
-      "tokens": 128
     },
     {
       "name": "whoami",

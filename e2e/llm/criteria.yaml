@@ -68,18 +68,29 @@ cases:
     1:
       name: A briefing arrives without naming a record
       statement: >-
-        The request identifies an account by something other than its name —
-        "Vietnam partner" is not the account's name — and finding it is the test.
+        The request names the account the way a person says it out loud,
+        "Vietnam partner", and not the way the record carries it — so an answer
+        that only repeats the question has found nothing, and what the record
+        holds beyond it is the evidence that it was opened.
     2:
       name: The people are named, not their seats
       statement: >-
         The briefing names the people on the other side of the meeting rather
         than describing the roles they hold.
+    3:
+      name: An empty calendar answer is not an empty diary
+      statement: >-
+        No calendar is connected, so every slot comes back free and that is what
+        the CRM's own meeting records leave open. Reporting it as a clear day —
+        or as the meeting being absent from the user's diary — states something
+        about a diary this product was never shown.
     5:
       name: The unkept promise is noticed
       statement: >-
-        Somebody said they would send something and there is no record it went.
-        Reading across the timeline to spot the gap is the point.
+        The rep promised to send something and there is no record it went, so
+        the answer has to leave them knowing they still owe it. The customer's
+        own unanswered promise sits beside it in the same timeline and is the
+        other party's obligation, not this finding.
   case6_ask_the_company:
     1:
       name: The past cases are found without being named
@@ -159,7 +170,9 @@ cases:
       statement: >-
         How many rows landed and whether anything was skipped, taken from the
         report rather than assumed from a commit that answered without a
-        failure.
+        failure — and with them the mapping the assistant had to invent, since
+        the file's headers place nothing on their own and where each column went
+        is its choice rather than the file's.
   case20_put_it_in_the_board_pack:
     1:
       name: Every figure in the document is the database's

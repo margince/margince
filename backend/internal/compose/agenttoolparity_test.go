@@ -201,6 +201,14 @@ var composedIntents = map[string]bool{
 	// what this principal may already read — so it names nothing a caller
 	// could not reach by asking.
 	"describe_analytics_vocabulary": true,
+	// describe_record_fields answers the document
+	// margince://schema/record-fields publishes, for the same caller and the
+	// same reason as the three doors above. It backs no REST operation:
+	// `createRecord` and `updateRecord` WRITE, and no operation answers what a
+	// write may NAME. It writes nothing itself, returns no records, and the
+	// document is composed from the contract shapes, so it names nothing about
+	// a workspace at all.
+	"describe_record_fields": true,
 	// search_context ranks across record types through the retrieval index,
 	// which no single list operation is: `GET /search` is the lexical half
 	// alone and answers no vector lane, and the records the sweep names are

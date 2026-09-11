@@ -1,20 +1,29 @@
 # CASE 5 — Before the meeting.
 #
-# Two [M] criteria the Go suite cannot reach:
+# Three criteria the Go suite cannot reach:
 #
-#   Criterion 1 — a briefing arrives without naming a record. The prompt says
-#   "Vietnam partner", which is not the account's name. Finding it is the test.
+#   Criterion 1 — a briefing arrives without naming a record. The prompt names
+#   the account the way a person says it out loud, "Vietnam partner", and the
+#   record carries "Vietnam Partner JSC". So the prompt is not the answer: what
+#   the workspace holds beyond the words the user used — the legal suffix, the
+#   person on the account — is the evidence that a record was opened at all.
 #
-#   Criterion 5 — the unkept promise. Somebody said they would send something
-#   and there is no record it went. The fixture builds that gap deliberately;
-#   noticing it is the highest-value thing this case produces, and it needs a
-#   model to read across the timeline.
+#   Criterion 3 — the diary nobody showed it. The prompt says "check my calendar"
+#   because the real one did, and no calendar is connected in this stack, so
+#   check_availability answers every slot free. A full day of free slots is what
+#   the CRM's own meeting records leave open and is no evidence about the user's
+#   diary — least of all that a meeting they have just said they are having is
+#   missing from it. Saying so is optional; asserting the opposite is the defect.
 #
-# The calendar half stays out. The prompt says "check my calendar" because the
-# real one did, and an assistant with no calendar connected should say so and
-# carry on rather than stopping.
+#   Criterion 5 — the unkept promise. The rep said the Aufstellung would follow
+#   by the end of the week and there is no record it ever went. The fixture
+#   builds that gap deliberately; noticing it is the highest-value thing this
+#   case produces, and it needs a model to read across the timeline. The
+#   customer owes something too — the appendix review Mai promised — so the
+#   case turns on WHICH side is reported as owing, which is the distinction a
+#   window over the prose cannot make.
 name: case5_before_the_meeting
-criteria: [1, 2, 5]
+criteria: [1, 2, 3, 5]
 
 # WRITES: nothing — this case only reads. Said out loud because a scenario that
 # does not say is refused: an absent or misspelled field used to arrive as the
@@ -49,21 +58,33 @@ must_mention:
   # Nguyen below is the stronger evidence that the record was opened, and this
   # entry is the weaker half of a pair rather than the case's proof.
   - "Vietnam Partner JSC|\bJSC\b"
-  # Criterion 5: the promise nobody kept. The fixture logs an outbound message
-  # saying the list would be sent, and nothing after it.
-  # THE UNKEPT PROMISE, which the header calls the highest-value thing this
-  # case produces. A bare "list" matched; so did "no record" — so an answer
-  # DENYING the finding ("there is no record of Mai Nguyen, nothing was
-  # promised") scored the criterion. Anchored to something being owed and not
-  # delivered.
-  - "(?:Aufstellung|breakdown|summary)[\s\S]{0,120}(?:waiting|no reply|outstanding|never (?:replied|came|sent)|quiet|promis\w*|zugesagt|owed)|(?:waiting for them|no reply|outstanding|promis\w*|zugesagt|owed)[\s\S]{0,120}(?:Aufstellung|breakdown|summary)"
   # Criterion 2's server half is already pinned; here it must NAME the people
   # rather than describing seats.
   - "Mai Nguyen"
 
 must_not_mention:
-  # An assistant that cannot see a calendar must say so, not invent a meeting.
+  # A booking reported by a run with no calendar to book into. MECHANICAL: the
+  # claim is an act with a fixed subject and verb. What the run may claim about
+  # the diary it was never shown is criterion 3's question, and judged.
   - "I have scheduled|I've added the meeting"
+
+# THE SEMANTIC HALF. Each entry is one criterion in plain words, and that
+# statement is BOTH the question put to the judge and the documentation of what
+# this case asks — one text, so the two cannot drift the way a regex and the
+# comment explaining it did. A criterion is a statement ABOUT THE ANSWER and
+# "yes" means it holds, for the forbidding one too.
+#
+# NEITHER OF THESE IS A MECHANICAL FACT, which is why neither is a regex. A
+# window over the prose reads the words in it and not who owes what: the
+# customer's own promise to review the appendix sits within a hundred characters
+# of the word "Aufstellung", so a pattern anchored to the noun scores the wrong
+# party's obligation as the finding — and scores it even in an answer declaring
+# the Aufstellung delivered. The diary half is a tense-and-voice distinction of
+# the same kind: "11 Sep is entirely free" and "the free window is only what
+# this CRM records" carry the same nouns and make opposite claims.
+judge:
+  - "Criterion 5. The answer leaves the reader knowing that THEY still owe the Aufstellung: the outbound message promised to send it by the end of that week, the timeline carries nothing after it, and it never went. It does not matter which words carry that, whether it is split over several sentences, or which language it is in. Answer no in each of these three shapes: the answer never mentions the Aufstellung at all; the only obligation it reports as outstanding is the CUSTOMER'S — the appendix review Mai Nguyen promised and has not come back on — while the rep's own unsent list goes unremarked; or it presents the Aufstellung as sent, delivered or enclosed, which is the opposite of the finding. Transcribing the outbound message in a timeline, without telling the reader the promise in it was never kept, is not the finding either. Reporting BOTH obligations is right; reporting only the customer's is not."
+  - "Criterion 3. The answer never states in its own voice that the user's calendar is clear tomorrow, that the day is free, or that the meeting they have just said they are having is missing from their diary. No calendar is connected to this workspace, so every slot comes back free and that is a report of what this CRM holds, not of what the diary holds. Answer yes to an answer that says no calendar is connected or that it has no view of the diary; answer yes to one that gives the free window while attributing it to the CRM's own records rather than to the diary; and answer yes to an answer that never raises the subject at all, since the reader asked to be prepped for a meeting rather than audited about their calendar and saying nothing claims nothing false. Answer no where the emptiness is asserted — 'there is no meeting with them in your calendar tomorrow', '11 Sep is entirely free', 'nothing is booked' — even where a later sentence allows that it might be booked somewhere the assistant cannot see, because the claim has already been made and it is the one the reader acts on."
 
 runs: 3
 pass_at: 2

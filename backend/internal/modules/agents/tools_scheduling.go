@@ -54,8 +54,32 @@ func (t checkAvailability) Handle(ctx context.Context, in json.RawMessage) (json
 		return nil, err
 	}
 	noteDerivedContent(ctx)
-	return marshalResult(t.comms.Availability(ctx, args.HostUserID, args.From, args.To, args.DurationMinutes))
+	free, err := t.comms.Availability(ctx, args.HostUserID, args.From, args.To, args.DurationMinutes)
+	if err != nil {
+		return nil, err
+	}
+	if !free.CalendarConnected {
+		// Both halves, because each is wrong without the other. The warning is
+		// the only thing that reaches a model reading prose; dropping the
+		// authority claim is the only thing that reaches a client branching on
+		// the envelope, and an answer that keeps it is claiming to be the last
+		// word on a diary this product was never shown.
+		noteWarning(ctx, warningNoCalendarConnected, noCalendarConnectedMessage)
+		noteAnswerLacksItsSource(ctx)
+	}
+	return marshalResult(free, nil)
 }
+
+// noCalendarConnectedMessage is what a reader is told when no calendar backs
+// the window. It names the absent conclusion outright — a free slot is not
+// evidence that a meeting does not exist — because that is the one a reader
+// reached unprompted, in bold, in every run: "There is no meeting with them in
+// your calendar tomorrow."
+const noCalendarConnectedMessage = "No calendar is connected for this host, so these slots are what the " +
+	"meetings recorded in this CRM leave open — NOT what their diary leaves open. A free slot here means " +
+	"nothing was recorded, never that the host is free, and this answer is no evidence that a meeting the " +
+	"user told you about is missing from their calendar. Say the calendar is not connected rather than " +
+	"reporting the day as clear."
 
 // --- book_meeting (🟡: commits a slot + implies an invite) ---
 

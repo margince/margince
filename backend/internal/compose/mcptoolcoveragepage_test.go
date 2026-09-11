@@ -30,6 +30,7 @@ func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
 	writeCoverageReliable(&p, r)
 	writeCoverageFailing(&p, r)
 	writeCoverageJudges(&p, r)
+	writeCoverageOneOfASet(&p, r)
 	writeCoverageUndriven(&p, r)
 	return []byte(p.String())
 }
@@ -47,6 +48,9 @@ func writeCoverageHowToRead(p *strings.Builder) {
 		"coverage means here. |\n")
 	p.WriteString("| Permitted | The case allows the tool without needing it. A case can pass having " +
 		"never touched a tool it permits, so **permission is not coverage**. |\n")
+	p.WriteString("| Required as one of a set | Some questions have more than one honest engine, so " +
+		"a case can require `A` **or** `B` and fail if neither is called. Every run reaches for one " +
+		"of the set, and any one member can go uncalled — which is neither of the two words above. |\n")
 	p.WriteString("| Driven | At least one case requires this tool. A tool no case requires is " +
 		"**untried, not broken** — nothing has ever asked an assistant to reach for it. |\n")
 	p.WriteString("| Reliability | Of the runs on the cases that require this tool, the share that " +
@@ -63,6 +67,7 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 	fmt.Fprintf(p, "| | |\n|---|---:|\n")
 	fmt.Fprintf(p, "| Tools the assistant is offered | %d |\n", r.Totals.Tools)
 	fmt.Fprintf(p, "| … some case requires | %d |\n", r.Totals.Driven)
+	fmt.Fprintf(p, "| … some case requires as one of a set | %d |\n", r.Totals.OneOfASet)
 	fmt.Fprintf(p, "| … **no case requires** | %d |\n", r.Totals.NeverDriven)
 	fmt.Fprintf(p, "| … of those, permitted somewhere but never required | %d |\n", r.Totals.PermittedNotDriven)
 	fmt.Fprintf(p, "| Prompt tokens spent on tools no case requires | %d |\n", r.Totals.UndrivenCost)
@@ -112,7 +117,7 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 		link := fmt.Sprintf("[%s](../../e2e/llm/scenarios/%s)", c.Name, c.File)
 		if len(c.ByModel) == 0 {
 			fmt.Fprintf(p, "| %s | — | not run | — | — | %s | %s |\n",
-				link, criteria, joinOrDash(c.Requires))
+				link, criteria, requiresColumn(c))
 			continue
 		}
 		for _, run := range c.ByModel {
@@ -122,7 +127,7 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 			}
 			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s |\n",
 				link, run.Model, result, run.Passed, run.Runs, run.PassAt,
-				criteria, joinOrDash(c.Requires))
+				criteria, requiresColumn(c))
 		}
 	}
 	p.WriteString("\n")
@@ -207,11 +212,11 @@ func writeCoverageFailing(p *strings.Builder, r mcpToolCoverage) {
 	}
 }
 
-// writeCoverageUndriven is the third question, and the one this page exists
+// writeCoverageUndriven is the last question, and the one this page exists
 // for: what has nobody written a case for. Ordered by what each costs, because
 // that is the bill being paid for the untried thing.
 func writeCoverageUndriven(p *strings.Builder, r mcpToolCoverage) {
-	p.WriteString("## 3. What no use case requires\n\n")
+	p.WriteString("## 4. What no use case requires\n\n")
 	p.WriteString("**Untried by THIS lane, which is not the same as ungraded.** The `Graded by` " +
 		"column names the certification tasks whose\n")
 	p.WriteString("corpus tests the tool anyway — that lane asks which tool a goal should reach " +
@@ -226,7 +231,10 @@ func writeCoverageUndriven(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("| Tool | Tokens | Graded by | Permitted in | Attached to |\n|---|---:|---|---|---|\n")
 	rows := 0
 	for _, row := range r.Tools {
-		if row.Driven {
+		// A tool some case requires as one of a set has its own section above:
+		// listing it here too would print it as untried on the page that just
+		// said a case reaches for it.
+		if row.Driven || row.OneOfASet {
 			continue
 		}
 		rows++
@@ -263,14 +271,69 @@ func criteriaNames(caseName string, numbers []int, catalog []criterionRow) strin
 	return strings.Join(out, "<br>")
 }
 
+// requiresColumn renders what a case demands, with an any-of group written as
+// the alternatives it is — "`a` or `b`" — rather than as two more names in a
+// comma list. A reader of that list would take each member for something the
+// case fails without, which is exactly what the group does not say.
+func requiresColumn(c caseRow) string {
+	parts := make([]string, 0, len(c.Requires)+len(c.RequiresOneOf))
+	for _, name := range c.Requires {
+		parts = append(parts, "`"+name+"`")
+	}
+	for _, group := range c.RequiresOneOf {
+		parts = append(parts, strings.Join(backticked(group), " or "))
+	}
+	if len(parts) == 0 {
+		return "—"
+	}
+	return strings.Join(parts, ", ")
+}
+
+// writeCoverageOneOfASet is the state between the two the page had: tools no
+// case requires on their own, which every run of some case nevertheless reaches
+// for one of.
+//
+// They are kept out of the untried bill below on purpose. A tool here is not
+// work nobody has done — a case drives the set — but it is not something to put
+// in front of somebody either, because no run proves this member was the one
+// called. Neither existing section can say that, which is why this one exists.
+func writeCoverageOneOfASet(p *strings.Builder, r mcpToolCoverage) {
+	p.WriteString("## 3. What a case requires only as one of a set\n\n")
+	p.WriteString("The case fails if NONE of the set is called, and passes having called any one of " +
+		"them. So a run may never touch the tool named here,\n")
+	p.WriteString("and the case's pass rate belongs to the set rather than to this row — which is " +
+		"why no reliability is printed for it above.\n\n")
+	p.WriteString("| Tool | Tokens | Required as one of a set by | Permitted in | Graded by | Attached to |\n" +
+		"|---|---:|---|---|---|---|\n")
+	rows := 0
+	for _, row := range r.Tools {
+		if !row.OneOfASet {
+			continue
+		}
+		rows++
+		fmt.Fprintf(p, "| `%s` | %d | %s | %s | %s | %s |\n",
+			row.Name, row.Tokens, joinOrDash(row.MustCallOneOf), joinOrDash(row.MayCall),
+			joinOrDash(row.GradedBy), joinOrDash(row.Agents))
+	}
+	if rows == 0 {
+		p.WriteString("| _no case offers a choice of tools_ | - | - | - | - | - |\n")
+	}
+	p.WriteString("\n")
+}
+
+// backticked quotes each name for a markdown cell.
+func backticked(in []string) []string {
+	out := make([]string, 0, len(in))
+	for _, v := range in {
+		out = append(out, "`"+v+"`")
+	}
+	return out
+}
+
 // joinOrDash renders a list as backticked names, or a dash when it is empty.
 func joinOrDash(in []string) string {
 	if len(in) == 0 {
 		return "—"
 	}
-	quoted := make([]string, 0, len(in))
-	for _, v := range in {
-		quoted = append(quoted, "`"+v+"`")
-	}
-	return strings.Join(quoted, ", ")
+	return strings.Join(backticked(in), ", ")
 }

@@ -29,9 +29,9 @@
 # ONE WORLD, EVERY CASE. Every scenario runs against all of this, so a fixture
 # written for one case is visible to the questions the others ask. What follows
 # is filed under the case that needs it, and each block says which other case's
-# answer it had to be kept away from — the Köln rows case 4 averages a centre
-# from, the correspondence case 5 reads a broken promise out of, the count case
-# 32 rests on, and the one word case 9 hands the assistant to find one mail by.
+# answer it had to be kept away from — the Köln rows case 4 finds by city, the
+# correspondence case 5 reads a broken promise out of, the count case 32 rests
+# on, and the one word case 9 hands the assistant to find one mail by.
 # A fixture NAME is the usual carrier: search_context sweeps deals as well as
 # messages, so a deal named after another case's subject is a second plausible
 # answer to that case's question, and a careful model is right to stop on it.
@@ -306,10 +306,23 @@ activate_seat "$colleague" "Sofia Meier"
 
 # --- CASE 4: companies in and around Köln, owned by the colleague ------------
 #
-# The city centre is averaged from the located companies filed under that city
-# name (people/geocodecity.go), so these coordinates ARE the centre. No
-# geocoder is called. Filing one of them under a different city would stretch
-# the average past the one-degree spread cap and the resolver would refuse.
+# THESE ROWS CARRY AN ADDRESS AND NO COORDINATES, and the difference decides
+# what case 4 can measure. `POST /organizations` has no field for a point —
+# there is none anywhere in backend/api/crm.yaml — and placing an address is a
+# job that runs only where a Geocoder is configured, which this stack has not
+# got. So `geocode_status` stands at 'stale' on all three and a `within_radius`
+# plan matches none of them, while a filter on address.city matches all three.
+#
+# A `"geocode":{"lat":…,"lon":…}` member in the body does NOT place them: the
+# contract has no such field, so the server drops it unread and the fixture
+# reads as located while no coordinate was ever written. The Go suite reaches
+# the same three companies through SQL (case4_use_the_moment_test.go inserts
+# geocode_status 'ok'), which is why the two lanes disagree about a capability
+# neither is wrong about.
+#
+# The addresses are three real streets in three parts of the city rather than
+# one landmark repeated, because a fixture that files every company at Cologne
+# Cathedral is placeholder data and a good answer says so instead of answering.
 #
 # Every body below is built into a VARIABLE first. Writing the JSON inline
 # inside `"$(id_of "$(api ... "{...}")")"` nests double quotes three deep: bash
@@ -328,20 +341,19 @@ else:
 }
 
 seed_cologne() {
-  local name="$1" lat="$2" lon="$3" body existing
+  local name="$1" line1="$2" postal="$3" body existing
   existing="$(org_id_by_name "$name")"
   if [[ -n "$existing" ]]; then
     echo "  $name already present"
     return 0
   fi
   body="$(printf '{"display_name":"%s","owner_id":"%s",' "$name" "$colleague")"
-  body="$body$(printf '"address":{"line1":"Domkloster 4","city":"Köln","country":"DE"},')"
-  body="$body$(printf '"geocode":{"lat":%s,"lon":%s}}' "$lat" "$lon")"
+  body="$body$(printf '"address":{"line1":"%s","postal_code":"%s","city":"Köln","country":"DE"}}' "$line1" "$postal")"
   create_or_die "/organizations" "$body" "$name" >/dev/null
 }
-seed_cologne "Dom Digital GmbH"    50.9375 6.9603
-seed_cologne "Rheinufer AG"        50.9475 6.9603
-seed_cologne "Vorort Systeme KG"   51.0175 6.9603
+seed_cologne "Dom Digital GmbH"    "Unter Sachsenhausen 21" 50667
+seed_cologne "Rheinufer AG"        "Konrad-Adenauer-Ufer 41" 50668
+seed_cologne "Vorort Systeme KG"   "Neusser Landstraße 384" 50769
 
 # --- CASE 5: the Vietnam partner, with a promise nobody kept -----------------
 vietnam="$(org_id_by_name "Vietnam Partner JSC")"
@@ -356,9 +368,14 @@ if [[ -z "$mai" ]]; then
   mai="$(create_or_die "/people" "$body" "Mai Nguyen")"
   link_employment "$mai" "$vietnam" "Mai Nguyen at Vietnam Partner JSC"
 
-  # THE PROMISE. An outbound message saying the list will be sent, and nothing
-  # after it. Criterion 5 is whether a model notices the silence.
-  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","body":"Ich schicke die Aufstellung mit.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"organization","entity_id":"%s"}]}' \
+  # THE PROMISE, AND IT HAS TO BE ONE. Criterion 5 is whether a model notices
+  # that something was owed and never went, so the sentence has to say the list
+  # is STILL TO COME. "Ich schicke die Aufstellung mit" does not: `mitschicken`
+  # is what a sender writes about an enclosure already in the mail, so a model
+  # reading it as delivered reads it correctly and the gap the case rests on is
+  # not in the data at all. A deadline makes it a promise, and the silence after
+  # it measurable.
+  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","body":"Die Aufstellung schicke ich Ihnen bis Ende der Woche nach.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"organization","entity_id":"%s"}]}' \
     "$(days_ago 18)" "$mai" "$vietnam")"
   create_or_die "/activities" "$body" "the unkept promise" >/dev/null
   body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","body":"Cảm ơn — we will review the appendix this week.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"organization","entity_id":"%s"}]}' \
@@ -1154,9 +1171,19 @@ if [[ -z "$project" ]]; then
   # create_or_die on a transition rather than a create: an advance appends a row
   # and answers with the project, so the id check reads what it reads on a
   # create, and a refused advance still has to stop the seed.
-  create_or_die "/projects/$project/advance" '{"to_phase":"pursuing"}' \
+  #
+  # EACH ADVANCE CARRIES ITS REASON, which is the only part of "how it moved"
+  # this seed can write. The API has no field for WHEN a transition happened, so
+  # all three history rows are stamped within one second of the seed and no
+  # fixture here can give the project a timeline; an answer that says the stamps
+  # are all today is reading the record correctly. The reason is what turns the
+  # ladder back into a walk-through, and it lives on the history row alone —
+  # read_record answers the current phase and nothing else carries it.
+  create_or_die "/projects/$project/advance" \
+    '{"to_phase":"pursuing","reason":"Angebot nach dem Standorttermin in Wismar freigegeben."}' \
     "the pursuing entry in the Elbwerk project's phase history" >/dev/null
-  create_or_die "/projects/$project/advance" '{"to_phase":"delivering"}' \
+  create_or_die "/projects/$project/advance" \
+    '{"to_phase":"delivering","reason":"Auftrag erteilt; Montage in Wismar und Greifswald geplant."}' \
     "the delivering entry in the Elbwerk project's phase history" >/dev/null
 
   # The commitment still open when the rep asks to close the project. Overdue on

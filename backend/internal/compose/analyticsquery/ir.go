@@ -309,7 +309,8 @@ func validateFilters(entity Entity, filters []Filter) error {
 				Suggest: "use one of: " + strings.Join(FilterOpNames(), ", "),
 			}
 		}
-		if _, ok := entity.Lookup(f.Field); !ok {
+		field, ok := entity.Lookup(f.Field)
+		if !ok {
 			return unknownField(entity, f.Field, KindDimension)
 		}
 		if valuelessOps[f.Op] != (f.Value == nil) {
@@ -319,6 +320,18 @@ func validateFilters(entity Entity, filters []Filter) error {
 					"%s on %s was given the wrong shape: %s takes %s",
 					f.Op, httperr.QuoteCaller(f.Field), f.Op, valueShape(f.Op)),
 				Suggest: "drop the value, or use a comparison that takes one",
+			}
+		}
+		// A value the driver cannot encode for this column used to travel to
+		// Postgres, fail there, and come back as an unclassified fault — which
+		// reaches a caller as "the tool failed for an internal reason; retry".
+		// The caller most likely to trip it spells a year the way JSON spells
+		// one, and an agent reading that advice retries what cannot succeed.
+		if !valuelessOps[f.Op] && !filterValueBinds(field, f.Value) {
+			return &RefusalError{
+				Kind:    RefusalInvalid,
+				Message: "filters " + CannotCompare(JSONShapeOf(f.Value), f.Field),
+				Suggest: valueAdvice(field.Shape),
 			}
 		}
 	}

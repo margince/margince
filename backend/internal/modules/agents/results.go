@@ -450,6 +450,13 @@ type FreeSlot struct {
 type AvailabilityResult struct {
 	Slots     []FreeSlot `json:"slots"`
 	Truncated bool       `json:"truncated"`
+	// CalendarConnected says what the free list was computed FROM: the host's
+	// own diary, or only the meetings this CRM happens to hold. False makes a
+	// full day of free slots mean "nothing is recorded here", which is not the
+	// same claim as "the host is free" and must never be reported as one — the
+	// warning beside it (warningNoCalendarConnected) is the instruction, this
+	// is the fact a caller branches on.
+	CalendarConnected bool `json:"calendar_connected"`
 }
 
 // PassthroughEntityResult is the GUARANTEED SUBSET of a result whose handler

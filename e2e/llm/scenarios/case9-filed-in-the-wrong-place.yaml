@@ -105,7 +105,14 @@ must_mention:
   # sentence missed while "the three Aachener mails" passed, so the pattern was
   # scoring how long the company's name is. The month lookahead still stands
   # between "3" and a date, which is the thing this must not read as a count.
-  - "\b(?:3|three|drei)\s+(?:(?!Jan|Feb|Mar|Apr|Ma[iy]|Jun|Jul|Aug|Sep|O[kc]t|Nov|De[czs])[\w-]+\s+){0,3}(?:activit\w*|e-?mails?|mails?|messages?|calls?|items?|records?|entries|Aktivit\w+|Anrufe?|Rückrufe?)|\b(?:3|three|drei)\s+(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)|(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)[^\n]{0,25}\ball (?:3|three|drei)\b|\ball (?:3|three|drei)\b[^\n]{0,30}(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)"
+  #
+  # AND THE SEPARATORS ARE NOT ONLY SPACES. A run quoting the subject writes
+  # `the 3 "Rückruf Aachener Metallwerke" mails`, and one compounding the noun
+  # writes `the three-mail move` — both report the count, and a pattern reading
+  # only \s and \w saw neither. Two of three runs missed on punctuation alone
+  # while doing the errand correctly, which is under-recognition: the direction
+  # a guard must never fail in, because it reads as a finding about the product.
+  - "\b(?:3|three|drei)[-\s]+(?:(?!Jan|Feb|Mar|Apr|Ma[iy]|Jun|Jul|Aug|Sep|O[kc]t|Nov|De[czs])[\w\"“”'’-]+[-\s]+){0,3}(?:activit\w*|e-?mails?|mails?|messages?|calls?|items?|records?|entries|Aktivit\w+|Anrufe?|Rückrufe?)|\b(?:3|three|drei)[-\s]+(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)|(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)[^\n]{0,25}\ball (?:3|three|drei)\b|\ball (?:3|three|drei)\b[^\n]{0,30}(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)"
 
 must_not_mention:
   # CRITERION 3, and the failure this case exists for: re-writing history instead
