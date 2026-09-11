@@ -38,4 +38,4 @@ e0c11716048a939f1f1187d6992754335300ac41 ce200199d82e76fca7c07e5781a7af1a963b496
 e4bc6bbe59911e0290a06f515c0c3ea9a3ae0218 fe9c2b0a85863adcbfc9a90825e181736ed76db8 ratified-1898-the-access-preview-is-a-read-and-carries-the-methods-of-one
 79fa8c2d60fdf8f8d8d71882a948cc8464b98c30 57058d94cf5a272de7ee74470eb2bdf212227590 ratified-a-confirm-link-answers-the-shape-its-mail-promised
 fff190e7be7ab8f126c2f57bc60dd3ccc77885d5 7ae4e67e4641faf851351a4502c34dfb4e2c5505 ratified-2025-the-record-type-is-called-company
-c8f736dcb7120ab7ae61f5d4c01a2da11811f9bb 53c720eb05a17e098f84c21c558d0fe9d83ed5d0 ratified-the-record-is-called-a-contact-pre-live-resync
+2aaf2516ca5bcde3047841f4755c7aaa1ac95f05 a4ac8b92673fb83a1d3e362a59ac710dcfa39f25 ratified-the-record-is-called-a-contact-pre-live-resync
