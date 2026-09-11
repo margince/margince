@@ -51,7 +51,11 @@ var dealStatusConstraint = regexp.MustCompile(`(?i)\bstatus\b\s*(=|<>|!=|\bIN\b|
 func TestEveryOpenDealCountComesFromTheRollup(t *testing.T) {
 	counts, dealReads := 0, 0
 	for _, sql := range moduleSQLLiterals(t) {
-		if strings.Contains(sql.text, "open_deal_count") {
+		// A literal that is EXACTLY the column name is a NAME — the sort
+		// vocabulary's key for the column, say — and names no population.
+		// Exempted at exactly that width and no wider: one more character and
+		// the literal is assembling something, which is what this arm reads.
+		if strings.Contains(sql.text, "open_deal_count") && sql.text != "open_deal_count" {
 			counts++
 			if !gatekit.TableReadPattern(openPipelineRollupView).MatchString(sql.text) {
 				t.Errorf("%s reads open_deal_count without reading %s:\n\n\t%s\n\n"+

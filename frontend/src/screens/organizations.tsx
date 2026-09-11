@@ -310,11 +310,14 @@ export function CompaniesScreen() {
             key: "description",
             header: t("org.description"),
             cell: (org: Organization) => org.description ?? "",
+            sort: "description",
           },
           tagsColumn<Organization>(t),
           {
             key: "website",
             header: t("org.website"),
+            // By the HOST the cell prints — the scheme is a constant.
+            sort: "website_url",
             cell: (org: Organization) =>
               org.website_url ? (
                 <a
@@ -335,6 +338,8 @@ export function CompaniesScreen() {
             header: t("org.contactCount"),
             numeric: true,
             cell: (org: Organization) => org.contact_count ?? "",
+            // A reader shown no count is ordered by none: such rows go last.
+            sort: "contact_count",
           },
           {
             // Withheld (absent key), not zero, for a role without
@@ -344,10 +349,12 @@ export function CompaniesScreen() {
             header: t("org.openDealCount"),
             numeric: true,
             cell: (org: Organization) => org.open_deal_count ?? "",
+            sort: "open_deal_count",
           },
           {
             key: "class",
             header: t("org.lifecycle"),
+            sort: "lifecycle",
             // classification is retired and no longer written by anything,
             // so a column reading it would show whatever it happened to
             // hold when the split shipped, forever.
@@ -359,6 +366,10 @@ export function CompaniesScreen() {
           {
             key: "relationship",
             header: t("org.relationshipTypes"),
+            // NO `sort`, and not a gap: an account can be a partner AND a
+            // customer, so ordering by the first member of a set would read as
+            // an answer without being one. The filter above narrows instead.
+            //
             // A filter with no column to read it back on is a list that cannot
             // say why a row matched. Multi-valued on purpose (ADR-0079):
             // an account can be a partner AND a customer, and showing only the
