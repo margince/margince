@@ -54,8 +54,10 @@ var deferred = gatekit.Waive(map[string]string{
 })
 
 // isDayTruncation reports whether a call is `X.Truncate(24 * time.Hour)` — the
-// one idiom every calendar-day drift used, in either operand order.
-func isDayTruncation(call *ast.CallExpr) bool {
+// one idiom every calendar-day drift used, in either operand order. timeName is
+// the local name the file binds the standard "time" package to, so a truncation
+// written through an aliased import is still seen.
+func isDayTruncation(call *ast.CallExpr, timeName string) bool {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok || sel.Sel.Name != "Truncate" || len(call.Args) != 1 {
 		return false
@@ -64,8 +66,8 @@ func isDayTruncation(call *ast.CallExpr) bool {
 	if !ok || bin.Op != token.MUL {
 		return false
 	}
-	return (isIntLit(bin.X, "24") && isTimeHour(bin.Y)) ||
-		(isTimeHour(bin.X) && isIntLit(bin.Y, "24"))
+	return (isIntLit(bin.X, "24") && isTimeHour(bin.Y, timeName)) ||
+		(isTimeHour(bin.X, timeName) && isIntLit(bin.Y, "24"))
 }
 
 func isIntLit(expr ast.Expr, value string) bool {
@@ -73,13 +75,34 @@ func isIntLit(expr ast.Expr, value string) bool {
 	return ok && lit.Kind == token.INT && lit.Value == value
 }
 
-func isTimeHour(expr ast.Expr) bool {
+func isTimeHour(expr ast.Expr, timeName string) bool {
 	sel, ok := expr.(*ast.SelectorExpr)
 	if !ok || sel.Sel.Name != "Hour" {
 		return false
 	}
 	pkg, ok := sel.X.(*ast.Ident)
-	return ok && pkg.Name == "time"
+	return ok && timeName != "" && pkg.Name == timeName
+}
+
+// timeImportName is the local name this file binds the standard "time" package
+// to — "time" normally, or the alias in `import clock "time"`. Empty when the
+// file does not import time at all, in which case no `time.Hour` can appear.
+//
+// Resolving the alias is what keeps the census from failing SHORT (rule 8): a
+// truncation written through an aliased import would otherwise pass unseen. A
+// LOCAL value shadowing `time` is deliberately NOT resolved — it would be
+// over-reported, the safe direction, an extra waiver rather than a missed site.
+func timeImportName(file *ast.File) string {
+	for _, imp := range file.Imports {
+		if imp.Path.Value != `"time"` {
+			continue
+		}
+		if imp.Name != nil {
+			return imp.Name.Name
+		}
+		return "time"
+	}
+	return ""
 }
 
 // TestTheMatcherSeesWhatItClaimsTo pins what the idiom catches and what it must
@@ -121,7 +144,51 @@ func exprIsDayTruncation(t *testing.T, src string) bool {
 		t.Fatalf("parsing %q: %v", src, err)
 	}
 	call, ok := expr.(*ast.CallExpr)
-	return ok && isDayTruncation(call)
+	return ok && isDayTruncation(call, "time")
+}
+
+// TestTheMatcherResolvesTheTimeImportAlias plants the case a static review named:
+// a truncation written through an aliased `time` import is a real day derivation
+// the census MUST still see (the false-NEGATIVE rule 8 forbids), while a file
+// that never imports time has no truncation to find.
+func TestTheMatcherResolvesTheTimeImportAlias(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		src  string
+		want bool
+	}{
+		{"plain import", "package p\nimport \"time\"\nfunc f(x time.Time) { _ = x.Truncate(24 * time.Hour) }\n", true},
+		{"aliased import", "package p\nimport clock \"time\"\nfunc f(x clock.Time) { _ = x.Truncate(24 * clock.Hour) }\n", true},
+		{"no time import is nothing to find", "package p\nfunc f() { _ = 24 }\n", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := fileHasDayTruncation(t, tc.src); got != tc.want {
+				t.Errorf("day truncation seen = %v, want %v in:\n%s", got, tc.want, tc.src)
+			}
+		})
+	}
+}
+
+// fileHasDayTruncation parses a whole file and runs the census's own logic —
+// resolve the time import, then inspect — so the alias resolution is exercised
+// exactly as the walk exercises it.
+func fileHasDayTruncation(t *testing.T, src string) bool {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", src, 0)
+	if err != nil {
+		t.Fatalf("parsing fixture: %v", err)
+	}
+	timeName := timeImportName(file)
+	found := false
+	ast.Inspect(file, func(node ast.Node) bool {
+		if call, ok := node.(*ast.CallExpr); ok && isDayTruncation(call, timeName) {
+			found = true
+		}
+		return true
+	})
+	return found
 }
 
 func TestOnlyOnePlaceDerivesACalendarDay(t *testing.T) {
@@ -161,9 +228,10 @@ func TestOnlyOnePlaceDerivesACalendarDay(t *testing.T) {
 			if parseErr != nil {
 				return parseErr
 			}
+			timeName := timeImportName(file)
 			ast.Inspect(file, func(node ast.Node) bool {
 				call, ok := node.(*ast.CallExpr)
-				if !ok || !isDayTruncation(call) {
+				if !ok || !isDayTruncation(call, timeName) {
 					return true
 				}
 				if !deferred.Waived(t, rel) {
