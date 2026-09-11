@@ -93,9 +93,17 @@ func statsByFailure(ctx context.Context, pool *pgxpool.Pool) ([]FailureCount, er
 // can publish is (core classes + each unit's own + one reserved) × the kinds
 // that fail, and a bound nobody can count is a bound nobody is keeping.
 func CoreFailureClasses() []string {
-	out := make([]string, 0, len(vocabulary))
+	out := make([]string, 0, len(vocabulary)+len(technicalFaults))
 	for _, known := range vocabulary {
 		out = append(out, known.class)
+	}
+	// The authored technical classes are core as well — one vocabulary in two
+	// tables, because one is keyed by sentinel and the other by the cause's
+	// shape. A bound that counted only the first would be short by exactly the
+	// classes an infrastructure outage arrives under, which are the ones an
+	// alert is most likely to be watching.
+	for _, technical := range technicalFaults {
+		out = append(out, technical.class)
 	}
 	return out
 }
@@ -110,6 +118,11 @@ func SentenceForClass(class string) string {
 	for _, known := range vocabulary {
 		if known.class == class {
 			return known.sentence
+		}
+	}
+	for _, technical := range technicalFaults {
+		if technical.class == class {
+			return technical.sentence
 		}
 	}
 	return ""
