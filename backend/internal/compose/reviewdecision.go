@@ -150,7 +150,7 @@ func reviewDecisionEffect(svc *approvals.Service, directed directedSendService) 
 			// the instruction refuses an empty explanation, and "approved from
 			// the queue" is the truthful minimum.
 			Explanation:    decision.recordedExplanation(),
-			WarningVersion: reviewCardWarningVersion,
+			WarningVersion: consent.QueueCardWarningVersion,
 			// Approving IS the acknowledgement. The card said what this is and
 			// the approver pressed approve; requiring a second tick inside the
 			// effect would be asking them to confirm the thing they just did.
@@ -159,12 +159,6 @@ func reviewDecisionEffect(svc *approvals.Service, directed directedSendService) 
 		return err
 	}
 }
-
-// reviewCardWarningVersion names the wording an approver was shown when they
-// answered a queue card, as distinct from the modal's own text. The record has
-// to say which words somebody read, and a card and a modal are not the same
-// words.
-const reviewCardWarningVersion = "queue-card-v1"
 
 // decodeReviewDecision reads a staged card, refusing one carrying anything this
 // effect does not act on.

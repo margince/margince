@@ -3570,6 +3570,24 @@ export const de = {
   "compose.consentBlockedTitle": "Versand blockiert — keine Einwilligung",
   "compose.consentBlocked":
     "Ein Empfänger hat für diesen Zweck nicht eingewilligt, daher wurde der Versand unterdrückt (Standard-Ablehnung).",
+  "directSend.title": "Trotzdem senden, auf eigene Verantwortung",
+  "directSend.confirm": "Ausnahme erfassen und senden",
+  "directSend.failed":
+    "Die Nachricht wurde nicht gesendet. Ihre Entscheidung ist möglicherweise bereits erfasst — öffnen Sie die Prüfung, bevor Sie erneut entscheiden.",
+  "directSend.noWarningServed":
+    "Diese Installation hat den Wortlaut, den Sie bestätigen würden, nicht veröffentlicht; daher ist hier keine Erfassung möglich.",
+  "directSend.needsAcknowledgement":
+    "Bestätigen Sie die Kenntnisnahme, um fortzufahren.",
+  "directSend.needsReason": "Begründen Sie, warum diese Nachricht gehen soll.",
+  "directSend.reasonCodeLabel": "Auf welcher Grundlage",
+  "directSend.explanationLabel": "Warum, in eigenen Worten",
+  "directSend.acknowledge":
+    "Ich habe das Obenstehende gelesen und übernehme die Verantwortung für diese Nachricht.",
+  "directSend.reason.customer_requested_outside_crm":
+    "Die Bitte kam außerhalb dieses Systems",
+  "directSend.reason.contractual_necessity": "Ein Vertrag verpflichtet uns",
+  "directSend.reason.legal_obligation": "Das Gesetz verpflichtet uns",
+  "directSend.reason.other": "Etwas anderes",
   "compose.reviewReference": "Prüfung",
   "compose.reviewRequest": "Jemanden um Entscheidung bitten",
   "compose.reviewRequesting": "Wird angefragt…",

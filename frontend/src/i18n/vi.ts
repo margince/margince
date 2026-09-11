@@ -3529,6 +3529,23 @@ export const vi = {
   "compose.consentBlockedTitle": "Bị chặn gửi — chưa có chấp thuận",
   "compose.consentBlocked":
     "Một người nhận chưa chấp thuận cho mục đích này, nên lượt gửi bị chặn (mặc định từ chối).",
+  "directSend.title": "Vẫn gửi, theo thẩm quyền của bạn",
+  "directSend.confirm": "Ghi nhận ngoại lệ và gửi",
+  "directSend.failed":
+    "Thư chưa được gửi. Quyết định của bạn có thể đã được ghi nhận — hãy mở phần xem xét trước khi quyết định lại.",
+  "directSend.noWarningServed":
+    "Cài đặt này chưa công bố nội dung bạn sẽ xác nhận, nên không thể ghi nhận ở đây.",
+  "directSend.needsAcknowledgement": "Hãy tích xác nhận để tiếp tục.",
+  "directSend.needsReason": "Hãy nêu lý do thư này nên được gửi.",
+  "directSend.reasonCodeLabel": "Trên cơ sở nào",
+  "directSend.explanationLabel": "Lý do, theo lời của bạn",
+  "directSend.acknowledge":
+    "Tôi đã đọc nội dung trên và chịu trách nhiệm gửi thư này.",
+  "directSend.reason.customer_requested_outside_crm":
+    "Yêu cầu đến từ bên ngoài hệ thống này",
+  "directSend.reason.contractual_necessity": "Hợp đồng buộc chúng tôi",
+  "directSend.reason.legal_obligation": "Luật buộc chúng tôi",
+  "directSend.reason.other": "Lý do khác",
   "compose.reviewReference": "Phần xem xét",
   "compose.reviewRequest": "Chuyển cho bên có thẩm quyền quyết định",
   "compose.reviewRequesting": "Đang hỏi…",

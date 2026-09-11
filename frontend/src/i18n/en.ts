@@ -3657,6 +3657,23 @@ export const en = {
   "compose.consentBlockedTitle": "Send blocked — no consent",
   "compose.consentBlocked":
     "A recipient has not granted consent for this purpose, so the send was suppressed (default-deny).",
+  "directSend.title": "Send anyway, on your own authority",
+  "directSend.confirm": "Record the exception and send",
+  "directSend.failed":
+    "The message was not sent. Your decision may already be on record — open the review before deciding again.",
+  "directSend.noWarningServed":
+    "This installation has not published the wording you would be acknowledging, so this cannot be recorded here.",
+  "directSend.needsAcknowledgement": "Tick the acknowledgement to continue.",
+  "directSend.needsReason": "Say why this message should go.",
+  "directSend.reasonCodeLabel": "Under what basis",
+  "directSend.explanationLabel": "Why, in your own words",
+  "directSend.acknowledge":
+    "I have read the above and take responsibility for sending this message.",
+  "directSend.reason.customer_requested_outside_crm":
+    "They asked us somewhere this system did not see",
+  "directSend.reason.contractual_necessity": "A contract obliges us",
+  "directSend.reason.legal_obligation": "The law obliges us",
+  "directSend.reason.other": "Something else",
   "compose.reviewReference": "Review",
   "compose.reviewRequest": "Ask someone to decide",
   "compose.reviewRequesting": "Asking…",

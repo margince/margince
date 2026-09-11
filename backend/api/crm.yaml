@@ -39877,6 +39877,13 @@ components:
             The card a routed review was handed to, so a decider reading this can find the decision
             they are being asked to make. Null on a review nobody has asked about, which is most of
             them.
+        warning:
+          $ref: '#/components/schemas/OverrideWarning'
+          description: |
+            What somebody must be shown before they direct this send, and the version their
+            acknowledgement will name. Served rather than composed by the client: an instruction's
+            claim is that a named person read particular words, and a client free to write its own
+            would have the record assert an acknowledgement of text nobody published.
 
     CommunicationReviewList:
       type: object
@@ -39891,6 +39898,26 @@ components:
           description: |
             How many are waiting in total. A page at its limit has more behind it, and this is how
             the caller knows rather than by discovering it.
+
+    OverrideWarning:
+      type: object
+      description: |
+        The caution a person reads before overruling the engine, with the version that identifies
+        it. Both together, because a surface that could get one without the other would show words
+        while naming a different version.
+      required: [version, text]
+      properties:
+        version:
+          type: string
+          description: |
+            What the acknowledgement records. It moves whenever the text does — an instruction
+            naming a version whose words were later edited is a record of an acknowledgement
+            nobody made.
+        text:
+          type: string
+          description: |
+            Shown verbatim. A surface that paraphrased it would record somebody as having read the
+            server's words while showing them its own.
 
     RequestCommunicationDecisionRequest:
       type: object

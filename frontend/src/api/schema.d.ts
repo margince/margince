@@ -29478,6 +29478,13 @@ export interface components {
              *     them.
              */
             approval_id?: string | null;
+            /**
+             * @description What somebody must be shown before they direct this send, and the version their
+             *     acknowledgement will name. Served rather than composed by the client: an instruction's
+             *     claim is that a named person read particular words, and a client free to write its own
+             *     would have the record assert an acknowledgement of text nobody published.
+             */
+            warning?: components["schemas"]["OverrideWarning"];
         };
         /** @description A page of refused sends waiting for a decision. */
         CommunicationReviewList: {
@@ -29487,6 +29494,24 @@ export interface components {
              *     the caller knows rather than by discovering it.
              */
             total: number;
+        };
+        /**
+         * @description The caution a person reads before overruling the engine, with the version that identifies
+         *     it. Both together, because a surface that could get one without the other would show words
+         *     while naming a different version.
+         */
+        OverrideWarning: {
+            /**
+             * @description What the acknowledgement records. It moves whenever the text does — an instruction
+             *     naming a version whose words were later edited is a record of an acknowledgement
+             *     nobody made.
+             */
+            version: string;
+            /**
+             * @description Shown verbatim. A surface that paraphrased it would record somebody as having read the
+             *     server's words while showing them its own.
+             */
+            text: string;
         };
         /** @description What the person asking wants the decider to know. */
         RequestCommunicationDecisionRequest: {

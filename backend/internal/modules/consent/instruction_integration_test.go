@@ -113,7 +113,7 @@ func TestOnlyAHumanHoldingTheGrantDirectsASend(t *testing.T) {
 	valid := DirectInput{
 		ReasonCode:     ReasonContractualNecessity,
 		Explanation:    "The framework agreement obliges us to send this notice.",
-		WarningVersion: "warn-2026-09",
+		WarningVersion: OverrideWarningVersion,
 		Acknowledged:   true,
 	}
 
@@ -168,7 +168,7 @@ func TestDirectingASendRecordsNoConsentAndLeavesTheRefusal(t *testing.T) {
 	if _, err := e.store.DirectSend(directorCtx(ws, user), review, DirectInput{
 		ReasonCode:     ReasonLegalObligation,
 		Explanation:    "Statutory notice, owed whatever they asked for.",
-		WarningVersion: "warn-2026-09",
+		WarningVersion: OverrideWarningVersion,
 		Acknowledged:   true,
 	}); err != nil {
 		t.Fatalf("directing the send: %v", err)
@@ -207,7 +207,7 @@ func TestAnInstructionCannotBeRewritten(t *testing.T) {
 	out, err := e.store.DirectSend(directorCtx(ws, user), review, DirectInput{
 		ReasonCode:     ReasonOtherException,
 		Explanation:    "Agreed with the client on the call this morning.",
-		WarningVersion: "warn-2026-09",
+		WarningVersion: OverrideWarningVersion,
 		Acknowledged:   true,
 	})
 	if err != nil {
@@ -244,7 +244,7 @@ func TestARevocationNamesItselfAndSpareAConsumedInstruction(t *testing.T) {
 	out, err := e.store.DirectSend(directorCtx(ws, user), review, DirectInput{
 		ReasonCode:     ReasonOtherException,
 		Explanation:    "Thought better of it.",
-		WarningVersion: "warn-2026-09",
+		WarningVersion: OverrideWarningVersion,
 		Acknowledged:   true,
 	})
 	if err != nil {
@@ -291,7 +291,7 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 	out, err := e.store.DirectSend(directorCtx(ws, user), review, DirectInput{
 		ReasonCode:     ReasonOtherException,
 		Explanation:    "Anna asked for this on the call this morning.",
-		WarningVersion: "warn-2026-09",
+		WarningVersion: OverrideWarningVersion,
 		Acknowledged:   true,
 	})
 	if err != nil {
