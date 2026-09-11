@@ -29,6 +29,15 @@ const (
 	assigneeKindColumnOf = "assignee_kind"
 )
 
+// The field names a 422 names back to the caller, and the codes that go with
+// them. Constants because each is spelled in several refusals and a typo in one
+// would tell a caller to fix a field the form does not have.
+const (
+	fieldRoleID        = "role_id"
+	fieldSubjectID     = "subject_id"
+	codeInvalidRecType = "invalid_record_type"
+)
+
 // validRecordTypes checks the set is non-empty and every member is a record
 // type this system knows. The DB CHECK enforces the same thing; this exists so
 // a bad request answers 422 with the offending field rather than 500 with a
@@ -45,7 +54,7 @@ func validRecordTypes(in []crmcontracts.AssignmentRecordType) ([]string, error) 
 	for _, rt := range in {
 		if !rt.Valid() {
 			return nil, &values.ParseError{
-				Field: "record_types", Code: "invalid_record_type",
+				Field: "record_types", Code: codeInvalidRecType,
 				Message: "record_types are company, deal, project",
 			}
 		}

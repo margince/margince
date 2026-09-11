@@ -6464,6 +6464,8 @@ export const vi = {
     "C\u00e1c giai \u0111o\u1ea1n m\u1ed9t deal \u0111i qua, cho to\u00e0n c\u00f4ng ty.",
   "settings.page.acquisition.sub":
     "Các kênh kinh doanh mà một thương vụ có thể được quy về.",
+  "settings.page.recordroles.sub":
+    "\u0110i\u1ec1u m\u00e0 m\u1ed9t \u0111\u1ed3ng nghi\u1ec7p ho\u1eb7c nh\u00f3m c\u00f3 th\u1ec3 ch\u1ecbu tr\u00e1ch nhi\u1ec7m tr\u00ean m\u1ed9t b\u1ea3n ghi. N\u00f3 kh\u00f4ng c\u1ea5p quy\u1ec1n truy c\u1eadp.",
   "settings.page.leads.sub":
     "T\u1eeb ng\u1eef c\u00f4ng ty n\u00e0y d\u00f9ng \u0111\u1ec3 m\u00f4 t\u1ea3 m\u1ed9t lead \u0111\u1ebfn t\u1eeb \u0111\u00e2u.",
   "settings.page.fields.sub":

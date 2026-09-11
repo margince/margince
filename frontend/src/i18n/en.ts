@@ -6665,6 +6665,8 @@ export const en = {
     "The stages a deal moves through, for the whole company.",
   "settings.page.acquisition.sub":
     "The business channels a deal can be attributed to.",
+  "settings.page.recordroles.sub":
+    "What a colleague or team can be accountable for on a record. It grants no access.",
   "settings.page.leads.sub":
     "The words this company uses to describe where a lead came from.",
   "settings.page.fields.sub":

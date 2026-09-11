@@ -45,8 +45,8 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 // it means a caller bypassed the generated decoder.
 func unknownRecordType() error {
 	return &values.ParseError{
-		Field:   "record_type",
-		Code:    "invalid_record_type",
+		Field:   recordTypeColumnOf,
+		Code:    codeInvalidRecType,
 		Message: "record_type is one of company, deal, project",
 	}
 }

@@ -6540,6 +6540,8 @@ export const de = {
     "Die Phasen, die ein Deal durchl\u00e4uft \u2014 f\u00fcr das ganze Unternehmen.",
   "settings.page.acquisition.sub":
     "Die Geschäftskanäle, denen ein Deal zugeordnet werden kann.",
+  "settings.page.recordroles.sub":
+    "Wof\u00fcr jemand oder ein Team bei einem Datensatz zust\u00e4ndig sein kann. Es gew\u00e4hrt keinen Zugriff.",
   "settings.page.leads.sub":
     "Die Worte, mit denen dieses Unternehmen beschreibt, woher ein Lead kam.",
   "settings.page.fields.sub":

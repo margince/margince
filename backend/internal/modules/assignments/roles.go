@@ -160,22 +160,9 @@ func (s *Store) UpdateRecordRole(
 	if err := auth.Require(ctx, assignmentVocabularyObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.RecordRole{}, err
 	}
-	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
-		return crmcontracts.RecordRole{}, &values.ParseError{
-			Field: roleLabelColumn, Code: codeRequired, Message: "label cannot be blank",
-		}
-	}
-	var recordTypes, assigneeKinds []string
-	var err error
-	if in.RecordTypes != nil {
-		if recordTypes, err = validRecordTypes(*in.RecordTypes); err != nil {
-			return crmcontracts.RecordRole{}, err
-		}
-	}
-	if in.AssigneeKinds != nil {
-		if assigneeKinds, err = validAssigneeKinds(*in.AssigneeKinds); err != nil {
-			return crmcontracts.RecordRole{}, err
-		}
+	recordTypes, assigneeKinds, err := checkRoleUpdate(in)
+	if err != nil {
+		return crmcontracts.RecordRole{}, err
 	}
 	var out crmcontracts.RecordRole
 	err = s.tx(ctx, func(tx pgx.Tx) error {
@@ -220,4 +207,27 @@ func (s *Store) UpdateRecordRole(
 		return err
 	})
 	return out, err
+}
+
+// checkRoleUpdate validates everything about a patch that can be judged before
+// a transaction opens, and returns the two applicability sets in the shape the
+// column takes. Separate from the write so the write reads as the sequence of
+// steps it is rather than as validation with a database call in the middle.
+func checkRoleUpdate(in UpdateRecordRoleInput) (recordTypes, assigneeKinds []string, err error) {
+	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
+		return nil, nil, &values.ParseError{
+			Field: roleLabelColumn, Code: codeRequired, Message: "label cannot be blank",
+		}
+	}
+	if in.RecordTypes != nil {
+		if recordTypes, err = validRecordTypes(*in.RecordTypes); err != nil {
+			return nil, nil, err
+		}
+	}
+	if in.AssigneeKinds != nil {
+		if assigneeKinds, err = validAssigneeKinds(*in.AssigneeKinds); err != nil {
+			return nil, nil, err
+		}
+	}
+	return recordTypes, assigneeKinds, nil
 }

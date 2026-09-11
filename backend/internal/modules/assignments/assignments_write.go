@@ -226,19 +226,19 @@ func ensureAssignableRole(
 	}
 	if !active {
 		return &values.ParseError{
-			Field: "role_id", Code: "retired_role",
+			Field: fieldRoleID, Code: "retired_role",
 			Message: "that role has been retired and cannot be newly assigned",
 		}
 	}
 	if !contains(recordTypes, string(rt)) {
 		return &values.ParseError{
-			Field: "role_id", Code: "role_not_applicable",
+			Field: fieldRoleID, Code: "role_not_applicable",
 			Message: fmt.Sprintf("that role cannot be held on a %s", rt),
 		}
 	}
 	if !contains(assigneeKinds, string(kind)) {
 		return &values.ParseError{
-			Field: "role_id", Code: "role_wrong_assignee_kind",
+			Field: fieldRoleID, Code: "role_wrong_assignee_kind",
 			Message: fmt.Sprintf("that role cannot be held by a %s", kind),
 		}
 	}

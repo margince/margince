@@ -81,11 +81,12 @@ func scanAssignmentRow(sc rowScanner) (assignmentRow, error) {
 		return assignmentRow{}, err
 	}
 	r.RecordType, r.RecordID = rt, id
-	if user != nil {
+	switch {
+	case user != nil:
 		r.SubjectKind, r.SubjectID = crmcontracts.AssignmentSubjectKindUser, *user
-	} else if team != nil {
+	case team != nil:
 		r.SubjectKind, r.SubjectID = crmcontracts.AssignmentSubjectKindTeam, *team
-	} else {
+	default:
 		return assignmentRow{}, fmt.Errorf("record_assignment row has no assignee")
 	}
 	return r, nil
@@ -160,8 +161,8 @@ func parentColumn(rt crmcontracts.AssignmentRecordType) (string, error) {
 		return "project_id", nil
 	}
 	return "", &values.ParseError{
-		Field:   "record_type",
-		Code:    "invalid_record_type",
+		Field:   recordTypeColumnOf,
+		Code:    codeInvalidRecType,
 		Message: "record_type is one of company, deal, project",
 	}
 }
@@ -210,7 +211,7 @@ func lockAssignment(ctx context.Context, tx pgx.Tx, id ids.UUID) (assignmentRow,
 func roleLookupError(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return &values.ParseError{
-			Field: "role_id", Code: "unknown_role",
+			Field: fieldRoleID, Code: "unknown_role",
 			Message: "no such role",
 		}
 	}
@@ -229,14 +230,14 @@ func ensureSubjectAssignable(
 		if err := tx.QueryRow(ctx, `SELECT archived_at FROM team WHERE id = $1`, id).Scan(&teamArchived); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return &values.ParseError{
-					Field: "subject_id", Code: "unknown_team", Message: "no such team",
+					Field: fieldSubjectID, Code: "unknown_team", Message: "no such team",
 				}
 			}
 			return fmt.Errorf("read team: %w", err)
 		}
 		if teamArchived != nil {
 			return &values.ParseError{
-				Field: "subject_id", Code: "archived_team",
+				Field: fieldSubjectID, Code: "archived_team",
 				Message: "that team is archived and cannot take on new responsibilities",
 			}
 		}
@@ -248,7 +249,7 @@ func ensureSubjectAssignable(
 		`SELECT status, archived_at FROM app_user WHERE id = $1`, id).Scan(&status, &archivedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return &values.ParseError{
-				Field: "subject_id", Code: "unknown_user", Message: "no such user",
+				Field: fieldSubjectID, Code: "unknown_user", Message: "no such user",
 			}
 		}
 		return fmt.Errorf("read app_user: %w", err)
@@ -258,7 +259,7 @@ func ensureSubjectAssignable(
 	// work until their first login.
 	if status == "suspended" || status == "deactivated" || archivedAt != nil {
 		return &values.ParseError{
-			Field: "subject_id", Code: "inactive_user",
+			Field: fieldSubjectID, Code: "inactive_user",
 			Message: "that person is deactivated and cannot take on new responsibilities",
 		}
 	}
