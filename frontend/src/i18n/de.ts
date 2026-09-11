@@ -1425,6 +1425,7 @@ export const de = {
   "approval.kind.update_record": "Datensatz ändern",
   "approval.kind.create_record": "Datensatz anlegen",
   "approval.kind.send_email": "E-Mail senden",
+  "approval.kind.communication_review": "Über eine abgelehnte E-Mail entscheiden",
   "approval.kind.held_draft": "Entworfene E-Mail prüfen",
   "approval.kind.book_meeting": "Termin buchen",
   "approval.kind.volume_release": "Einen Agenten weiterarbeiten lassen",

@@ -381,6 +381,10 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 // confirmation lane's all-three-or-none rule.
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
+		// THE SAME APPROVALS ENGINE the inbox decides through, so a card raised
+		// here is answered there rather than sitting in a second queue nobody
+		// reads.
+		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)}).
 		WithEraser(privacy.NewEraser(InstallationDB(pool))).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {

@@ -190,7 +190,13 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 // this is composition naming a dependency, every caller assigns it into the
 // seam itself, and widening here would only hide which gate was built.
 func consentGateFor(pool *pgxpool.Pool) *consent.Gate {
-	return consent.NewGate(consent.NewStore(InstallationDB(pool))).
+	return consent.NewGate(consent.NewStore(InstallationDB(pool)).
+		// THE SAME SEAM THE HANDLERS HOLD, wired here too because this is the
+		// store that CLOSES a review when its message goes — and closing one
+		// has to retract the card somebody was asked to decide. A gate without
+		// it would resolve the review and leave a live card asking about a
+		// message that has already been sent.
+		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)})).
 		// Where the installation is established, which selects the messaging
 		// rules a decision is taken under. Injected rather than read directly
 		// because the setting belongs to identity and consent may not import a
@@ -243,6 +249,23 @@ func registerLateApprovalEffects(svc *approvals.Service, pool *pgxpool.Pool, sen
 	for kind, late := range lateApprovalEffects {
 		svc.WithEffect(kind, late.effect(svc, store, gate, send.Delivery))
 		svc.WithPrecheck(kind, late.precheck(store, gate, send.Delivery))
+	}
+	// APPROVING A ROUTED REFUSAL SENDS THE MESSAGE, so it is registered here
+	// with the others that send rather than beside the ordinary kinds: an
+	// executor registered there would put out mail with no signature and no
+	// unsubscribe linker.
+	//
+	// It is wired separately from the table above because it needs the whole
+	// directed-send service — the consent store, the gate and the delivery
+	// machinery together — rather than the three the table's shape carries.
+	if send.Delivery != nil {
+		svc.WithEffect(approvals.KindCommunicationReview,
+			reviewDecisionEffect(svc, newDirectedSendService(pool, send.Delivery, send)))
+		// SAYING NO AND SAYING NOTHING both end the asking, and both have to
+		// move the review — a rep left reading "waiting for a decision" would
+		// be waiting on an answer that is never coming.
+		svc.WithDeclinedEffect(approvals.KindCommunicationReview, reviewDecisionDeclined())
+		svc.WithExpiredEffect(approvals.KindCommunicationReview, reviewDecisionExpired())
 	}
 }
 

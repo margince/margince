@@ -446,6 +446,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/coldstart/preview":                                         {Op: "coldStartPreview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/commissions/{id}/decide":                                   {Op: "decideCommissionEntry", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/communication-reviews/{id}/direct-send":                    {Op: "directCommunicationSend", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/communication-reviews/{id}/request-decision":               {Op: "requestCommunicationDecision", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/companies":                                                 {Op: "createCompany", Access: "tool", Tool: "create_record", RecordType: "company", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/companies/{id}/ask":                                        {Op: "askAboutCompany", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/companies/{id}/brief":                                      {Op: "regenerateCompanyBrief", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

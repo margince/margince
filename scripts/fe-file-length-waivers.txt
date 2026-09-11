@@ -109,7 +109,7 @@
 648 frontend/src/screens/leads.list.tsx
 648 frontend/src/screens/partners.tsx
 661 frontend/src/screens/record360/citations.tsx
-663 frontend/src/screens/approvalkind.ts
+591 frontend/src/screens/approvalkind.ts
 670 frontend/src/screens/entityref.tsx
 671 frontend/src/screens/contractform.tsx
 671 frontend/src/screens/users-admin.tsx

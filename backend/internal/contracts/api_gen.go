@@ -3105,16 +3105,19 @@ func (e CommunicationReviewKind) Valid() bool {
 
 // Defines values for CommunicationReviewState.
 const (
-	CommunicationReviewStateCancelled    CommunicationReviewState = "cancelled"
-	CommunicationReviewStateNeedsContext CommunicationReviewState = "needs_context"
-	CommunicationReviewStateNeedsRepair  CommunicationReviewState = "needs_repair"
-	CommunicationReviewStateResolved     CommunicationReviewState = "resolved"
-	CommunicationReviewStateSuperseded   CommunicationReviewState = "superseded"
+	CommunicationReviewStateAwaitingDecision CommunicationReviewState = "awaiting_decision"
+	CommunicationReviewStateCancelled        CommunicationReviewState = "cancelled"
+	CommunicationReviewStateNeedsContext     CommunicationReviewState = "needs_context"
+	CommunicationReviewStateNeedsRepair      CommunicationReviewState = "needs_repair"
+	CommunicationReviewStateResolved         CommunicationReviewState = "resolved"
+	CommunicationReviewStateSuperseded       CommunicationReviewState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the CommunicationReviewState enum.
 func (e CommunicationReviewState) Valid() bool {
 	switch e {
+	case CommunicationReviewStateAwaitingDecision:
+		return true
 	case CommunicationReviewStateCancelled:
 		return true
 	case CommunicationReviewStateNeedsContext:
@@ -21011,6 +21014,13 @@ type CommissionSummaryRow struct {
 // security warning.
 type CommunicationContext string
 
+// CommunicationDecisionRequested The approval card a routed refusal was staged as.
+type CommunicationDecisionRequested struct {
+	// ApprovalId The card carrying the question. A second ask about the same review answers the same id:
+	// one refused message is one decision.
+	ApprovalId openapi_types.UUID `json:"approval_id"`
+}
+
 // CommunicationEvidence Records the caller can name in support of a send, each by id. Evidence is
 // CHECKED, never trusted: the engine reads the named record and asks whether it
 // actually supports the category claimed — a deal id that is closed, an invoice
@@ -21064,7 +21074,9 @@ type CommunicationReview struct {
 	// State What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
 	// and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
 	// answer — an objection, a dead address — where offering a context form would invite a rep
-	// to argue with a withdrawal.
+	// to argue with a withdrawal. `awaiting_decision` is a refusal the rep has handed to
+	// somebody who may override it: their work no longer, so a surface should say so rather
+	// than showing them a form they have already filled in.
 	State CommunicationReviewState `json:"state"`
 }
 
@@ -21074,7 +21086,9 @@ type CommunicationReviewKind string
 // CommunicationReviewState What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
 // and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
 // answer — an objection, a dead address — where offering a context form would invite a rep
-// to argue with a withdrawal.
+// to argue with a withdrawal. `awaiting_decision` is a refusal the rep has handed to
+// somebody who may override it: their work no longer, so a surface should say so rather
+// than showing them a form they have already filled in.
 type CommunicationReviewState string
 
 // Company A company. Mirrors the `company` table.
@@ -32719,6 +32733,18 @@ type RequestAccessResponse struct {
 	Requested bool `json:"requested"`
 }
 
+// RequestCommunicationDecisionRequest What the person asking wants the decider to know.
+type RequestCommunicationDecisionRequest struct {
+	// Note Why this message should go, in the asker's own words. Optional — a refusal is often
+	// self-explanatory — but it is what the approver reads and therefore what the record says
+	// they acted on.
+	//
+	// Bounded by what an instruction's explanation accepts, because that is where these words
+	// end up. A note the record could not hold would stage a card that fails when somebody
+	// approves it.
+	Note *string `json:"note,omitempty"`
+}
+
 // RescheduleSendRequest A new moment for a message already scheduled. TIME ONLY — the content is what the
 // approval bound to, so changing it is cancel-and-recompose (ADR-0104 §5).
 type RescheduleSendRequest struct {
@@ -43196,6 +43222,9 @@ type DecideCommissionEntryJSONRequestBody = DecideCommissionRequest
 // DirectCommunicationSendJSONRequestBody defines body for DirectCommunicationSend for application/json ContentType.
 type DirectCommunicationSendJSONRequestBody = DirectCommunicationSendRequest
 
+// RequestCommunicationDecisionJSONRequestBody defines body for RequestCommunicationDecision for application/json ContentType.
+type RequestCommunicationDecisionJSONRequestBody = RequestCommunicationDecisionRequest
+
 // CreateCompanyJSONRequestBody defines body for CreateCompany for application/json ContentType.
 type CreateCompanyJSONRequestBody = CreateCompanyRequest
 
@@ -52134,6 +52163,9 @@ type ServerInterface interface {
 	// Send a refused message anyway, on a named person's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
 	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Ask somebody who may override the engine to decide this refused send.
+	// (POST /communication-reviews/{id}/request-decision)
+	RequestCommunicationDecision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List companies (live by default; cursor-paginated).
 	// (GET /companies)
 	ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams)
@@ -54426,6 +54458,12 @@ func (_ Unimplemented) GetCommunicationReview(w http.ResponseWriter, r *http.Req
 // Send a refused message anyway, on a named person's recorded decision.
 // (POST /communication-reviews/{id}/direct-send)
 func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask somebody who may override the engine to decide this refused send.
+// (POST /communication-reviews/{id}/request-decision)
+func (_ Unimplemented) RequestCommunicationDecision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62381,6 +62419,38 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DirectCommunicationSend(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestCommunicationDecision operation middleware
+func (siw *ServerInterfaceWrapper) RequestCommunicationDecision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestCommunicationDecision(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84380,6 +84450,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/communication-reviews/{id}/direct-send", wrapper.DirectCommunicationSend)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/communication-reviews/{id}/request-decision", wrapper.RequestCommunicationDecision)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies", wrapper.ListCompanies)

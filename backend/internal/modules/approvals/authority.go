@@ -80,6 +80,22 @@ const (
 // lives here, so the edge is injected there and both halves name one kind.
 const KindScheduledSendHeld = "scheduled_send_held"
 
+// KindCommunicationReview is a send the engine refused, put in front of
+// somebody who may decide it goes anyway.
+//
+// NOT SELF-ONLY, unlike the held-message kind above, and that is the whole
+// point of routing one. A rep refused at the keyboard may not hold the
+// authority to override the engine; this card exists so they can ask somebody
+// who does. A kind only its initiator could decide would put the question back
+// in front of the person who could not answer it.
+const KindCommunicationReview = "communication_review"
+
+// objectCommunicationException is the RBAC object directing a send answers to,
+// spelled here as identity's policy spells it. Deciding one of these cards IS
+// directing a send, so it takes the same grant the direct-send door takes —
+// anything less would make the card a way around that door.
+const objectCommunicationException = "communication_exception"
+
 // decisionGrants maps each stageable kind onto the RBAC its effect needs given
 // the KIND ALONE; approving requires every one of them. A kind whose grant also
 // depends on what the staging points at carries that half in
@@ -113,6 +129,12 @@ var decisionGrants = map[string][]grantRequirement{
 	// the two entries are one decision and TestAStepUpIsDecidedByTheLenderAlone
 	// holds them together.
 	KindVolumeRelease: {},
+	// Deciding a refused send is directing it, so it takes the grant the
+	// direct-send door takes. The card is a route to that act, not a second
+	// authority for it — a reviewer who could approve here but not direct
+	// would be releasing work they could not perform, and the effect would
+	// refuse after the decision had already committed.
+	KindCommunicationReview: {{objectCommunicationException, principal.ActionCreate}},
 
 	"advance_deal": {{tableDeal, principal.ActionUpdate}},
 	// progress_deal is advance_deal plus a timeline note; the gated effect

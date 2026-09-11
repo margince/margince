@@ -77,3 +77,29 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 	}
 	return out
 }
+
+// RequestCommunicationDecision hands a refused send to somebody who may direct
+// it.
+//
+// Thin transport. Who may ask, what state a review must be in and what the card
+// carries are all the store's, and the approvals engine decides who may answer.
+func (h Handlers) RequestCommunicationDecision(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
+) {
+	var body crmcontracts.RequestCommunicationDecisionRequest
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	note := ""
+	if body.Note != nil {
+		note = *body.Note
+	}
+	approvalID, err := h.store.RequestDecision(r.Context(), ids.UUID(id), note)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusCreated, crmcontracts.CommunicationDecisionRequested{
+		ApprovalId: openapi_types.UUID(approvalID),
+	})
+}

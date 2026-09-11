@@ -236,3 +236,53 @@ func TestASpentDecisionCannotBeRePointedAtAnotherMessage(t *testing.T) {
 			"then be made to describe a message nobody read")
 	}
 }
+
+// A SENT MESSAGE CLOSES THE REVIEW IT ANSWERED.
+//
+// Without this the review stays live forever: the rep's queue keeps showing
+// work that is done, the message can still be routed to a decider who would be
+// asked about a closed matter, and the index that allows one live review per
+// held message goes on treating a spent one as waiting.
+//
+// Resolved, not deleted — a subject asking why they received the message is
+// shown the review beside the decision, and a queue that emptied itself by
+// forgetting would answer nothing.
+func TestADirectedSendClosesTheReviewItAnswered(t *testing.T) {
+	c := setupConsent(t)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send → %d, want 409", status)
+	}
+	review := liveReviewID(t, c)
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
+		directed(), nil, nil); status != http.StatusCreated {
+		t.Fatalf("directing the send → %d, want 201", status)
+	}
+
+	var state string
+	var resolved *string
+	if err := c.Owner.QueryRow(context.Background(),
+		`SELECT state, resolved_at::text FROM communication_review WHERE id = $1`, review).
+		Scan(&state, &resolved); err != nil {
+		t.Fatalf("reading the review: %v", err)
+	}
+	if state != "resolved" {
+		t.Errorf("the review reads %q after its message went, want resolved — the rep's queue "+
+			"still shows work that is done", state)
+	}
+	if resolved == nil {
+		t.Error("the review says it is finished and names no moment, which the row's own shape " +
+			"check refuses")
+	}
+	// It is still readable. The record of what was refused is what a subject
+	// asking about the message is shown.
+	var rows int
+	if err := c.Owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM communication_review WHERE id = $1`, review).Scan(&rows); err != nil {
+		t.Fatalf("reading the review: %v", err)
+	}
+	if rows != 1 {
+		t.Error("the review was deleted rather than closed — nothing is left to answer a subject " +
+			"asking why they received the message")
+	}
+}
