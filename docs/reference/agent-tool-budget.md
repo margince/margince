@@ -30,15 +30,15 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 6 |
-| `overnight_at_risk_sweep` | 7 | 2509 | 7% | 20701 | 15 | 10 |
-| _whole served catalog, for scale_ | 76 | 24157 | 73% | — | — | — |
+| `morning_brief` | 5 | 1626 | 4% | 21584 | 6 | 6 |
+| `overnight_at_risk_sweep` | 7 | 2499 | 7% | 20711 | 15 | 10 |
+| _whole served catalog, for scale_ | 76 | 24098 | 73% | — | — | — |
 
 ### `morning_brief`
 
 > Prepare the acting person's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this person; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
 
-Attaches 5 tools for 1634 tokens, leaving 21576 of its budget and 31134 tokens of the
+Attaches 5 tools for 1626 tokens, leaving 21584 of its budget and 31142 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -61,7 +61,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2509 tokens, leaving 20701 of its budget and 30259 tokens of the
+Attaches 7 tools for 2499 tokens, leaving 20711 of its budget and 30269 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -126,7 +126,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 272 tokens, mean 317, across 76 served tools.
+Median 272 tokens, mean 316, across 76 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -135,43 +135,43 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 1011 | 3 scenarios |
-| `send_account_email` | 768 | — |
-| `preview_import` | 728 | — |
+| `run_report` | 1010 | 3 scenarios |
+| `send_account_email` | 767 | — |
+| `preview_import` | 723 | — |
 | `send_email` | 698 | 1 scenario |
-| `log_activity` | 677 | 1 scenario |
-| `update_record` | 582 | 4 scenarios |
+| `log_activity` | 676 | 1 scenario |
+| `update_record` | 581 | 4 scenarios |
 | `send_message` | 546 | — |
 | `forecast_readings` | 509 | — |
-| `list_records` | 508 | — |
 | `progress_deal` | 505 | 3 scenarios |
-| `resolve_entities` | 498 | — |
+| `list_records` | 503 | — |
+| `resolve_entities` | 491 | — |
 | `query_workspace` | 484 | 3 scenarios |
-| `create_record` | 483 | 1 scenario |
+| `create_record` | 480 | 1 scenario |
 | `run_analytics_query` | 476 | — |
 | `forecast_movement` | 453 | — |
 | `advance_deal` | 447 | 1 scenario |
 | `compose_analytics_report` | 440 | — |
-| `book_meeting` | 424 | — |
+| `book_meeting` | 423 | — |
 | `annotate_brief` | 418 | — |
 | `review_commitments` | 401 | 1 scenario |
-| `enrich` | 398 | — |
-| `search_records` | 385 | 9 scenarios |
+| `enrich` | 391 | — |
+| `search_records` | 382 | 9 scenarios |
 | `check_availability` | 365 | — |
 | `describe_report_vocabulary` | 349 | — |
 | `describe_record_fields` | 345 | — |
-| `search_context` | 345 | — |
+| `search_context` | 343 | — |
 | `advance_project_phase` | 340 | — |
-| `prep_for_meeting` | 326 | — |
 | `forecast_input_checks` | 324 | — |
+| `prep_for_meeting` | 324 | — |
 | `demote_lead` | 316 | — |
 | `promote_lead` | 303 | — |
-| `merge_records` | 294 | — |
-| `archive_record` | 290 | — |
+| `merge_records` | 291 | — |
+| `archive_record` | 289 | — |
 | `describe_analytics_vocabulary` | 286 | — |
-| `catch_me_up_on` | 280 | 3 scenarios |
-| `draft_email` | 279 | — |
-| `relink_activity` | 277 | — |
+| `catch_me_up_on` | 278 | 3 scenarios |
+| `draft_email` | 278 | — |
+| `relink_activity` | 276 | — |
 | `draft_follow_ups_for` | 273 | — |
 | `decide_approval` | 272 | — |
 | `list_approvals` | 267 | — |
@@ -181,31 +181,31 @@ a term in an addition.
 | `describe_report_blocks` | 245 | — |
 | `decide_approval_bundle` | 235 | — |
 | `qualify_lead` | 229 | — |
-| `apply_tag` | 227 | — |
-| `create_task` | 222 | — |
-| `read_record` | 222 | 3 scenarios |
+| `apply_tag` | 226 | — |
+| `create_task` | 220 | — |
+| `read_record` | 220 | 3 scenarios |
 | `whats_slipping_this_week` | 211 | 2 scenarios |
 | `disqualify_lead` | 209 | — |
 | `list_input_checks` | 209 | — |
 | `at_risk_relationships` | 208 | — |
 | `read_brief` | 206 | — |
-| `relink_activities` | 206 | — |
 | `update_tag` | 205 | — |
 | `commit_import` | 204 | — |
+| `relink_activities` | 204 | — |
 | `merge_tags` | 198 | — |
-| `relink_thread` | 197 | — |
+| `relink_thread` | 196 | — |
 | `data_coverage` | 195 | — |
 | `list_colleagues` | 195 | — |
 | `who_knows` | 194 | — |
 | `list_pipelines` | 191 | — |
-| `intro_path_to` | 190 | 2 scenarios |
+| `intro_path_to` | 187 | 2 scenarios |
 | `create_tag` | 183 | — |
 | `list_channel_providers` | 174 | — |
-| `remove_tag` | 167 | — |
+| `remove_tag` | 166 | — |
 | `check_location_support` | 156 | — |
 | `read_project_360` | 156 | — |
 | `read_approval` | 153 | — |
-| `get_record_tags` | 142 | — |
+| `get_record_tags` | 141 | — |
 | `whoami` | 128 | — |
 | `list_tags` | 95 | — |
 | `get_tag` | 86 | — |

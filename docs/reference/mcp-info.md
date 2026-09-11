@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 76 |
 | Resources | 12 |
-| Tool catalog | 217.9 KB |
+| Tool catalog | 217.6 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 56933 |
+| Approx. wire tokens | 56862 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 99.6 KB | 45% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 57.5 KB | 26% | Yes, every step |
-| Input schemas | 44.7 KB | 20% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.1 KB | 7% | Partly |
-| **Description + input schema** | **102.3 KB** | **46%** | **the recurring cost** |
+| Input schemas | 44.6 KB | 20% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.0 KB | 7% | Partly |
+| **Description + input schema** | **102.0 KB** | **46%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -69,7 +69,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.5 KB |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
-| [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
+| [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.8 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 2.8 KB |
@@ -92,7 +92,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
-| [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.7 KB |
+| [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.6 KB |
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
 | [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 3.8 KB |
@@ -111,7 +111,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 4.4 KB |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 4.3 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.6 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
@@ -126,7 +126,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.0 KB |
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
-| [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
+| [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.5 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.2 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 5.3 KB |
@@ -1119,7 +1119,7 @@ Tag a person, company, deal, lead or project by tag_id, or by tag_name, which mu
     "record_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "project"
@@ -1287,7 +1287,7 @@ Retire a record that should no longer be worked — a duplicate, a dead account,
     "record_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "project",
         "relationship",
@@ -1655,7 +1655,7 @@ Hold a slot in the host's calendar and record the meeting against the records it
           "entity_type": {
             "enum": [
               "person",
-              "organization",
+              "company",
               "deal",
               "lead",
               "project"
@@ -1821,7 +1821,7 @@ Answer "what has been going on with this?" for one person, company, deal, lead, 
     "record_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "project",
@@ -2622,7 +2622,7 @@ WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary fo
 
 **Create a record**
 
-Create a person, organization, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A PERSON created here is visible to the human you are acting for and to nobody else, until they publish it or correspondence with that address earns a widening verdict — attending a meeting together does not earn one. Do not tell anyone a contact you just created is on their colleagues' screens. Search first when the record might already exist — a second copy of a person or account is a problem that then needs merge_records to undo. The new record's id comes back in the result; keep it for anything that links to it. (Governance: runs immediately; requires passport scope "write".)
+Create a person, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A PERSON created here is visible to the human you are acting for and to nobody else, until they publish it or correspondence with that address earns a widening verdict — attending a meeting together does not earn one. Do not tell anyone a contact you just created is on their colleagues' screens. Search first when the record might already exist — a second copy of a person or account is a problem that then needs merge_records to undo. The new record's id comes back in the result; keep it for anything that links to it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -2647,7 +2647,7 @@ Create a person, organization, deal, lead, project, activity or relationship tha
     "record_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "activity",
@@ -3020,7 +3020,7 @@ Put a to-do on someone's list: what is owed, by whom, on which records. Creates 
           "entity_type": {
             "enum": [
               "person",
-              "organization",
+              "company",
               "deal",
               "lead",
               "project"
@@ -4635,7 +4635,7 @@ Compose an email: a reply to a recorded thread (activity_id), or a FIRST message
           "entity_type": {
             "enum": [
               "person",
-              "organization",
+              "company",
               "deal",
               "lead",
               "project"
@@ -4969,9 +4969,9 @@ Draft a follow-up for each deal in a segment at once — today only the slipping
 
 ### enrich
 
-**Enrich an organization from its website**
+**Enrich a company from its website**
 
-Learn about an organization by reading its public website, and propose what was found for a person to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the organization_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a person approves every call before it runs; requires passport scope "enrich".)
+Learn about a company by reading its public website, and propose what was found for a person to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the company_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a person approves every call before it runs; requires passport scope "enrich".)
 
 <details><summary>Input schema</summary>
 
@@ -4981,6 +4981,11 @@ Learn about an organization by reading its public website, and propose what was 
   "properties": {
     "approval_id": {
       "description": "Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
+    "company_id": {
+      "description": "The company to enrich",
       "format": "uuid",
       "type": "string"
     },
@@ -4999,19 +5004,14 @@ Learn about an organization by reading its public website, and propose what was 
       "maxLength": 255,
       "type": "string"
     },
-    "organization_id": {
-      "description": "The organization to enrich",
-      "format": "uuid",
-      "type": "string"
-    },
     "url": {
-      "description": "Absolute http(s) URL to read instead of the organization's own domain",
+      "description": "Absolute http(s) URL to read instead of the company's own domain",
       "format": "uri",
       "type": "string"
     }
   },
   "required": [
-    "organization_id"
+    "company_id"
   ],
   "type": "object"
 }
@@ -5704,7 +5704,7 @@ Read the tags on one person, company or deal, with who applied each and when. Th
     "record_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal"
       ],
       "type": "string"
@@ -6010,14 +6010,14 @@ Find a warm route into a company: who we already know there, and which colleague
 {
   "additionalProperties": false,
   "properties": {
-    "organization_id": {
+    "company_id": {
       "description": "The account to find a warm route into",
       "format": "uuid",
       "type": "string"
     }
   },
   "required": [
-    "organization_id"
+    "company_id"
   ],
   "type": "object"
 }
@@ -6035,7 +6035,7 @@ Find a warm route into a company: who we already know there, and which colleague
         "candidates_truncated": {
           "type": "boolean"
         },
-        "organization_id": {
+        "company_id": {
           "format": "uuid",
           "type": "string"
         },
@@ -6081,7 +6081,7 @@ Find a warm route into a company: who we already know there, and which colleague
       },
       "required": [
         "candidates_truncated",
-        "organization_id",
+        "company_id",
         "routes"
       ],
       "type": "object"
@@ -7055,7 +7055,7 @@ List every pipeline this workspace has with its live stages — the configuratio
 
 **List records**
 
-Enumerate the people, organizations, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one person owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. (Governance: runs immediately; requires passport scope "read".)
+Enumerate the people, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one person owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -7071,7 +7071,7 @@ Enumerate the people, organizations, deals, leads or projects that meet exact co
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) organization — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — forecast_category (commit|best_case|pipeline|omitted), organization_id, owner_id, partner_attribution (sourced|influenced), partner_org_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, organization_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
       "type": "object"
     },
     "limit": {
@@ -7082,7 +7082,7 @@ Enumerate the people, organizations, deals, leads or projects that meet exact co
     "record_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "project"
@@ -7432,7 +7432,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
           "entity_type": {
             "enum": [
               "person",
-              "organization",
+              "company",
               "deal",
               "lead",
               "project"
@@ -7590,7 +7590,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
 
 **Merge two records**
 
-Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and organizations with organizations; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing: the fold cannot be called back, and by default nothing holds it. (Governance: runs immediately; requires passport scope "write".)
+Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and companies with companies; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing: the fold cannot be called back, and by default nothing holds it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -7611,7 +7611,7 @@ Collapse two records for the same real person or company into one, moving the so
     "record_type": {
       "enum": [
         "person",
-        "organization"
+        "company"
       ],
       "type": "string"
     },
@@ -7918,7 +7918,7 @@ Get ready for a specific meeting: given the meeting, the same written brief a pe
     "record_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "project",
@@ -8786,6 +8786,10 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
         "as_of": {
           "type": "string"
         },
+        "company_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "deals": {
           "items": {
             "properties": {
@@ -8918,10 +8922,6 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
             "type": "object"
           },
           "type": "array"
-        },
-        "organization_id": {
-          "format": "uuid",
-          "type": "string"
         },
         "owner_id": {
           "format": "uuid",
@@ -9063,7 +9063,7 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
 
 **Preview an import**
 
-Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is organization, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link people to their employers, map the company column to `organization_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the person weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope "write".)
+Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link people to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the person weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -9084,12 +9084,12 @@ Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each c
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"organization_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands.",
+      "description": "Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"company_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands.",
       "type": "object"
     },
     "object": {
       "enum": [
-        "organization",
+        "company",
         "lead",
         "person"
       ],
@@ -11084,6 +11084,22 @@ Read one project's whole page: company, phase history with time per phase, deals
           ],
           "type": "object"
         },
+        "company": {
+          "properties": {
+            "company_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "company_id",
+            "name"
+          ],
+          "type": "object"
+        },
         "contracts": {
           "properties": {
             "items": {
@@ -11243,22 +11259,6 @@ Read one project's whole page: company, phase history with time per phase, deals
           ],
           "type": "object"
         },
-        "organization": {
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "organization_id": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          "required": [
-            "name",
-            "organization_id"
-          ],
-          "type": "object"
-        },
         "phase_history": {
           "properties": {
             "phase_durations": {
@@ -11329,6 +11329,10 @@ Read one project's whole page: company, phase history with time per phase, deals
             "closed_reason": {
               "type": "string"
             },
+            "company_id": {
+              "format": "uuid",
+              "type": "string"
+            },
             "description": {
               "type": "string"
             },
@@ -11339,10 +11343,6 @@ Read one project's whole page: company, phase history with time per phase, deals
               "type": "string"
             },
             "name": {
-              "type": "string"
-            },
-            "organization_id": {
-              "format": "uuid",
               "type": "string"
             },
             "owner_id": {
@@ -11549,10 +11549,10 @@ Read one record's own stored fields — the values a person would see on its det
       "type": "string"
     },
     "record_type": {
-      "description": "partner is addressed by its ORGANIZATION's id: the row is that company's partner terms, not a separate record.",
+      "description": "partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record.",
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "activity",
@@ -11718,7 +11718,7 @@ Move up to 500 named activities onto one record, all or nothing. Each id must be
     "entity_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "project"
@@ -11875,7 +11875,7 @@ Fix what a recorded activity is about, when a captured mail or meeting landed on
     "entity_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "project"
@@ -12027,7 +12027,7 @@ Move one whole conversation (by thread_key) onto a record, in one transaction. M
     "entity_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "project"
@@ -12182,7 +12182,7 @@ Take one tag off one record — by tag_id or tag_name — leaving the word itsel
     "record_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "project"
@@ -12325,7 +12325,7 @@ Take one tag off one record — by tag_id or tag_name — leaving the word itsel
 
 **Resolve people and companies**
 
-Find out whether the people and companies named in something you are holding already exist here, matched on addresses, phone numbers and company domains rather than on text. It reads only. Nothing is created, changed or merged, and it answers person and organization, never leads. A near match comes back `ambiguous` however close it is. Use search_records to find a record you know exists, and merge_records once a person has decided that two records are one. Call this BEFORE creating a person or company from anything you did not type. Act on `matched`; on `ambiguous` ask which is meant; on `unresolved` say what you will create — a miss is not proof nothing exists. (Governance: runs immediately; requires passport scope "read".)
+Find out whether the people and companies named in something you are holding already exist here, matched on addresses, phone numbers and company domains rather than on text. It reads only. Nothing is created, changed or merged, and it answers person and company, never leads. A near match comes back `ambiguous` however close it is. Use search_records to find a record you know exists, and merge_records once a person has decided that two records are one. Call this BEFORE creating a person or company from anything you did not type. Act on `matched`; on `ambiguous` ask which is meant; on `unresolved` say what you will create — a miss is not proof nothing exists. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -12338,7 +12338,7 @@ Find out whether the people and companies named in something you are holding alr
         "additionalProperties": false,
         "properties": {
           "domains": {
-            "description": "Company domains claimed by the payload. Read for an organization only.",
+            "description": "Company domains claimed by the payload. Read for a company only.",
             "items": {
               "type": "string"
             },
@@ -12346,7 +12346,7 @@ Find out whether the people and companies named in something you are holding alr
             "type": "array"
           },
           "emails": {
-            "description": "Every address on the payload, not just the primary one. For an organization each address also contributes its domain, unless it is a consumer mail domain.",
+            "description": "Every address on the payload, not just the primary one. For a company each address also contributes its domain, unless it is a consumer mail domain.",
             "items": {
               "type": "string"
             },
@@ -12357,12 +12357,12 @@ Find out whether the people and companies named in something you are holding alr
             "description": "Which record type this payload is asking about. Leads are not resolved.",
             "enum": [
               "person",
-              "organization"
+              "company"
             ],
             "type": "string"
           },
           "legal_name": {
-            "description": "The registered company name, when it differs from the trading name. Read for an organization only.",
+            "description": "The registered company name, when it differs from the trading name. Read for a company only.",
             "type": "string"
           },
           "name": {
@@ -13060,7 +13060,7 @@ Answer a question about totals, counts or breakdowns by running one of this work
       "type": "array"
     },
     "report": {
-      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by organization_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
+      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
@@ -13245,7 +13245,7 @@ Find the records most relevant to a description, ranked by meaning as well as by
       "items": {
         "enum": [
           "person",
-          "organization",
+          "company",
           "deal",
           "lead",
           "project"
@@ -13449,7 +13449,7 @@ Find the records most relevant to a description, ranked by meaning as well as by
 
 **Search records**
 
-Find people, organizations, deals, leads and projects when you know roughly what they are called but not which record they are. It matches text stored ON the record. It does not read a timeline: message bodies, call notes and meeting content are not searched, so a query describing what someone said or did will not find them. Use list_records when the question is which records meet a condition rather than what one is called, read_record when you already hold the record's id, and run_report when the question is a count, a total or a breakdown rather than a set of records. Keep each result's record_type and id together: every other tool identifies a record by both, and an id alone does not say which type it belongs to. (Governance: runs immediately; requires passport scope "read".)
+Find people, companies, deals, leads and projects when you know roughly what they are called but not which record they are. It matches text stored ON the record. It does not read a timeline: message bodies, call notes and meeting content are not searched, so a query describing what someone said or did will not find them. Use list_records when the question is which records meet a condition rather than what one is called, read_record when you already hold the record's id, and run_report when the question is a count, a total or a breakdown rather than a set of records. Keep each result's record_type and id together: every other tool identifies a record by both, and an id alone does not say which type it belongs to. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -13474,7 +13474,7 @@ Find people, organizations, deals, leads and projects when you know roughly what
       "description": "Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one.",
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "project",
@@ -13698,7 +13698,7 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
           "entity_type": {
             "enum": [
               "person",
-              "organization",
+              "company",
               "deal",
               "lead",
               "project"
@@ -14324,7 +14324,7 @@ Change stored field values on a record that already exists — a corrected title
     "record_type": {
       "enum": [
         "person",
-        "organization",
+        "company",
         "deal",
         "lead",
         "activity",

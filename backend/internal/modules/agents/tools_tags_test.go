@@ -337,6 +337,13 @@ func (noSuchTag) FindTag(context.Context, string) (ids.UUID, bool, error) {
 	return ids.UUID{}, false, nil
 }
 
+// Both doors, or the unknown-name test stops testing an unknown name: the
+// embedded stub answers ok=true for everything, so a removal reaching only the
+// removal lookup would sail past the no-op this double exists to pin.
+func (noSuchTag) FindTagToRemove(context.Context, string) (ids.UUID, bool, error) {
+	return ids.UUID{}, false, nil
+}
+
 // The vocabulary had no door. apply_tag's own copy says to prefer a tag_id
 // "you already hold", and nothing on the surface could produce one: create was
 // human-only and the listing was declared by nobody. So the only reachable way

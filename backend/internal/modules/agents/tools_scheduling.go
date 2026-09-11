@@ -79,12 +79,22 @@ func (t checkAvailability) Handle(ctx context.Context, in json.RawMessage) (json
 // and their connector state is not this tool's to report.
 func calendarCaveat(backing CalendarBacking) (string, bool) {
 	switch backing {
+	case CalendarBacked:
+		// The ONLY value that buys silence, named rather than defaulted to.
+		// CalendarBacking's zero value is the empty string, so a result built
+		// without setting it used to fall through a `default: no caveat` and
+		// keep freshness.authoritative — an answer claiming to be the last word
+		// on a diary nobody established it had read. That is this file's own
+		// defect reached by forgetting a field, and a value added later would
+		// have inherited it.
+		return "", false
 	case CalendarUnbacked:
 		return noCalendarConnectedMessage, true
-	case CalendarBackingUnknown:
-		return foreignCalendarMessage, true
 	default:
-		return "", false
+		// Unknown, unset, or a state added after this was written. All three
+		// mean the same thing to a reader: nothing here establishes the host's
+		// diary, and nothing may be said about their account.
+		return foreignCalendarMessage, true
 	}
 }
 

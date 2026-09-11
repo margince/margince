@@ -245,6 +245,24 @@ func TestAGenuinelyFreeDayCarriesNoCalendarWarning(t *testing.T) {
 	}
 }
 
+// A result whose backing was never set is treated as unestablished, not as a
+// calendar read.
+//
+// CalendarBacking's zero value is the empty string, so a caller that forgets
+// the field gets it. Silence there would publish freshness.authoritative on a
+// window nothing established — this file's own defect, reached by omission
+// rather than by intent.
+func TestAnUnsetCalendarBackingStillCarriesTheCaveat(t *testing.T) {
+	env := checkAvailabilityWindow(t, AvailabilityResult{Slots: aWorkdayOfSlots()})
+
+	if _, warned := warningNamed(env, warningNoCalendarConnected); !warned {
+		t.Fatalf("a window with no backing set carries no caveat: %v", env.Warnings)
+	}
+	if env.Freshness.Authoritative {
+		t.Error("a window whose source was never established claims to be authoritative")
+	}
+}
+
 // A host who is NOT the acting seat carries the same caveat and says nothing
 // about that person's account.
 //
