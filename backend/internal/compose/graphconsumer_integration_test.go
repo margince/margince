@@ -274,11 +274,11 @@ func TestAContactAddedLaterMeetsTheGhostThatWasWaiting(t *testing.T) {
 		t.Fatalf("seeding the ghost: %v", err)
 	}
 
-	// The ghost's owner needs a real person grant: the matcher now runs under
-	// each owner's own authority, so a member the RBAC resolver reports as
-	// holding nothing is skipped. A fixture that only built a context proved
-	// nothing about that path.
-	grantReadPeopleRole(t, e, e.Rep1, "all")
+	// The ghost's owner needs update authority: the matcher runs under each
+	// owner's own resolved RBAC, and an automatic confirm edits the contact, so
+	// an owner who may only READ people gets a suggestion instead. A member who
+	// imports and manages their own LinkedIn network holds update.
+	grantEditPeopleRole(t, e, e.Rep1, "all")
 
 	// Months later a rep adds the contact by hand.
 	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{
@@ -457,22 +457,37 @@ func TestThePerPersonSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T
 }
 
 // grantReadPeopleRole gives one member a role that reads people at the named
-// row scope.
+// row scope, and grantEditPeopleRole one that also updates them — the authority
+// an automatic confirm now takes, since confirming a match edits the contact. A
+// ghost owner who imports and manages their own network holds the latter.
 //
 // The matcher resolves authority from the DATABASE, not from a test principal,
 // so a fixture that only builds a context proves nothing about which member the
 // sweep will act for.
 func grantReadPeopleRole(t *testing.T, e *integration.Env, user ids.UUID, rowScope string) {
 	t.Helper()
+	grantPeopleRole(t, e, user, rowScope, `{"read":true}`)
+}
+
+func grantEditPeopleRole(t *testing.T, e *integration.Env, user ids.UUID, rowScope string) {
+	t.Helper()
+	grantPeopleRole(t, e, user, rowScope, `{"read":true,"update":true}`)
+}
+
+func grantPeopleRole(t *testing.T, e *integration.Env, user ids.UUID, rowScope, personGrant string) {
+	t.Helper()
 	ctx := context.Background()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var roleID ids.UUID
+		// The key carries the grant too: the same row scope with read-only and
+		// with read-write are two different roles, and keying on scope alone
+		// would hand the second caller the first's permissions.
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO role (key, name, permissions)
-			VALUES ('ghost_owner_' || $1, 'Ghost owner test',
-			        format('{"row_scope":"%s","objects":{"person":{"read":true}}}', $1)::jsonb)
+			VALUES ('ghost_owner_' || $1 || '_' || left(md5($2), 6), 'Ghost owner test',
+			        format('{"row_scope":"%s","objects":{"person":%s}}', $1, $2)::jsonb)
 			ON CONFLICT (key) DO UPDATE SET name = EXCLUDED.name
-			RETURNING id`, rowScope).Scan(&roleID); err != nil {
+			RETURNING id`, rowScope, personGrant).Scan(&roleID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
