@@ -211,9 +211,9 @@ func TestFlipChecksCountTheRowsNoDeclarationCanProject(t *testing.T) {
 	markBackfillDone(ctx, t, pool, IncumbentClassContacts)
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
-	ingestMirrorRow(ctx, t, ms, "person", "p-old-1", oldContactsDeclaration, baseline)
-	ingestMirrorRow(ctx, t, ms, "person", "p-old-2", oldContactsDeclaration, baseline)
-	ingestMirrorRow(ctx, t, ms, "person", "p-current", currentContactsDeclaration, baseline)
+	ingestMirrorRow(ctx, t, ms, "contact", "p-old-1", oldContactsDeclaration, baseline)
+	ingestMirrorRow(ctx, t, ms, "contact", "p-old-2", oldContactsDeclaration, baseline)
+	ingestMirrorRow(ctx, t, ms, "contact", "p-current", currentContactsDeclaration, baseline)
 
 	checks, err := svc.FlipChecks(ctx)
 	if err != nil {

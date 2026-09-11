@@ -71,7 +71,7 @@ type FlipChecks struct {
 	//
 	// It is a SUBSET of what holds ForceFreshDone shut, and the useful one:
 	// the rest of that staleness drains by itself, while these rows never do.
-	// An operator blocked by force_fresh_incomplete is exactly the person who
+	// An operator blocked by force_fresh_incomplete is exactly the human who
 	// needs to know which of the two they are waiting on, and telling them
 	// the preflight failed without telling them how much is stuck leaves them
 	// waiting on a sweep that will never clear it.
