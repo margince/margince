@@ -134,6 +134,20 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	out.Access = access
 	out.Summary = availableSummary(activity, parties, len(attachments), access.DisplayStatus)
 
+	// What HAPPENED to it, as a page of one — so which rows may carry a
+	// delivery is decided where the timeline decides it. Read after the access
+	// gate for the reason the attachment count is: whether a message left is
+	// something about the message, so the caller's own gate is what decides.
+	// Not WithEmailRowFacts, because the attachments are already in hand here
+	// and counting them again would be a statement for a number this function
+	// can see.
+	row := []crmcontracts.Activity{{Id: activity.Id, EmailSummary: &out.Summary}}
+	states, err := DeliveryStatesFor(ctx, tx, emailIDsOf(row))
+	if err != nil {
+		return crmcontracts.EmailPresentation{}, err
+	}
+	applyDeliveryStates(row, states)
+
 	thread, err := readThreadPage(ctx, tx, activity, threadCursor)
 	if err != nil {
 		return crmcontracts.EmailPresentation{}, err

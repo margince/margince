@@ -45,6 +45,27 @@ const WITHHELD: EmailSummary = {
   display_status: "withheld",
 };
 
+// An outbound message the provider confirmed, and the same message refused.
+// Both carry a counterparty, so what separates them on screen is the delivery
+// and nothing else — which is the whole claim.
+const DELIVERED: EmailSummary = {
+  ...READABLE,
+  activity_id: "33333333-3333-4333-8333-333333333333",
+  direction: "outbound",
+  counterparty: "Ana Sommer",
+  delivery: { state: "sent", delivered_at: "2026-09-01T09:13:00Z", files: [] },
+};
+
+const PARKED: EmailSummary = {
+  ...DELIVERED,
+  activity_id: "44444444-4444-4444-8444-444444444444",
+  delivery: {
+    state: "parked",
+    reason: "the channel refused the attachment",
+    files: [],
+  },
+};
+
 const PRESENTATION = {
   id: READABLE.activity_id,
   lifecycle: "delivered",
@@ -221,7 +242,15 @@ describe("EmailEntry", () => {
   it("keeps the direction right on an outbound row with no name", () => {
     wrap(
       <EmailEntry
-        summary={{ ...WITHHELD, direction: "outbound" }}
+        // A READABLE row with nothing to glue a name from. It used to borrow
+        // the withheld fixture for that, which now earns a verb of its own:
+        // this case is about the missing NAME, so the row under it has to be
+        // one the reader may read.
+        summary={{
+          ...READABLE,
+          direction: "outbound",
+          counterparty: undefined,
+        }}
         timestamp="1 Sep 09:12"
         whyNotOpenable="noDetail"
       />,
@@ -274,6 +303,125 @@ describe("EmailEntry", () => {
       />,
     );
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  // The defect this arc exists to remove: "Sent" was drawn from DIRECTION
+  // alone. A message parked because the channel refused its files read exactly
+  // like one the provider confirmed, and the rep was told their mail went.
+  it("does not call a parked message sent", () => {
+    wrap(
+      <EmailEntry
+        summary={PARKED}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
+    expect(screen.getByText("Not sent to Ana Sommer")).toBeInTheDocument();
+    expect(screen.queryByText("Sent to Ana Sommer")).not.toBeInTheDocument();
+    // And the part a rep can act on, in the words the park was recorded with.
+    expect(
+      screen.getByText("the channel refused the attachment"),
+    ).toBeInTheDocument();
+  });
+
+  it("says a confirmed message went, and says nothing about trouble", () => {
+    wrap(
+      <EmailEntry
+        summary={DELIVERED}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
+    expect(screen.getByText("Sent to Ana Sommer")).toBeInTheDocument();
+    expect(
+      screen.queryByText("the channel refused the attachment"),
+    ).not.toBeInTheDocument();
+  });
+
+  // A bounce is a later fact about a send the provider DID accept, so the
+  // delivery keeps `sent` in the database and says `bounced` on the wire. A
+  // row that reads the status alone tells a rep the mail arrived.
+  it("does not call a bounced message sent", () => {
+    wrap(
+      <EmailEntry
+        summary={{
+          ...DELIVERED,
+          delivery: {
+            state: "bounced",
+            reason: "550 5.1.1 user unknown",
+            files: [],
+          },
+        }}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
+    expect(screen.getByText("Did not reach Ana Sommer")).toBeInTheDocument();
+    expect(screen.getByText("550 5.1.1 user unknown")).toBeInTheDocument();
+  });
+
+  // A message somebody LOGGED rather than sent through the product has no
+  // delivery at all. That is the rep's own claim that it went, and the row
+  // keeps saying so.
+  it("still says sent for a message with no delivery of its own", () => {
+    wrap(
+      <EmailEntry
+        summary={{ ...DELIVERED, delivery: undefined }}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
+    expect(screen.getByText("Sent to Ana Sommer")).toBeInTheDocument();
+  });
+
+  // The chip counts what the message CARRIED, which the snapshot records and
+  // the live list forgets: archiving the document afterwards drops
+  // attachment_count to zero and must not rewrite what already went out.
+  it("counts the files a message was staged with, not the ones still filed", () => {
+    wrap(
+      <EmailEntry
+        summary={{
+          ...DELIVERED,
+          attachment_count: 0,
+          delivery: {
+            state: "sent",
+            files: [
+              { filename: "contract.pdf" },
+              { filename: "annex.pdf" },
+              { filename: "terms.pdf" },
+            ],
+          },
+        }}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("contract.pdf, annex.pdf, terms.pdf"),
+    ).toBeVisible();
+  });
+
+  // A withheld row says nothing about delivery either. "This message you may
+  // not read was parked because the recipient blocked us" is the content the
+  // row just refused, in smaller print.
+  it("says nothing about delivery on a withheld row", () => {
+    wrap(
+      <EmailEntry
+        summary={{ ...PARKED, display_status: "withheld" }}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="withheld"
+      />,
+    );
+    expect(
+      screen.queryByText("the channel refused the attachment"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Not sent/)).not.toBeInTheDocument();
+    // And it does not claim the opposite either: the row keeps the direction
+    // and loses the verb, because "Sent" beside a message whose delivery it
+    // just refused to read would be a claim it cannot support.
+    expect(screen.queryByText(/^Sent/)).not.toBeInTheDocument();
+    expect(screen.getByText("Outgoing")).toBeInTheDocument();
   });
 });
 

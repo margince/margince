@@ -108,6 +108,26 @@
   height: 12px;
 }
 
+/* Why a message did not arrive. It reads as trouble at a glance and still
+   reads at all where colour does not survive: the glyph carries the meaning
+   with the colour turned off. */
+.emailentry__trouble {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  color: var(--dangerText);
+  font-size: var(--fs-meta);
+}
+
+.emailentry__trouble > svg {
+  width: 12px;
+  height: 12px;
+  /* Aligned to the first line of a reason that wraps, rather than centred on
+     the block. */
+  margin-top: 2px;
+  flex: none;
+}
+
 .emailentry--open {
   border: 0;
   border-radius: var(--r-sm);
