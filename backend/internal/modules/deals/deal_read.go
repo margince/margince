@@ -120,23 +120,56 @@ const dealNameColumn = "name"
 // the columns, for every list in the product; where that and the older set
 // disagree, this follows the rule.
 //
-// `name` and `status` are the two the ruling reaches today, because they are
-// columns of `deal` and the list machinery orders by a base column. `stage` and
-// the two organization columns are joined — a stage sorts by its POSITION in
-// its pipeline rather than by its name, and a partner sorts by the
-// organization's — and storekit's ORDER BY renders one quoted identifier, so
-// those three need the sort model to take an expression before they can be
-// offered. Named here rather than left as an unexplained gap: the frontend
-// columns cite this vocabulary by name, so a reader who finds two of the four
-// fixed needs to know why the others were not.
-var dealListFields = map[string]string{
-	"created_at":          storekit.KindTimestamp,
-	"updated_at":          storekit.KindTimestamp,
-	"last_activity_at":    storekit.KindTimestamp,
-	"amount_minor":        fieldcatalog.TypeCurrency,
-	"expected_close_date": fieldcatalog.TypeDate,
-	dealNameColumn:        fieldcatalog.TypeText,
-	"status":              fieldcatalog.TypeText,
+// Three of the eight are not columns of `deal` at all: a stage and the two
+// organizations are references, so each carries the expression that orders it.
+var dealListFields = map[string]storekit.SortField{
+	"created_at":         storekit.Column(storekit.KindTimestamp),
+	"updated_at":         storekit.Column(storekit.KindTimestamp),
+	"last_activity_at":   storekit.Column(storekit.KindTimestamp),
+	"amount_minor":       storekit.Column(fieldcatalog.TypeCurrency),
+	closeDateField:       storekit.Column(fieldcatalog.TypeDate),
+	dealNameColumn:       storekit.Column(fieldcatalog.TypeText),
+	"status":             storekit.Column(fieldcatalog.TypeText),
+	filterStageID:        {Kind: fieldcatalog.TypeNumber, Expr: orderByStagePosition},
+	filterOrganizationID: {Kind: fieldcatalog.TypeText, Expr: orderByReadableOrgName(filterOrganizationID)},
+	filterPartnerOrgID:   {Kind: fieldcatalog.TypeText, Expr: orderByReadableOrgName(filterPartnerOrgID)},
+}
+
+// orderByStagePosition orders by a stage's place in its PIPELINE, not by its
+// name.
+//
+// Alphabetical is almost never what somebody sorting by stage means: they want
+// the funnel, and "Discovery, Negotiation, Proposal" is the funnel shuffled.
+// `stage` is workspace configuration and carries no row scope, so the position
+// is the same number for every reader.
+func orderByStagePosition(context.Context, func(any) int) (string, error) {
+	return "(SELECT stage_sort.position FROM stage stage_sort WHERE stage_sort.id = deal.stage_id)", nil
+}
+
+// orderByReadableOrgName orders by the referenced organization's name, and by
+// NOTHING for a reference this caller may not read.
+//
+// Ordering by a value is reading it — the rule refuseMaskedSort already applies
+// to masked amounts — so a page ordered by names the caller is refused would
+// disclose them through its order. The row scope goes INSIDE the subquery
+// rather than beside it: a reference outside the caller's scope then answers
+// NULL, which the ORDER BY already puts last, so those deals land in the tail
+// together and the order says nothing about which company they name. That is
+// the same answer the row itself gives, where the reference is withheld.
+func orderByReadableOrgName(column string) func(context.Context, func(any) int) (string, error) {
+	return func(ctx context.Context, arg func(any) int) (string, error) {
+		scope, err := auth.ScopeClauseFor(ctx, "organization", "org_sort", arg)
+		if err != nil {
+			return "", err
+		}
+		if scope != "" {
+			scope = " AND " + scope
+		}
+		// The column is one of this map's own keys, never a caller's string.
+		return storekit.SQLf(
+			"(SELECT org_sort.display_name FROM organization org_sort WHERE org_sort.id = deal.%s%s)",
+			column, scope), nil
+	}
 }
 
 // wireRowTags renders one deal row's tag chips. A twin of the people module's:

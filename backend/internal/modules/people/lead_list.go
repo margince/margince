@@ -49,14 +49,14 @@ const (
 // name. That header no longer offers a sort, and
 // TestEverySortAListOffersIsOneItsResourceAccepts is what keeps the two
 // answering together.
-var leadListFields = map[string]string{
-	createdAtColumn:   storekit.KindTimestamp,
-	updatedAtColumn:   storekit.KindTimestamp,
-	leadNameColumn:    fieldcatalog.TypeText,
-	leadCompanyColumn: fieldcatalog.TypeText,
-	leadStatusColumn:  fieldcatalog.TypeText,
-	leadScoreColumn:   fieldcatalog.TypeNumber,
-	ownerIDColumn:     storekit.KindUUID,
+var leadListFields = map[string]storekit.SortField{
+	createdAtColumn:   storekit.Column(storekit.KindTimestamp),
+	updatedAtColumn:   storekit.Column(storekit.KindTimestamp),
+	leadNameColumn:    storekit.Column(fieldcatalog.TypeText),
+	leadCompanyColumn: storekit.Column(fieldcatalog.TypeText),
+	leadStatusColumn:  storekit.Column(fieldcatalog.TypeText),
+	leadScoreColumn:   storekit.Column(fieldcatalog.TypeNumber),
+	ownerIDColumn:     storekit.Column(storekit.KindUUID),
 }
 
 // ListLeads is the row-scoped lead list read: quick-find, the status and

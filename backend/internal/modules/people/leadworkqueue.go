@@ -116,7 +116,7 @@ func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalo
 	if scope != "" {
 		where = append(where, scope)
 	}
-	defaultSort, err := storekit.ParseListSort(nil, leadListFields)
+	defaultSort, err := storekit.ParseListSort(ctx, nil, leadListFields, arg)
 	if err != nil {
 		return nil, nil, nil, err
 	}

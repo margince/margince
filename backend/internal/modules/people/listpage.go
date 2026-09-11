@@ -38,7 +38,7 @@ type listPageSpec[T any] struct {
 	columns string
 	// fields is the core sortable vocabulary (data-model §13.5); active
 	// cf_ columns join it per request.
-	fields map[string]string
+	fields map[string]storekit.SortField
 	// filters appends the request's optional WHERE clauses (their
 	// arguments through arg) — typically listFilters.clauses plus any
 	// type-specific extras.
@@ -63,15 +63,18 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	sorted, err := storekit.ParseListSort(sortSpec, storekit.SortVocabulary(spec.fields, active))
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
 	limit := storekit.ClampLimit(limitIn)
 
 	where := []string{whereAlways}
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
+
+	// The sort first, because a reference sort binds parameters of its own and
+	// every clause below binds through the same counter.
+	sorted, err := storekit.ParseListSort(ctx, sortSpec, storekit.SortVocabulary(spec.fields, active), arg)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
 
 	scope, err := auth.ScopeClauseFor(ctx, spec.entity, "", arg)
 	if err != nil {

@@ -111,17 +111,17 @@ const projectQuickFindExpr = `(coalesce(name,'') || ' ' || coalesce(key,''))`
 const projectNameField = "name"
 
 // projectListFields is the project list's core sortable vocabulary.
-var projectListFields = map[string]string{
-	"created_at":       storekit.KindTimestamp,
-	"updated_at":       storekit.KindTimestamp,
-	"last_activity_at": storekit.KindTimestamp,
-	projectNameField:   fieldcatalog.TypeText,
-	"target_end_date":  fieldcatalog.TypeDate,
+var projectListFields = map[string]storekit.SortField{
+	"created_at":        storekit.Column(storekit.KindTimestamp),
+	"updated_at":        storekit.Column(storekit.KindTimestamp),
+	"last_activity_at":  storekit.Column(storekit.KindTimestamp),
+	projectNameField:    storekit.Column(fieldcatalog.TypeText),
+	targetEndDateColumn: storekit.Column(fieldcatalog.TypeDate),
 	// The Owner header has offered this sort for as long as the list has drawn
 	// the column, and the server refused it: `project.owner_id` is a column of
 	// the row like any other, so the refusal was the vocabulary's omission
 	// rather than anything about the field.
-	filterOwnerID: storekit.KindUUID,
+	filterOwnerID: storekit.Column(storekit.KindUUID),
 }
 
 // ListProjects answers one page under the caller's row scope.
