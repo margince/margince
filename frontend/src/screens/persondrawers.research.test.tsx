@@ -1,4 +1,5 @@
 /** @vitest-environment jsdom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   render,
@@ -9,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { LocaleProvider } from "../i18n";
 import { PersonResearchDrawer } from "./persondrawers";
 import { providerCompletedProfile } from "./personprovider.fixtures";
 import {
@@ -191,7 +193,11 @@ describe("the research drawer mapping claims to profile fields", () => {
     );
     await user.click(screen.getByRole("button", { name: /review & save/i }));
 
-    expect(await screen.findByText(/added to the record/i)).toBeDefined();
+    // The count the endpoint reported, not just that something was said — a
+    // confirmation that misreports how many landed is as wrong as none.
+    expect(
+      await screen.findByText(/1 claim added to the record/i),
+    ).toBeDefined();
     await waitFor(() => expect(closed).toBe(true));
     expect(saved).toHaveLength(1);
   });
@@ -212,5 +218,59 @@ describe("the research drawer mapping claims to profile fields", () => {
 
     await waitFor(() => expect(closed).toBe(true));
     expect(saved).toHaveLength(0);
+  });
+
+  it("clears staged mappings when it closes, so a reopen starts clean", async () => {
+    // The page keeps the drawer mounted and only toggles `open`. Without a reset
+    // a mapping made in one session would survive the close and be inherited by
+    // a later run that reuses the ordinal — saving a stale value under it.
+    const user = userEvent.setup();
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read"] }),
+      "POST /people/p-1/research": () =>
+        jsonResponse({
+          person_id: "p-1",
+          state: "ready",
+          provider_name: "Clearbit",
+          generated_at: "2026-08-18T09:00:00Z",
+          sources_read: 2,
+          claims: [acmeClaim],
+        }),
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const ui = (open: boolean) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ToastProvider>
+            <PersonResearchDrawer
+              personId="p-1"
+              personName="Dana Buyer"
+              open={open}
+              onClose={() => undefined}
+            />
+            <ToastRegion />
+          </ToastProvider>
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(ui(true));
+
+    await screen.findByText(acmeClaim.body);
+    const field = () =>
+      screen.getByRole("combobox", { name: /profile field/i });
+    await user.click(field());
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", { name: "Role" }),
+    );
+    expect(field().textContent).toContain("Role");
+
+    // Close, then reopen the still-mounted drawer.
+    rerender(ui(false));
+    rerender(ui(true));
+
+    await screen.findByText(acmeClaim.body);
+    expect(field().textContent).toContain("Choose a field");
   });
 });

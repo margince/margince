@@ -3,7 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
@@ -11,7 +11,7 @@ import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { formatNumber, ordinalNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { throwProblem } from "./common";
 import { PersonProviderSection } from "./personprovider";
 
@@ -212,11 +212,24 @@ export function PersonResearchDrawer({
   onClose: () => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const toast = useToast();
   const queryClient = useQueryClient();
   const [dismissed, setDismissed] = useState<ReadonlySet<number>>(new Set());
   const [edits, setEdits] = useState<Record<number, Mapping>>({});
+
+  // The drawer stays mounted while the page toggles `open`, so its edits and
+  // dismissals would otherwise outlive the run they were made against — and a
+  // later run reusing a claim's ordinal would inherit them, saving a stale value
+  // or hiding a claim nobody dismissed. Clearing on close hands every reopen a
+  // clean slate, whichever way it was closed (save, discard or Escape).
+  useEffect(() => {
+    if (!open) {
+      setEdits({});
+      setDismissed(new Set());
+    }
+  }, [open]);
 
   const run = useQuery({
     enabled: open,
@@ -248,7 +261,9 @@ export function PersonResearchDrawer({
     },
     onSuccess: async (saved) => {
       toast.show(
-        t("person.research.saved", { count: formatNumber(saved, locale) }),
+        plural("person.research.saved", saved, {
+          count: formatNumber(saved, locale),
+        }),
       );
       await queryClient.invalidateQueries({
         queryKey: ["personResearch", personId],
@@ -354,10 +369,11 @@ export function PersonResearchDrawer({
           <Button onClick={onClose}>{t("person.research.discard")}</Button>
           <Button
             variant="primary"
-            disabled={toSave.length === 0 || save.isPending}
+            disabled={toSave.length === 0}
+            pending={save.isPending}
             onClick={() => save.mutate(toSave)}
           >
-            {t("person.research.save", {
+            {plural("person.research.save", toSave.length, {
               count: formatNumber(toSave.length, locale),
             })}
           </Button>
