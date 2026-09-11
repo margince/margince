@@ -306,7 +306,13 @@ func (h Handlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.svc.ChangePassword(r.Context(), req.CurrentPassword, req.NewPassword)
+	// The user-agent rides the context so the fresh session this mints records
+	// the device it was changed from — the same capture Login and the SSO
+	// callback do, and the reason it matters here is sharper: ChangePassword
+	// revokes every prior session, so the one it issues is the ONLY row the
+	// session list will show, and a blank device there would be this account's
+	// whole history.
+	token, err := h.svc.ChangePassword(withUserAgent(r.Context(), r.UserAgent()), req.CurrentPassword, req.NewPassword)
 	switch {
 	case errors.Is(err, errAccountLocked):
 		// Same answer the login path gives a locked account, for the same

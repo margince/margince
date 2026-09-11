@@ -255,6 +255,12 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	}
 	opts = append(opts, passwordOpts...)
 
+	// The second-factor login challenge shares the OAuth state HMAC key, domain-
+	// separated by token type: a deployment that set one for its connect flows
+	// gets MFA sign-in armed too, and one that set none serves the challenge as
+	// unavailable rather than minting a token nothing can verify.
+	opts = append(opts, compose.WithMFAChallengeSigner(cfg.connectorStateKey))
+
 	// The signing key enables the mutating /webhook-subscriptions surface
 	// (create/rotate/replay); without it those paths answer an honest 503.
 	if cfg.webhookKey != "" {

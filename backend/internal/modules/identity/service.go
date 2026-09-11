@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -56,6 +57,20 @@ type Service struct {
 	// module identity never imports. Nil ⟹ nothing caps seats, which is what
 	// a role that resolved no license posture means.
 	seatCeiling SeatCeiling
+	// requireSSO answers whether this installation has switched password sign-in
+	// off (enforced-SSO mode). Nil when unwired — a deployment that never
+	// composed the reader behaves exactly as one whose policy is off, so the
+	// password path stays open. See ssoenforcement.go.
+	requireSSO func(ctx context.Context) (bool, error)
+	// requireMFA answers whether this installation makes a second factor
+	// mandatory. Nil when unwired — no enforcement, and Authenticate then reads
+	// nothing extra per request. See mfachallenge.go.
+	requireMFA func(ctx context.Context) (bool, error)
+	// vault seals a member's TOTP secret at rest: the secret must be recoverable
+	// to verify a code (unlike a password, which is only ever compared), so it is
+	// sealed rather than hashed. Nil when unwired, which is what the MFA methods
+	// check before they touch it. See mfa.go.
+	vault keyvault.Vault
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
@@ -99,9 +114,14 @@ type Identity struct {
 	// somebody else chose — a configured bootstrap's operator-supplied
 	// credential. Every authenticated route is refused until it is replaced.
 	MustChangePassword bool
-	Roles              []string
-	Teams              []ids.TeamID
-	Permissions        principal.Permissions
+	// MustEnrolMFA is true while require-MFA is on and this account has no
+	// confirmed second factor: every route but MFA enrolment is refused until
+	// one is set up, the same confinement MustChangePassword uses. Derived per
+	// request from the policy and the enrolment, not a stored column.
+	MustEnrolMFA bool
+	Roles        []string
+	Teams        []ids.TeamID
+	Permissions  principal.Permissions
 }
 
 // systemRoles is the seeded default role set (data-model §2.4, ADR-0110);
@@ -253,6 +273,12 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		return Identity{}, "", ErrBadCredentials
 	}
 	wsID := ids.From[ids.WorkspaceKind](rawWsID)
+	// Read before the credential check so the outcome of a genuine outage is a
+	// refused login rather than a session minted against an unknown policy.
+	sso, err := s.enforcedSSO(ctx)
+	if err != nil {
+		return Identity{}, "", err
+	}
 	token, tokenHash, err := mintSessionToken()
 	if err != nil {
 		return Identity{}, "", err
@@ -264,25 +290,43 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		if err != nil {
 			return err
 		}
+		id = Identity{UserID: account.UserID, WorkspaceID: wsID, Email: email, DisplayName: account.DisplayName, SeatType: account.SeatType}
+		var loadErr error
+		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, account.UserID)
+		if loadErr != nil {
+			return loadErr
+		}
+		// Enforced SSO closes the password path to everyone but an admin, and
+		// only AFTER the credential check above — so a wrong password is still
+		// refused first and neutrally, never answered differently because the
+		// mode is on. Rolls back before any session is minted.
+		if sso && !id.hasRole(roleAdmin) {
+			return errSSORequired
+		}
+		// A member with an active second factor gets no session from the password
+		// alone: the flow stops here and resumes at /auth/mfa. Checked after the
+		// SSO gate so an admin break-glass password login is still challenged for
+		// its factor if they hold one.
+		mfaConfirmed, err := hasConfirmedMFA(ctx, tx, account.UserID)
+		if err != nil {
+			return err
+		}
+		if mfaConfirmed {
+			return errMFARequired
+		}
 		if err := insertSession(ctx, tx, account.UserID, tokenHash); err != nil {
 			return err
 		}
 		if err := auditLogin(ctx, tx, account.UserID, "password login"); err != nil {
 			return err
 		}
-
-		id = Identity{UserID: account.UserID, WorkspaceID: wsID, Email: email, DisplayName: account.DisplayName, SeatType: account.SeatType}
 		// Failing here would answer correct credentials with a 500 while
 		// wrong ones still got 401 — telling an attacker which passwords
 		// are right — so InstallationNameOf coalesces an absent row to
 		// the empty string rather than erroring.
 		var nameErr error
-		if id.WorkspaceName, nameErr = InstallationNameOf(ctx, tx); nameErr != nil {
-			return nameErr
-		}
-		var loadErr error
-		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, account.UserID)
-		return loadErr
+		id.WorkspaceName, nameErr = InstallationNameOf(ctx, tx)
+		return nameErr
 	})
 	if errors.Is(err, errAccountLocked) {
 		// A §27-locked account is refused, but INDISTINGUISHABLY from bad
@@ -306,6 +350,12 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		}
 		return Identity{}, "", err
 	}
+	if errors.Is(err, errMFARequired) {
+		// Password verified; a second factor is owed. The id carries the user the
+		// challenge must bind to — populated before the gate rolled the tx back —
+		// but no session token: that waits for /auth/mfa.
+		return id, "", errMFARequired
+	}
 	if err != nil {
 		return Identity{}, "", err
 	}
@@ -323,6 +373,12 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 	// session and app_user, and a request already carries this same value from
 	// the middleware before any session is looked up.
 	wsID, err := s.InstallationWorkspace(ctx)
+	if err != nil {
+		return Identity{}, err
+	}
+	// Read before the tx (like the login gates), so the per-request enrolment
+	// check below runs only when the installation actually requires a factor.
+	requireMFA, err := s.mfaMandatory(ctx)
 	if err != nil {
 		return Identity{}, err
 	}
@@ -380,7 +436,20 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		}
 		var loadErr error
 		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, userID)
-		return loadErr
+		if loadErr != nil {
+			return loadErr
+		}
+		// Confine a member with no confirmed factor while the installation
+		// requires one — the enrolment check runs only when the policy is on, so
+		// an installation that never required MFA pays nothing for it.
+		if requireMFA {
+			confirmed, err := hasConfirmedMFA(ctx, tx, userID)
+			if err != nil {
+				return err
+			}
+			id.MustEnrolMFA = !confirmed
+		}
+		return nil
 	})
 	if err != nil {
 		return Identity{}, err

@@ -61,7 +61,15 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
 	// serves the already-bound singleton organization.
-	identitySvc := identity.NewService(pool)
+	// The login path reads the enforced-SSO policy fresh per attempt, so an
+	// admin turning the mode on or off takes effect without a restart. A
+	// dedicated settings-store handle rather than the one the settings HANDLERS
+	// hold: both are stateless readers over the same rows, and the login service
+	// is composed here while that store is assembled elsewhere.
+	authPolicy := identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool))
+	identitySvc := identity.NewService(pool).
+		WithRequireSSO(authPolicy.SSOEnforced).
+		WithRequireMFA(authPolicy.MFARequired)
 	// The standing-grant edge: identity mints the credential, agents/runner
 	// stores the answer, and neither may import the other. Both halves of one
 	// fact, committed in one transaction — agentgrantseam.go says why.

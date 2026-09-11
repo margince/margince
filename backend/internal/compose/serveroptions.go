@@ -213,9 +213,27 @@ func WithBlobstore(store blobstore.Store) Option {
 // Gmail (WithGmailCapture) re-wires this over its own richer registry, which
 // upgrades the mailbox half without ever making the channel half depend on
 // that config.
+// WithMFAChallengeSigner arms the second-factor login challenge with the
+// deployment's HMAC key. Without it a login that would challenge fails closed
+// rather than mint an unsigned token; the same key the OAuth state flows use is
+// reused, domain-separated by token type, so no second secret is required.
+func WithMFAChallengeSigner(key string) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		signer := newMFAChallengeSigner([]byte(key))
+		if signer.key == nil {
+			return
+		}
+		s.authHandlers = s.WithMFAChallengeSigner(signer)
+	}
+}
+
 func WithKeyvault(vault keyvault.Vault) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.vault = vault
+		// The MFA endpoints seal each member's TOTP secret here; without a vault
+		// they serve enrolment as unavailable rather than storing a seed in the
+		// clear. Mutates the one identity service the auth handlers already hold.
+		s.authHandlers = s.WithMFAVault(vault)
 		// Backfilled for the same reason the object store is: WithDataReset may
 		// have already run, and a reset that cannot reach the vault leaves the
 		// sealed credentials of the installation it just wiped resident.

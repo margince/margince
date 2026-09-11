@@ -276,8 +276,61 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeResponse' }
+        '202':
+          description: >-
+            The password was correct but a second factor is required: no session is set yet.
+            The body carries a short-lived `mfa_challenge` to present, with the authenticator
+            code, to `POST /auth/mfa`. A distinct status rather than a variant 200 body, so a
+            client that has not learned MFA still treats only 200 as signed-in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaChallenge' }
         '401':
           description: Invalid credentials.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '403':
+          description: >-
+            Refused with `code: sso_required` — the credentials were correct, but this
+            installation has closed the password path (`require_sso`) and the account is not an
+            admin. The client sends the caller to single sign-on rather than showing a password
+            error. Admins are exempt (break-glass), so they never see this.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/mfa:
+    post:
+      tags: [Identity]
+      operationId: completeMfaChallenge
+      security: []   # pre-auth: the signed challenge from /auth/login is the credential
+      x-agent-access: auth-bootstrap
+      summary: Complete a second-factor challenge and open a session.
+      description: |
+        Second half of an MFA sign-in. Present the `mfa_challenge` from a `202` login together
+        with a current authenticator code — or an unused recovery code — and, on success, a
+        session is minted and the `crm_session` cookie set, exactly as `POST /auth/login` does
+        for a member with no second factor. A wrong code, or an expired or tampered challenge,
+        is a neutral 401. The challenge is short-lived; a stale one is refused.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MfaLoginRequest' }
+      responses:
+        '200':
+          description: Authenticated; session cookie set.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: 'crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeResponse' }
+        '401':
+          description: The code, or the challenge, is not valid.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -15102,6 +15155,57 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /users/{id}/sessions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: listUserSessions
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: The sessions open under a member's account. Admin-only, human-only.
+      description: |
+        For a `user_admin` holder: the live sessions open under another member's account,
+        each naming the device it was opened from. The self-service `GET /me/sessions` is the
+        owner's own view; this is the administrative one, so it carries the grant rather than
+        being self-scoped. No `current` marker — the admin's own request is never one of the
+        target's sessions. No IP, the same coarser view the owner gets. A delegated admin may
+        not view a full admin's sessions (403), and an unknown member is 404.
+      responses:
+        '200':
+          description: The member's live sessions, newest activity first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserSessionList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /users/{id}/sessions/{sessionId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: sessionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [Identity]
+      operationId: revokeUserSession
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: End one of a member's sessions. Admin-only, human-only.
+      description: |
+        For a `user_admin` holder: ends one session open under another member's account — the
+        administrative counterpart to a person signing their own device out. A session id the
+        member does not hold is answered 404, never 403, so an admin cannot probe ids by whose
+        revoke lands; a delegated admin may not end a full admin's session (403); an unknown
+        member is 404. Ending an already-ended session is a no-op. The action is audited naming
+        both the acting admin and the member.
+      responses:
+        '204': { description: 'The session is revoked, or was already.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /users/{id}/password-link:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -19643,6 +19747,137 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /me/sessions:
+    get:
+      tags: [Identity]
+      operationId: listMySessions
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: The sessions open under your account.
+      description: |
+        Always the CALLER's own. Each entry names the device the session was
+        opened from and when, and marks the one making this request, so a person
+        can recognise a session they do not know and end it. The opaque token is
+        never returned — a session is named here by its own id, which is the
+        handle `DELETE` takes. The address a session was opened from is
+        deliberately withheld: the device is enough to recognise it by, and the
+        IP is a sharper disclosure than the list needs.
+      responses:
+        '200':
+          description: The caller's live sessions, newest activity first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MySessionList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/sessions/{sessionId}:
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [Identity]
+      operationId: revokeMySession
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: End one of your sessions.
+      description: |
+        Ends the caller's own session named by its id — including the session
+        making the request, which is how a person signs THIS device out by
+        choosing it from the list. A session id that is not the caller's is
+        answered 404, never 403: whose revoke succeeds must not disclose whether
+        a session exists. Ending an already-ended session is a no-op, not an
+        error.
+      responses:
+        '204': { description: 'The session is revoked, or was already.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /me/mfa:
+    get:
+      tags: [Identity]
+      operationId: getMyMfa
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Your own multi-factor state.
+      description: |
+        Always the CALLER's own: whether a second factor is enrolled, whether it is
+        confirmed (a pending enrolment is not yet a factor), and how many one-time recovery
+        codes remain.
+      responses:
+        '200':
+          description: The caller's MFA state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Identity]
+      operationId: disableMyMfa
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Turn your own multi-factor authentication off.
+      description: |
+        Removes the caller's own second factor: the enrolment, its recovery codes, and the
+        sealed secret. Idempotent — disabling when nothing is enrolled is a no-op.
+      responses:
+        '204': { description: 'MFA is off, or was already.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/mfa/totp:
+    post:
+      tags: [Identity]
+      operationId: startMyTotpEnrolment
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Begin enrolling an authenticator app.
+      description: |
+        Mints a fresh TOTP secret for the caller and returns it once, with the `otpauth://`
+        URI an authenticator app scans. The enrolment is PENDING until confirmed with a code;
+        it is not yet a factor a login will challenge for. A caller who already holds a
+        CONFIRMED factor must disable it first (409) rather than silently swap it. The secret
+        is shown exactly once and never retrievable again — `Cache-Control: no-store`.
+      responses:
+        '200':
+          description: The pending enrolment's secret and provisioning URI. Returned once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TotpEnrolment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: 'Refused with `code: mfa_already_enrolled` — disable the current factor before enrolling a new one.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /me/mfa/totp/confirm:
+    post:
+      tags: [Identity]
+      operationId: confirmMyTotp
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Confirm an authenticator and receive recovery codes.
+      description: |
+        Verifies a code against the pending secret and, on success, activates the factor and
+        returns a fresh set of one-time recovery codes — shown exactly once, never retrievable
+        again (`Cache-Control: no-store`). A wrong code leaves the enrolment pending (401).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TotpConfirmRequest' }
+      responses:
+        '200':
+          description: The factor is active; the one-time recovery codes, shown once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecoveryCodes' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: 'Refused with `code: mfa_already_enrolled` — the factor is already confirmed.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/working-hours:
     get:
       tags: [Identity]
@@ -22207,6 +22442,20 @@ components:
             Password sign-in is not a member of this list and cannot be removed by any value of
             it. Omit the field to leave the choice unchanged; send an empty array to offer
             password only.
+        require_sso:
+          type: boolean
+          description: |
+            Close the password path: when true, an ordinary member may sign in only through a
+            configured provider, while an admin keeps the password form as break-glass. Omit to
+            leave the policy unchanged. This governs who may use password sign-in, never whether
+            the mechanism exists — an installation cannot strand itself, because admins are
+            always exempt.
+        require_mfa:
+          type: boolean
+          description: |
+            Make a second factor mandatory: a member without a confirmed authenticator is
+            confined to the MFA enrolment routes until they set one up. Omit to leave the policy
+            unchanged.
         forecast_forward_measure:
           type: string
           enum: [commit_evidence, weighted, manager_call]
@@ -22699,6 +22948,148 @@ components:
             answers sends them to debug a mismatch that was never the cause.
           items:
             $ref: '#/components/schemas/ConnectorAppRedirectUri'
+    MySession:
+      type: object
+      additionalProperties: false
+      required: [id, signed_in_at, last_active_at, current]
+      description: >-
+        One session open under the caller's account, as its owner sees it. The
+        opaque token never appears; `id` is the session's own handle, which
+        `DELETE /me/sessions/{sessionId}` takes. No IP address — the device is
+        the coarser view this list deliberately offers in its place.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The session's handle, for revoking it.
+        user_agent:
+          type: string
+          nullable: true
+          description: >-
+            The User-Agent the session was opened from, verbatim, or null when
+            the client sent none. Shown as given; the client formats it.
+        signed_in_at:
+          type: string
+          format: date-time
+          description: When the session was opened.
+        last_active_at:
+          type: string
+          format: date-time
+          description: When a request was last admitted on it.
+        current:
+          type: boolean
+          description: Whether this is the session making the request.
+    MySessionList:
+      type: object
+      additionalProperties: false
+      required: [sessions]
+      description: The caller's live sessions, newest activity first.
+      properties:
+        sessions:
+          type: array
+          items: { $ref: '#/components/schemas/MySession' }
+    MfaChallenge:
+      type: object
+      additionalProperties: false
+      required: [mfa_challenge]
+      description: >-
+        Handed back by a 202 login when a second factor is required. The token is opaque,
+        short-lived, and stands in for "this member passed the password step"; present it to
+        POST /auth/mfa with a code.
+      properties:
+        mfa_challenge:
+          type: string
+          description: The opaque challenge to return with the authenticator code.
+    MfaLoginRequest:
+      type: object
+      additionalProperties: false
+      required: [mfa_challenge, code]
+      properties:
+        mfa_challenge:
+          type: string
+          description: The challenge from the 202 login response.
+        code:
+          type: string
+          description: A current authenticator code, or an unused recovery code.
+    MfaStatus:
+      type: object
+      additionalProperties: false
+      required: [enrolled, confirmed, recovery_codes_left]
+      description: The caller's own multi-factor state.
+      properties:
+        enrolled:
+          type: boolean
+          description: Whether an enrolment exists (pending or confirmed).
+        confirmed:
+          type: boolean
+          description: Whether the factor is active — a pending enrolment is not yet a factor.
+        recovery_codes_left:
+          type: integer
+          description: How many one-time recovery codes remain unused.
+    TotpEnrolment:
+      type: object
+      additionalProperties: false
+      required: [secret, otpauth_uri]
+      description: A pending TOTP enrolment, returned once. Never retrievable again.
+      properties:
+        secret:
+          type: string
+          description: The base32 shared secret, for manual entry into an authenticator app.
+        otpauth_uri:
+          type: string
+          description: The otpauth:// URI the same app scans as a QR code.
+    TotpConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: The current code from the authenticator being enrolled.
+    RecoveryCodes:
+      type: object
+      additionalProperties: false
+      required: [recovery_codes]
+      description: One-time recovery codes, shown exactly once at confirmation.
+      properties:
+        recovery_codes:
+          type: array
+          items: { type: string }
+          description: Each code works once, for signing in when the authenticator is unavailable.
+    UserSession:
+      type: object
+      additionalProperties: false
+      required: [id, signed_in_at, last_active_at]
+      description: >-
+        One session open under a member's account as an admin sees it: the same view its owner
+        gets from MySession, minus `current` — the admin's own request is never one of the
+        target's sessions. No IP, the same coarser view the owner has.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The session's handle, for revoking it.
+        user_agent:
+          type: string
+          nullable: true
+          description: The User-Agent the session was opened from, or null when the client sent none.
+        signed_in_at:
+          type: string
+          format: date-time
+          description: When the session was opened.
+        last_active_at:
+          type: string
+          format: date-time
+          description: When a request was last admitted on it.
+    UserSessionList:
+      type: object
+      additionalProperties: false
+      required: [sessions]
+      description: A member's live sessions, newest activity first.
+      properties:
+        sessions:
+          type: array
+          items: { $ref: '#/components/schemas/UserSession' }
     AuthenticationPolicy:
       type: object
       description: |
@@ -22707,7 +23098,7 @@ components:
         Carries only what `authentication_policy` governs. The installation's name, timezone
         and currency are NOT here — every role reads those, and repeating them in a document
         governed by a narrower grant would make the same fact answer to two authorities.
-      required: [sign_in_providers]
+      required: [sign_in_providers, require_sso, require_mfa]
       properties:
         sign_in_providers:
           type: array
@@ -22717,6 +23108,21 @@ components:
             guarantee the provider has working credentials. Password is never listed: it
             is the method every installation always has and cannot switch off.
           items: { $ref: '#/components/schemas/SignInProvider' }
+        require_sso:
+          type: boolean
+          description: |
+            When true, this installation has closed the password path: an ordinary member
+            may sign in only through a configured provider. Admins keep the password form
+            regardless — the break-glass that stops a broken IdP from locking out the people
+            who fix it. Password is still never removed as a mechanism; this decides who may
+            use it, not whether it exists.
+        require_mfa:
+          type: boolean
+          description: |
+            When true, a second factor is mandatory: a member with no confirmed authenticator
+            is admitted only to the MFA enrolment routes until they set one up, the same
+            confinement a forced password change uses. A member who already holds a factor is
+            unaffected — they are challenged for it at sign-in either way.
     SignInProvider:
       type: object
       additionalProperties: false
