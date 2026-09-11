@@ -636,6 +636,16 @@ fe-typecheck-composed: composition
 ## frontend-e2e — the screen-acceptance harness (AC-<screen>-N + axe WCAG AA
 ## + PERF-1's held-read claim) against the built app over the seed mock.
 ## Set BASE_URL to point the same suite at a live backend.
+##
+## `pnpm e2e` builds the BUNDLE and not the typecheck in front of it. That
+## typecheck is `pnpm build`'s first half and it dominates the build — vite
+## emits in seconds and `tsc -b` takes over a minute of them. This
+## lane is about what the built app renders; whether the sources typecheck is
+## fe-bundle's question, it runs the same `tsc -b` on every change that reaches
+## here (both jobs sit behind the same frontend classifier and both are in the
+## `ci` aggregate), and a type error therefore still fails the merge. What the
+## two share is `build:bundle`, so the app this suite exercises cannot quietly
+## become a different artefact from the one that ships.
 frontend-e2e:
 	cd frontend && pnpm install --frozen-lockfile && pnpm e2e
 
