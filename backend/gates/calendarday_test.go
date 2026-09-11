@@ -62,7 +62,7 @@ func isDayTruncation(call *ast.CallExpr, timeName string) bool {
 	if !ok || sel.Sel.Name != "Truncate" || len(call.Args) != 1 {
 		return false
 	}
-	bin, ok := call.Args[0].(*ast.BinaryExpr)
+	bin, ok := unparen(call.Args[0]).(*ast.BinaryExpr)
 	if !ok || bin.Op != token.MUL {
 		return false
 	}
@@ -70,13 +70,27 @@ func isDayTruncation(call *ast.CallExpr, timeName string) bool {
 		(isTimeHour(bin.X, timeName) && isIntLit(bin.Y, "24"))
 }
 
+// unparen strips redundant parentheses, so `(24)` and `(time.Hour)` and a whole
+// parenthesised `(24 * time.Hour)` match the same as the bare forms. A census
+// that let a parenthesised operand slip would fail short (rule 8), and gofmt
+// does not remove parentheses a writer put there.
+func unparen(expr ast.Expr) ast.Expr {
+	for {
+		paren, ok := expr.(*ast.ParenExpr)
+		if !ok {
+			return expr
+		}
+		expr = paren.X
+	}
+}
+
 func isIntLit(expr ast.Expr, value string) bool {
-	lit, ok := expr.(*ast.BasicLit)
+	lit, ok := unparen(expr).(*ast.BasicLit)
 	return ok && lit.Kind == token.INT && lit.Value == value
 }
 
 func isTimeHour(expr ast.Expr, timeName string) bool {
-	sel, ok := expr.(*ast.SelectorExpr)
+	sel, ok := unparen(expr).(*ast.SelectorExpr)
 	if !ok || sel.Sel.Name != "Hour" {
 		return false
 	}
@@ -115,6 +129,11 @@ func TestTheMatcherSeesWhatItClaimsTo(t *testing.T) {
 		"x.UTC().Truncate(24 * time.Hour)",
 		"clock().UTC().Truncate(24 * time.Hour)",
 		"t.Truncate(time.Hour * 24)",
+		// Parentheses a writer added, which gofmt keeps: the census must see
+		// through them or it fails short.
+		"x.Truncate((24) * time.Hour)",
+		"x.Truncate(24 * (time.Hour))",
+		"x.Truncate((24 * time.Hour))",
 	}
 	for _, src := range caught {
 		if !exprIsDayTruncation(t, src) {
@@ -216,7 +235,10 @@ func TestOnlyOnePlaceDerivesACalendarDay(t *testing.T) {
 				return nil
 			}
 			rel := filepath.ToSlash(path)
-			if strings.Contains(rel, calendarDayOwner) {
+			// Exactly the owner package, by directory prefix — Contains would also
+			// exempt a sibling like storekitlegacy/ whose path merely spells the
+			// owner's, letting a truncation there pass unseen.
+			if rel == calendarDayOwner || strings.HasPrefix(rel, calendarDayOwner+"/") {
 				return nil
 			}
 			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
