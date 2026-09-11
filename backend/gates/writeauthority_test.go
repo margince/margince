@@ -96,6 +96,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/assignments:ensureParentReadable": "the probe that decides whether an assignment ROW MAY BE SERVED, never whether the caller may change it. Its two callers are the list read, which is a read, and readAssignment, which every write verb calls at the END to hand back the row it just saved — by which point that caller has already passed auth.Require plus auth.HoldWritableLive on the same parent, so the write authority is held and this is the disclosure decision on top of it. Widening it to a write probe would change nothing about who may write and would make the LIST refuse a caller who may perfectly well read the record",
 	// Conflict and disclosure probes about a RIVAL row. Each answers "may this
 	// refusal NAME the incumbent I just collided with", never "may this caller
 	// change it", and the record actually being written is gated on its own way

@@ -185,13 +185,29 @@ func readAssignment(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.R
 	return r.wire(), nil
 }
 
-// lockAssignment takes the row lock the reassign and archive paths rely on, and
-// checks write authority against the STORED parent before returning the row.
+// lockAssignment holds the parent, then locks the assignment row the reassign
+// and archive paths are about to change.
 //
-// The check lives HERE rather than in each caller so the row cannot leave this
-// function unbounded: the parent comes off the stored row, so a caller naming a
-// record they may write cannot reach an assignment on one they may not.
+// THAT ORDER, and it is load-bearing. Art. 17 erasure locks its subject and
+// then deletes the rows hanging off it, so a writer that took its own row first
+// would deadlock against the eraser and, when the eraser lost, cost somebody
+// their erasure. So the parent is read unlocked to learn WHICH record this
+// assignment hangs on, the parent is held, and only then is the assignment row
+// locked and re-read under that hold.
+//
+// The authority check lives here rather than in each caller so the row cannot
+// leave this function unbounded: the parent comes off the STORED row, so a
+// caller naming a record they may write cannot reach an assignment on one they
+// may not. The first read is a lookup, not a decision — nothing is returned
+// from it, and every value the caller acts on comes from the second.
 func lockAssignment(ctx context.Context, tx pgx.Tx, id ids.UUID) (assignmentRow, error) {
+	parent, err := parentOfAssignment(ctx, tx, id)
+	if err != nil {
+		return assignmentRow{}, err
+	}
+	if err := ensureParentWritable(ctx, tx, parent.recordType, parent.recordID); err != nil {
+		return assignmentRow{}, err
+	}
 	row := tx.QueryRow(ctx, assignmentSelect+` WHERE a.id = $1 FOR UPDATE OF a`, id)
 	r, err := scanAssignmentRow(row)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -200,10 +216,36 @@ func lockAssignment(ctx context.Context, tx pgx.Tx, id ids.UUID) (assignmentRow,
 	if err != nil {
 		return assignmentRow{}, fmt.Errorf("lock record assignment: %w", err)
 	}
-	if err := ensureParentWritable(ctx, tx, r.RecordType, r.RecordID); err != nil {
-		return assignmentRow{}, err
-	}
+	// The parent cannot have moved — an assignment never changes the record it
+	// hangs on — but the row was re-read under the hold, so this is the value
+	// the caller acts on either way.
 	return r, nil
+}
+
+// assignmentParent is which record an assignment hangs on, and nothing else.
+type assignmentParent struct {
+	recordType crmcontracts.AssignmentRecordType
+	recordID   ids.UUID
+}
+
+// parentOfAssignment reads the parent arms alone, without a lock, so the caller
+// can hold the PARENT before locking anything of its own.
+func parentOfAssignment(ctx context.Context, tx pgx.Tx, id ids.UUID) (assignmentParent, error) {
+	var company, deal, project *ids.UUID
+	err := tx.QueryRow(ctx,
+		`SELECT company_id, deal_id, project_id FROM record_assignment WHERE id = $1`, id).
+		Scan(&company, &deal, &project)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return assignmentParent{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return assignmentParent{}, fmt.Errorf("read record assignment parent: %w", err)
+	}
+	rt, recordID, err := parentOf(company, deal, project)
+	if err != nil {
+		return assignmentParent{}, err
+	}
+	return assignmentParent{recordType: rt, recordID: recordID}, nil
 }
 
 // roleLookupError turns a missing role into the field error the caller can act
@@ -222,12 +264,19 @@ func roleLookupError(err error) error {
 // a deactivated user for a NEW assignment while leaving existing ones standing:
 // history keeps its name, but nobody is newly made responsible for work they
 // have left.
+//
+// FOR SHARE, not a bare read: the foreign key enforces that the subject EXISTS,
+// never that it is still active, so without the lock a deactivation committing
+// between this check and the insert would leave somebody newly responsible for
+// work on the day they left. A share lock rather than an exclusive one because
+// this transaction only needs the row to hold still — it writes nothing to it,
+// and two assignments naming the same person must not queue behind each other.
 func ensureSubjectAssignable(
 	ctx context.Context, tx pgx.Tx, kind crmcontracts.AssignmentSubjectKind, id ids.UUID,
 ) error {
 	if kind == crmcontracts.AssignmentSubjectKindTeam {
 		var teamArchived *time.Time
-		if err := tx.QueryRow(ctx, `SELECT archived_at FROM team WHERE id = $1`, id).Scan(&teamArchived); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT archived_at FROM team WHERE id = $1 FOR SHARE`, id).Scan(&teamArchived); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return &values.ParseError{
 					Field: fieldSubjectID, Code: "unknown_team", Message: "no such team",
@@ -246,7 +295,7 @@ func ensureSubjectAssignable(
 	var status string
 	var archivedAt *time.Time
 	if err := tx.QueryRow(ctx,
-		`SELECT status, archived_at FROM app_user WHERE id = $1`, id).Scan(&status, &archivedAt); err != nil {
+		`SELECT status, archived_at FROM app_user WHERE id = $1 FOR SHARE`, id).Scan(&status, &archivedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return &values.ParseError{
 				Field: fieldSubjectID, Code: "unknown_user", Message: "no such user",

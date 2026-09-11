@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -56,15 +57,30 @@ func unknownRecordType() error {
 // found, so asking for the assignments of a record you cannot open never
 // confirms that the record exists.
 func ensureParentReadable(ctx context.Context, tx pgx.Tx, rt crmcontracts.AssignmentRecordType, id ids.UUID) error {
+	// BOTH halves, in this order. auth.Require answers "may this caller read
+	// records of this kind at all", and EnsureVisible answers "is THIS row one
+	// of theirs" — row scope alone admits a caller holding no read permission
+	// on the parent kind, because a workspace-readable table answers yes for
+	// every row.
+	//
 	// The three tables are spelled out rather than resolved through a variable:
 	// the row-scope gate reads the table name from this call site, and a name it
 	// cannot see is a reference it has to report as unbounded.
 	switch rt {
 	case crmcontracts.AssignmentRecordTypeCompany:
+		if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+			return err
+		}
 		return auth.EnsureVisible(ctx, tx, "company", id)
 	case crmcontracts.AssignmentRecordTypeDeal:
+		if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+			return err
+		}
 		return auth.EnsureVisible(ctx, tx, "deal", id)
 	case crmcontracts.AssignmentRecordTypeProject:
+		if err := auth.Require(ctx, "project", principal.ActionRead); err != nil {
+			return err
+		}
 		return auth.EnsureVisible(ctx, tx, "project", id)
 	}
 	return unknownRecordType()
@@ -80,29 +96,39 @@ func ensureParentReadable(ctx context.Context, tx pgx.Tx, rt crmcontracts.Assign
 // act on, and the row lock EnsureWritableLive takes is what makes a concurrent
 // archive and this write take turns.
 func ensureParentWritable(ctx context.Context, tx pgx.Tx, rt crmcontracts.AssignmentRecordType, id ids.UUID) error {
-	// The visible probe first, then the writable one. EnsureWritableLive opens
-	// with EnsureVisibleLive itself, so the first call is not what bounds the
-	// row — the pair is spelled out because the row-scope census reads the
-	// EnsureVisible family by name and does not recognise the writable
-	// spellings, and a reference it cannot see bounded is one it must report as
-	// unbounded. Two narrowing probes in one transaction admit nothing either
-	// alone would.
+	// THREE checks, narrowing each time: may this caller update records of this
+	// kind at all, is this row one they can see, and is it one they may write.
+	// auth.Require is the half row scope does not answer — without it a caller
+	// holding no update permission on the parent kind still reaches this write,
+	// because being the owner of a row is not the same as being allowed to
+	// change rows of that type.
+	//
+	// HoldWritableLive is EnsureWritableLive followed by LockSubjectLive, and
+	// the lock half is not a formality: the probe reads a SNAPSHOT, so without
+	// it an archive committing between the check and the insert would leave an
+	// assignment hanging on an archived record — the foreign key still
+	// succeeds, because archiving does not delete the row.
+	//
+	// Holding the PARENT first is also what keeps this writer out of the
+	// eraser's way: Art. 17 erasure locks its subject and then deletes the rows
+	// hanging off it, so a writer taking its own rows first would deadlock
+	// against it and cost somebody their erasure.
 	switch rt {
 	case crmcontracts.AssignmentRecordTypeCompany:
-		if err := auth.EnsureVisibleLive(ctx, tx, "company", id); err != nil {
+		if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 			return err
 		}
-		return auth.EnsureWritableLive(ctx, tx, "company", id)
+		return auth.HoldWritableLive(ctx, tx, "company", id)
 	case crmcontracts.AssignmentRecordTypeDeal:
-		if err := auth.EnsureVisibleLive(ctx, tx, "deal", id); err != nil {
+		if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 			return err
 		}
-		return auth.EnsureWritableLive(ctx, tx, "deal", id)
+		return auth.HoldWritableLive(ctx, tx, "deal", id)
 	case crmcontracts.AssignmentRecordTypeProject:
-		if err := auth.EnsureVisibleLive(ctx, tx, "project", id); err != nil {
+		if err := auth.Require(ctx, "project", principal.ActionUpdate); err != nil {
 			return err
 		}
-		return auth.EnsureWritableLive(ctx, tx, "project", id)
+		return auth.HoldWritableLive(ctx, tx, "project", id)
 	}
 	return unknownRecordType()
 }

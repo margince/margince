@@ -196,7 +196,18 @@ func (s *Store) UpdateRecordRole(
 			out, err = readRole(ctx, tx, id)
 			return err
 		}
-		if err := patch.ApplyWithVersion(ctx, tx, roleTable, id, before.Version); err != nil {
+		// ApplyLocked under a NoArchiveColumn lock, NOT ApplyWithVersion:
+		// ApplyWithVersion always narrows with `archived_at IS NULL`, and this
+		// table has no such column — retirement here is `active = false`, so
+		// that clause would refuse every row with an undefined-column error.
+		// readRoleForUpdate already took FOR UPDATE on this row, so the lock is
+		// the whole of the serialization: two administrators editing one role
+		// take turns rather than one overwriting the other.
+		lock, err := storekit.LockRow(ctx, tx, roleTable, id, storekit.NoArchiveColumn)
+		if err != nil {
+			return err
+		}
+		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "record_role", id,

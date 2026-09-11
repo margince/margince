@@ -318,8 +318,20 @@ var replayableOperations = map[string]replayTarget{
 	// company, deal or project, so there is no object grant of this module's
 	// own for the middleware to re-check, and the row that governs the write is
 	// the PARENT's rather than the assignment's.
-	"POST /v1/records/{record_type}/{record_id}/assignments": {objectNote: "authority is the parent record's own — auth.EnsureWritableLive on company/deal/project", rowNote: "the governing row is the parent record, resolved from the path"},
-	"PATCH /v1/assignments/{id}":                             {objectNote: "authority is the parent record's own — auth.EnsureWritableLive on the stored parent", rowNote: "the governing row is the parent record, resolved from the stored assignment"},
+	// Both carry the parent in the RESPONSE body, so a replay re-probes the
+	// record the assignment hangs on rather than re-serving a stored answer.
+	// Without that, a caller who wrote an assignment and later lost sight of
+	// its parent could replay the key and read it back — the store is not
+	// entered a second time, so its own gate never runs. `record_type` names
+	// the table exactly as the record-grant route above does.
+	"POST /v1/records/{record_type}/{record_id}/assignments": {
+		objectNote: "authority is the parent record's own — auth.Require plus auth.EnsureWritableLive on company/deal/project",
+		tableField: "record_type", idPath: "record_id",
+	},
+	"PATCH /v1/assignments/{id}": {
+		objectNote: "authority is the parent record's own — auth.Require plus auth.EnsureWritableLive on the stored parent",
+		tableField: "record_type", idPath: "record_id",
+	},
 
 	// Surfaces whose module gates on something other than a coreObject, so
 	// there is no object grant for this middleware to re-check.

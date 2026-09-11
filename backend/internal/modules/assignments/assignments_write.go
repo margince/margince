@@ -144,10 +144,13 @@ func (s *Store) UpdateAssignment(
 			return err
 		}
 		if err := patch.ApplyWithVersion(ctx, tx, assignmentTable, id, before.Version); err != nil {
+			// The live-uniqueness index fires when the reassignment would put a
+			// subject where that subject already holds this role. "Already
+			// there" is a conflict the caller can act on, not a server fault.
+			if storekit.IsUniqueViolation(err) {
+				return apperrors.ErrConflict
+			}
 			return err
-		}
-		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "record_assignment", id,
 			patch.Before(), patch.After()); err != nil {
