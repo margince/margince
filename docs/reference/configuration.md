@@ -28,9 +28,9 @@ configurable logger.
 
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
-| `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
+| `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role. **In production** (`MARGINCE_ENV` unset or anything but `dev`/`test`), the DSN must force TLS — `sslmode=require`, `verify-ca` or `verify-full`; the unset default, `disable`, `allow` and `prefer` all permit a plaintext fallback and are refused at boot, before any connection is attempted, naming the setting. Both `cmd/api` and `cmd/worker` hold this on the same DSN; a non-production installation is unheld, the same escape hatch the license check grants |
 | `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (bootstrap + auth — workspace, bootstrap_admin, seeds, email; strict decoding, secrets as `*_file` references). A missing file boots an existing installation; bootstrapping an empty database requires `workspace` + `bootstrap_admin` |
-| `--schema-dsn` | `MARGINCE_SCHEMA_DSN` | — | Postgres DSN, **owner** role, for the customfields runtime-DDL pool; unset = `createCustomField`/`updateCustomFieldOptions` answer 501 |
+| `--schema-dsn` | `MARGINCE_SCHEMA_DSN` | — | Postgres DSN, **owner** role, for the customfields runtime-DDL pool; unset = `createCustomField`/`updateCustomFieldOptions` answer 501. Held to the same production TLS requirement as `--dsn` above |
 | `--addr` | — | `:8080` | listen address |
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |
 | `--redis-password` | `MARGINCE_REDIS_PASSWORD` | — (none) | Event-bus credential, where the instance requires one. Empty is the ordinary case: an instance reached over a network the deployment controls needs none. Set it wherever the bus is reachable by anything else — the desktop bundle mints one per installation, because its bus listens on loopback and any local account could otherwise read the stream. Prefer the environment over the flag: argv is readable by every process on the machine |
@@ -385,7 +385,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
-| `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
+| `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role. Held to the same production TLS requirement `cmd/api`'s `--dsn` row documents (above) — one DSN, one rule |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required for a marketing send originated by this role's Surface-B agent run — without it that send refuses rather than emit a forgeable link |
 | `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file; the worker reads it for the `ai.capture_payloads` posture the Surface-B runner honors (capture applies to **both** the api and worker roles — the worker runs the richest content source, the agent runs). A missing file boots with capture off |
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |

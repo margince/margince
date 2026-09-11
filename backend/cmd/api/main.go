@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 func main() {
@@ -82,7 +83,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	config.WarnUndeclared(logger, cfg.unknownVars)
 
-	pool, vault, err := openInstallation(ctx, cfg.dsn)
+	pool, vault, err := openInstallation(ctx, cfg.dsn, cfg.posture)
 	if err != nil {
 		return err
 	}
@@ -187,8 +188,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 // closes it here instead, because there is no pool to return alongside an error.
 //
 //nolint:ireturn // the vault seam has two providers behind one Vault; returning the interface is the design, and this only carries what ForRole handed back.
-func openInstallation(ctx context.Context, dsn string) (*pgxpool.Pool, keyvault.Vault, error) {
-	pool, err := boundPool(ctx, dsn)
+func openInstallation(ctx context.Context, dsn string, env runtimeenv.Environment) (*pgxpool.Pool, keyvault.Vault, error) {
+	pool, err := boundPool(ctx, dsn, env)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -366,7 +367,7 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	}
 	opts = append(opts, microsoftSignInOpts...)
 
-	schemaOpts, schemaPool, closeSchemaPool, err := schemaPoolOptions(ctx, cfg.schemaDSN, stdout)
+	schemaOpts, schemaPool, closeSchemaPool, err := schemaPoolOptions(ctx, cfg.schemaDSN, cfg.posture, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -440,9 +441,14 @@ func blobstoreOptions(ctx context.Context, stdout io.Writer) ([]compose.Option, 
 // (ErrSchemaChangesUnavailable) and reset skips the finalize step; the
 // returned pool is nil in that case, and the close func is a no-op, so
 // run() can always defer it unconditionally.
-func schemaPoolOptions(ctx context.Context, schemaDSN string, stdout io.Writer) ([]compose.Option, *pgxpool.Pool, func(), error) {
+func schemaPoolOptions(ctx context.Context, schemaDSN string, env runtimeenv.Environment, stdout io.Writer) ([]compose.Option, *pgxpool.Pool, func(), error) {
 	if schemaDSN == "" {
 		return nil, nil, func() {}, nil
+	}
+	// Same gate the serving pool passed in run() — a second Postgres
+	// credential is still a Postgres credential, and this one runs DDL.
+	if err := compose.AssertDatabaseTLS(schemaDSN, env); err != nil {
+		return nil, nil, nil, err
 	}
 	// The engine serializes every ALTER on a table behind a transaction-scoped
 	// advisory lock (customfields.beginSchemaChange), so this pool never runs
