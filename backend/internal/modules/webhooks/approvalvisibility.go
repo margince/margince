@@ -210,6 +210,10 @@ const (
 // TestEveryApprovalTargetTakesItsOwningStoresRule pins each type to its own rule,
 // which is what a collision breaks.
 var approvalTargetRules = func() map[string]approvalTargetRule {
+	//nolint:goconst // the keys are WIRE target types read as data, and the rule each
+	// takes is the point of the table. A constant shared with the entity switch next
+	// door would assert the two vocabularies are one, which is the claim this table
+	// exists to make one row at a time.
 	rules := map[string]approvalTargetRule{
 		"person":           targetRuleRowScoped,
 		"company":          targetRuleRowScoped,

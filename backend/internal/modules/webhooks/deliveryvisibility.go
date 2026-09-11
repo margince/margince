@@ -203,6 +203,10 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 		return ok && actor.UserID != ids.Nil && actor.UserID == entityID, nil
 	}
 	switch entityType {
+	//nolint:goconst // wire entity types read as data. The constants goconst points at
+	// name other concepts that spell the same word — an approval target, a mirror
+	// object class — and hiding these behind one would assert a correspondence no
+	// gate holds.
 	case "person", "company", "deal", "lead", "project", "voice_profile":
 		return s.rowScopedVisible(ctx, entityType, func(c context.Context, tx pgx.Tx) error {
 			return auth.EnsureVisible(c, tx, entityType, entityID)
