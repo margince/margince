@@ -40,6 +40,25 @@ export function withRowUpdated(
   });
 }
 
+// One row moved a single position up or down. Order is a real gesture on these
+// rows — a reader puts the number they hand out first — and personformfields.ts
+// maps the array index straight to each row's `position`, so the move rewrites
+// exactly what the save persists. A move off either end returns the SAME array,
+// not a fresh copy, so a disabled-edge press cannot re-render the list for nothing.
+export function withRowMoved(
+  rows: FormRow[],
+  index: number,
+  direction: "up" | "down",
+): FormRow[] {
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (target < 0 || target >= rows.length) {
+    return rows;
+  }
+  const next = [...rows];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
+}
+
 // Marks one row primary among the rows sharing its kind, leaving every
 // other kind's rows untouched.
 export function withPrimaryMarked(

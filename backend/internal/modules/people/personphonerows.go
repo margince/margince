@@ -34,32 +34,70 @@ type phonePlacement struct {
 	row PersonPhoneInput
 }
 
-// reconcilePhonePlacements splits a whole-list phone replace into row-level work:
-// each submitted row consumes ONE held row of its number in FIFO order (an
-// update to that row's id); a submitted row with no held row left is fresh; a
-// held row nothing consumed is archived. Two rows of one number keep their own
-// identities because they consume two distinct held ids.
+// heldPhone is a live phone row the reconciler may consume: its id and the type
+// it currently sits under. The type lets a re-sent row reclaim its OWN row
+// rather than the first row of that number — the difference between keeping two
+// types of one number distinct and collapsing them onto one id, with the wrong
+// row's created_at, source, captured_by and observed_at carried into the survivor.
+type heldPhone struct {
+	id        ids.UUID
+	phoneType string
+}
+
+// reconcilePhonePlacements splits a whole-list phone replace into row-level work.
+// A submitted row first reclaims a held row of the SAME (number, type), so a
+// number held under two types keeps each row's id and provenance when the list is
+// re-sent unchanged. Only when no same-type row is left does it fall back to
+// consuming any remaining held row of that number in FIFO order — which is how a
+// type CHANGE keeps the existing row instead of archiving and re-inserting it. A
+// submitted row with no held row left is fresh; a held row nothing consumed is
+// archived.
 func reconcilePhonePlacements(
-	held map[string][]ids.UUID,
+	held map[string][]heldPhone,
 	submitted []PersonPhoneInput,
 ) (updates []phonePlacement, fresh []PersonPhoneInput, archive []ids.UUID) {
-	remaining := make(map[string][]ids.UUID, len(held))
-	for number, rowIDs := range held {
-		remaining[number] = append([]ids.UUID(nil), rowIDs...)
+	remaining := make(map[string][]heldPhone, len(held))
+	for number, rows := range held {
+		remaining[number] = append([]heldPhone(nil), rows...)
 	}
-	for _, row := range submitted {
-		rowIDs := remaining[row.Phone]
-		if len(rowIDs) > 0 {
-			updates = append(updates, phonePlacement{id: rowIDs[0], row: row})
-			remaining[row.Phone] = rowIDs[1:]
+	placed := make([]bool, len(submitted))
+	for i, row := range submitted {
+		if id, ok := consumeHeldPhone(remaining, row.Phone, row.PhoneType); ok {
+			updates = append(updates, phonePlacement{id: id, row: row})
+			placed[i] = true
+		}
+	}
+	for i, row := range submitted {
+		if placed[i] {
+			continue
+		}
+		if id, ok := consumeHeldPhone(remaining, row.Phone, ""); ok {
+			updates = append(updates, phonePlacement{id: id, row: row})
 		} else {
 			fresh = append(fresh, row)
 		}
 	}
-	for _, rowIDs := range remaining {
-		archive = append(archive, rowIDs...)
+	for _, rows := range remaining {
+		for _, h := range rows {
+			archive = append(archive, h.id)
+		}
 	}
 	return updates, fresh, archive
+}
+
+// consumeHeldPhone removes one held row of `number` from `remaining` and returns
+// its id: the first whose type matches `phoneType`, or — when `phoneType` is
+// empty — the first of the number regardless of type. Removing it stops a second
+// submitted row from reclaiming the same held id.
+func consumeHeldPhone(remaining map[string][]heldPhone, number, phoneType string) (ids.UUID, bool) {
+	rows := remaining[number]
+	for i, h := range rows {
+		if phoneType == "" || h.phoneType == phoneType {
+			remaining[number] = append(append([]heldPhone(nil), rows[:i]...), rows[i+1:]...)
+			return h.id, true
+		}
+	}
+	return ids.UUID{}, false
 }
 
 // replacePersonPhones makes the person's LIVE numbers mirror the given set, the
@@ -88,29 +126,35 @@ func replacePersonPhones(ctx context.Context, tx pgx.Tx, personID ids.PersonID, 
 		return err
 	}
 
-	held, err := heldPhoneIDs(ctx, tx, personID)
+	held, err := heldPhones(ctx, tx, personID)
 	if err != nil {
 		return err
 	}
 	updates, fresh, archive := reconcilePhonePlacements(held, phones)
 
-	// archived_at IS NULL makes this an absolute idempotent transition: a row a
-	// concurrent write already archived converges on the same archived_at rather
-	// than raced, so a lost race here is not a conflict.
-	for _, id := range archive {
+	// One statement archives every held row the reconciler did not reclaim, inside
+	// the transaction already holding this person's row lock. archived_at IS NULL
+	// makes it an absolute idempotent transition: a row a concurrent write already
+	// archived converges on the same archived_at rather than racing, so a lost race
+	// here is agreement, not a conflict. person_id is where "the same person row"
+	// is spelled — every id came from this person's held-set, and the predicate
+	// keeps the write from ever reaching past them.
+	if len(archive) > 0 {
 		if _, err := tx.Exec(ctx,
-			`UPDATE person_phone SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id); err != nil {
-			return fmt.Errorf("archive person phone: %w", err)
+			`UPDATE person_phone SET archived_at = now()
+			   WHERE id = ANY($1) AND person_id = $2 AND archived_at IS NULL`,
+			archive, personID); err != nil {
+			return fmt.Errorf("archive person phones: %w", err)
 		}
 	}
 	// Demotions before promotions: a swap of which same-type number is primary
 	// travels here with both rows retained, and promoting one before demoting the
 	// other is two live primaries of one type until the statement ends, which
 	// uq_person_phone_primary refuses.
-	if err := placePhones(ctx, tx, updates, false); err != nil {
+	if err := placePhones(ctx, tx, personID, updates, false); err != nil {
 		return err
 	}
-	if err := placePhones(ctx, tx, updates, true); err != nil {
+	if err := placePhones(ctx, tx, personID, updates, true); err != nil {
 		return err
 	}
 	return insertPersonPhones(ctx, tx, personID, source, by, fresh)
@@ -118,26 +162,28 @@ func replacePersonPhones(ctx context.Context, tx pgx.Tx, personID ids.PersonID, 
 
 // placePhones applies the retained-row placements whose is_primary matches
 // `primary`, each keyed on the held row's own id so two rows of one number no
-// longer overwrite each other.
+// longer overwrite each other. person_id pins each write to this person — the id
+// already identifies the row, but the predicate is where the reach "on the SAME
+// person row" is stated in SQL rather than left to a comment.
 //
 // archived_at IS NULL refuses a row a concurrent write archived out from under
 // this one, and RowsAffected turns that refusal into a CAS: a placement that
 // matches zero rows lost that race rather than silently doing nothing to a
 // number the held-set said was still live.
-func placePhones(ctx context.Context, tx pgx.Tx, updates []phonePlacement, primary bool) error {
+func placePhones(ctx context.Context, tx pgx.Tx, personID ids.PersonID, updates []phonePlacement, primary bool) error {
 	for _, u := range updates {
 		if u.row.IsPrimary != primary {
 			continue
 		}
 		tag, err := tx.Exec(ctx,
-			`UPDATE person_phone SET phone_type = $2, is_primary = $3, position = $4
-			   WHERE id = $1 AND archived_at IS NULL`,
-			u.id, u.row.PhoneType, u.row.IsPrimary, u.row.Position)
+			`UPDATE person_phone SET phone_type = $3, is_primary = $4, position = $5
+			   WHERE id = $1 AND person_id = $2 AND archived_at IS NULL`,
+			u.id, personID, u.row.PhoneType, u.row.IsPrimary, u.row.Position)
 		if err != nil {
 			if _, ok := storekit.UniqueViolation(err); ok {
 				return apperrors.ErrConflict
 			}
-			return fmt.Errorf("update person phone placement: %w", err)
+			return fmt.Errorf("placing person phone: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
 			return apperrors.ErrConflict
@@ -146,27 +192,30 @@ func placePhones(ctx context.Context, tx pgx.Tx, updates []phonePlacement, prima
 	return nil
 }
 
-// heldPhoneIDs answers the ids of a person's live numbers, grouped by the stored
-// E.164 form and ordered so the same held row is consumed first each time. A
-// number can name several live rows (no dedupe index — a switchboard reaches
-// several people), so the value is a slice, not a single id.
-func heldPhoneIDs(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (map[string][]ids.UUID, error) {
+// heldPhones answers a person's live phone rows, grouped by the stored E.164 form
+// and ordered so the same held row is consumed first on every re-send. A number
+// can name several live rows (no dedupe index — a switchboard reaches several
+// people), so the value is a slice. The order is total: position and created_at
+// alone tie for two rows of one number written by one CreatePerson in a single
+// transaction — they share the transaction timestamp and carry a client-supplied
+// position — so id breaks the tie and keeps consumption stable between saves.
+func heldPhones(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (map[string][]heldPhone, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT id, phone FROM person_phone
+		`SELECT id, phone, phone_type FROM person_phone
 		   WHERE person_id = $1 AND archived_at IS NULL
-		   ORDER BY position, created_at`, personID)
+		   ORDER BY position, created_at, id`, personID)
 	if err != nil {
 		return nil, fmt.Errorf("read person phones: %w", err)
 	}
 	defer rows.Close()
-	held := map[string][]ids.UUID{}
+	held := map[string][]heldPhone{}
 	for rows.Next() {
-		var id ids.UUID
+		var h heldPhone
 		var phone string
-		if err := rows.Scan(&id, &phone); err != nil {
+		if err := rows.Scan(&h.id, &phone, &h.phoneType); err != nil {
 			return nil, fmt.Errorf("scan person phone: %w", err)
 		}
-		held[phone] = append(held[phone], id)
+		held[phone] = append(held[phone], h)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read person phones: %w", err)

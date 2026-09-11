@@ -3,7 +3,9 @@ import {
   BriefcaseBusiness,
   ChevronRight,
   Link as LinkIcon,
+  Mail,
   MapPin,
+  Phone,
   User,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
@@ -23,6 +25,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ContactLink } from "../design-system/contactlink";
 import { EmailReference } from "../design-system/emailreference";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineText } from "../design-system/inlinechoice";
@@ -55,7 +58,6 @@ import { CounterpartyHoldRow } from "./counterparty-hold";
 import { stillHeld, today } from "./employmentcurrency";
 import { PersonAccess } from "./personaccess";
 import { ConsentAndChannels } from "./personconsentpanel";
-import { ContactMethodsEdit, EmailRow, PhoneRow } from "./personcontactdetails";
 import { daysSinceInbound, isQuiet } from "./personquiet";
 import { personTabRoute } from "./persontab";
 import { TagsPanel } from "./tagspanel";
@@ -439,15 +441,49 @@ function CityRow({ person, canEdit, readOnlyReason, patch }: DetailsRowProps) {
   );
 }
 
+// The rail draws email and phone read-only: an address is written to and a
+// number is dialled from here. Editing the set is the record's Edit action
+// (personeditmergearchive), which sends the whole emails/phones list on
+// UpdatePersonRequest — one editor for these rows, not a second grown on the rail.
+function EmailRow({ person }: Readonly<{ person: Person }>) {
+  const t = useT();
+  const email = person.emails?.[0]?.email;
+  return (
+    <FieldRow label={t("person.rail.email")} icon={<Mail />}>
+      {email ? (
+        <ContactLink
+          kind="email"
+          value={email}
+          record={{ entityType: "person", entityId: person.id }}
+          readOnly={Boolean(person.archived_at)}
+          className="pe-meta-link"
+        />
+      ) : (
+        <span className="pe-rail-value-muted">{t("field.unset")}</span>
+      )}
+    </FieldRow>
+  );
+}
+
+function PhoneRow({ person }: Readonly<{ person: Person }>) {
+  const t = useT();
+  const phone = person.phones?.[0]?.phone;
+  return (
+    <FieldRow label={t("person.rail.phone")} icon={<Phone />}>
+      {phone ? (
+        <ContactLink kind="phone" value={phone} className="pe-meta-link" />
+      ) : (
+        <span className="pe-rail-value-muted">{t("field.unset")}</span>
+      )}
+    </FieldRow>
+  );
+}
+
 // The rail's own Details grid — the record's own fields, at a glance above
 // the six relationship sections below it. Writability gates the VERBS only:
 // an archived or overlay-mirrored contact still shows every field, it simply
 // loses the edit affordance (InlineText's own `canEdit={false}` path), the
 // same rule companyraildetails.tsx's DetailsGrid keeps for the account.
-//
-// EmailRow, PhoneRow and ContactMethodsEdit live in personcontactdetails.tsx
-// (co-located, not shared elsewhere) purely to keep this file's own length in
-// bounds — they are this panel's rows as much as NameRow or TitleRow below.
 function DetailsGrid({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
   const person = view.person;
@@ -457,18 +493,14 @@ function DetailsGrid({ view }: Readonly<{ view: Person360 }>) {
   const canUpdate = useCanWriteRecord("person", person);
   const readOnlyReason = usePersonReadOnlyReason(person);
   const patch = usePersonFieldPatch(person);
-  const canEdit = canUpdate && !readOnlyReason;
   const row: DetailsRowProps = {
     person,
-    canEdit,
+    canEdit: canUpdate && !readOnlyReason,
     readOnlyReason,
     patch,
   };
   return (
-    <Panel
-      title={t("person.rail.detailsTitle")}
-      titleAction={<ContactMethodsEdit person={person} canEdit={canEdit} />}
-    >
+    <Panel title={t("person.rail.detailsTitle")}>
       <PanelBody>
         <FieldGrid icons>
           <NameRow {...row} />

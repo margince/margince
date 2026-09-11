@@ -21,6 +21,8 @@ import (
 	"errors"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -231,9 +233,64 @@ func TestReplacingLeavesTwoTypesOfOneNumberIntact(t *testing.T) {
 	}
 }
 
+// Dropping one of two types of a number keeps the SURVIVING row's own identity.
+// The by-value reconciler relabelled the FIRST held row of the number to the
+// surviving type and archived the real one, so the survivor inherited the dropped
+// row's id, created_at, source and captured_by — and observed_at, which decides
+// whether a later provider fill stands, so a home row wearing a work row's older
+// observed_at could be overwritten by a fill that should have been skipped. Any
+// row pointing at the archived id then named a number that was still live.
+func TestDroppingOneTypeKeepsTheSurvivorsIdentity(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Dup Phone",
+		Phones: []PersonPhoneInput{
+			{Phone: "+493011112222", PhoneType: "work", IsPrimary: false, Position: 0},
+			{Phone: "+493011112222", PhoneType: "home", IsPrimary: false, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+	homeID := phoneIDOfType(t, person, "home")
+
+	updated, err := e.store.UpdatePerson(ctx, ids.From[ids.PersonKind](ids.UUID(person.Id)), UpdatePersonInput{
+		// The reader kept only the home row.
+		Phones: []PersonPhoneInput{{Phone: "+493011112222", PhoneType: "home", IsPrimary: false, Position: 0}},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("dropping the work row: %v", err)
+	}
+
+	rows := livePhoneRows(updated)
+	if len(rows) != 1 || rows[0].PhoneType != "home" {
+		t.Fatalf("phones = %+v, want a single home row", rows)
+	}
+	if rows[0].Id != homeID {
+		t.Fatalf("survivor id = %v, want the HOME row's id %v — the work row was relabelled instead of the home row kept",
+			rows[0].Id, homeID)
+	}
+}
+
 func livePhoneRows(p crmcontracts.Person) []crmcontracts.PersonPhone {
 	if p.Phones == nil {
 		return nil
 	}
 	return *p.Phones
+}
+
+// phoneIDOfType reads the id of the one live row of the given type at create time.
+func phoneIDOfType(t *testing.T, p crmcontracts.Person, phoneType string) openapi_types.UUID {
+	t.Helper()
+	for _, r := range livePhoneRows(p) {
+		if string(r.PhoneType) == phoneType {
+			return r.Id
+		}
+	}
+	t.Fatalf("no %s phone in %+v", phoneType, p.Phones)
+	return openapi_types.UUID{}
 }

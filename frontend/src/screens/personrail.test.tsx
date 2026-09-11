@@ -856,16 +856,3 @@ describe("how the contact is filed", () => {
     expect(await screen.findByText("Champion")).toBeTruthy();
   });
 });
-
-describe("editing contact methods", () => {
-  it("opens the contact-methods editor from the details rail", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    mount(granted);
-    await user.click(
-      await screen.findByRole("button", { name: /edit contact methods/i }),
-    );
-    expect(
-      await screen.findByRole("button", { name: /add email/i }),
-    ).toBeTruthy();
-  });
-});

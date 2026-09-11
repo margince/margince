@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { navigate, type Route, type Screen } from "../app/router";
 import {
@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Select, type SelectOption } from "../design-system/select";
+import { ordinalNumber } from "../format/format";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -22,7 +23,12 @@ import {
   problemMessageOf,
   useSorMode,
 } from "./common";
-import { kindOf, withPrimaryMarked, withRowUpdated } from "./createrows";
+import {
+  kindOf,
+  withPrimaryMarked,
+  withRowMoved,
+  withRowUpdated,
+} from "./createrows";
 
 // The record screens whose entities are served from the incumbent mirror in
 // overlay mode. Creating one there answers unsupported_by_sor, so CreateAction
@@ -580,6 +586,10 @@ function RepeatableRowsField({
   const primaryKey = field.primaryKey;
   const typeKey = field.typeKey;
   const typeDefault = field.typeDefault ?? "";
+  // Reorder moves nothing on screen a sighted reader cannot see, but a screen
+  // reader hears only the button it pressed — so the new position is announced
+  // through a polite live region rather than left silent.
+  const [moveNotice, setMoveNotice] = useState("");
 
   function updateRow(index: number, key: string, value: string) {
     setRows(withRowUpdated(rows, index, key, value, primaryKey, typeKey));
@@ -590,6 +600,15 @@ function RepeatableRowsField({
       return;
     }
     setRows(withPrimaryMarked(rows, index, primaryKey, typeKey, typeDefault));
+  }
+
+  function moveRow(index: number, direction: "up" | "down") {
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= rows.length) {
+      return;
+    }
+    setRows(withRowMoved(rows, index, direction));
+    setMoveNotice(t("field.rowMoved", { n: ordinalNumber(target + 1) }));
   }
 
   function removeRow(index: number) {
@@ -603,12 +622,14 @@ function RepeatableRowsField({
         {field.required ? " *" : ""}
       </span>
       {rows.map((row, index) => (
-        // Rows have no stable identity until saved — index is the only key
-        // available, and reordering never happens (add appends, remove
-        // filters), so it's safe here.
+        // Rows have no stable identity until saved, so index is the only key.
+        // Reorder swaps two entries, but every cell — each subfield input and
+        // the primary radio — is controlled from rows[index], so React re-renders
+        // each position with the swapped row's values rather than carrying stale
+        // local state; the index key stays correct under a move.
         <Card
           as="div"
-          // biome-ignore lint/suspicious/noArrayIndexKey: rows are unordered-append/remove only
+          // biome-ignore lint/suspicious/noArrayIndexKey: every cell is controlled from rows[index], so a swap re-renders in place
           key={index}
           style={{
             display: "flex",
@@ -644,6 +665,26 @@ function RepeatableRowsField({
               label={t("field.primary")}
             />
           )}
+          <Button
+            small
+            type="button"
+            variant="ghost"
+            disabled={index === 0}
+            aria-label={t("field.moveRowUp", { n: ordinalNumber(index + 1) })}
+            onClick={() => moveRow(index, "up")}
+          >
+            <ChevronUp aria-hidden size={16} />
+          </Button>
+          <Button
+            small
+            type="button"
+            variant="ghost"
+            disabled={index === rows.length - 1}
+            aria-label={t("field.moveRowDown", { n: ordinalNumber(index + 1) })}
+            onClick={() => moveRow(index, "down")}
+          >
+            <ChevronDown aria-hidden size={16} />
+          </Button>
           <Button small type="button" onClick={() => removeRow(index)}>
             {t("field.removeRow")}
           </Button>
@@ -652,6 +693,9 @@ function RepeatableRowsField({
       <Button small type="button" onClick={() => setRows([...rows, {}])}>
         {field.addLabel ? t(field.addLabel) : fieldLabel(field, t)}
       </Button>
+      <p className="sr-only" role="status" aria-live="polite">
+        {moveNotice}
+      </p>
     </div>
   );
 }
