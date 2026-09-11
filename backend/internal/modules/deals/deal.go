@@ -127,6 +127,36 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		s.installation.EnsurePartner, s.ensureProjectAttachable); err != nil {
 		return nil, err
 	}
+	if in.Description != nil {
+		p.Set("description", current.Description, *in.Description)
+	}
+	if in.CommercialMotion != nil {
+		p.Set(filterCommercialMotion, motionOf(current), *in.CommercialMotion)
+	}
+	if in.Priority != nil {
+		p.Set(filterPriority, priorityOf(current), *in.Priority)
+	}
+	if in.AcquisitionSource != nil {
+		// Checked against the catalog HERE rather than at the handler, because
+		// only the patch knows the deal's current value — and the rule is about
+		// the change, not the value: a retired key a deal already holds survives
+		// an unrelated edit, and the same key cannot be newly chosen.
+		//
+		// The deal row is locked FIRST, and the current value re-read under that
+		// lock. `current` was read without one, so between that read and this
+		// check another transaction can clear or replace the source — and the
+		// "it already holds this key" exemption would then re-assign a retired
+		// key nobody is allowed to choose any more. Deal before catalog, which
+		// is the order every other writer here takes.
+		held, err := lockedAcquisitionSource(ctx, tx, current)
+		if err != nil {
+			return nil, err
+		}
+		if err := ensureAssignableAcquisitionSource(ctx, tx, *in.AcquisitionSource, held); err != nil {
+			return nil, err
+		}
+		p.Set(filterAcquisitionSource, held, *in.AcquisitionSource)
+	}
 	if in.ExpectedClose != nil {
 		// INV-CLOSE-PAST (formulas §11): an open deal never claims a past
 		// close date. Closed deals keep their historical dates editable.

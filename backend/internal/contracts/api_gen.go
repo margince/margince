@@ -5004,11 +5004,12 @@ func (e ConsentEventNewState) Valid() bool {
 
 // Defines values for ConsentQualifyingEventKind.
 const (
-	ConsentQualifyingEventKindActiveDeal     ConsentQualifyingEventKind = "active_deal"
-	ConsentQualifyingEventKindInPerson       ConsentQualifyingEventKind = "in_person"
-	ConsentQualifyingEventKindInboundMessage ConsentQualifyingEventKind = "inbound_message"
-	ConsentQualifyingEventKindInquiry        ConsentQualifyingEventKind = "inquiry"
-	ConsentQualifyingEventKindMeeting        ConsentQualifyingEventKind = "meeting"
+	ConsentQualifyingEventKindActiveDeal         ConsentQualifyingEventKind = "active_deal"
+	ConsentQualifyingEventKindInPerson           ConsentQualifyingEventKind = "in_person"
+	ConsentQualifyingEventKindInboundMessage     ConsentQualifyingEventKind = "inbound_message"
+	ConsentQualifyingEventKindInquiry            ConsentQualifyingEventKind = "inquiry"
+	ConsentQualifyingEventKindMeeting            ConsentQualifyingEventKind = "meeting"
+	ConsentQualifyingEventKindRequestedBySubject ConsentQualifyingEventKind = "requested_by_subject"
 )
 
 // Valid indicates whether the value is a known member of the ConsentQualifyingEventKind enum.
@@ -5023,6 +5024,8 @@ func (e ConsentQualifyingEventKind) Valid() bool {
 	case ConsentQualifyingEventKindInquiry:
 		return true
 	case ConsentQualifyingEventKindMeeting:
+		return true
+	case ConsentQualifyingEventKindRequestedBySubject:
 		return true
 	default:
 		return false
@@ -6520,6 +6523,36 @@ func (e CreateDataSubjectRequestKind) Valid() bool {
 	}
 }
 
+// Defines values for CreateDealRequestCommercialMotion.
+const (
+	CreateDealRequestCommercialMotionCrossSell        CreateDealRequestCommercialMotion = "cross_sell"
+	CreateDealRequestCommercialMotionExistingBusiness CreateDealRequestCommercialMotion = "existing_business"
+	CreateDealRequestCommercialMotionExpansion        CreateDealRequestCommercialMotion = "expansion"
+	CreateDealRequestCommercialMotionNewBusiness      CreateDealRequestCommercialMotion = "new_business"
+	CreateDealRequestCommercialMotionRenewal          CreateDealRequestCommercialMotion = "renewal"
+	CreateDealRequestCommercialMotionUpsell           CreateDealRequestCommercialMotion = "upsell"
+)
+
+// Valid indicates whether the value is a known member of the CreateDealRequestCommercialMotion enum.
+func (e CreateDealRequestCommercialMotion) Valid() bool {
+	switch e {
+	case CreateDealRequestCommercialMotionCrossSell:
+		return true
+	case CreateDealRequestCommercialMotionExistingBusiness:
+		return true
+	case CreateDealRequestCommercialMotionExpansion:
+		return true
+	case CreateDealRequestCommercialMotionNewBusiness:
+		return true
+	case CreateDealRequestCommercialMotionRenewal:
+		return true
+	case CreateDealRequestCommercialMotionUpsell:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateDealRequestPartnerAttribution.
 const (
 	CreateDealRequestPartnerAttributionInfluenced CreateDealRequestPartnerAttribution = "influenced"
@@ -6532,6 +6565,27 @@ func (e CreateDealRequestPartnerAttribution) Valid() bool {
 	case CreateDealRequestPartnerAttributionInfluenced:
 		return true
 	case CreateDealRequestPartnerAttributionSourced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateDealRequestPriority.
+const (
+	CreateDealRequestPriorityHigh   CreateDealRequestPriority = "high"
+	CreateDealRequestPriorityLow    CreateDealRequestPriority = "low"
+	CreateDealRequestPriorityMedium CreateDealRequestPriority = "medium"
+)
+
+// Valid indicates whether the value is a known member of the CreateDealRequestPriority enum.
+func (e CreateDealRequestPriority) Valid() bool {
+	switch e {
+	case CreateDealRequestPriorityHigh:
+		return true
+	case CreateDealRequestPriorityLow:
+		return true
+	case CreateDealRequestPriorityMedium:
 		return true
 	default:
 		return false
@@ -7000,6 +7054,36 @@ func (e DataSubjectRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for DealCommercialMotion.
+const (
+	DealCommercialMotionCrossSell        DealCommercialMotion = "cross_sell"
+	DealCommercialMotionExistingBusiness DealCommercialMotion = "existing_business"
+	DealCommercialMotionExpansion        DealCommercialMotion = "expansion"
+	DealCommercialMotionNewBusiness      DealCommercialMotion = "new_business"
+	DealCommercialMotionRenewal          DealCommercialMotion = "renewal"
+	DealCommercialMotionUpsell           DealCommercialMotion = "upsell"
+)
+
+// Valid indicates whether the value is a known member of the DealCommercialMotion enum.
+func (e DealCommercialMotion) Valid() bool {
+	switch e {
+	case DealCommercialMotionCrossSell:
+		return true
+	case DealCommercialMotionExistingBusiness:
+		return true
+	case DealCommercialMotionExpansion:
+		return true
+	case DealCommercialMotionNewBusiness:
+		return true
+	case DealCommercialMotionRenewal:
+		return true
+	case DealCommercialMotionUpsell:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealForecastCategory.
 const (
 	DealForecastCategoryBestCase DealForecastCategory = "best_case"
@@ -7036,6 +7120,27 @@ func (e DealPartnerAttribution) Valid() bool {
 	case DealPartnerAttributionInfluenced:
 		return true
 	case DealPartnerAttributionSourced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealPriority.
+const (
+	DealPriorityHigh   DealPriority = "high"
+	DealPriorityLow    DealPriority = "low"
+	DealPriorityMedium DealPriority = "medium"
+)
+
+// Valid indicates whether the value is a known member of the DealPriority enum.
+func (e DealPriority) Valid() bool {
+	switch e {
+	case DealPriorityHigh:
+		return true
+	case DealPriorityLow:
+		return true
+	case DealPriorityMedium:
 		return true
 	default:
 		return false
@@ -10636,6 +10741,24 @@ func (e RecordClaimRecordType) Valid() bool {
 	}
 }
 
+// Defines values for RecordCommunicationContextRequestKind.
+const (
+	RecordCommunicationContextRequestKindInPerson           RecordCommunicationContextRequestKind = "in_person"
+	RecordCommunicationContextRequestKindRequestedBySubject RecordCommunicationContextRequestKind = "requested_by_subject"
+)
+
+// Valid indicates whether the value is a known member of the RecordCommunicationContextRequestKind enum.
+func (e RecordCommunicationContextRequestKind) Valid() bool {
+	switch e {
+	case RecordCommunicationContextRequestKindInPerson:
+		return true
+	case RecordCommunicationContextRequestKindRequestedBySubject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordConfirmationPageKind.
 const (
 	RecordConfirmationPageKindRecordConfirmation RecordConfirmationPageKind = "record_confirmation"
@@ -10755,13 +10878,16 @@ func (e RecordGrantSubjectType) Valid() bool {
 
 // Defines values for RecordQualifyingEventRequestKind.
 const (
-	RecordQualifyingEventRequestKindInPerson RecordQualifyingEventRequestKind = "in_person"
+	RecordQualifyingEventRequestKindInPerson           RecordQualifyingEventRequestKind = "in_person"
+	RecordQualifyingEventRequestKindRequestedBySubject RecordQualifyingEventRequestKind = "requested_by_subject"
 )
 
 // Valid indicates whether the value is a known member of the RecordQualifyingEventRequestKind enum.
 func (e RecordQualifyingEventRequestKind) Valid() bool {
 	switch e {
 	case RecordQualifyingEventRequestKindInPerson:
+		return true
+	case RecordQualifyingEventRequestKindRequestedBySubject:
 		return true
 	default:
 		return false
@@ -13078,6 +13204,36 @@ func (e UpdateDataSubjectRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for UpdateDealRequestCommercialMotion.
+const (
+	UpdateDealRequestCommercialMotionCrossSell        UpdateDealRequestCommercialMotion = "cross_sell"
+	UpdateDealRequestCommercialMotionExistingBusiness UpdateDealRequestCommercialMotion = "existing_business"
+	UpdateDealRequestCommercialMotionExpansion        UpdateDealRequestCommercialMotion = "expansion"
+	UpdateDealRequestCommercialMotionNewBusiness      UpdateDealRequestCommercialMotion = "new_business"
+	UpdateDealRequestCommercialMotionRenewal          UpdateDealRequestCommercialMotion = "renewal"
+	UpdateDealRequestCommercialMotionUpsell           UpdateDealRequestCommercialMotion = "upsell"
+)
+
+// Valid indicates whether the value is a known member of the UpdateDealRequestCommercialMotion enum.
+func (e UpdateDealRequestCommercialMotion) Valid() bool {
+	switch e {
+	case UpdateDealRequestCommercialMotionCrossSell:
+		return true
+	case UpdateDealRequestCommercialMotionExistingBusiness:
+		return true
+	case UpdateDealRequestCommercialMotionExpansion:
+		return true
+	case UpdateDealRequestCommercialMotionNewBusiness:
+		return true
+	case UpdateDealRequestCommercialMotionRenewal:
+		return true
+	case UpdateDealRequestCommercialMotionUpsell:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateDealRequestForecastCategory.
 const (
 	UpdateDealRequestForecastCategoryBestCase UpdateDealRequestForecastCategory = "best_case"
@@ -13114,6 +13270,27 @@ func (e UpdateDealRequestPartnerAttribution) Valid() bool {
 	case UpdateDealRequestPartnerAttributionInfluenced:
 		return true
 	case UpdateDealRequestPartnerAttributionSourced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateDealRequestPriority.
+const (
+	UpdateDealRequestPriorityHigh   UpdateDealRequestPriority = "high"
+	UpdateDealRequestPriorityLow    UpdateDealRequestPriority = "low"
+	UpdateDealRequestPriorityMedium UpdateDealRequestPriority = "medium"
+)
+
+// Valid indicates whether the value is a known member of the UpdateDealRequestPriority enum.
+func (e UpdateDealRequestPriority) Valid() bool {
+	switch e {
+	case UpdateDealRequestPriorityHigh:
+		return true
+	case UpdateDealRequestPriorityLow:
+		return true
+	case UpdateDealRequestPriorityMedium:
 		return true
 	default:
 		return false
@@ -16141,6 +16318,63 @@ func (e ListDealsParamsPartnerAttribution) Valid() bool {
 	}
 }
 
+// Defines values for ListDealsParamsCommercialMotion.
+const (
+	ListDealsParamsCommercialMotionCrossSell        ListDealsParamsCommercialMotion = "cross_sell"
+	ListDealsParamsCommercialMotionExistingBusiness ListDealsParamsCommercialMotion = "existing_business"
+	ListDealsParamsCommercialMotionExpansion        ListDealsParamsCommercialMotion = "expansion"
+	ListDealsParamsCommercialMotionNewBusiness      ListDealsParamsCommercialMotion = "new_business"
+	ListDealsParamsCommercialMotionRenewal          ListDealsParamsCommercialMotion = "renewal"
+	ListDealsParamsCommercialMotionUnset            ListDealsParamsCommercialMotion = "unset"
+	ListDealsParamsCommercialMotionUpsell           ListDealsParamsCommercialMotion = "upsell"
+)
+
+// Valid indicates whether the value is a known member of the ListDealsParamsCommercialMotion enum.
+func (e ListDealsParamsCommercialMotion) Valid() bool {
+	switch e {
+	case ListDealsParamsCommercialMotionCrossSell:
+		return true
+	case ListDealsParamsCommercialMotionExistingBusiness:
+		return true
+	case ListDealsParamsCommercialMotionExpansion:
+		return true
+	case ListDealsParamsCommercialMotionNewBusiness:
+		return true
+	case ListDealsParamsCommercialMotionRenewal:
+		return true
+	case ListDealsParamsCommercialMotionUnset:
+		return true
+	case ListDealsParamsCommercialMotionUpsell:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListDealsParamsPriority.
+const (
+	ListDealsParamsPriorityHigh   ListDealsParamsPriority = "high"
+	ListDealsParamsPriorityLow    ListDealsParamsPriority = "low"
+	ListDealsParamsPriorityMedium ListDealsParamsPriority = "medium"
+	ListDealsParamsPriorityUnset  ListDealsParamsPriority = "unset"
+)
+
+// Valid indicates whether the value is a known member of the ListDealsParamsPriority enum.
+func (e ListDealsParamsPriority) Valid() bool {
+	switch e {
+	case ListDealsParamsPriorityHigh:
+		return true
+	case ListDealsParamsPriorityLow:
+		return true
+	case ListDealsParamsPriorityMedium:
+		return true
+	case ListDealsParamsPriorityUnset:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListDealsParamsTagMode.
 const (
 	ListDealsParamsTagModeAll  ListDealsParamsTagMode = "all"
@@ -17284,6 +17518,33 @@ type AccountEmailDraft struct {
 
 	// VoiceProfileVersion The Voice DNA profile version that styled this draft; null when no ready profile shaped it.
 	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
+}
+
+// AcquisitionSource One administered business channel a deal can be attributed to.
+type AcquisitionSource struct {
+	// Active False is retired: still readable and still filterable on deals that carry it, but refused for a new assignment.
+	Active    bool               `json:"active"`
+	CreatedAt *time.Time         `json:"created_at,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Key The stable identifier stored on the deal. Lowercase, never changes once created — relabelling edits `label`, so a report keyed on the key survives the rename.
+	Key string `json:"key"`
+
+	// Label What readers see.
+	Label string `json:"label"`
+
+	// SortOrder Display order in pickers and settings.
+	SortOrder int `json:"sort_order"`
+
+	// System Seeded with the installation. Fully editable; it simply cannot be removed.
+	System    *bool      `json:"system,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	Version   *int64     `json:"version,omitempty"`
+}
+
+// AcquisitionSourceListResponse defines model for AcquisitionSourceListResponse.
+type AcquisitionSourceListResponse struct {
+	Data []AcquisitionSource `json:"data"`
 }
 
 // Activity A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
@@ -23707,7 +23968,7 @@ type ConsentPurpose struct {
 type ConsentQualifyingEvent struct {
 	Kind ConsentQualifyingEventKind `json:"kind"`
 
-	// Note The typed evidence for an `in_person` exchange, where a named human's note IS the record.
+	// Note The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note IS the record.
 	Note             *string                                 `json:"note,omitempty"`
 	OccurredAt       time.Time                               `json:"occurred_at"`
 	SourceEntityId   *openapi_types.UUID                     `json:"source_entity_id,omitempty"`
@@ -25045,6 +25306,14 @@ type ConversationMemoryEntryDirection string
 // ConversationMemoryEntryStatus The state a reader acts on: `replied`, `unanswered`, `awaiting_them`, or null when the entry carries no such claim. Derived from direction and what followed it.
 type ConversationMemoryEntryStatus string
 
+// CreateAcquisitionSourceRequest defines model for CreateAcquisitionSourceRequest.
+type CreateAcquisitionSourceRequest struct {
+	// Key Derived from the label when omitted.
+	Key       *string `json:"key,omitempty"`
+	Label     string  `json:"label"`
+	SortOrder *int    `json:"sort_order,omitempty"`
+}
+
 // CreateActivityRequest defines model for CreateActivityRequest.
 type CreateActivityRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -25254,9 +25523,17 @@ type CreateDataSubjectRequestKind string
 
 // CreateDealRequest defines model for CreateDealRequest.
 type CreateDealRequest struct {
-	AmountMinor *int64              `json:"amount_minor,omitempty"`
-	CompanyId   *openapi_types.UUID `json:"company_id,omitempty"`
-	Currency    *string             `json:"currency,omitempty"`
+	// AcquisitionSource An active key from `/acquisition-sources`. A retired key is refused for a NEW assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it through unrelated edits. Null clears it.
+	AcquisitionSource *string `json:"acquisition_source,omitempty"`
+	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+	CommercialMotion *CreateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
+	CompanyId        *openapi_types.UUID                `json:"company_id,omitempty"`
+	Currency         *string                            `json:"currency,omitempty"`
+
+	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
+	Description *string `json:"description,omitempty"`
 
 	// ExpectedCloseDate Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
@@ -25270,6 +25547,9 @@ type CreateDealRequest struct {
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 	PipelineId       openapi_types.UUID  `json:"pipeline_id"`
 
+	// Priority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+	Priority *CreateDealRequestPriority `json:"priority,omitempty"`
+
 	// ProjectId The body of work this deal belongs to; must name the same company as the deal.
 	ProjectId            *openapi_types.UUID    `json:"project_id,omitempty"`
 	Source               string                 `json:"source"`
@@ -25277,8 +25557,14 @@ type CreateDealRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// CreateDealRequestCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+type CreateDealRequestCommercialMotion string
+
 // CreateDealRequestPartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
 type CreateDealRequestPartnerAttribution string
+
+// CreateDealRequestPriority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+type CreateDealRequestPriority string
 
 // CreateDealRoomRequest defines model for CreateDealRoomRequest.
 type CreateDealRoomRequest struct {
@@ -25839,8 +26125,10 @@ type DeactivateUserRequest struct {
 
 // Deal A deal. Mirrors the `deal` table.
 type Deal struct {
-	AmountMinor *int64     `json:"amount_minor,omitempty"`
-	ArchivedAt  *time.Time `json:"archived_at,omitempty"`
+	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
+	AcquisitionSource *string    `json:"acquisition_source,omitempty"`
+	AmountMinor       *int64     `json:"amount_minor,omitempty"`
+	ArchivedAt        *time.Time `json:"archived_at,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
@@ -25849,10 +26137,16 @@ type Deal struct {
 	CloseDateProvisional *bool      `json:"close_date_provisional,omitempty"`
 	ClosedAt             *time.Time `json:"closed_at,omitempty"`
 
+	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+	CommercialMotion *DealCommercialMotion `json:"commercial_motion,omitempty"`
+
 	// CompanyId Primary company; never a raw lead. Null when the caller may not read that company, in which case `masked_fields` names it.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 	CreatedAt time.Time           `json:"created_at"`
 	Currency  *string             `json:"currency,omitempty"`
+
+	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
+	Description *string `json:"description,omitempty"`
 
 	// ExpectedCloseDate INV-CLOSE-PAST (formulas §11): an open deal never claims a past close date — saving one is rejected 422 (close_date_past); one that ages into the past is corrected by the nightly run.
 	ExpectedCloseDate *openapi_types.Date   `json:"expected_close_date,omitempty"`
@@ -25882,6 +26176,9 @@ type Deal struct {
 
 	// PipelineId Native mode: always a non-null pipeline FK. Overlay mode: NULL — an overlay-mirror deal has no native Margince pipeline row; the incumbent's own pipeline id rides `raw` and the code-declared stage→semantic mapping drives tier resolution (overlay-augmentation OVA-MAP-6). A zero/placeholder UUID here is forbidden (dangling FK).
 	PipelineId *openapi_types.UUID `json:"pipeline_id"`
+
+	// Priority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+	Priority *DealPriority `json:"priority,omitempty"`
 
 	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
 	ProjectId *openapi_types.UUID     `json:"project_id,omitempty"`
@@ -25918,11 +26215,17 @@ type Deal struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// DealCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+type DealCommercialMotion string
+
 // DealForecastCategory defines model for Deal.ForecastCategory.
 type DealForecastCategory string
 
 // DealPartnerAttribution What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
 type DealPartnerAttribution string
+
+// DealPriority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+type DealPriority string
 
 // DealStatus defines model for Deal.Status.
 type DealStatus string
@@ -32178,6 +32481,28 @@ type RecordClaim struct {
 // RecordClaimRecordType defines model for RecordClaim.RecordType.
 type RecordClaimRecordType string
 
+// RecordCommunicationContextRequest One rep's statement about one contact, answering one refusal.
+type RecordCommunicationContextRequest struct {
+	// Kind How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
+	// contact asking us to write to them by phone or across a counter.
+	Kind RecordCommunicationContextRequestKind `json:"kind"`
+
+	// Note What happened, in the words of whoever was there. Required — it is the only evidence there is.
+	Note string `json:"note"`
+
+	// OccurredAt When it happened, not when it was typed in. A future moment is refused.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// SubjectId The contact this statement is about. It must be somebody this review was refused for,
+	// and the refusal must be one a statement can answer — a review naming three contacts
+	// takes three statements, not one copied across them.
+	SubjectId openapi_types.UUID `json:"subject_id"`
+}
+
+// RecordCommunicationContextRequestKind How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
+// contact asking us to write to them by phone or across a counter.
+type RecordCommunicationContextRequestKind string
+
 // RecordConfirmationPage One contact's own view of what the workspace holds about them, for the no-login confirm page.
 // A purpose-built projection and never the Contact360 read model, which carries this workspace's
 // working notes — owner, lifecycle, scores — rather than the subject's own data.
@@ -32283,23 +32608,29 @@ type RecordGrantSubjectType string
 
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
 type RecordQualifyingEventRequest struct {
-	// Kind Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
-	// active_deal, meeting — is DERIVED from records the product already holds, and a
-	// hand-written one would be a second, unbacked answer to a question the data already
-	// settles.
+	// Kind The two kinds a human may state. `in_person` is an exchange that happened in a room —
+	// a card handed over at a stand. `requested_by_subject` is the contact asking us to write
+	// to them away from every system: a phone call, a conversation at a counter.
+	//
+	// Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
+	// records the product already holds, and a hand-written one would be a second, unbacked
+	// answer to a question the data already settles.
 	Kind RecordQualifyingEventRequestKind `json:"kind"`
 
-	// Note What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has.
+	// Note What happened, in the words of whoever was there. Required — it is the only evidence a hand-recorded exchange has.
 	Note string `json:"note"`
 
 	// OccurredAt When the exchange happened, not when it was typed in.
 	OccurredAt time.Time `json:"occurred_at"`
 }
 
-// RecordQualifyingEventRequestKind Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
-// active_deal, meeting — is DERIVED from records the product already holds, and a
-// hand-written one would be a second, unbacked answer to a question the data already
-// settles.
+// RecordQualifyingEventRequestKind The two kinds a human may state. `in_person` is an exchange that happened in a room —
+// a card handed over at a stand. `requested_by_subject` is the contact asking us to write
+// to them away from every system: a phone call, a conversation at a counter.
+//
+// Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
+// records the product already holds, and a hand-written one would be a second, unbacked
+// answer to a question the data already settles.
 type RecordQualifyingEventRequestKind string
 
 // RecordTag One tag on one record, with the assignment that put it there.
@@ -35186,6 +35517,13 @@ type Undoability struct {
 // UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
 type UndoabilityReason string
 
+// UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.
+type UpdateAcquisitionSourceRequest struct {
+	Active    *bool   `json:"active,omitempty"`
+	Label     *string `json:"label,omitempty"`
+	SortOrder *int    `json:"sort_order,omitempty"`
+}
+
 // UpdateActivityRequest defines model for UpdateActivityRequest.
 type UpdateActivityRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -35455,9 +35793,17 @@ type UpdateDataSubjectRequestStatus string
 
 // UpdateDealRequest defines model for UpdateDealRequest.
 type UpdateDealRequest struct {
-	AmountMinor *int64              `json:"amount_minor,omitempty"`
-	CompanyId   *openapi_types.UUID `json:"company_id,omitempty"`
-	Currency    *string             `json:"currency,omitempty"`
+	// AcquisitionSource An active key from `/acquisition-sources`. A retired key is refused for a NEW assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it through unrelated edits. Null clears it.
+	AcquisitionSource *string `json:"acquisition_source,omitempty"`
+	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+	CommercialMotion *UpdateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
+	CompanyId        *openapi_types.UUID                `json:"company_id,omitempty"`
+	Currency         *string                            `json:"currency,omitempty"`
+
+	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
+	Description *string `json:"description,omitempty"`
 
 	// ExpectedCloseDate On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.
 	ExpectedCloseDate *openapi_types.Date                `json:"expected_close_date,omitempty"`
@@ -35474,18 +35820,27 @@ type UpdateDealRequest struct {
 	PartnerAttribution *UpdateDealRequestPartnerAttribution `json:"partner_attribution,omitempty"`
 
 	// PartnerCompanyId The partner who brought this deal. The company must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.
-	PartnerCompanyId     *openapi_types.UUID      `json:"partner_company_id,omitempty"`
-	ProjectId            *openapi_types.UUID      `json:"project_id,omitempty"`
-	Status               *UpdateDealRequestStatus `json:"status,omitempty"`
-	WaitUntil            *openapi_types.Date      `json:"wait_until,omitempty"`
-	AdditionalProperties map[string]interface{}   `json:"-"`
+	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
+
+	// Priority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+	Priority             *UpdateDealRequestPriority `json:"priority,omitempty"`
+	ProjectId            *openapi_types.UUID        `json:"project_id,omitempty"`
+	Status               *UpdateDealRequestStatus   `json:"status,omitempty"`
+	WaitUntil            *openapi_types.Date        `json:"wait_until,omitempty"`
+	AdditionalProperties map[string]interface{}     `json:"-"`
 }
+
+// UpdateDealRequestCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+type UpdateDealRequestCommercialMotion string
 
 // UpdateDealRequestForecastCategory defines model for UpdateDealRequest.ForecastCategory.
 type UpdateDealRequestForecastCategory string
 
 // UpdateDealRequestPartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
 type UpdateDealRequestPartnerAttribution string
+
+// UpdateDealRequestPriority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+type UpdateDealRequestPriority string
 
 // UpdateDealRequestStatus defines model for UpdateDealRequest.Status.
 type UpdateDealRequestStatus string
@@ -38245,6 +38600,44 @@ type cookieAuthContextKey string
 // dealRoomSessionContextKey is the context key for dealRoomSession security scheme
 type dealRoomSessionContextKey string
 
+// CreateAcquisitionSourceParams defines parameters for CreateAcquisitionSource.
+type CreateAcquisitionSourceParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// UpdateAcquisitionSourceParams defines parameters for UpdateAcquisitionSource.
+type UpdateAcquisitionSourceParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListActivitiesParams defines parameters for ListActivities.
 type ListActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -40466,6 +40859,15 @@ type ListDealsParams struct {
 	// PartnerAttribution Deals a partner brought (`sourced`) or merely helped (`influenced`).
 	PartnerAttribution *ListDealsParamsPartnerAttribution `form:"partner_attribution,omitempty" json:"partner_attribution,omitempty"`
 
+	// CommercialMotion `unset` matches deals with no motion recorded, which no enum value can express.
+	CommercialMotion *ListDealsParamsCommercialMotion `form:"commercial_motion,omitempty" json:"commercial_motion,omitempty"`
+
+	// Priority `unset` matches deals nobody has prioritised.
+	Priority *ListDealsParamsPriority `form:"priority,omitempty" json:"priority,omitempty"`
+
+	// AcquisitionSource An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker.
+	AcquisitionSource *string `form:"acquisition_source,omitempty" json:"acquisition_source,omitempty"`
+
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
 	//
 	// By ID, not by name: a name is what a human types and an admin can rename, so a
@@ -40488,6 +40890,12 @@ type ListDealsParamsForecastCategory string
 
 // ListDealsParamsPartnerAttribution defines parameters for ListDeals.
 type ListDealsParamsPartnerAttribution string
+
+// ListDealsParamsCommercialMotion defines parameters for ListDeals.
+type ListDealsParamsCommercialMotion string
+
+// ListDealsParamsPriority defines parameters for ListDeals.
+type ListDealsParamsPriority string
 
 // ListDealsParamsTagMode defines parameters for ListDeals.
 type ListDealsParamsTagMode string
@@ -43109,6 +43517,12 @@ type GetResponseMetricsParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
+// CreateAcquisitionSourceJSONRequestBody defines body for CreateAcquisitionSource for application/json ContentType.
+type CreateAcquisitionSourceJSONRequestBody = CreateAcquisitionSourceRequest
+
+// UpdateAcquisitionSourceJSONRequestBody defines body for UpdateAcquisitionSource for application/json ContentType.
+type UpdateAcquisitionSourceJSONRequestBody = UpdateAcquisitionSourceRequest
+
 // LogActivityJSONRequestBody defines body for LogActivity for application/json ContentType.
 type LogActivityJSONRequestBody = CreateActivityRequest
 
@@ -43267,6 +43681,9 @@ type ColdStartPreviewJSONRequestBody = ColdStartRequest
 
 // DecideCommissionEntryJSONRequestBody defines body for DecideCommissionEntry for application/json ContentType.
 type DecideCommissionEntryJSONRequestBody = DecideCommissionRequest
+
+// RecordCommunicationContextJSONRequestBody defines body for RecordCommunicationContext for application/json ContentType.
+type RecordCommunicationContextJSONRequestBody = RecordCommunicationContextRequest
 
 // DirectCommunicationSendJSONRequestBody defines body for DirectCommunicationSend for application/json ContentType.
 type DirectCommunicationSendJSONRequestBody = DirectCommunicationSendRequest
@@ -45556,12 +45973,28 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["acquisition_source"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionSource)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_source': %w", err)
+		}
+		delete(object, "acquisition_source")
+	}
+
 	if raw, found := object["amount_minor"]; found {
 		err = json.Unmarshal(raw, &a.AmountMinor)
 		if err != nil {
 			return fmt.Errorf("error reading 'amount_minor': %w", err)
 		}
 		delete(object, "amount_minor")
+	}
+
+	if raw, found := object["commercial_motion"]; found {
+		err = json.Unmarshal(raw, &a.CommercialMotion)
+		if err != nil {
+			return fmt.Errorf("error reading 'commercial_motion': %w", err)
+		}
+		delete(object, "commercial_motion")
 	}
 
 	if raw, found := object["company_id"]; found {
@@ -45578,6 +46011,14 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'currency': %w", err)
 		}
 		delete(object, "currency")
+	}
+
+	if raw, found := object["description"]; found {
+		err = json.Unmarshal(raw, &a.Description)
+		if err != nil {
+			return fmt.Errorf("error reading 'description': %w", err)
+		}
+		delete(object, "description")
 	}
 
 	if raw, found := object["expected_close_date"]; found {
@@ -45628,6 +46069,14 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "pipeline_id")
 	}
 
+	if raw, found := object["priority"]; found {
+		err = json.Unmarshal(raw, &a.Priority)
+		if err != nil {
+			return fmt.Errorf("error reading 'priority': %w", err)
+		}
+		delete(object, "priority")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -45671,10 +46120,24 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 
+	if a.AcquisitionSource != nil {
+		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
+
 	if a.AmountMinor != nil {
 		object["amount_minor"], err = json.Marshal(a.AmountMinor)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'amount_minor': %w", err)
+		}
+	}
+
+	if a.CommercialMotion != nil {
+		object["commercial_motion"], err = json.Marshal(a.CommercialMotion)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'commercial_motion': %w", err)
 		}
 	}
 
@@ -45689,6 +46152,13 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 		object["currency"], err = json.Marshal(a.Currency)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'currency': %w", err)
+		}
+	}
+
+	if a.Description != nil {
+		object["description"], err = json.Marshal(a.Description)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'description': %w", err)
 		}
 	}
 
@@ -45728,6 +46198,13 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 	object["pipeline_id"], err = json.Marshal(a.PipelineId)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'pipeline_id': %w", err)
+	}
+
+	if a.Priority != nil {
+		object["priority"], err = json.Marshal(a.Priority)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'priority': %w", err)
+		}
 	}
 
 	if a.ProjectId != nil {
@@ -46650,6 +47127,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["acquisition_source"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionSource)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_source': %w", err)
+		}
+		delete(object, "acquisition_source")
+	}
+
 	if raw, found := object["amount_minor"]; found {
 		err = json.Unmarshal(raw, &a.AmountMinor)
 		if err != nil {
@@ -46690,6 +47175,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "closed_at")
 	}
 
+	if raw, found := object["commercial_motion"]; found {
+		err = json.Unmarshal(raw, &a.CommercialMotion)
+		if err != nil {
+			return fmt.Errorf("error reading 'commercial_motion': %w", err)
+		}
+		delete(object, "commercial_motion")
+	}
+
 	if raw, found := object["company_id"]; found {
 		err = json.Unmarshal(raw, &a.CompanyId)
 		if err != nil {
@@ -46712,6 +47205,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'currency': %w", err)
 		}
 		delete(object, "currency")
+	}
+
+	if raw, found := object["description"]; found {
+		err = json.Unmarshal(raw, &a.Description)
+		if err != nil {
+			return fmt.Errorf("error reading 'description': %w", err)
+		}
+		delete(object, "description")
 	}
 
 	if raw, found := object["expected_close_date"]; found {
@@ -46816,6 +47317,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'pipeline_id': %w", err)
 		}
 		delete(object, "pipeline_id")
+	}
+
+	if raw, found := object["priority"]; found {
+		err = json.Unmarshal(raw, &a.Priority)
+		if err != nil {
+			return fmt.Errorf("error reading 'priority': %w", err)
+		}
+		delete(object, "priority")
 	}
 
 	if raw, found := object["project_id"]; found {
@@ -46941,6 +47450,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 
+	if a.AcquisitionSource != nil {
+		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
+
 	if a.AmountMinor != nil {
 		object["amount_minor"], err = json.Marshal(a.AmountMinor)
 		if err != nil {
@@ -46974,6 +47490,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.CommercialMotion != nil {
+		object["commercial_motion"], err = json.Marshal(a.CommercialMotion)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'commercial_motion': %w", err)
+		}
+	}
+
 	if a.CompanyId != nil {
 		object["company_id"], err = json.Marshal(a.CompanyId)
 		if err != nil {
@@ -46990,6 +47513,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["currency"], err = json.Marshal(a.Currency)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'currency': %w", err)
+		}
+	}
+
+	if a.Description != nil {
+		object["description"], err = json.Marshal(a.Description)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'description': %w", err)
 		}
 	}
 
@@ -47076,6 +47606,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 	object["pipeline_id"], err = json.Marshal(a.PipelineId)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'pipeline_id': %w", err)
+	}
+
+	if a.Priority != nil {
+		object["priority"], err = json.Marshal(a.Priority)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'priority': %w", err)
+		}
 	}
 
 	if a.ProjectId != nil {
@@ -50330,12 +50867,28 @@ func (a *UpdateDealRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["acquisition_source"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionSource)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_source': %w", err)
+		}
+		delete(object, "acquisition_source")
+	}
+
 	if raw, found := object["amount_minor"]; found {
 		err = json.Unmarshal(raw, &a.AmountMinor)
 		if err != nil {
 			return fmt.Errorf("error reading 'amount_minor': %w", err)
 		}
 		delete(object, "amount_minor")
+	}
+
+	if raw, found := object["commercial_motion"]; found {
+		err = json.Unmarshal(raw, &a.CommercialMotion)
+		if err != nil {
+			return fmt.Errorf("error reading 'commercial_motion': %w", err)
+		}
+		delete(object, "commercial_motion")
 	}
 
 	if raw, found := object["company_id"]; found {
@@ -50352,6 +50905,14 @@ func (a *UpdateDealRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'currency': %w", err)
 		}
 		delete(object, "currency")
+	}
+
+	if raw, found := object["description"]; found {
+		err = json.Unmarshal(raw, &a.Description)
+		if err != nil {
+			return fmt.Errorf("error reading 'description': %w", err)
+		}
+		delete(object, "description")
 	}
 
 	if raw, found := object["expected_close_date"]; found {
@@ -50426,6 +50987,14 @@ func (a *UpdateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "partner_company_id")
 	}
 
+	if raw, found := object["priority"]; found {
+		err = json.Unmarshal(raw, &a.Priority)
+		if err != nil {
+			return fmt.Errorf("error reading 'priority': %w", err)
+		}
+		delete(object, "priority")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -50469,10 +51038,24 @@ func (a UpdateDealRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 
+	if a.AcquisitionSource != nil {
+		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
+
 	if a.AmountMinor != nil {
 		object["amount_minor"], err = json.Marshal(a.AmountMinor)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'amount_minor': %w", err)
+		}
+	}
+
+	if a.CommercialMotion != nil {
+		object["commercial_motion"], err = json.Marshal(a.CommercialMotion)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'commercial_motion': %w", err)
 		}
 	}
 
@@ -50487,6 +51070,13 @@ func (a UpdateDealRequest) MarshalJSON() ([]byte, error) {
 		object["currency"], err = json.Marshal(a.Currency)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'currency': %w", err)
+		}
+	}
+
+	if a.Description != nil {
+		object["description"], err = json.Marshal(a.Description)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'description': %w", err)
 		}
 	}
 
@@ -50550,6 +51140,13 @@ func (a UpdateDealRequest) MarshalJSON() ([]byte, error) {
 		object["partner_company_id"], err = json.Marshal(a.PartnerCompanyId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'partner_company_id': %w", err)
+		}
+	}
+
+	if a.Priority != nil {
+		object["priority"], err = json.Marshal(a.Priority)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'priority': %w", err)
 		}
 	}
 
@@ -51795,6 +52392,15 @@ func (t *ConfirmPage) UnmarshalJSON(b []byte) error {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List deal acquisition sources, active and retired, in display order.
+	// (GET /acquisition-sources)
+	ListAcquisitionSources(w http.ResponseWriter, r *http.Request)
+	// Add an acquisition source.
+	// (POST /acquisition-sources)
+	CreateAcquisitionSource(w http.ResponseWriter, r *http.Request, params CreateAcquisitionSourceParams)
+	// Relabel, reorder or retire an acquisition source.
+	// (PATCH /acquisition-sources/{id})
+	UpdateAcquisitionSource(w http.ResponseWriter, r *http.Request, id Id, params UpdateAcquisitionSourceParams)
 	// List activities (the timeline; cursor-paginated, filterable by type/entity).
 	// (GET /activities)
 	ListActivities(w http.ResponseWriter, r *http.Request, params ListActivitiesParams)
@@ -52212,6 +52818,9 @@ type ServerInterface interface {
 	// What a refused send was refused for, and for whom.
 	// (GET /communication-reviews/{id})
 	GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Answer a refusal by saying what happened away from the system.
+	// (POST /communication-reviews/{id}/context)
+	RecordCommunicationContext(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
 	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -53679,6 +54288,24 @@ type ServerInterface interface {
 
 type Unimplemented struct{}
 
+// List deal acquisition sources, active and retired, in display order.
+// (GET /acquisition-sources)
+func (_ Unimplemented) ListAcquisitionSources(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add an acquisition source.
+// (POST /acquisition-sources)
+func (_ Unimplemented) CreateAcquisitionSource(w http.ResponseWriter, r *http.Request, params CreateAcquisitionSourceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Relabel, reorder or retire an acquisition source.
+// (PATCH /acquisition-sources/{id})
+func (_ Unimplemented) UpdateAcquisitionSource(w http.ResponseWriter, r *http.Request, id Id, params UpdateAcquisitionSourceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List activities (the timeline; cursor-paginated, filterable by type/entity).
 // (GET /activities)
 func (_ Unimplemented) ListActivities(w http.ResponseWriter, r *http.Request, params ListActivitiesParams) {
@@ -54510,6 +55137,12 @@ func (_ Unimplemented) ListCommunicationReviews(w http.ResponseWriter, r *http.R
 // What a refused send was refused for, and for whom.
 // (GET /communication-reviews/{id})
 func (_ Unimplemented) GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a refusal by saying what happened away from the system.
+// (POST /communication-reviews/{id}/context)
+func (_ Unimplemented) RecordCommunicationContext(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -57443,6 +58076,131 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListAcquisitionSources operation middleware
+func (siw *ServerInterfaceWrapper) ListAcquisitionSources(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAcquisitionSources(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateAcquisitionSource operation middleware
+func (siw *ServerInterfaceWrapper) CreateAcquisitionSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateAcquisitionSourceParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAcquisitionSource(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAcquisitionSource operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAcquisitionSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateAcquisitionSourceParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAcquisitionSource(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListActivities operation middleware
 func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http.Request) {
@@ -62484,6 +63242,38 @@ func (siw *ServerInterfaceWrapper) GetCommunicationReview(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCommunicationReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordCommunicationContext operation middleware
+func (siw *ServerInterfaceWrapper) RecordCommunicationContext(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordCommunicationContext(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -69975,6 +70765,45 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_attribution"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_attribution", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "commercial_motion" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "commercial_motion", r.URL.Query(), &params.CommercialMotion, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "commercial_motion"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "commercial_motion", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "priority" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "priority", r.URL.Query(), &params.Priority, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "priority"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "priority", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "acquisition_source" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "acquisition_source", r.URL.Query(), &params.AcquisitionSource, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "acquisition_source"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "acquisition_source", Err: err})
 		}
 		return
 	}
@@ -84132,6 +84961,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/acquisition-sources", wrapper.ListAcquisitionSources)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/acquisition-sources", wrapper.CreateAcquisitionSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/acquisition-sources/{id}", wrapper.UpdateAcquisitionSource)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities", wrapper.ListActivities)
 	})
 	r.Group(func(r chi.Router) {
@@ -84547,6 +85385,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/communication-reviews/{id}", wrapper.GetCommunicationReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/communication-reviews/{id}/context", wrapper.RecordCommunicationContext)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/communication-reviews/{id}/direct-send", wrapper.DirectCommunicationSend)

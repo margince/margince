@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -194,6 +195,74 @@ func TestAnInPersonExchangeMakesCorrespondenceLawful(t *testing.T) {
 	}
 	if after.Qualifying == nil || after.Qualifying.Kind != "in_person" {
 		t.Errorf("the verdict cites %+v, want the in-person exchange", after.Qualifying)
+	}
+}
+
+// A PHONE CALL IS EVIDENCE TOO, AND IT HAS ITS OWN WORD FOR IT.
+//
+// A customer rings and asks for a quote. Nothing lands in a mailbox, nothing
+// appears in a calendar, and the send is refused as correspondence with
+// somebody who "has never written to you" — true of the inbox and false of the
+// world. Before this kind existed the rep's only way to say otherwise was
+// `in_person`, which claims they were in a room together when they were not.
+func TestARequestTheSubjectMadeMakesCorrespondenceLawful(t *testing.T) {
+	e := setupQualifying(t)
+
+	if before := e.verdict(t); before.State != VerdictUnknown {
+		t.Fatalf("the starting verdict = %q, want unknown", before.State)
+	}
+
+	rang := time.Now().Add(-3 * time.Hour).Truncate(time.Second)
+	if _, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, RecordQualifyingEventInput{
+		Kind:       KindRequestedBySubject,
+		Note:       "Rang about the March order and asked me to send the quote by email.",
+		OccurredAt: rang,
+	}); err != nil {
+		t.Fatalf("recording the request: %v", err)
+	}
+
+	after := e.verdict(t)
+	if after.State != VerdictAllowed {
+		t.Fatalf("the verdict after the call = %q (%s), want allowed", after.State, after.Reason)
+	}
+	if after.Qualifying == nil || after.Qualifying.Kind != KindRequestedBySubject {
+		t.Fatalf("the verdict cites %+v, want the request the subject made", after.Qualifying)
+	}
+	// THE REASON SAYS WHOSE MOVE IT WAS. A rep reading why this send is lawful
+	// needs to see that the contact asked, not merely that "an exchange" is on
+	// file — which is what the generic arm would have said.
+	if !strings.Contains(after.Reason, "asked you to write") {
+		t.Errorf("the reason reads %q, which does not say the contact asked", after.Reason)
+	}
+	if !strings.Contains(after.Reason, "March order") {
+		t.Errorf("the reason reads %q and does not carry the note, which IS the evidence",
+			after.Reason)
+	}
+}
+
+// THE NOTE IS STILL REQUIRED, because it is still the only evidence there is.
+//
+// The new kind joins in_person on the hand-recorded side of the table's own
+// evidence CHECK, so a row without a note is one the database refuses. This
+// proves the store refuses it first, with a field a screen can highlight,
+// rather than letting a constraint error surface from inside a send.
+func TestARequestTheSubjectMadeStillNeedsItsNote(t *testing.T) {
+	e := setupQualifying(t)
+
+	_, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, RecordQualifyingEventInput{
+		Kind:       KindRequestedBySubject,
+		Note:       "   ",
+		OccurredAt: time.Now().Add(-time.Hour),
+	})
+	var invalid *InvalidQualifyingEventError
+	if !errors.As(err, &invalid) {
+		t.Fatalf("recording a note-less request → %v, want a refusal naming the field", err)
+	}
+	if invalid.Field != fieldNote {
+		t.Errorf("the refusal names %q, want %q", invalid.Field, fieldNote)
+	}
+	if e.verdict(t).State != VerdictUnknown {
+		t.Error("a refused statement still changed the verdict, so something was written")
 	}
 }
 

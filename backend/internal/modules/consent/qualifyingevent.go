@@ -35,14 +35,39 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// kindInPerson is the one kind a human may assert. Every other kind is derived
-// from records, and a hand-written one would be a second, unbacked answer to a
-// question the data already settles.
+// kindInPerson is an exchange that happened in a room: a card handed over at a
+// trade fair, a conversation at a stand.
 //
 // Held by: TestRecordingAnExchangeRefusesWhatItCannotStandBehind
 // (backend/internal/modules/consent/qualifyingevent_integration_test.go), whose
 // first case sends a derived kind and requires the refusal.
 const kindInPerson = "in_person"
+
+// KindRequestedBySubject is the contact asking us to write to them, away from
+// every system: a phone call, a conversation at a counter, a message on a
+// channel this product does not capture.
+//
+// A SECOND HAND-RECORDED KIND RATHER THAN A WIDER in_person. The rep who took
+// the call has to say what happened, and "in person" says they were in a room
+// together when they were not. A reader asking later what evidence stands
+// behind a send gets the answer in the word.
+//
+// Exported because the review's context form names it: a rep answering "they
+// asked me for this" is recording exactly this kind, and one spelling of the
+// word is what stops the form and the store disagreeing about what was written.
+const KindRequestedBySubject = "requested_by_subject"
+
+// handRecordedKinds are the kinds a human may assert. Every other kind is
+// derived from records, and a hand-written one would be a second, unbacked
+// answer to a question the data already settles.
+//
+// Both of these need a NOTE and carry no source row, which is the shape the
+// table's evidence CHECK requires of them — there is nothing to cite, so the
+// note is the evidence.
+var handRecordedKinds = map[string]bool{
+	kindInPerson:           true,
+	KindRequestedBySubject: true,
+}
 
 // KindMeeting is the event derived from a meeting the subject was in
 // (qualifyingground.go). Exported because the capture ladder reads the same
@@ -84,15 +109,18 @@ func (s *Store) RecordQualifyingEvent(
 	contactID ids.ContactID,
 	in RecordQualifyingEventInput,
 ) (QualifyingEvent, error) {
-	if in.Kind != kindInPerson {
+	if !handRecordedKinds[in.Kind] {
 		return QualifyingEvent{}, &InvalidQualifyingEventError{
-			Field: "kind", Reason: "only an in-person exchange is recorded by hand; the rest are derived",
+			Field: "kind",
+			Reason: "only an exchange in person or a request the subject made themselves is " +
+				"recorded by hand; the rest are derived",
 		}
 	}
 	note := strings.TrimSpace(in.Note)
 	if note == "" {
 		return QualifyingEvent{}, &InvalidQualifyingEventError{
-			Field: fieldNote, Reason: "an in-person exchange has no other evidence, so it needs one",
+			Field:  fieldNote,
+			Reason: "a hand-recorded exchange has no other evidence, so it needs one",
 		}
 	}
 	if len([]rune(note)) > noteMaxRunes {
@@ -130,7 +158,7 @@ func (s *Store) RecordQualifyingEvent(
 		return QualifyingEvent{}, err
 	}
 
-	out := QualifyingEvent{Kind: kindInPerson, Note: note, OccurredAt: in.OccurredAt}
+	out := QualifyingEvent{Kind: in.Kind, Note: note, OccurredAt: in.OccurredAt}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The row-scope probe first: this changes what may be SENT to a contact,
 		// which is a change to their record however little of the row it
@@ -154,13 +182,13 @@ func (s *Store) RecordQualifyingEvent(
 				SELECT 1 FROM consent_qualifying_event
 				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4)
 			RETURNING true`,
-			contactID, kindInPerson, note, in.OccurredAt, by).Scan(&inserted); err != nil {
+			contactID, in.Kind, note, in.OccurredAt, by).Scan(&inserted); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				// Already on file. The caller's claim stands, and nothing was
 				// written twice — so there is nothing to audit either.
 				return nil
 			}
-			return fmt.Errorf("consent: recording the in-person exchange: %w", err)
+			return fmt.Errorf("consent: recording the exchange: %w", err)
 		}
 		// Audit-only, like every other consent-basis write beside it: the closed
 		// public-event catalog carries no type for a lawful basis, and what an
@@ -172,7 +200,7 @@ func (s *Store) RecordQualifyingEvent(
 		// `contact_consent` would have put a rule in the trail
 		// (`contact_consent.create`) that authorized nothing here.
 		_, err := storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
-			"qualifying_event": kindInPerson,
+			"qualifying_event": in.Kind,
 			fieldNote:          note,
 			fieldOccurredAt:    in.OccurredAt.UTC().Format(time.RFC3339),
 		})

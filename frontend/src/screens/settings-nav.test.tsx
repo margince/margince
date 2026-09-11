@@ -144,10 +144,10 @@ const EVERY_PAGE = [
 // The five reads the old Data model entry unioned, now spread across five pages
 // of their own. Each still has to open its page ALONE: a page wired to one
 // object with four decorative terms passes any fixture that grants all five.
-// `custom_field` names TWO pages: the field editor and the lead vocabulary are
-// both stored as custom fields and the server gates both on that object, so one
-// revoked grant closes both — which a case naming only the editor would not
-// say. `pipeline` names the stage designer alone.
+// `custom_field` names THREE pages: the field editor, the lead vocabulary and
+// the acquisition-source catalog are all gated on that object server-side, so
+// one revoked grant closes all three — which a case naming only the editor
+// would not say. `pipeline` names the stage designer alone.
 //
 // A record rather than a tuple, so the object and the pages keep their own
 // types: a tuple with a variadic tail widens both halves to their union, and
@@ -156,7 +156,7 @@ const SALES_READS: readonly {
   readonly object: RbacObject;
   readonly opens: readonly SettingsPageId[];
 }[] = [
-  { object: "custom_field", opens: ["leads", "fields"] },
+  { object: "custom_field", opens: ["leads", "acquisition", "fields"] },
   { object: "pipeline", opens: ["pipelines", "stageautomation"] },
   { object: "product", opens: ["products"] },
   { object: "offer_template", opens: ["products"] },
@@ -244,6 +244,7 @@ const SEEDED_READ_PAGES = pagesNamed(
   // a seat that may see the stages may see what their transitions have earned.
   "stageautomation",
   "leads",
+  "acquisition",
   "fields",
   "products",
   "capture",
@@ -266,6 +267,7 @@ const SEEDED_OPS_PAGES = pagesNamed(
   // a seat that may see the stages may see what their transitions have earned.
   "stageautomation",
   "leads",
+  "acquisition",
   "fields",
   "products",
   "capture",

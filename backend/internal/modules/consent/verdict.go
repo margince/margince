@@ -342,6 +342,11 @@ func qualifyingReason(event QualifyingEvent) string {
 		// side of today reads as a bug to the rep who is looking at the
 		// calendar entry.
 		return fmt.Sprintf("a meeting on %s connects you", when)
+	case KindRequestedBySubject:
+		// Named rather than left to the default arm below, because what this
+		// says is stronger than "an exchange happened": the contact ASKED. A rep
+		// reading why a send is lawful should see whose move it was.
+		return fmt.Sprintf("they asked you to write to them on %s: %s", when, event.Note)
 	default:
 		return fmt.Sprintf("a recorded exchange on %s: %s", when, event.Note)
 	}

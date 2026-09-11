@@ -5538,6 +5538,58 @@ export interface paths {
         patch: operations["updateLeadSource"];
         trace?: never;
     };
+    "/acquisition-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List deal acquisition sources, active and retired, in display order.
+         * @description The administered business channels a deal can be attributed to. This list is
+         *     deliberately separate from `/lead-sources`: that one also models how a RECORD
+         *     reached Margince (connector, import, crawl) and scores lead intent, while this
+         *     one only names how an OPPORTUNITY reached the business. Retired entries are
+         *     returned so a deal still carrying one renders its label and a filter can still
+         *     find it; they cannot be newly assigned.
+         */
+        get: operations["listAcquisitionSources"];
+        put?: never;
+        /** Add an acquisition source. */
+        post: operations["createAcquisitionSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition-sources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Relabel, reorder or retire an acquisition source.
+         * @description Retirement is `active: false`, and there is no delete: a key a deal has ever
+         *     carried must stay resolvable, or that deal's history stops rendering. Relabelling
+         *     changes what readers see and never rewrites the stored key, so reports keyed on it
+         *     stay comparable across the rename.
+         */
+        patch: operations["updateAcquisitionSource"];
+        trace?: never;
+    };
     "/lead-disqualify-reasons": {
         parameters: {
             query?: never;
@@ -9387,6 +9439,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/communication-reviews/{id}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a refusal by saying what happened away from the system.
+         * @description The engine refuses a send to somebody it has no evidence about, and it is right to:
+         *     nothing on the record connects this workspace to that contact. But the record is not the
+         *     world. A customer rang and asked for a quote; somebody took a card at a stand. The rep
+         *     who was there is the only place that fact exists, and this is where they put it on the
+         *     record without leaving the message they are trying to send.
+         *
+         *     WHAT IT WRITES is a qualifying event (`consent_qualifying_event`) — the same row the
+         *     `business_correspondence` verdict reads. So the next preview of the same message answers
+         *     differently, which is the whole point: the earlier version of this endpoint wrote to a
+         *     table nothing reads, answered 204, and left the rep refused for the same reason.
+         *
+         *     IT NAMES ONE CONTACT. A statement is about whoever it is about, and a review can name
+         *     several recipients — so the body carries the `subject_id` the statement concerns, and it
+         *     must be somebody this review was actually refused for.
+         *
+         *     IT ANSWERS ONE KIND OF REFUSAL. A qualifying event settles whether ordinary business
+         *     correspondence is lawful at all (`no_compatible_evidence`). It does not touch a marketing
+         *     objection, a suppression, a bounce or a frequency cap — those are the subject's own
+         *     decisions or facts about the address, and no rep's recollection overrides one. Asking it
+         *     to answer one of those is a 422 naming what is really in the way.
+         *
+         *     IT DOES NOT SEND. Recording evidence and sending are two decisions; the caller re-previews
+         *     and presses send.
+         */
+        post: operations["recordCommunicationContext"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/communication-reviews/{id}/direct-send": {
         parameters: {
             query?: never;
@@ -10270,19 +10366,20 @@ export interface paths {
          * @description A qualifying event is what a `business_correspondence` verdict reads to answer whether
          *     we may write to somebody at all (`getContactConsentGuard`). Most arrive on their own —
          *     an inbound message, an inquiry, an open deal are all derived from records the product
-         *     already holds. One cannot: **a card handed over in person**, which happened away from
-         *     every system and is a fact only the contact who was there can state.
+         *     already holds. Two cannot: **a card handed over in person**, and **a request the contact
+         *     made themselves** by phone or across a counter. Both happened away from every system and
+         *     are facts only the colleague who was there can state.
          *
-         *     This is where they state it. `in_person` requires a `note` saying what happened, because
+         *     This is where they state it. Both kinds require a `note` saying what happened, because
          *     that note IS the evidence — there is no message to cite and no deal to point at, and a
          *     recorded basis nobody can check is not accountability.
          *
-         *     It does not grant marketing consent and never could: §7 UWG asks for express consent, and
-         *     a card is not one. What it settles is the narrower question of whether an ordinary business
-         *     email may be sent — which is the question the confirm-your-details flow has to answer
-         *     before it can send anything at all.
+         *     Neither grants marketing consent and neither could: §7 UWG asks for express consent, and
+         *     a card is not one, nor is "send me a quote". What they settle is the narrower question of
+         *     whether an ordinary business email may be sent — which is the question the
+         *     confirm-your-details flow has to answer before it can send anything at all.
          *
-         *     Human-only. An agent never asserts that a contact met somebody.
+         *     Human-only. An agent never asserts that a contact met somebody or rang up.
          */
         post: operations["recordQualifyingEvent"];
         delete?: never;
@@ -20660,14 +20757,14 @@ export interface components {
          */
         ConsentQualifyingEvent: {
             /** @enum {string} */
-            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting";
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting" | "requested_by_subject";
             /** Format: date-time */
             occurred_at: string;
             /** @enum {string|null} */
             source_entity_type?: "activity" | "deal" | null;
             /** Format: uuid */
             source_entity_id?: string | null;
-            /** @description The typed evidence for an `in_person` exchange, where a named human's note IS the record. */
+            /** @description The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note IS the record. */
             note?: string | null;
         };
         /** @description The local graph around one contact — nodes, the edges between them, and the route worth taking. */
@@ -22050,6 +22147,20 @@ export interface components {
              * @enum {string|null}
              */
             partner_attribution?: "sourced" | "influenced" | null;
+            /** @description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow. */
+            description?: string | null;
+            /**
+             * @description Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+             * @enum {string|null}
+             */
+            commercial_motion?: "new_business" | "renewal" | "upsell" | "cross_sell" | "expansion" | "existing_business" | null;
+            /**
+             * @description Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+             * @enum {string|null}
+             */
+            priority?: "low" | "medium" | "high" | null;
+            /** @description The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key. */
+            acquisition_source?: string | null;
             /**
              * Format: uuid
              * @description The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
@@ -22133,6 +22244,20 @@ export interface components {
              * @enum {string|null}
              */
             partner_attribution?: "sourced" | "influenced" | null;
+            /** @description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow. */
+            description?: string | null;
+            /**
+             * @description Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+             * @enum {string|null}
+             */
+            commercial_motion?: "new_business" | "renewal" | "upsell" | "cross_sell" | "expansion" | "existing_business" | null;
+            /**
+             * @description Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+             * @enum {string|null}
+             */
+            priority?: "low" | "medium" | "high" | null;
+            /** @description An active key from `/acquisition-sources`. A retired key is refused for a NEW assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it through unrelated edits. Null clears it. */
+            acquisition_source?: string | null;
             /**
              * Format: uuid
              * @description The body of work this deal belongs to; must name the same company as the deal.
@@ -22166,6 +22291,20 @@ export interface components {
              * @enum {string|null}
              */
             partner_attribution?: "sourced" | "influenced" | null;
+            /** @description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow. */
+            description?: string | null;
+            /**
+             * @description Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+             * @enum {string|null}
+             */
+            commercial_motion?: "new_business" | "renewal" | "upsell" | "cross_sell" | "expansion" | "existing_business" | null;
+            /**
+             * @description Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+             * @enum {string|null}
+             */
+            priority?: "low" | "medium" | "high" | null;
+            /** @description An active key from `/acquisition-sources`. A retired key is refused for a NEW assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it through unrelated edits. Null clears it. */
+            acquisition_source?: string | null;
             /** Format: uuid */
             project_id?: string | null;
             /** Format: uuid */
@@ -25105,6 +25244,42 @@ export interface components {
          * @enum {string}
          */
         LeadSourceIntent: "high" | "neutral" | "low";
+        /** @description One administered business channel a deal can be attributed to. */
+        AcquisitionSource: {
+            /** Format: uuid */
+            id: string;
+            /** @description The stable identifier stored on the deal. Lowercase, never changes once created — relabelling edits `label`, so a report keyed on the key survives the rename. */
+            key: string;
+            /** @description What readers see. */
+            label: string;
+            /** @description Display order in pickers and settings. */
+            sort_order: number;
+            /** @description False is retired: still readable and still filterable on deals that carry it, but refused for a new assignment. */
+            active: boolean;
+            /** @description Seeded with the installation. Fully editable; it simply cannot be removed. */
+            readonly system: boolean;
+            /** Format: int64 */
+            readonly version: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        AcquisitionSourceListResponse: {
+            data: components["schemas"]["AcquisitionSource"][];
+        };
+        CreateAcquisitionSourceRequest: {
+            /** @description Derived from the label when omitted. */
+            key?: string;
+            label: string;
+            sort_order?: number;
+        };
+        /** @description Every field optional; an omitted one is left alone. */
+        UpdateAcquisitionSourceRequest: {
+            label?: string;
+            sort_order?: number;
+            active?: boolean;
+        };
         /** @description One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees. */
         LeadSource: {
             /** Format: uuid */
@@ -25403,17 +25578,43 @@ export interface components {
             source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             source_id?: string | null;
         };
+        /** @description One rep's statement about one contact, answering one refusal. */
+        RecordCommunicationContextRequest: {
+            /**
+             * Format: uuid
+             * @description The contact this statement is about. It must be somebody this review was refused for,
+             *     and the refusal must be one a statement can answer — a review naming three contacts
+             *     takes three statements, not one copied across them.
+             */
+            subject_id: string;
+            /**
+             * @description How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
+             *     contact asking us to write to them by phone or across a counter.
+             * @enum {string}
+             */
+            kind: "in_person" | "requested_by_subject";
+            /** @description What happened, in the words of whoever was there. Required — it is the only evidence there is. */
+            note: string;
+            /**
+             * Format: date-time
+             * @description When it happened, not when it was typed in. A future moment is refused.
+             */
+            occurred_at: string;
+        };
         /** @description One exchange that makes ordinary business correspondence lawful. */
         RecordQualifyingEventRequest: {
             /**
-             * @description Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
-             *     active_deal, meeting — is DERIVED from records the product already holds, and a
-             *     hand-written one would be a second, unbacked answer to a question the data already
-             *     settles.
+             * @description The two kinds a human may state. `in_person` is an exchange that happened in a room —
+             *     a card handed over at a stand. `requested_by_subject` is the contact asking us to write
+             *     to them away from every system: a phone call, a conversation at a counter.
+             *
+             *     Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
+             *     records the product already holds, and a hand-written one would be a second, unbacked
+             *     answer to a question the data already settles.
              * @enum {string}
              */
-            kind: "in_person";
-            /** @description What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has. */
+            kind: "in_person" | "requested_by_subject";
+            /** @description What happened, in the words of whoever was there. Required — it is the only evidence a hand-recorded exchange has. */
             note: string;
             /**
              * Format: date-time
@@ -38528,6 +38729,12 @@ export interface operations {
                 partner_sourced?: boolean;
                 /** @description Deals a partner brought (`sourced`) or merely helped (`influenced`). */
                 partner_attribution?: "sourced" | "influenced";
+                /** @description `unset` matches deals with no motion recorded, which no enum value can express. */
+                commercial_motion?: "new_business" | "renewal" | "upsell" | "cross_sell" | "expansion" | "existing_business" | "unset";
+                /** @description `unset` matches deals nobody has prioritised. */
+                priority?: "low" | "medium" | "high" | "unset";
+                /** @description An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker. */
+                acquisition_source?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
                  *
@@ -43469,6 +43676,121 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listAcquisitionSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The acquisition source list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcquisitionSourceListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createAcquisitionSource: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAcquisitionSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created acquisition source. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcquisitionSource"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateAcquisitionSource: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAcquisitionSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated acquisition source. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcquisitionSource"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listLeadDisqualifyReasons: {
         parameters: {
             query?: never;
@@ -48375,6 +48697,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommunicationDecisionRequested"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordCommunicationContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordCommunicationContextRequest"];
+            };
+        };
+        responses: {
+            /** @description The review as it stands after the statement was recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationReview"];
                 };
             };
             404: components["responses"]["NotFound"];

@@ -23,6 +23,18 @@ type stubs struct{}
 
 var _ crmcontracts.ServerInterface = stubs{}
 
+func (stubs) ListAcquisitionSources(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListAcquisitionSources")
+}
+
+func (stubs) CreateAcquisitionSource(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateAcquisitionSourceParams) {
+	httperr.NotImplemented(w, r, "CreateAcquisitionSource")
+}
+
+func (stubs) UpdateAcquisitionSource(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateAcquisitionSourceParams) {
+	httperr.NotImplemented(w, r, "UpdateAcquisitionSource")
+}
+
 func (stubs) ListActivities(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListActivitiesParams) {
 	httperr.NotImplemented(w, r, "ListActivities")
 }
@@ -577,6 +589,10 @@ func (stubs) ListCommunicationReviews(w nethttp.ResponseWriter, r *nethttp.Reque
 
 func (stubs) GetCommunicationReview(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetCommunicationReview")
+}
+
+func (stubs) RecordCommunicationContext(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RecordCommunicationContext")
 }
 
 func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {

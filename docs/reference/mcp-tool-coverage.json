@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 39,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 12648,
+    "tokens_served_but_never_driven": 12685,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 7,
@@ -1216,22 +1216,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "progress_deal",
-      "tokens": 505,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
-      "measured_by_model": {}
-    },
-    {
       "name": "list_records",
-      "tokens": 504,
+      "tokens": 541,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1253,6 +1239,20 @@
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
+      "name": "progress_deal",
+      "tokens": 505,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
       "measured_by_model": {}
     },
     {

@@ -6,7 +6,7 @@
   "catalog": {
     "tools": 76,
     "system_frame_tokens": 353,
-    "tokens": 24294,
+    "tokens": 24331,
     "median_tool_tokens": 273,
     "mean_tool_tokens": 319
   },
@@ -21,9 +21,9 @@
         "read_brief",
         "read_record"
       ],
-      "tokens": 1629,
-      "percent_of_ceiling": 4,
-      "headroom_tokens": 21581,
+      "tokens": 1666,
+      "percent_of_ceiling": 5,
+      "headroom_tokens": 21544,
       "dangling_cross_references": [
         "annotate_brief → log_activity",
         "catch_me_up_on → prep_for_meeting",
@@ -46,9 +46,9 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "tokens": 2503,
+      "tokens": 2540,
       "percent_of_ceiling": 7,
-      "headroom_tokens": 20707,
+      "headroom_tokens": 20670,
       "dangling_cross_references": [
         "at_risk_relationships → account_coverage",
         "at_risk_relationships → intro_path_to",
@@ -99,16 +99,16 @@
       "tokens": 581
     },
     {
+      "name": "list_records",
+      "tokens": 541
+    },
+    {
       "name": "forecast_readings",
       "tokens": 509
     },
     {
       "name": "progress_deal",
       "tokens": 505
-    },
-    {
-      "name": "list_records",
-      "tokens": 504
     },
     {
       "name": "resolve_entities",
