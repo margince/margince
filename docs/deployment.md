@@ -257,9 +257,30 @@ cannot disarm the guard for the roles that boot after it.
 That is what makes a locally built image (`docker build --target api .`, which
 passes no `MARGINCE_RELEASE_VERSION`) usable, and it is a fact worth knowing about
 your own pipeline: **a deploy recipe that builds these targets itself, rather than
-pulling released images, gets no guard**
-([#1728](https://github.com/margince/margince/issues/1728)). Pass the
-argument if you want one.
+pulling released images, gets no guard.**
+
+To get one, pass the argument — the same value for all three roles, which is the
+whole point of it:
+
+```
+docker build --target api    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" .
+docker build --target web    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" .
+docker build --target worker --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" .
+```
+
+It does **not** have to be a constellation release version. The guard compares
+for equality and never for order, so any stable per-build identifier your
+pipeline already has — a commit sha, a build number — makes the comparison
+meaningful, as long as every role in one deployment gets the same one. What it
+must not be is empty or `dev`: both are what a build says when it does not know,
+and the roles read them as "make no comparison".
+
+`docker-bake.hcl` does this for the release workflow, declaring the argument once
+on the shared `role` target rather than per role, for the same reason: three
+declarations are three chances for the roles not to match. The release workflow
+refuses to publish a set stamped `dev` or nothing at all
+(`scripts/release-version-stamped.sh`), so the path that must always stamp proves
+it rather than relying on the bake file staying correct.
 
 ## Order of operations
 
