@@ -32,7 +32,6 @@ import { RecordTabs } from "../design-system/recordtabs";
 import {
   hasTimelineFilters,
   useRecordTimeline,
-  useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
@@ -129,10 +128,9 @@ import {
   ChronologyFilter,
   ChronologyFooter,
   chronologyNotice,
-  useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
-import { ConversationList } from "./recordconversations";
+import { ConversationList, useChronologyCut } from "./recordconversations";
 import {
   createdColumn,
   lastActivityColumn,
@@ -310,11 +308,14 @@ export function CompaniesScreen() {
             key: "description",
             header: t("org.description"),
             cell: (org: Organization) => org.description ?? "",
+            sort: "description",
           },
           tagsColumn<Organization>(t),
           {
             key: "website",
             header: t("org.website"),
+            // By the HOST the cell prints — the scheme is a constant.
+            sort: "website_url",
             cell: (org: Organization) =>
               org.website_url ? (
                 <a
@@ -335,6 +336,8 @@ export function CompaniesScreen() {
             header: t("org.contactCount"),
             numeric: true,
             cell: (org: Organization) => org.contact_count ?? "",
+            // A reader shown no count is ordered by none: such rows go last.
+            sort: "contact_count",
           },
           {
             // Withheld (absent key), not zero, for a role without
@@ -344,10 +347,12 @@ export function CompaniesScreen() {
             header: t("org.openDealCount"),
             numeric: true,
             cell: (org: Organization) => org.open_deal_count ?? "",
+            sort: "open_deal_count",
           },
           {
             key: "class",
             header: t("org.lifecycle"),
+            sort: "lifecycle",
             // classification is retired and no longer written by anything,
             // so a column reading it would show whatever it happened to
             // hold when the split shipped, forever.
@@ -359,6 +364,10 @@ export function CompaniesScreen() {
           {
             key: "relationship",
             header: t("org.relationshipTypes"),
+            // NO `sort`, and not a gap: an account can be a partner AND a
+            // customer, so ordering by the first member of a set would read as
+            // an answer without being one. The filter above narrows instead.
+            //
             // A filter with no column to read it back on is a list that cannot
             // say why a row matched. Multi-valued on purpose (ADR-0079):
             // an account can be a partner AND a customer, and showing only the
@@ -1227,8 +1236,9 @@ function useChronologySlots({
     records("person", id) ??
     records("deal", id) ??
     records("organization", id);
-  const [filter, setFilter] = useChronologyFilter(org.id);
-  const [filters, setFilters] = useTimelineFilters(org.id);
+  const { filter, filters, setFilters, openCut, kinds } = useChronologyCut(
+    org.id,
+  );
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("organization", org.id, {
@@ -1270,10 +1280,11 @@ function useChronologySlots({
       />
     ),
   });
-  // An evidence mark asks "where did this value come from" — the answer is
-  // the record's change history, so the mark turns the timeline to Changes
-  // rather than opening a screen of its own.
-  const showChanges = () => setFilter("changes");
+  // An evidence mark asks "where did this value come from", and the answer
+  // is the record's change history: the mark turns the timeline to Changes
+  // through the opener a pill press uses — one act, one set of rules about
+  // opening a cut, and no screen of its own.
+  const showChanges = () => openCut("changes");
 
   if (!active) {
     return {
@@ -1306,13 +1317,13 @@ function useChronologySlots({
       timelineGroups: groupChronology(history.entries, timeline.hasNextPage),
       timelineHeader: (
         <>
-          <ChronologyFilter
-            filter={filter}
-            conversations
-            onFilter={setFilter}
-          />
+          <ChronologyFilter filter={filter} conversations onFilter={openCut} />
           {filter !== "changes" && (
-            <TimelineFilterBar value={filters} onChange={setFilters} />
+            <TimelineFilterBar
+              value={filters}
+              kinds={kinds}
+              onChange={setFilters}
+            />
           )}
         </>
       ),

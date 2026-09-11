@@ -27,14 +27,16 @@ import (
 // it. Written through the owner connection because the caller under test is a
 // READER — a test that wrote its fixture as the reader would prove the reader
 // can see its own writes and nothing about the projection.
-func seedAttachment(t *testing.T, activity ids.UUID, filename string) {
+func seedAttachment(t *testing.T, activity ids.UUID, filename string) ids.UUID {
 	t.Helper()
+	id := ids.NewV7()
 	if _, err := OwnerConn(t).Exec(context.Background(), `
-		INSERT INTO attachment (entity_type, entity_id, filename, storage_key, source, captured_by)
-		VALUES ('activity', $1, $2, $3, 'imap', 'connector:imap')`,
-		activity, filename, "seed/"+filename+"/"+activity.String()); err != nil {
+		INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key, source, captured_by)
+		VALUES ($1, 'activity', $2, $3, $4, 'imap', 'connector:imap')`,
+		id, activity, filename, "seed/"+filename+"/"+activity.String()); err != nil {
 		t.Fatalf("seeding %s: %v", filename, err)
 	}
+	return id
 }
 
 func rowFor(page []crmcontracts.Activity, id ids.UUID) *crmcontracts.EmailSummary {

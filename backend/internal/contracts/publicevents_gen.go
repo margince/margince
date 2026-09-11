@@ -357,6 +357,27 @@ func (e PublicEventRelationshipNudgeDecidedAction) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventRetentionAppliedAction.
+const (
+	RetentionAppliedAnonymize PublicEventRetentionAppliedAction = "anonymize"
+	RetentionAppliedArchive   PublicEventRetentionAppliedAction = "archive"
+	RetentionAppliedErase     PublicEventRetentionAppliedAction = "erase"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventRetentionAppliedAction enum.
+func (e PublicEventRetentionAppliedAction) Valid() bool {
+	switch e {
+	case RetentionAppliedAnonymize:
+		return true
+	case RetentionAppliedArchive:
+		return true
+	case RetentionAppliedErase:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventRetentionRestrictedAction.
 const (
 	Pin      PublicEventRetentionRestrictedAction = "pin"
@@ -2002,8 +2023,8 @@ type PublicEventRelationshipNudgeDecidedAction string
 
 // PublicEventRetentionApplied Payload for retention.applied — a retention/erasure action ran against one record. Four emit sites, four different runtime subjects: the embed-call sweep (ai_call), the voice-learning-signal content sweep (voice_learning_signal), a workspace's configured retention policy's object type (activity | deal | lead | person | ai_call_payload), and Art. 17 erasure (person) — none fixed enough for this schema to name, so this is dynamic-entity (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. policy/reason are a union across the sites — both telemetry sweeps set neither, the policy-driven sweep sets policy only, Art. 17 erasure sets reason only.
 type PublicEventRetentionApplied struct {
-	// Action The action that ran (archive | anonymize | erase).
-	Action string `json:"action"`
+	// Action The action that ran. A CLOSED set, so a subscriber can switch on it exhaustively — which is the whole reason for closing it: an open field leaves a consumer to either branch on values nobody has defined or drop what it does not recognise, and a silent drop looks exactly like no event. `retention_policy.action` carries the same three under a CHECK, and a gate holds the two spellings together. Restriction is NOT a fourth action here: it emits retention.restricted, whose own action is a different closed set.
+	Action PublicEventRetentionAppliedAction `json:"action"`
 
 	// Policy The retention policy that drove this action (absent for the fixed embed-call sweep and for Art. 17 erasure, neither of which is policy-configured).
 	Policy *openapi_types.UUID `json:"policy,omitempty"`
@@ -2011,6 +2032,9 @@ type PublicEventRetentionApplied struct {
 	// Reason Why this action ran (Art. 17 erasure only — e.g. dsr_request; absent for both retention-sweep sites).
 	Reason *string `json:"reason,omitempty"`
 }
+
+// PublicEventRetentionAppliedAction The action that ran. A CLOSED set, so a subscriber can switch on it exhaustively — which is the whole reason for closing it: an open field leaves a consumer to either branch on values nobody has defined or drop what it does not recognise, and a silent drop looks exactly like no event. `retention_policy.action` carries the same three under a CHECK, and a gate holds the two spellings together. Restriction is NOT a fourth action here: it emits retention.restricted, whose own action is a different closed set.
+type PublicEventRetentionAppliedAction string
 
 // PublicEventRetentionRestricted Payload for retention.restricted — a statutory retention obligation changed what may be done with one record (A165/ADR-0114). Its own event type rather than a widening of retention.applied, because `restrict` carries an obligation on the SUBSCRIBER that no existing action does: the record survives in storage and must not survive in a projection. Adding it to retention.applied would have changed the meaning of a field subscribers already parse, which the versioning rule forbids within a major.
 type PublicEventRetentionRestricted struct {

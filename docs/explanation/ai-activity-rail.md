@@ -203,6 +203,30 @@ ticker's own `enrich` key names DIFFERENT work — a provider run on a person
 runs `cold_start`, not this task. The deep read rides its own `site-read` ticker
 key, not this one.
 
+### Where a narrated line lands
+
+Three places, and each answers a different question.
+
+- **The panel's running section** lists what is LIVE, and only that.
+- **The panel's recap** ("What it has done") lists what SETTLED today, newest
+  first, at most five. Same copy table, so one occurrence is told in one
+  vocabulary from start to finish — "I'm reading the Acme website" while it runs
+  and "I've read the Acme website" once it is done — and the record's name is a
+  LINK, which is the half of the row a reader can act on. It reads THIS feed
+  rather than the model-call trace deliberately: `ai_call` is telemetry and
+  carries no subject (`Call.Subject` reaches the occurrence and never the trace),
+  so a recap read from there could report that something happened and nothing
+  about what it happened to. The trace is still one click away, behind
+  "Full log".
+- **The card's resting line** rotates the newest settled occurrence among the
+  agent's other standing facts, because the rail is 235px wide and carries one
+  line.
+
+A kind with no copy draws nothing in any of the three. The recap says "nothing
+has finished today" only once the feed has ANSWERED: an unread feed draws no
+sentence at all, because "nothing finished" is a claim about a day somebody
+looked at.
+
 ### The ask: what this tab knows before the feed does
 
 The feed arrives on a poll, so between a person pressing "Draft with AI" and

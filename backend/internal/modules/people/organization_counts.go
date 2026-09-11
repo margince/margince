@@ -105,32 +105,53 @@ func grantVisible(ctx context.Context, object string) bool {
 func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Organization, orgIDs []ids.UUID) error {
 	args := []any{orgIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	// attachOrgCounts admitted the object; this bounds WHICH edges are counted,
-	// so a count never includes an edge whose endpoint the caller cannot reach.
-	edgeBound, err := auth.RelationshipEndpointScope(ctx, "rel", arg)
+	// attachOrgCounts admitted the object; the helper bounds which edges and
+	// people are counted, so a count never includes an edge whose endpoint the
+	// caller cannot reach.
+	from, err := countedEmploymentFrom(ctx, "rel.organization_id = ANY($1)", arg)
 	if err != nil {
 		return err
+	}
+	return fillCount(ctx, tx, idx,
+		`SELECT rel.organization_id, count(*)`+from+`
+		 GROUP BY rel.organization_id`, args,
+		func(o *crmcontracts.Organization, n int) { o.ContactCount = &n })
+}
+
+// countedEmploymentFrom is the FROM and WHERE of "which contacts work here that
+// this caller may see", with the organization binding left to the caller.
+//
+// Both the count the page PRINTS and the expression it ORDERS BY build their
+// statement from here — the page counts the whole set at once, the sort counts
+// per row — so a reader sees the number the list was arranged by rather than a
+// second reading of the same question.
+//
+// It takes the gates itself rather than being handed them: which employment
+// EDGES this caller may traverse bounds the count as much as which PEOPLE they
+// may see, and a caller that had to remember to pass either could forget one
+// and get a counting oracle over edges it is refused everywhere else.
+func countedEmploymentFrom(ctx context.Context, orgBinding string, arg func(any) int) (string, error) {
+	edgeBound, err := auth.RelationshipEndpointScope(ctx, "rel", arg)
+	if err != nil {
+		return "", err
 	}
 	if edgeBound != "" {
 		edgeBound = " AND " + edgeBound
 	}
 	scope, err := auth.ScopeClauseFor(ctx, "person", "p", arg)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if scope != "" {
 		scope = " AND " + scope
 	}
-	return fillCount(ctx, tx, idx,
-		`SELECT rel.organization_id, count(*)
+	return `
 		 FROM relationship rel
 		 JOIN person p ON p.id = rel.person_id AND p.archived_at IS NULL
-		 WHERE rel.organization_id = ANY($1)
+		 WHERE ` + orgBinding + `
 		   AND rel.kind = 'employment'
-		   AND `+employment.CurrentPrimarySQL("rel")+`
-		   AND rel.archived_at IS NULL`+edgeBound+scope+`
-		 GROUP BY rel.organization_id`, args,
-		func(o *crmcontracts.Organization, n int) { o.ContactCount = &n })
+		   AND ` + employment.CurrentPrimarySQL("rel") + `
+		   AND rel.archived_at IS NULL` + edgeBound + scope, nil
 }
 
 // fillOpenDealCounts reads the 0065 organization_open_pipeline_rollup view

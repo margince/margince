@@ -38,6 +38,15 @@ export type TimelineFilter =
   | (typeof TIMELINE_FILTERS)[number]
   | "conversations";
 
+// Whether the cut reads the EXCHANGES alone — Activities, and Conversations,
+// which is a narrowing of it. ONE predicate rather than the comparison spelled
+// again at each decision it drives (whether the change feed is read at all,
+// what draws as loading or failed, what a retry offers, which feed "load
+// older" lengthens), so a cut added to the vocabulary is answered everywhere.
+export function readsExchangesOnly(filter: TimelineFilter): boolean {
+  return filter === "activities" || filter === "conversations";
+}
+
 /**
  * useChronologyFilter owns the filter for ONE record rather than for the
  * session. When both records are already cached the route swaps one for
@@ -197,9 +206,8 @@ export function useRecordChronology({
 }>): RecordChronology {
   const t = useT();
   const viewerId = useViewerId();
-  // Only the cuts that DRAW change rows read them: Conversations is about
-  // what was said, exactly as a narrowed read is.
-  const wantsChanges = (filter === "all" || filter === "changes") && !narrowed;
+  // Only the cuts that DRAW change rows read them, and never a narrowed read.
+  const wantsChanges = !readsExchangesOnly(filter) && !narrowed;
   const changes = useFieldHistory(kind, recordId, { enabled: wantsChanges });
   // `page.data ?? []`, not `page.data`: a 200 with no body is a shape the
   // contract permits and the overlay mirror actually returns, and flattening
@@ -244,15 +252,11 @@ export function useRecordChronology({
     viewerId,
   );
   // Loading means NOTHING IS ON SCREEN YET, not "one of the two reads is still
-  // out". On the combined view the activities usually arrive first — the 360
-  // seeds them — and blanking them behind a skeleton until the change history
-  // lands takes rows away from a reader who already had them. It matters now
-  // that ALL is the default: every record page would open on a skeleton and
-  // then fill in.
-  // Rows already on screen are what makes a second feed's wait bearable, and
-  // only the COMBINED cut has any: on the changes cut the change feed is the
-  // whole list, so its wait and its failure are the section's own however many
-  // exchanges the record holds.
+  // out": rows already on screen are what makes a second feed's wait bearable.
+  // Only the COMBINED cut has any — the 360 seeds its activities, which arrive
+  // first — and since ALL is the default, blanking them behind a skeleton
+  // would open every record page on one. On the changes cut the change feed is
+  // the whole list, so its wait is the section's own.
   const holdingRows = filter === "all" && activityEntries.length > 0;
   const loading = wantsChanges && changes.isPending && !holdingRows;
   // Failure is judged the same way, and for the same reason: on the combined
@@ -266,20 +270,17 @@ export function useRecordChronology({
   // and that is a change to what the footer says rather than to this test.
   const failed = wantsChanges && changes.isError && !holdingRows;
 
-  // Conversations reads the same feed as Activities — the exchanges — and
-  // its renderer, not this hook, is what narrows the rows to threads.
-  if (filter === "activities" || filter === "conversations") {
+  // The renderer, not this hook, is what narrows these rows to threads.
+  if (readsExchangesOnly(filter)) {
     return {
       entries: activityEntries,
-      // The composite read caps this section, and a capped list that says
-      // nothing reads as the whole history: a reader looking at the oldest of
-      // 25 rows would take it for the day the relationship began.
+      // A capped list that says nothing reads as the whole history: a reader
+      // at the oldest of 25 rows takes it for the day the relationship began.
       truncated: activitiesHaveMore,
       changes,
       loading: false,
       failed: false,
-      // The Activities cut reads no changes, so there is no failure of theirs
-      // to report on it.
+      // Neither cut reads changes: no failure of theirs to report.
       changesUnread: false,
       changesAreTheLimit: false,
       activities: loadMore,
@@ -397,8 +398,7 @@ function activitiesCanGrow(
     return false;
   }
   return (
-    filter === "activities" ||
-    filter === "conversations" ||
+    readsExchangesOnly(filter) ||
     (filter === "all" && !chronology.changesAreTheLimit)
   );
 }

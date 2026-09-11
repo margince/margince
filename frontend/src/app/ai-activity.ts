@@ -101,6 +101,16 @@ export type AiActivity = Readonly<{
   /** Occurrences that settled since local midnight, newest first. */
   recent: readonly AiActivityItem[];
   /**
+   * Whether a read of the feed has actually ANSWERED.
+   *
+   * The three lists above coalesce an absent read to empty, which is the right
+   * default for anything that counts them and the wrong one for anything that
+   * would SAY so: "nothing has finished today" claims a day nobody read. A
+   * surface that draws an empty state needs the two apart, and nothing else in
+   * the shape can tell them apart.
+   */
+  answered: boolean;
+  /**
    * What went wrong today — failed and degraded runs, newest first.
    *
    * Beside `recent` rather than filtered out of it, and the difference is the
@@ -239,15 +249,16 @@ export function useAiActivity(): AiActivity {
   // off the body: a 200 whose shape is not the one the contract promises is
   // another absent read, and reaching into it for a length is how the rail's
   // whole section throws instead of reporting nothing.
-  const answered = query.data;
-  const running = answered?.running ?? NOTHING;
-  const recent = answered?.recent ?? NOTHING;
-  const faults = answered?.faults ?? NOTHING;
+  const feed = query.data;
+  const running = feed?.running ?? NOTHING;
+  const recent = feed?.recent ?? NOTHING;
+  const faults = feed?.faults ?? NOTHING;
   const asking = useLingeringAsk(open, recent[0]?.id);
   return {
     running,
     recent,
     faults,
+    answered: feed !== undefined,
     // STALLED is not working. The server derives that state for an occurrence
     // whose own source says it should have finished by now, and the chrome that
     // reads `working` pulses to say the AI is busy — so counting a stalled item

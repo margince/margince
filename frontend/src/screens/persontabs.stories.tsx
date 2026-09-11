@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { PersonTimelineTab } from "./persontabs";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
@@ -104,6 +105,22 @@ type Story = StoryObj<typeof PersonTimelineTab>;
  * head with the narrowing row beneath them, and the exchanges under both.
  */
 export const Chronology: Story = { render: tab(view) };
+
+/**
+ * The Conversations cut: the same chronicle, narrowed to the exchanges
+ * somebody can answer, with the kind dial under it offering only the kinds
+ * this cut can draw. Reached by pressing the pill, because the cut is the
+ * reader's choice rather than a prop.
+ */
+export const Conversations: Story = {
+  render: tab(view),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await page.findByRole("button", { name: "Conversations" }),
+    );
+  },
+};
 
 /**
  * The section the reader's grant does not reach. The dials stay — what they

@@ -1007,6 +1007,17 @@
   font-style: italic;
 }
 
+/* The recap's sentence, as ONE flex item.
+ *
+ * A recap line can carry a link around the record it names, and the line is
+ * rendered as a fragment — dropped straight into the row it would make that
+ * link a flex child of its own, with the row's gap opened between the words
+ * and the name. `min-width: 0` is what lets a long company name wrap inside
+ * the sentence instead of pushing the stamp out of the panel. */
+.arsaid {
+  min-width: 0;
+}
+
 .armuted {
   margin-left: auto;
   padding-left: var(--space-2);

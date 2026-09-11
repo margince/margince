@@ -27,12 +27,18 @@ import (
 // staged. The BYTES are not here: they are read from the object store at
 // transmit, so a delivery sitting on a retry ladder does not hold every
 // attachment it might ever send in the database.
+//
+// The tags name the keys the staged snapshot is stored under, so this type
+// reads that snapshot back as well as writing it — what the timeline says a
+// message carried is the same set of files, in the same spelling, that the
+// send handed the delivery. The two ends are held together by
+// TestTheStagedFileSnapshotIsReadBackInTheSpellingItWasWrittenIn.
 type OutboundFile struct {
-	AttachmentID ids.UUID
-	Filename     string
-	ContentType  string
-	ByteSize     int64
-	Checksum     string
+	AttachmentID ids.UUID `json:"attachment_id"`
+	Filename     string   `json:"filename"`
+	ContentType  string   `json:"content_type,omitempty"`
+	ByteSize     int64    `json:"byte_size,omitempty"`
+	Checksum     string   `json:"checksum,omitempty"`
 }
 
 // attachmentIDsFrom reads the contract's optional attachment_ids into the

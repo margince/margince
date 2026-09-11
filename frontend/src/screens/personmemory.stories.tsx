@@ -18,6 +18,10 @@ import "./person360.css";
 // because a filtered list that has come up empty is exactly when a reader
 // needs the strip that got them there.
 //
+// The card is a GLANCE: three conversations, then the footer's way to the
+// record's whole chronology. `Truncated` is the frame that shows both halves of
+// that — what a talkative contact looks like here, and where the rest went.
+//
 // EVERY INSTANT IS FIXED. `make fe-clock-drift` runs the suite at +200 days,
 // and a row dated relative to today would read as a meeting still to come.
 
@@ -97,6 +101,20 @@ const note: Activity = {
   ...CAPTURED,
 };
 
+// A contact who talks a lot: more captured than the card draws, which is the
+// only way to see the cut and the footer under it.
+const olderNotes: Activity[] = [
+  "Left a voicemail about the depot slot",
+  "Sent the fleet numbers over",
+  "Asked for the renewal terms in writing",
+].map((subject, index) => ({
+  ...note,
+  id: `01a05500-0000-7000-8000-0000000000${20 + index}`,
+  subject,
+  body: subject,
+  occurred_at: `2026-08-${25 - index}T09:00:00Z`,
+}));
+
 function view(activities: readonly Activity[]): Person360 {
   return {
     as_of: AT,
@@ -130,6 +148,15 @@ type Story = StoryObj<typeof PersonMemory>;
 
 /** Three kinds under the strip: a retained email, a meeting and a note. */
 export const WithRows: Story = { render: card([email, meeting, note]) };
+
+/**
+ * More than the glance holds. Three conversations are drawn and the footer
+ * carries the reader to the Timeline tab for the rest — the same place the
+ * rail's recent-activity glance leads, so one record has one ledger.
+ */
+export const Truncated: Story = {
+  render: card([email, meeting, note, ...olderNotes]),
+};
 
 /**
  * Nothing captured. The strip stays — it is how the reader got here, and a

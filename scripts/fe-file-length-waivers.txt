@@ -11,7 +11,7 @@
 # Format: <frozen-line-count> <path>
 1035 frontend/src/App.tsx
 612 frontend/src/app/account.tsx
-1488 frontend/src/app/agentrail.test.tsx
+1442 frontend/src/app/agentrail.test.tsx
 1571 frontend/src/app/agentrail.tsx
 589 frontend/src/app/palette.tsx
 1031 frontend/src/app/shell.tsx
@@ -101,7 +101,7 @@
 856 frontend/src/screens/onboarding-gate.tsx
 995 frontend/src/screens/onboarding-read.tsx
 2534 frontend/src/screens/organizations.test.tsx
-2589 frontend/src/screens/organizations.tsx
+2587 frontend/src/screens/organizations.tsx
 984 frontend/src/screens/overlay-usermap.tsx
 648 frontend/src/screens/partners.tsx
 513 frontend/src/screens/person360.tsx

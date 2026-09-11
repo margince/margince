@@ -1669,6 +1669,14 @@ export const de = {
   "email.received": "Erhalten",
   "email.sentTo": "Gesendet an {who}",
   "email.sent": "Gesendet",
+  "email.outgoingTo": "Ausgehend an {who}",
+  "email.outgoing": "Ausgehend",
+  "email.sendingTo": "Wird an {who} gesendet",
+  "email.sending": "Wird gesendet",
+  "email.notSentTo": "Nicht an {who} gesendet",
+  "email.notSent": "Nicht gesendet",
+  "email.bouncedFrom": "Hat {who} nicht erreicht",
+  "email.bounced": "Nicht angekommen",
   "email.access.sentence.team": "Alle im Unternehmen können das lesen.",
   "email.access.sentence.participants":
     "Nur die Beteiligten dieser Nachricht können sie lesen.",
@@ -8227,6 +8235,7 @@ export const de = {
   "person.loops.atLeast": "mindestens {count}",
 
   "person.memory.title": "Gesprächsgedächtnis",
+  "person.memory.viewAll": "Alle Aktivitäten ansehen",
   "person.memory.empty": "Auf diesem Kanal wurde noch nichts erfasst.",
   "person.memory.all": "Alle",
   "person.memory.email": "E-Mail",

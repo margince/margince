@@ -226,13 +226,22 @@ func descendContract(t *testing.T, doc map[string]any, path ...string) map[strin
 
 func loadContractDocument(t *testing.T) map[string]any {
 	t.Helper()
-	raw, err := os.ReadFile(contractDocument)
+	return loadOpenAPIDocument(t, contractDocument)
+}
+
+// loadOpenAPIDocument reads one OpenAPI document as untyped nodes, for the
+// readers above. The path is a parameter because the product publishes two —
+// crm.yaml to callers and public-events.yaml to subscribers — and a set spelled
+// in both is read here twice rather than by two readers.
+func loadOpenAPIDocument(t *testing.T, path string) map[string]any {
+	t.Helper()
+	raw, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("reading %s: %v", contractDocument, err)
+		t.Fatalf("reading %s: %v", path, err)
 	}
 	var doc map[string]any
 	if err := yaml.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("parsing %s: %v", contractDocument, err)
+		t.Fatalf("parsing %s: %v", path, err)
 	}
 	return doc
 }

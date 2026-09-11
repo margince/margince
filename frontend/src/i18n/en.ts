@@ -1751,6 +1751,14 @@ export const en = {
   "email.received": "Received",
   "email.sentTo": "Sent to {who}",
   "email.sent": "Sent",
+  "email.outgoingTo": "Outgoing to {who}",
+  "email.outgoing": "Outgoing",
+  "email.sendingTo": "Sending to {who}",
+  "email.sending": "Sending",
+  "email.notSentTo": "Not sent to {who}",
+  "email.notSent": "Not sent",
+  "email.bouncedFrom": "Did not reach {who}",
+  "email.bounced": "Did not arrive",
   "email.access.sentence.team": "Everyone in the organization can read this.",
   "email.access.sentence.participants":
     "Only the people on this message can read it.",
@@ -8325,6 +8333,7 @@ export const en = {
   "person.loops.atLeast": "at least {count}",
 
   "person.memory.title": "Conversation memory",
+  "person.memory.viewAll": "View all activity",
   "person.memory.empty": "Nothing captured on this channel yet.",
   "person.memory.all": "All",
   "person.memory.email": "Email",

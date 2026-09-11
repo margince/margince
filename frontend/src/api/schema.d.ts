@@ -16120,10 +16120,65 @@ export interface components {
             move: "needs_reply" | "waiting_for_them" | "none";
             display_status: components["schemas"]["EmailAccessStatus"];
             /**
+             * @description What happened to an outbound message, when this row is one and a delivery was
+             *     staged for it. Absent on an inbound message, and on an outbound one logged
+             *     rather than sent — neither has a delivery to report, which is a different
+             *     thing from one that has not left yet.
+             */
+            delivery?: components["schemas"]["EmailDelivery"];
+            /**
              * @description The activity's version, carried so a row can open an editor that writes with
              *     If-Match. A row without it can only read.
              */
             version: components["schemas"]["RowVersion"];
+        };
+        /**
+         * @description Whether an outbound message actually left, and why not when it did not.
+         *
+         *     The timeline carried DIRECTION alone, which reads as a delivery state and is not one:
+         *     a message parked because the channel refused its files, because the recipient blocked
+         *     the bot, or because the credential was rejected rendered exactly like one the provider
+         *     confirmed. The rep was told their message went.
+         */
+        EmailDelivery: {
+            /**
+             * @description What became of the message. `pending` is staged and not yet attempted — a real
+             *     state a reader may see, and not the same as parked.
+             *
+             *     `bounced` is the one state the delivery row does not spell as a status: a bounce
+             *     is a later fact about a send the provider DID accept, so the row keeps `sent` and
+             *     records the return beside it. A reader shown `sent` for a message that came back
+             *     is told the one thing that row can never say.
+             * @enum {string}
+             */
+            state: "pending" | "sent" | "parked" | "bounced";
+            /**
+             * @description Why it did not arrive, in the words it was recorded with — written for a human
+             *     because a rep is the one who has to act on it. Null unless the state is `parked`
+             *     or `bounced`.
+             */
+            reason?: string | null;
+            /**
+             * Format: date-time
+             * @description When the provider accepted it. Null unless the state is `sent`.
+             */
+            delivered_at?: string | null;
+            /**
+             * @description What the message was staged with, as it was at that moment. Empty when it carried
+             *     nothing.
+             *
+             *     NOT the live attachment list. Archiving or superseding a document later changes
+             *     what the library holds and must change nothing about what the timeline says went
+             *     out with a message that already left.
+             */
+            files?: components["schemas"]["EmailDeliveryFile"][];
+        };
+        /** @description One file a message was staged with, frozen at staging. */
+        EmailDeliveryFile: {
+            filename: string;
+            content_type?: string | null;
+            /** Format: int64 */
+            byte_size?: number | null;
         };
         /**
          * @description What a reader is allowed to know about who else reads this message, in one word the
@@ -27543,10 +27598,16 @@ export interface components {
          *     Four names come from a durable carrier that owns its own occurrence and can say
          *     queued and running: the two scheduled kinds match a name in runner.Catalog(),
          *     `document_extract` is a reading of an attached document a human asked for, and
-         *     `site_read` is a deep read of a company's website — one occurrence for the whole crawl,
-         *     where the site tasks below are the individual model calls it makes. Every other
-         *     name is an api/ai-tasks.yaml task announced by the router on the task's own behalf —
+         *     `site_read` is a deep read of a company's website. Every other name is an
+         *     api/ai-tasks.yaml task announced by the router on the task's own behalf —
          *     settled when it appears, because the router learns of a call once the call is over.
+         *
+         *     `site_extract`, `site_fact_extract` and `site_triage` are RETIRED names: a website
+         *     read runs those three passes and is one occurrence of the read, so the passes report
+         *     none of their own. Nothing writes them any more. They stay in this list because it is
+         *     also what a caller may FILTER on, and rows written before they were retired are served
+         *     until the projection's retention window closes over them — narrowing the filter would
+         *     refuse a query that still has answers.
          *
          *     Its own schema because the item that reports a kind and the query that asks for kinds
          *     must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody

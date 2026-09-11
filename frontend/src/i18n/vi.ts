@@ -1654,6 +1654,14 @@ export const vi = {
   "email.received": "Đã nhận",
   "email.sentTo": "Đã gửi tới {who}",
   "email.sent": "Đã gửi",
+  "email.outgoingTo": "Thư gửi đi tới {who}",
+  "email.outgoing": "Thư gửi đi",
+  "email.sendingTo": "Đang gửi tới {who}",
+  "email.sending": "Đang gửi",
+  "email.notSentTo": "Chưa gửi tới {who}",
+  "email.notSent": "Chưa gửi",
+  "email.bouncedFrom": "Không tới được {who}",
+  "email.bounced": "Không tới nơi",
   "email.access.sentence.team": "Mọi người trong tổ chức đều đọc được thư này.",
   "email.access.sentence.participants":
     "Chỉ những người có trong thư này mới đọc được.",
@@ -8105,6 +8113,7 @@ export const vi = {
   "person.loops.atLeast": "ít nhất {count}",
 
   "person.memory.title": "Ký ức trò chuyện",
+  "person.memory.viewAll": "Xem tất cả hoạt động",
   "person.memory.empty": "Chưa ghi nhận gì trên kênh này.",
   "person.memory.all": "Tất cả",
   "person.memory.email": "Email",
