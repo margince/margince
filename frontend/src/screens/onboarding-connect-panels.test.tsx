@@ -435,3 +435,32 @@ describe("OAuthReturnPanel handing off to the backread", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("OAuthReturnPanel reading a reader-typed outcome", () => {
+  // The permanent-failure table is a plain object literal indexed with the
+  // outcome segment off the address bar. `constructor`, `toString` and their
+  // siblings are INHERITED members, so a bare index answers them with a
+  // function rather than undefined — truthy, which routes this panel into the
+  // permanent-failure banner and then asks the catalogue for a message keyed by
+  // that function. The reader gets advice about credentials nobody refused,
+  // with no way back, where the retry they need was one segment away.
+  it.each([
+    "constructor",
+    "toString",
+    "__proto__",
+    "valueOf",
+    "hasOwnProperty",
+  ])("offers the retry, not a permanent failure, for %s", async (outcome) => {
+    installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
+    render(<OAuthReturnPanel outcome={outcome} onDone={vi.fn()} />);
+
+    expect(
+      await screen.findByText("We couldn't confirm the connection."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Head to Settings → Connections to try connecting again.",
+      ),
+    ).toBeInTheDocument();
+  });
+});
