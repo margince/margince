@@ -29,7 +29,7 @@ func directed() AnyMap {
 	return AnyMap{
 		"reason_code":     "contractual_necessity",
 		"explanation":     "The service agreement obliges us to send this notice.",
-		"warning_version": "v1",
+		"warning_version": "override-v1",
 		"acknowledged":    true,
 	}
 }
@@ -284,5 +284,66 @@ func TestADirectedSendClosesTheReviewItAnswered(t *testing.T) {
 	if rows != 1 {
 		t.Error("the review was deleted rather than closed — nothing is left to answer a subject " +
 			"asking why they received the message")
+	}
+}
+
+// THE WARNING IS THE SERVER'S OWN WORDS.
+//
+// An instruction's whole claim is that a named person read a particular
+// caution before overruling the engine, and it records that as a version. A
+// client free to compose its own wording, or to name any version it liked,
+// would have the record assert an acknowledgement of text nobody published.
+//
+// So the review serves the words and the version together, and the door refuses
+// a version this installation does not serve.
+func TestTheWarningADirectorAcknowledgesIsTheServersOwn(t *testing.T) {
+	c := setupConsent(t)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send → %d, want 409", status)
+	}
+	review := liveReviewID(t, c)
+
+	var opened struct {
+		Warning struct {
+			Version string `json:"version"`
+			Text    string `json:"text"`
+		} `json:"warning"`
+	}
+	if status := c.Call(t, "GET", "/v1/communication-reviews/"+review, nil, nil, &opened); status != http.StatusOK {
+		t.Fatalf("reading the review → %d, want 200", status)
+	}
+	if opened.Warning.Version == "" || opened.Warning.Text == "" {
+		t.Fatalf("the review serves warning %+v — a surface with nothing to show would compose "+
+			"its own, and the record would name words this installation never wrote",
+			opened.Warning)
+	}
+
+	// A version the installation does not serve is refused, whatever else the
+	// request gets right.
+	invented := directed()
+	invented["warning_version"] = "whatever-v99"
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
+		invented, nil, nil); status == http.StatusCreated {
+		t.Error("a decision naming a warning version this installation does not serve was " +
+			"recorded — the record asserts somebody read words nobody published")
+	}
+
+	// And the version the review served is accepted.
+	acknowledged := directed()
+	acknowledged["warning_version"] = opened.Warning.Version
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
+		acknowledged, nil, nil); status != http.StatusCreated {
+		t.Errorf("the version the review itself served was refused → %d — a director cannot "+
+			"acknowledge the warning they were shown", status)
+	}
+	var recorded string
+	if err := c.Owner.QueryRow(context.Background(),
+		`SELECT warning_version FROM communication_instruction`).Scan(&recorded); err != nil {
+		t.Fatalf("reading the decision: %v", err)
+	}
+	if recorded != opened.Warning.Version {
+		t.Errorf("the record names warning %q and the director was shown %q",
+			recorded, opened.Warning.Version)
 	}
 }

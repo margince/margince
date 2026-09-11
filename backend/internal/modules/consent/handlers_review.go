@@ -82,6 +82,14 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 		card := openapi_types.UUID(review.ApprovalID)
 		out.ApprovalId = &card
 	}
+	// SERVED ON EVERY REVIEW, not only on ones somebody may direct. Whether
+	// this reader holds the grant is a question the direct-send door answers,
+	// and withholding the words here would make a surface guess whether to ask
+	// for them — one more round trip, and a modal that opens empty.
+	warning := TheOverrideWarning()
+	out.Warning = &crmcontracts.OverrideWarning{
+		Version: warning.Version, Text: warning.Text,
+	}
 	return out
 }
 

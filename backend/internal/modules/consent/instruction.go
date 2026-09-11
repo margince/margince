@@ -134,6 +134,11 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
 		return Instruction{}, err
 	}
+	// NORMALISED BEFORE ANYTHING READS IT, so the value checked and the value
+	// stored are one value. Trimming only inside the check let " override-v1 "
+	// pass and then land on the row naming a version nothing serves.
+	in.WarningVersion = strings.TrimSpace(in.WarningVersion)
+	in.Explanation = strings.TrimSpace(in.Explanation)
 	if err := validateDirect(in); err != nil {
 		return Instruction{}, err
 	}
@@ -177,7 +182,7 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording)
 			VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8)
 			RETURNING id`,
-			reviewID, director, in.ReasonCode, strings.TrimSpace(in.Explanation),
+			reviewID, director, in.ReasonCode, in.Explanation,
 			in.WarningVersion, review.OpenedAt, out.ValidUntil, acknowledged).Scan(&out.ID); err != nil {
 			// A DECISION ALREADY STANDS ON THIS REVIEW, which is what the
 			// unique key on review_id says. Named rather than reported as a
@@ -299,10 +304,25 @@ func validateDirect(in DirectInput) error {
 			Reason: "an explanation is at most 1000 characters",
 		}
 	}
-	if strings.TrimSpace(in.WarningVersion) == "" {
+	// A VERSION THIS BUILD ACTUALLY SERVES, not merely a non-empty string.
+	//
+	// The record's whole claim is that a named person read particular words. A
+	// caller free to name any version could write "v99" onto an instruction and
+	// the record would assert an acknowledgement of text nobody ever wrote —
+	// which is exactly the assertion a dispute about an override turns on.
+	//
+	// The queue card has its own version because a card and a modal are not the
+	// same words: somebody approving from a list read a summary, and recording
+	// them as having read the modal's caution would overstate what they saw.
+	// COMPARED AND STORED AS THE SAME VALUE. Trimming only for the comparison
+	// let " override-v1 " pass the check and land on the row, where it names a
+	// version the served set does not contain — so the record would claim an
+	// acknowledgement of a version nothing publishes.
+	if !servedWarningVersion(in.WarningVersion) {
 		return &ValidationError{
-			Field:  "warning_version",
-			Reason: "a decision records which warning the director was shown",
+			Field: "warning_version",
+			Reason: "a decision records which warning the director was shown, and it must be one " +
+				"this installation serves",
 		}
 	}
 	return nil
@@ -378,3 +398,27 @@ func isDuplicateInstruction(err error) bool {
 	constraint, ok := storekit.UniqueViolation(err)
 	return ok && strings.Contains(constraint, "review_id")
 }
+
+// servedWarningVersion reports whether this build published the wording a
+// caller says they were shown.
+//
+// TWO, and they are different surfaces rather than two spellings of one. The
+// override warning is the caution in the modal a director reads before sending;
+// the queue-card version names the summary an approver answered from a list.
+// Recording one as the other would say somebody read words they never saw.
+func servedWarningVersion(version string) bool {
+	switch strings.TrimSpace(version) {
+	case OverrideWarningVersion, QueueCardWarningVersion:
+		return true
+	default:
+		return false
+	}
+}
+
+// QueueCardWarningVersion names the summary an approver answers from in the
+// approvals queue, as distinct from the modal's own caution.
+//
+// It lives here rather than in compose so the validator and the effect that
+// writes it read one constant: two spellings would let a version be recorded
+// that the check does not admit.
+const QueueCardWarningVersion = "queue-card-v1"

@@ -390,7 +390,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `waiveronoffender_test.go` | H2 | A waiver must be asked about an offender, never about a candidate. |
 | `workflowhandler_test.go` | H2 | The workflow.Handler read/write contract as a fitness function (ports/workflow.Handler): Match is a pure predicate and Plan computes the typed Effect WITHOUT applying it — "this is what makes dry-run and diff preview possible". |
 
-## Claim (11)
+## Claim (12)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -402,6 +402,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `meetingoverspelling_test.go` | H2 | "This meeting is over" is spelled twice, and the two must say the same thing. |
 | `noisejudgedspelling_test.go` | H2 | "An already-settled answer disowns this contact" is spelled once. |
 | `onedraftwriter_test.go` | H1 | One writer produces every grounded draft, or the surfaces drift. |
+| `overridewarning_test.go` | H2 | The words behind a recorded acknowledgement cannot change without the version changing. |
 | `renovatelockfileage_test.go` | H3 | The lockfile refresh is not held back by the repo-wide release-age floor. |
 | `rolemailboxonelist_test.go` | H2 | One role-mailbox list, held by a test rather than by a comment. |
 | `uniquenessclaims_test.go` | H1 | A comment that says a declaration is the ONLY one of its kind is not decoration. |

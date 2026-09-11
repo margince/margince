@@ -21083,6 +21083,11 @@ type CommunicationReview struct {
 	// somebody who may override it: their work no longer, so a surface should say so rather
 	// than showing them a form they have already filled in.
 	State CommunicationReviewState `json:"state"`
+
+	// Warning The caution a person reads before overruling the engine, with the version that identifies
+	// it. Both together, because a surface that could get one without the other would show words
+	// while naming a different version.
+	Warning *OverrideWarning `json:"warning,omitempty"`
 }
 
 // CommunicationReviewKind defines model for CommunicationReview.Kind.
@@ -29968,6 +29973,20 @@ type OverlayUserMapPage struct {
 	Entries    []OverlayUserMapEntry `json:"entries"`
 	Incumbent  string                `json:"incumbent"`
 	NextCursor *string               `json:"next_cursor,omitempty"`
+}
+
+// OverrideWarning The caution a person reads before overruling the engine, with the version that identifies
+// it. Both together, because a surface that could get one without the other would show words
+// while naming a different version.
+type OverrideWarning struct {
+	// Text Shown verbatim. A surface that paraphrased it would record somebody as having read the
+	// server's words while showing them its own.
+	Text string `json:"text"`
+
+	// Version What the acknowledgement records. It moves whenever the text does — an instruction
+	// naming a version whose words were later edited is a record of an acknowledgement
+	// nobody made.
+	Version string `json:"version"`
 }
 
 // PageInfo defines model for PageInfo.
