@@ -31,6 +31,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
+// publishedRetentionAction is the check the one emit site whose action comes off
+// a ROW rather than out of the code has to make.
+//
+// Every other site passes a contract constant, so the compiler holds them.
+// retention_policy.action carries the same closed set under a CHECK, but a row
+// written before a value was retired — or by a migration that widened the CHECK
+// without the contract — would otherwise ship an event every subscriber drops in
+// silence, which is the shape this event's closed set exists to stop.
+func publishedRetentionAction(
+	stored string, policyID ids.UUID,
+) (crmcontracts.PublicEventRetentionAppliedAction, error) {
+	action := crmcontracts.PublicEventRetentionAppliedAction(stored)
+	if !action.Valid() {
+		return "", fmt.Errorf(
+			"privacy: retention policy %s names the action %q, which retention.applied does not publish",
+			policyID, stored)
+	}
+	return action, nil
+}
+
 // retentionAppliedPayload builds the retention.applied wire payload — the
 // subject travels separately (the caller's own entityType, passed to
 // storekit.EmitEventForEntity), since this event's entity is dynamic

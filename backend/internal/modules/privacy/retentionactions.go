@@ -18,7 +18,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -141,15 +140,9 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 			return err
 		}
 		policyID := pol.ID
-		// The one site whose action comes off a ROW rather than out of the
-		// code, so it is the one that has to check. retention_policy.action
-		// carries the same closed set under a CHECK, but a row written before a
-		// value was retired — or by a migration that widened the CHECK without
-		// the contract — would otherwise ship an event every subscriber drops
-		// in silence, which is the shape this event's closed set exists to stop.
-		action := crmcontracts.PublicEventRetentionAppliedAction(pol.Action)
-		if !action.Valid() {
-			return fmt.Errorf("privacy: retention policy %s names the action %q, which retention.applied does not publish", pol.ID, pol.Action)
+		action, err := publishedRetentionAction(pol.Action, pol.ID)
+		if err != nil {
+			return err
 		}
 		return storekit.EmitEventForEntity(ctx, tx, auditID, pol.ObjectType, id, retentionAppliedPayload(action, &policyID, nil))
 	})
