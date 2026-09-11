@@ -6,7 +6,13 @@ import { userEvent, within } from "storybook/test";
 import { deckItems } from "./brief";
 import { DecisionsSection } from "./brief.decisions";
 import { bundle, proposal, singles } from "./brief.fixtures";
-import { StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+} from "./story-utils";
 
 // WAITING ON YOU — the zone, and what the redesign gave it.
 //
@@ -24,16 +30,48 @@ import { StoryProviders } from "./story-utils";
 
 const NOW = Date.parse("2026-08-20T06:00:00Z");
 
+// THE READS THIS ZONE MAKES, answered honestly.
+//
+// `GET /me` is not optional furniture: the card's provenance reading needs the
+// signed-in reader's own id to tell "an agent staged this" from "you did", and a
+// refused session reads as a malformed one — every grant then fails closed and
+// the surface draws a posture no rep has.
+//
+// The grants are what these frames are ABOUT, spelled rather than guessed:
+// there is no `approval` object in the RBAC vocabulary, because a proposal is
+// gated by the act it proposes. These are the two acts the fixtures stage — a
+// mail to send and a deal to move — so this is the seat that can answer them.
+const ROUTES: RouteMap = {
+  "GET /me": meRoute(
+    { activity: ["read", "create"], deal: ["read", "update"] },
+    { roles: ["rep"] },
+  ),
+  // The autonomy dot's own source. Routed rather than left to the fallback: an
+  // empty catalog is a real state and it draws the CONFIRM dot for every kind,
+  // so a frame that let it fall through would picture the one reading these
+  // proposals are not — a tool nobody has cleared to act on its own.
+  "GET /agent-tools": () =>
+    jsonResponse({
+      data: [
+        { name: "send_email", tier: "confirmation_required" },
+        { name: "progress_deal", tier: "auto_execute" },
+      ],
+    }),
+};
+
 const meta: Meta<typeof DecisionsSection> = {
   title: "Shell/Brief decisions",
   component: DecisionsSection,
   parameters: { layout: "padded" },
   decorators: [
-    (Story) => (
-      <StoryProviders>
-        <Story />
-      </StoryProviders>
-    ),
+    (Story) => {
+      installFetchStub(ROUTES);
+      return (
+        <StoryProviders>
+          <Story />
+        </StoryProviders>
+      );
+    },
   ],
 };
 export default meta;
