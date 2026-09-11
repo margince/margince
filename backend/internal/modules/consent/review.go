@@ -374,6 +374,12 @@ func (g *Gate) RecordRefusal(ctx context.Context, set commsauthz.DecisionSet, in
 type SendRefusedError struct {
 	ReviewID ids.UUID
 	Cause    error
+	// Actions is what THIS caller may do about the refusal, decided where the
+	// refusal is recorded because that is where the principal is known. Empty
+	// for a caller with nothing to do but stop and report, which is the honest
+	// answer for an agent: routing a decision is human-only and bound to the
+	// review's initiator.
+	Actions []string
 }
 
 func (e *SendRefusedError) Error() string {
@@ -449,3 +455,42 @@ func zeroSeatAsNull(seat ids.UUID) *ids.UUID {
 	}
 	return &seat
 }
+
+// FaultReference implements apperrors.ReferencedFault: the review this refusal
+// opened, as a field rather than as a sentence.
+//
+// STILL NO FieldFault, and the distinction matters. A field fault says "you
+// sent a bad input" and answers 422; this refusal is neither — the caller's
+// input was fine and the engine refused on consent grounds, which is the 409
+// every client and every test already recognises. Implementing FieldFault here
+// once flipped the whole send surface from 409 to 422.
+//
+// What a reference adds is orthogonal to that: the status and the code are
+// unchanged, and the id appears beside them where a machine can read it. The
+// tool surface is why — an agent handed a sentence can do nothing, and the same
+// refusal naming its review can hand the question to a person.
+func (e *SendRefusedError) FaultReference() map[string]any {
+	if e.ReviewID.IsZero() {
+		return nil
+	}
+	return map[string]any{
+		FieldReviewID: e.ReviewID.String(),
+		// WHAT THIS CALLER MAY DO, not what the route exists for.
+		//
+		// Routing a decision is human-only and bound to the review's own
+		// initiator, so naming it unconditionally would promise an agent a move
+		// it cannot make — and an agent that tries and is refused has been sent
+		// somewhere by us rather than by its own mistake. Worse than saying
+		// nothing.
+		//
+		// An empty list is the honest answer for a caller with nothing to do
+		// but stop and report: the reference still travels, and a person
+		// reading the agent's transcript can pick the review up.
+		"available_actions": e.Actions,
+	}
+}
+
+// Unreferenced answers the refusal without the reference, which is what decides
+// the status. It is the wrapped cause rather than this value, or classification
+// would come straight back here.
+func (e *SendRefusedError) Unreferenced() error { return e.Cause }

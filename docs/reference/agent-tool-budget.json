@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 76,
     "system_frame_tokens": 353,
-    "tokens": 24098,
+    "tokens": 24267,
     "median_tool_tokens": 272,
-    "mean_tool_tokens": 316
+    "mean_tool_tokens": 318
   },
   "agents": [
     {
@@ -76,27 +76,27 @@
     },
     {
       "name": "send_account_email",
-      "tokens": 767
+      "tokens": 823
+    },
+    {
+      "name": "send_email",
+      "tokens": 754
     },
     {
       "name": "preview_import",
       "tokens": 723
     },
     {
-      "name": "send_email",
-      "tokens": 698
-    },
-    {
       "name": "log_activity",
       "tokens": 676
     },
     {
-      "name": "update_record",
-      "tokens": 581
+      "name": "send_message",
+      "tokens": 603
     },
     {
-      "name": "send_message",
-      "tokens": 546
+      "name": "update_record",
+      "tokens": 581
     },
     {
       "name": "forecast_readings",

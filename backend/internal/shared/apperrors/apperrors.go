@@ -186,3 +186,26 @@ var ErrRetentionHold = errors.New("record is held under a statutory retention ob
 // "the diagnosis is in the process log" — true, and useless once the process
 // has restarted, which is exactly when an operator goes looking.
 var ErrProviderUnusable = errors.New("the provider returned no usable answer")
+
+// ReferencedFault is a refusal that leaves something behind a caller can act
+// on.
+//
+// THE STATUS IS NOT ITS BUSINESS. A refusal already classifies — through a
+// sentinel, a field fault, whatever it was going to do — and implementing this
+// changes none of that. What it adds is a structured reference beside the
+// message, so a surface that can only read prose is not the only one served.
+//
+// It exists because of the tool surface. An agent handed "consent not granted"
+// in a sentence can do nothing with it: it cannot parse an id out of English
+// reliably, and guessing is worse than failing. The same refusal naming the
+// review it opened can hand the question to a person, which is the whole
+// difference between an agent that stops and an agent that escalates.
+type ReferencedFault interface {
+	error
+	// FaultReference is what the caller may act on. Keys are wire names and
+	// values must be JSON-renderable; an empty map renders nothing.
+	FaultReference() map[string]any
+	// Unreferenced is the refusal without the reference, which is what decides
+	// the status and the code. A type returning itself here would recurse.
+	Unreferenced() error
+}

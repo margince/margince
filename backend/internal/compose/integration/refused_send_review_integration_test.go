@@ -720,3 +720,114 @@ func TestAnotherSeatsReviewIsNotFound(t *testing.T) {
 			"which is a disclosure about a message this caller may not see", status)
 	}
 }
+
+// THE REFUSAL NAMES ITS REVIEW AS A FIELD, not only in a sentence.
+//
+// The reference has always travelled in the message, which serves a person
+// reading it and nothing else. An agent handed "consent not granted" in English
+// can do nothing with it: parsing an id out of prose is guesswork, and guessing
+// is worse than failing. Named as a field, the same refusal is something an
+// agent can act on — it can hand the question to a person.
+//
+// AND THE STATUS DOES NOT MOVE. This is the constraint the first attempt at a
+// structured refusal broke: implementing FieldFault flipped the send surface
+// from 409 to 422 across every client and test that already recognised it. The
+// reference is orthogonal to classification and must stay that way.
+func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
+	c := setupConsent(t)
+
+	var problem struct {
+		Code    string `json:"code"`
+		Details struct {
+			ReviewID         string   `json:"review_id"`
+			AvailableActions []string `json:"available_actions"`
+		} `json:"details"`
+	}
+	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"}, "consent_purpose": "marketing_email",
+	}, nil, &problem)
+
+	if status != http.StatusConflict {
+		t.Fatalf("a refused send answered %d, want 409 — the reference must not change what the "+
+			"refusal says happened", status)
+	}
+	if problem.Code != "consent_not_granted" {
+		t.Errorf("the refusal reads code %q, want consent_not_granted", problem.Code)
+	}
+	reviews := openReviews(t, c.AppEnv)
+	if len(reviews) != 1 {
+		t.Fatalf("%d review(s), want 1", len(reviews))
+	}
+	if problem.Details.ReviewID != reviews[0].id {
+		t.Errorf("the refusal names review %q as a field and opened %q — an agent reading the "+
+			"body cannot find the work this left behind",
+			problem.Details.ReviewID, reviews[0].id)
+	}
+	// NAMED EXACTLY, not merely non-empty. A test that accepted any list would
+	// pass while the refusal promised a move this caller cannot make — which is
+	// the bug it exists to catch.
+	//
+	// This caller is the human who pressed send, so routing a decision is
+	// theirs to do.
+	if len(problem.Details.AvailableActions) != 1 ||
+		problem.Details.AvailableActions[0] != "request_decision" {
+		t.Errorf("the refusal offers %v, want exactly [request_decision] — a rep who was refused "+
+			"is told what they may do about it", problem.Details.AvailableActions)
+	}
+}
+
+// NAMING THE KIND IS ENOUGH; THE LEGACY KEY IS NOT REQUIRED.
+//
+// The four send tools required consent_purpose, which is the legacy key. A1
+// made communication_context the field the engine decides on, so an agent that
+// knows what kind of message it is sending should say that and nothing else —
+// forced to name a legacy key as well, it names the wrong one.
+//
+// SAYING NEITHER IS STILL REFUSED, and that is the engine working rather than a
+// gap this slice left. Resolution from the thread alone cannot tell a quote
+// from a newsletter, so it answers unknown_purpose and opens a review instead
+// of guessing. Making the resolver cleverer is A1's question; what this slice
+// owes is that an agent naming the CANONICAL field is not also made to name the
+// legacy one.
+func TestNamingTheKindIsEnoughWithoutTheLegacyKey(t *testing.T) {
+	c := setupConsent(t)
+
+	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to":                    []string{"subject@consent.test"},
+		"communication_context": "reply_to_inbound",
+	}, nil, nil)
+	if status >= 300 {
+		var reason string
+		_ = c.Owner.QueryRow(context.Background(),
+			`SELECT reason_code FROM communication_review WHERE resolved_at IS NULL`).Scan(&reason)
+		t.Errorf("a reply naming its kind and no legacy key answered %d (%s), want it accepted — an agent "+
+			"that knows what it is sending should not also have to name a key it does not "+
+			"understand", status, reason)
+	}
+}
+
+// AND SAYING NOTHING AT ALL IS REFUSED WITH SOMETHING TO ACT ON. The engine
+// will not guess a category, which is right; what it owes is a review rather
+// than a dead end.
+func TestASendNamingNoKindAtAllIsRefusedWithAReview(t *testing.T) {
+	c := setupConsent(t)
+
+	var problem struct {
+		Details struct {
+			ReviewID string `json:"review_id"`
+		} `json:"details"`
+	}
+	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"},
+	}, nil, &problem)
+	if status != http.StatusConflict {
+		t.Fatalf("a send naming no kind answered %d, want 409", status)
+	}
+	if problem.Details.ReviewID == "" {
+		t.Error("the refusal names no review, so an agent that cannot resolve its own purpose is " +
+			"left with nothing to hand to a person")
+	}
+}

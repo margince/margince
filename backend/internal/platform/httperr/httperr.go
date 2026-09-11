@@ -311,6 +311,36 @@ func (f Fault) Transient() bool {
 // named it. One tree and two renderers means the surfaces cannot drift apart
 // again.
 func Classify(err error) (Fault, bool) {
+	// A REFUSAL THAT CARRIES A REFERENCE renders it as a field rather than
+	// leaving it in prose.
+	//
+	// BEFORE the sentinel table and after nothing, because the sentinel is
+	// still what decides the STATUS: this branch changes what a caller is
+	// handed, never what they are told happened. A surface reading `details`
+	// gets an id it can act on; one reading only the message gets exactly what
+	// it got before.
+	//
+	// It exists for the tool surface. An agent handed "consent not granted" in
+	// a sentence can do nothing with it; the same refusal naming the review it
+	// opened can hand the question to a person.
+	var referenced apperrors.ReferencedFault
+	if errors.As(err, &referenced) {
+		if fault, ok := Classify(referenced.Unreferenced()); ok {
+			fault.Details = referenced.FaultReference()
+			// AND THE MESSAGE KEEPS THE REFERENCE TOO. Classifying the
+			// unreferenced cause is what preserves the status, and it also
+			// answers the CAUSE's own text — which no longer names the review.
+			//
+			// A person reading the prose must not lose what a machine just
+			// gained. Both carry it: the sentence for whoever reads it, the
+			// field for whatever parses it.
+			if detail := referenced.Error(); detail != "" && !infrastructureCause(err) {
+				fault.Detail = detail
+			}
+			return fault, true
+		}
+	}
+
 	var withDetails *DetailedError
 	if errors.As(err, &withDetails) {
 		return Fault{
