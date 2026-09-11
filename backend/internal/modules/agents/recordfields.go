@@ -115,8 +115,9 @@ func contractFieldNames(t reflect.Type) []string {
 // disprove, which costs more than the silence it replaced.
 const recordFieldsDescription = "The crm.yaml body for the record_type. The fields each " +
 	"record_type takes, which of them are REQUIRED, and their shapes are published at " +
-	RecordFieldsURI + " — that document, not this description, is what says what a write may " +
-	"name. An extra key must be cf_<slug> for a custom field; any other key is refused BY NAME " +
+	RecordFieldsURI + ", and answered by describe_record_fields — that document, not this " +
+	"description, is what says what a write may name. An extra key must be cf_<slug> for a " +
+	"custom field; any other key is refused BY NAME " +
 	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
 	"Any field holding a sentence — a description, a summary, a note — is written in whoami's " +
 	"prose_language, whatever language this conversation is in."

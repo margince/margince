@@ -29,6 +29,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -128,7 +129,7 @@ func requireFilterScopes(ctx context.Context, tx pgx.Tx, spec reportSpec, filter
 		}
 		text, ok := value.(string)
 		if !ok {
-			return &FilterValueNotAllowedError{Filter: key, Kind: jsonShapeOf(value)}
+			return &FilterValueNotAllowedError{Filter: key, Kind: analyticsquery.JSONShapeOf(value)}
 		}
 		id, err := ids.Parse(text)
 		if err != nil {

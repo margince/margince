@@ -18,9 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// testSchema is a small vocabulary with one of everything the compiler
-// distinguishes: a dimension, a numeric measure, and a text field that is
-// neither.
 // noScope is a caller whose authority narrows nothing — an unbounded reader.
 //
 // A FUNCTION rather than nil: Compile refuses nil, because "no scope source"
@@ -28,6 +25,9 @@ import (
 // is safe to render.
 func noScope(func(any) int) ([]string, error) { return nil, nil }
 
+// testSchema is a small vocabulary with one of everything the compiler
+// distinguishes: a dimension, a numeric measure, a yes-or-no dimension, and a
+// text field that is none of them.
 func testSchema() Schema {
 	return Schema{
 		Version: "test_v1",
@@ -37,9 +37,14 @@ func testSchema() Schema {
 				From:      "deal t",
 				BaseWhere: "t.archived_at IS NULL",
 				Fields: map[string]Field{
-					"stage":  {Name: "stage", Expr: "t.stage_id", Kind: KindDimension},
-					"owner":  {Name: "owner", Expr: "t.owner_id", Kind: KindDimension},
-					"amount": {Name: "amount", Expr: "t.amount_minor", Kind: KindMeasure},
+					"stage": {Name: "stage", Expr: "t.stage_id", Kind: KindDimension},
+					"owner": {Name: "owner", Expr: "t.owner_id", Kind: KindDimension},
+					// Typed as the seam types them, or this fixture would be a
+					// schema production never hands the compiler: every measure
+					// it derives holds a number, and a filter's admissible
+					// spellings follow from that.
+					"amount": {Name: "amount", Expr: "t.amount_minor", Kind: KindMeasure, Shape: ShapeNumber},
+					"won":    {Name: "won", Expr: "(t.status = 'won')", Kind: KindDimension, Shape: ShapeBoolean},
 				},
 			},
 		},
@@ -335,5 +340,93 @@ func TestAPercentileOverANonNumericFieldIsRefused(t *testing.T) {
 			t.Errorf("the refusal suggests %q, which does not name a measure that works",
 				refusal.Suggest)
 		}
+	}
+}
+
+// A filter value the driver could not encode for the column reached Postgres,
+// failed there, and came back as a fault no taxonomy claimed — which every
+// surface renders as "the tool failed for an internal reason; retry". The
+// caller who trips it is the one who spells a year the way JSON spells a year,
+// and retrying is the one thing that cannot work.
+//
+// The advice is asserted, not just the refusal: a refusal that does not carry
+// the spelling which WOULD have bound costs a round trip per guess, and for a
+// yes-or-no column "quote it as text" is advice that fails a second time.
+func TestAFilterValueThatCouldNotBindIsRefusedWithTheSpellingThatWould(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		filter Filter
+		advice string
+	}{
+		{
+			name:   "a number against a text column",
+			filter: Filter{Field: "stage", Op: OpEq, Value: float64(2026)},
+			advice: QuoteAsTextAdvice,
+		},
+		{
+			name:   "a yes-or-no against a text column",
+			filter: Filter{Field: "stage", Op: OpEq, Value: true},
+			advice: QuoteAsTextAdvice,
+		},
+		{
+			name:   "a number against a yes-or-no column",
+			filter: Filter{Field: "won", Op: OpEq, Value: float64(1)},
+			advice: "send true or false",
+		},
+		{
+			name:   "a yes-or-no against a number column",
+			filter: Filter{Field: "amount", Op: OpGte, Value: true},
+			advice: "send the number unquoted",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Compile(Query{
+				Entity:   "deals",
+				Measures: []Measure{{Fn: CountAll}},
+				Filters:  []Filter{tc.filter},
+			}, testSchema(), noScope)
+			var refusal *RefusalError
+			if !errors.As(err, &refusal) {
+				t.Fatalf("err = %v, want a typed refusal the caller can act on", err)
+			}
+			if refusal.Kind != RefusalInvalid {
+				t.Errorf("kind = %s, want %s — the request is wrong, not the engine", refusal.Kind, RefusalInvalid)
+			}
+			if !strings.Contains(refusal.Suggest, tc.advice) {
+				t.Errorf("advice = %q, want it to carry %q", refusal.Suggest, tc.advice)
+			}
+		})
+	}
+}
+
+// The spellings that DO bind keep binding: text against any column, and the
+// JSON literal against the column that holds it. The refusal above is one
+// switch away from refusing every filter on this surface, and nothing else
+// here would notice.
+func TestEveryBindableFilterSpellingStillCompiles(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		filter Filter
+	}{
+		{"text against a text column", Filter{Field: "stage", Op: OpEq, Value: "closed"}},
+		{"text against a number column", Filter{Field: "amount", Op: OpGte, Value: "100"}},
+		{"a number against a number column", Filter{Field: "amount", Op: OpGte, Value: float64(100)}},
+		{"text against a yes-or-no column", Filter{Field: "won", Op: OpEq, Value: "true"}},
+		{"a yes-or-no against a yes-or-no column", Filter{Field: "won", Op: OpEq, Value: true}},
+		{"no value at all, where the comparison takes none", Filter{Field: "stage", Op: OpIsNull}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if _, err := Compile(Query{
+				Entity:   "deals",
+				Measures: []Measure{{Fn: CountAll}},
+				Filters:  []Filter{tc.filter},
+			}, testSchema(), noScope); err != nil {
+				t.Errorf("refused: %v", err)
+			}
+		})
 	}
 }

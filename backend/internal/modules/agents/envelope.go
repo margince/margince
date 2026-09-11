@@ -80,7 +80,10 @@ type Freshness struct {
 	// configuration has nothing to be stale).
 	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
 	// Authoritative is false when ANY contributing record was mirror-backed and
-	// pending sync. In system-of-record mode it is always true.
+	// pending sync, and when the answer was computed without the system that
+	// holds the facts it reports at all (noteAnswerLacksItsSource). Both are one
+	// claim: this product is not the authority for what it just said. In
+	// system-of-record mode, with every source it needs, it is true.
 	Authoritative bool `json:"authoritative"`
 }
 
@@ -324,6 +327,31 @@ func noteDerivedContent(ctx context.Context) {
 	facts.mu.Lock()
 	defer facts.mu.Unlock()
 	facts.taint(trustExternal)
+}
+
+// noteAnswerLacksItsSource says this answer was computed WITHOUT the system
+// that holds the facts it reports — free/busy for a host whose calendar was
+// never connected to this product.
+//
+// It drops the envelope's authority claim, and that is the whole of what it
+// does: it is not about staleness, so it stamps no sync time, and it is not
+// about where content came from, so it moves no tier. The answer is the
+// product's own and correctly derived; what it is not is the last word on a
+// question this product cannot see all of, and `authoritative: true` beside a
+// full day of free slots says exactly the opposite.
+//
+// Handlers call it, because only the handler knows which source its answer
+// needed. There is no way to infer it here: an answer resting on no record at
+// all is the normal shape of a tool that reads configuration, and those are
+// authoritative.
+func noteAnswerLacksItsSource(ctx context.Context) {
+	facts := factsOn(ctx)
+	if facts == nil {
+		return
+	}
+	facts.mu.Lock()
+	defer facts.mu.Unlock()
+	facts.authoritative = false
 }
 
 // noteWarning raises one condition, once. A sweep that hits its cap on every

@@ -293,6 +293,7 @@ func newCommsAdapter(pool *pgxpool.Pool, drafter activities.EmailDrafter, send S
 		stager:        send.Delivery,
 		channelStager: send.Delivery,
 		timer:         send.ScheduleTimer,
+		calendars:     calendarBackingResolver(pool),
 		own:           capture.NewOwnDomainStore(InstallationDB(pool)),
 	}
 }

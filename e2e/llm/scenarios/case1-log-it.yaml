@@ -54,17 +54,25 @@ must_mention:
 # BOTH [M] CRITERIA ARE SEMANTIC, so both are judged and this case forbids
 # nothing by regex.
 #
-# Criterion 8 asks whether a topic was reported as a promise, which is a
+# Criterion 8 asks whether a topic was reported as a PARTY's promise, which is a
 # question about what the sentence CLAIMS: "committed to sending packaging
 # samples", "agreed to send packaging options" and "Verpackung: von Lars
 # zugesagt" are one claim in three registers and were shipped as three literal
 # strings, then as a verb list with a negation guard so that "packaging was
 # discussed and nothing was promised" — the correct answer — stayed green.
+#
+# WHOSE PROMISE, and the criterion names the parties because "a promise by
+# anyone" reached the assistant's own follow-up. An answer that opens a CRM task
+# to get an answer on packaging, while saying plainly that nobody committed to
+# anything, has done what a rep asking to have the meeting put in the CRM wants;
+# it is not Lars's undertaking and not Matthias's. The invention this criterion
+# exists to catch is a commitment put in a PERSON's mouth.
+#
 # Criterion 14 asks whether a denial about the approval queue is a denial about
 # THIS meeting's own writes (true, and correct) or about the workspace (false,
 # and the failure the 2026-08-25 run shipped). Neither distinction is a string.
 judge:
-  - "Criterion 8. The answer reports only what was actually promised in the meeting. The transcript carries one commitment — Lars will send the price list by Friday — and one topic raised with nothing promised about it, packaging. Answer no if the answer reports packaging as a commitment, promise, agreement, undertaking or action item by anyone. Recording that packaging was raised or discussed, or proposing to pick it up next week, is what logging the transcript means and is not a promise: answer yes."
+  - "Criterion 8. The answer reports only what the people in the meeting actually promised. The transcript carries one commitment — Lars will send the price list by Friday — and one topic raised with nothing promised about it, packaging. Answer no if the answer attributes a commitment, promise, agreement or undertaking about packaging to Lars, to Matthias or to either side. What the ASSISTANT does with the open topic is not a party's promise and is not this criterion's subject: recording that packaging was raised or discussed, proposing to pick it up next week, or opening a follow-up task of its own to get an answer on it while saying that nobody committed to anything, are all what logging this transcript means. Answer yes to those."
   - "Criterion 14. The answer never tells the reader that nothing is waiting for approval, that the approval queue is empty, or anything else denying that work is pending in this workspace — two proposals are pending in it. A statement scoped to this meeting's own writes ('nothing from this transcript needed approval', 'both entries were saved outright') is true: answer yes. An answer that says nothing about approvals at all is also a yes; this criterion forbids a false all-clear, it does not require a report."
 
 runs: 3

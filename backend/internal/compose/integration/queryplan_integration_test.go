@@ -414,6 +414,46 @@ func TestQueryPlanAnUnanswerablePredicateReturnsItsNoteNotRows(t *testing.T) {
 	}
 }
 
+// A radius over a workspace that has placed NOTHING answers the note, not a
+// clean empty page.
+//
+// The capability used to be settled against the schema alone — does the target
+// carry coordinate columns — while the statement requires geocode_status 'ok'
+// per row. An installation whose companies are all unresolved therefore ran the
+// query, matched nothing, and answered coverage complete_exact with an empty
+// notes array: a search that failed short wearing the shape of a complete,
+// exact one. What a caller does with that is report that nobody is near the
+// place asked about, which is a claim about the customers made from a fact
+// about the geocoder.
+//
+// The companion above proves the other direction — a workspace that HAS placed
+// rows must not carry this note — so the pair fails if the check is dropped and
+// fails if it fires on everything.
+func TestQueryPlanARadiusOverAnUnplacedWorkspaceSaysSoRatherThanAnsweringEmpty(t *testing.T) {
+	q := setupQuery(t)
+	q.seedFixture(t)
+	q.seedUnlocatedCompany(t, "Radius Ohne Koordinaten GmbH")
+
+	result := q.run(q.admin(), t, `{
+		"version": "v1", "target": "organization",
+		"where": [{"field": "address", "op": "within_radius",
+		           "value": {"lat": 48.7758, "lon": 9.1829, "radius_km": 50}}],
+		"limit": 20}`)
+
+	if len(result.Rows) != 0 {
+		t.Fatalf("nothing is geocoded and the radius returned %d rows", len(result.Rows))
+	}
+	if !hasNote(result, search.CodeDistanceRankingUnavailable) {
+		t.Fatalf("an empty radius over an unplaced workspace carries no note, so it reads as "+
+			"a complete answer about the customers: coverage %q, notes %v",
+			result.Coverage, result.Notes)
+	}
+	if result.Coverage != search.CoveragePartialDegraded {
+		t.Errorf("coverage is %q; an answer the workspace could not compute is not complete_exact",
+			result.Coverage)
+	}
+}
+
 // The whole point, against Postgres: a radius on a company returns the ones
 // inside it, NEAREST FIRST, each saying how far.
 //

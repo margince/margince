@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 6 |
 | `overnight_at_risk_sweep` | 7 | 2509 | 7% | 20701 | 15 | 10 |
-| _whole served catalog, for scale_ | 75 | 23542 | 71% | — | — | — |
+| _whole served catalog, for scale_ | 76 | 24185 | 73% | — | — | — |
 
 ### `morning_brief`
 
@@ -126,7 +126,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 267 tokens, mean 313, across 75 served tools.
+Median 272 tokens, mean 317, across 76 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -135,20 +135,20 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 990 | 3 scenarios |
+| `run_report` | 1011 | 3 scenarios |
+| `preview_import` | 779 | — |
 | `send_account_email` | 768 | — |
 | `send_email` | 698 | 1 scenario |
 | `log_activity` | 677 | 1 scenario |
-| `preview_import` | 677 | — |
-| `update_record` | 572 | 4 scenarios |
+| `update_record` | 582 | 4 scenarios |
 | `send_message` | 546 | — |
 | `forecast_readings` | 509 | — |
 | `list_records` | 508 | — |
 | `progress_deal` | 505 | 3 scenarios |
 | `resolve_entities` | 498 | — |
 | `query_workspace` | 484 | 3 scenarios |
+| `create_record` | 483 | 1 scenario |
 | `run_analytics_query` | 476 | — |
-| `create_record` | 473 | 1 scenario |
 | `forecast_movement` | 453 | — |
 | `advance_deal` | 447 | 1 scenario |
 | `compose_analytics_report` | 440 | — |
@@ -158,8 +158,10 @@ a term in an addition.
 | `enrich` | 398 | — |
 | `search_records` | 385 | 9 scenarios |
 | `describe_report_vocabulary` | 349 | — |
+| `describe_record_fields` | 345 | — |
 | `search_context` | 345 | — |
 | `advance_project_phase` | 340 | — |
+| `check_availability` | 329 | — |
 | `prep_for_meeting` | 326 | — |
 | `forecast_input_checks` | 324 | — |
 | `demote_lead` | 316 | — |
@@ -175,7 +177,6 @@ a term in an addition.
 | `list_approvals` | 267 | — |
 | `prepare_handoff` | 267 | 1 scenario |
 | `describe_query_vocabulary` | 266 | — |
-| `check_availability` | 263 | — |
 | `account_coverage` | 245 | 2 scenarios |
 | `describe_report_blocks` | 245 | — |
 | `decide_approval_bundle` | 235 | — |
@@ -183,6 +184,7 @@ a term in an addition.
 | `apply_tag` | 227 | — |
 | `create_task` | 222 | — |
 | `read_record` | 222 | 3 scenarios |
+| `commit_import` | 217 | — |
 | `whats_slipping_this_week` | 211 | 2 scenarios |
 | `disqualify_lead` | 209 | — |
 | `list_input_checks` | 209 | — |
@@ -204,7 +206,6 @@ a term in an addition.
 | `read_project_360` | 156 | — |
 | `read_approval` | 153 | — |
 | `get_record_tags` | 142 | — |
-| `commit_import` | 128 | — |
 | `whoami` | 128 | — |
 | `list_tags` | 95 | — |
 | `get_tag` | 86 | — |

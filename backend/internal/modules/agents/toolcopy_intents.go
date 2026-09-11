@@ -158,9 +158,12 @@ var atRiskRelationshipsCopy = toolCopy{
 // So the boundary is stated here rather than left to be inferred from which
 // tool sounds more general.
 var runReportCopy = toolCopy{
-	Purpose: "Answer a question about totals, counts or breakdowns — pipeline by stage, deals " +
-		"won by owner, activity volume over time — by running one of this workspace's prebuilt " +
-		"reports.",
+	// No illustrative examples in the Purpose. They were three goals picked out
+	// of a catalog the `report` argument then enumerates in full, one line per
+	// report with what each answers — a sample of a list printed directly below
+	// it, paid for on every listing of the whole surface.
+	Purpose: "Answer a question about totals, counts or breakdowns by running one of this " +
+		"workspace's prebuilt reports.",
 	Limits: "Only the named reports exist, each with its own filter, grouping and measure names; " +
 		"anything else is refused. It aggregates: how many and how much, never which record.",
 	Instead: "Use search_records or whats_slipping_this_week when the answer wanted is the " +
@@ -169,7 +172,7 @@ var runReportCopy = toolCopy{
 		"filter and the grouping, so it is one call where a query is a vocabulary lookup " +
 		"and a query.",
 	Retain: "Call a report with no plan first to see its default answer, then narrow with the " +
-		"names its catalog entry lists.",
+		"names describe_report_vocabulary gives for it.",
 }
 
 var annotateBriefCopy = toolCopy{

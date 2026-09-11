@@ -28,7 +28,34 @@ type Field struct {
 	// question with no answer, and refusing it at plan time beats a Postgres
 	// error the caller cannot act on.
 	Kind FieldKind
+	// Shape is what the column holds, which decides the spellings a filter
+	// against it can carry. Its zero value is text, which is the safe default
+	// in the one direction that matters: a text column given a number refuses
+	// with the spelling that works, where a column left untyped refuses a
+	// literal that would have bound — recoverable advice either way, and never
+	// the opaque fault an unbindable value used to become.
+	Shape ColumnShape
 }
+
+// ColumnShape is what a column holds — named for the COLUMN because the
+// package's valueShape already answers a different question, about the
+// operator.
+//
+// It exists for FILTER values and nothing else: the driver encodes a Go string
+// into a column of any type and a JSON number into no text one, so a value
+// that is not text binds only where the column can hold it.
+type ColumnShape string
+
+const (
+	// ShapeText is the zero value, deliberately: a field nobody typed is
+	// compared as text, and the driver encodes a Go string into a column of
+	// any type.
+	ShapeText ColumnShape = ""
+	// ShapeNumber is a numeric column: 50 and "50" alike.
+	ShapeNumber ColumnShape = "number"
+	// ShapeBoolean is a yes-or-no column: true and "true" alike.
+	ShapeBoolean ColumnShape = "boolean"
+)
 
 // FieldKind is what a field holds.
 type FieldKind string

@@ -33,6 +33,8 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // geoColumns is the coordinate pair a radius predicate measures from, plus the
@@ -359,4 +361,74 @@ func secondRadius(clauses []Predicate) (string, bool) {
 		seen = true
 	}
 	return "", false
+}
+
+// anythingLocated reports whether this workspace holds a single row of the
+// target type whose coordinates mean anything.
+//
+// WHY THE QUESTION IS ASKED OF THE ROWS AND NOT THE SCHEMA. bindGeo settles
+// whether the deployment CAN rank by distance by looking at the columns, and
+// that was read as the whole capability. It is half of it: a workspace whose
+// organizations all sit at geocode_status 'stale' runs the statement, matches
+// nothing, and answers zero rows at coverage complete_exact with no note —
+// a search that failed short in the shape of a complete, exact answer. The
+// caller then reports that nobody is near Cologne, which is a claim about the
+// customers rather than about the geocoder.
+//
+// ON THE EMPTY PATH ONLY, which is why it is a second query rather than a
+// widening of the first. An answer that came back with rows has proved the
+// capability by using it, and pre-checking would put a count in front of every
+// radius call to say something the rows themselves say.
+//
+// WORKSPACE-WIDE, not row-scoped. The question is whether this installation has
+// geocoded anything — a property of the deployment, which is what the published
+// code names — and narrowing it to the caller's own rows would make an empty
+// answer depend on who asked, which is the side channel row-scoping exists to
+// close.
+func (e *QueryExecutor) anythingLocated(ctx context.Context, target string) (bool, error) {
+	columns, locatable := geoCapableTargets[target]
+	if !locatable {
+		return false, nil
+	}
+	var located bool
+	err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Every identifier here is a compile-time literal off geoCapableTargets
+		// and the branch table, never a name off a request.
+		return tx.QueryRow(ctx, fmt.Sprintf(
+			`SELECT EXISTS (SELECT 1 FROM %s WHERE %s = 'ok' AND archived_at IS NULL)`,
+			target, columns.Status,
+		)).Scan(&located)
+	})
+	if err != nil {
+		return false, fmt.Errorf("search: asking whether anything is geocoded: %w", err)
+	}
+	return located, nil
+}
+
+// nothingToMatch answers the note an EMPTY radius answer owes, and whether it
+// owes one at all.
+//
+// Asked only where the emptiness is — a plan with no radius, or one that came
+// back with rows, has nothing to explain and pays nothing here. A radius that
+// matched nothing over a workspace that has placed nothing is not a statement
+// about the customers, and returning it as coverage complete_exact with no note
+// is how "nobody is near Cologne" gets said about a geocoder.
+func (e *QueryExecutor) nothingToMatch(
+	ctx context.Context, target string, geo *geoBinding, rows []QueryRow,
+) (QueryNote, bool, error) {
+	if geo == nil || len(rows) > 0 {
+		return QueryNote{}, false, nil
+	}
+	located, err := e.anythingLocated(ctx, target)
+	if err != nil {
+		return QueryNote{}, false, err
+	}
+	if located {
+		return QueryNote{}, false, nil
+	}
+	return QueryNote{
+		Code:   CodeDistanceRankingUnavailable,
+		Path:   geo.Field,
+		Detail: unavailableDetail(CodeDistanceRankingUnavailable),
+	}, true, nil
 }

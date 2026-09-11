@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -51,5 +52,40 @@ func workingHoursResolver(pool *pgxpool.Pool) activities.WorkingHoursResolver {
 			StartMinute: hours.StartMinute, EndMinute: hours.EndMinute,
 			Days: hours.Days, Location: location,
 		}, nil
+	}
+}
+
+// calendarBacking answers whether a host's own calendar reaches this product,
+// which is what decides how much a free/busy answer may claim for itself.
+//
+// Nil is the unwired deployment and answers NO, which is the opposite direction
+// from workingHoursResolver's fallback and deliberately so: unread hours make an
+// answer less useful, while an unread calendar makes it untrue. A seam nobody
+// remembered to wire must not be able to promise a diary it cannot see.
+type calendarBacking func(ctx context.Context, host ids.UserID) (bool, error)
+
+func (backs calendarBacking) connected(ctx context.Context, host ids.UserID) (bool, error) {
+	if backs == nil {
+		return false, nil
+	}
+	return backs(ctx, host)
+}
+
+// calendarBackingResolver answers it from capture's connections: a host with a
+// live calendar connection has a diary this product reads, and a host without
+// one has meetings somebody typed in.
+func calendarBackingResolver(pool *pgxpool.Pool) calendarBacking {
+	db := InstallationDB(pool)
+	return func(ctx context.Context, host ids.UserID) (bool, error) {
+		var connected bool
+		err := db.Tx(ctx, func(tx pgx.Tx) error {
+			var err error
+			connected, err = capture.ConnectedOnAny(ctx, tx, host, calendarProviders)
+			return err
+		})
+		if err != nil {
+			return false, fmt.Errorf("compose: reading the host's calendar connections: %w", err)
+		}
+		return connected, nil
 	}
 }

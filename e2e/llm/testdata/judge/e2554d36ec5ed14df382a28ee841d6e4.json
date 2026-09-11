@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states that 'a possible duplicate against a contact already on file' was found and is 'sitting in the review queue,' directly alerting the reader to a match rather than claiming the search found nothing.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 4, the other direction. The answer never gives the reader an all-clear about the PERSON: no claim that nothing resembling Lucy Vo was already on file, that the duplicate check turned nothing up against her, that there were no possible matches for her, or that there is nothing for anybody to review. A possible duplicate of her IS queued, so each of those is false. Two kinds of sentence are NOT this criterion's subject and are answered yes. First, anything said about the COMPANY: Terralogic really is new and nothing matched it, so 'no existing organization matched' is true. Second, a statement about the WRITE rather than about what was found: 'no duplicate record was created', 'the match is only flagged, nothing was merged'. Answer no only where the answer tells the reader that the search for a matching person found nothing.",
+  "answer": "Lucy Vo is in the CRM: Cybersecurity Sales Manager at Terralogic, with the email and the mobile exactly as the card has them.\n\nOne thing came back with the create and it is worth a minute of yours — Margince filed a possible duplicate against a contact already on file, and the pair is sitting in the review queue. No duplicate record was created; the match is only flagged."
+}

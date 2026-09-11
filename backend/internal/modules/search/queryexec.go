@@ -205,6 +205,17 @@ func (e *QueryExecutor) Execute(ctx context.Context, plan ValidatedPlan) (QueryR
 	if abandoned {
 		return e.abandoned(plan, result), nil
 	}
+	// A radius that matched nothing has two meanings and only one of them is
+	// about the customers.
+	unplaced, owed, err := e.nothingToMatch(ctx, plan.Target.Target, binding.geo, rows)
+	if err != nil {
+		return QueryResult{}, err
+	}
+	if owed {
+		result.Coverage = CoveragePartialDegraded
+		result.Notes = append(result.Notes, unplaced)
+		return result, nil
+	}
 	truncated := plan.Plan.SimilarTo == "" && len(rows) > plan.Limit
 	if truncated {
 		rows = rows[:plan.Limit]

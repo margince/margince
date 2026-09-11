@@ -210,6 +210,20 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 	// a caller only needs when narrowing: a description still listing one
 	// report's names would be the same second copy in a shorter font.
 	//
+	// THE DIMENSIONS WERE TRIED HERE AND DO NOT FIT, which is worth writing down
+	// because the argument for them is good. Asked for an inbound-against-outbound
+	// split, every run read `activities-by-kind: count as activities grouped by
+	// kind`, concluded no prebuilt report reached direction, and went to the
+	// ad-hoc engine; `direction` is one of that report's dimensions. Publishing
+	// them costs ~220 tokens and run_report renders ~990 against the 1024 one tool
+	// may take, so it buys the fix by breaking the ration
+	// (TestNoSingleToolTakesMoreOfTheWindowThanItsShare, which fails at ~1220).
+	// What stands in their place is the sentence saying a default is not a
+	// report's reach — no enumeration, and it attacks the same false conclusion.
+	// If that sentence does not move the measurement, the case for enlarging
+	// run_report's share has a number behind it and this comment is where it
+	// starts.
+	//
 	// DERIVED from the fixture rather than listed, so renaming a name in
 	// twoReportCatalog() cannot leave this passing while the description recites
 	// the new one.
@@ -220,6 +234,7 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 	// TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines requires that
 	// sentence as long as the schema names them. Sweeping them up here would be
 	// demanding the removal of the one sentence another gate demands.
+	//
 	provenance := map[string]bool{"pipeline_id": true, "stage_id": true}
 	swept := 0
 	for _, entry := range twoReportCatalog() {
