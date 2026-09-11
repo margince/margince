@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -128,7 +129,7 @@ func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, re
 			return err
 		}
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "activity", id,
-			retentionAppliedPayload(actionErase, nil, nil))
+			retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil))
 	})
 }
 
@@ -180,7 +181,7 @@ func (s *RetentionService) anonymiseOnePerson(ctx context.Context, id ids.UUID, 
 			return err
 		}
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "person", id,
-			retentionAppliedPayload(actionAnonymize, nil, nil))
+			retentionAppliedPayload(crmcontracts.RetentionAppliedAnonymize, nil, nil))
 	})
 }
 

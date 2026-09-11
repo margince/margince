@@ -2892,7 +2892,24 @@ components:
       properties:
         action:
           type: string
-          description: The action that ran (archive | anonymize | erase).
+          enum: [archive, anonymize, erase]
+          # Named explicitly: these three generate `Archive`, `Anonymize` and
+          # `Erase`, which crm.yaml's RetentionAction already holds — and a
+          # collision there silently renames THAT enum's constants and breaks
+          # modules with no connection to this one.
+          x-enum-varnames:
+            - RetentionAppliedArchive
+            - RetentionAppliedAnonymize
+            - RetentionAppliedErase
+          description: >-
+            The action that ran. A CLOSED set, so a subscriber can switch on it
+            exhaustively — which is the whole reason for closing it: an open
+            field leaves a consumer to either branch on values nobody has
+            defined or drop what it does not recognise, and a silent drop looks
+            exactly like no event. `retention_policy.action` carries the same
+            three under a CHECK, and a gate holds the two spellings together.
+            Restriction is NOT a fourth action here: it emits
+            retention.restricted, whose own action is a different closed set.
         policy:
           type: string
           format: uuid
