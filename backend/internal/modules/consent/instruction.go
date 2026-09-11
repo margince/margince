@@ -182,6 +182,19 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		if known {
 			acknowledged = wording[:]
 		}
+		// ASKED BEFORE THE INSERT, not after it. A unique violation aborts the
+		// transaction, so a query that ran once the key had fired would be
+		// refused by Postgres — the caller would get an opaque fault instead of
+		// the reason their retry cannot work.
+		//
+		// A standing decision is found by the same key that would refuse the
+		// insert, so this is the same question asked while it can still be
+		// answered.
+		if standing, err := standingDecisionOutcome(ctx, tx, reviewID); err != nil {
+			return err
+		} else if standing {
+			return ErrDecisionAlreadyRecorded
+		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication_instruction
 			  (review_id, directed_by, reason_code, explanation, warning_version,
@@ -197,6 +210,9 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 			// transient hiccup in the send would trap the reviewer behind their
 			// own record.
 			if isDuplicateInstruction(err) {
+				// A decision landed between the read above and this insert.
+				// Whatever it says, the caller's own is not being recorded and
+				// the retry is theirs to make.
 				return ErrDecisionAlreadyRecorded
 			}
 			return fmt.Errorf("consent: recording the decision to send this refused message: %w", err)

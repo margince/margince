@@ -254,7 +254,24 @@ func (s *Store) CancelInTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		}
 		// Answered, like the reschedule above: a cancelled message needs no
 		// decision, so its card must not outlive it.
-		return s.resolveHeld(ctx, tx, id)
+		if err := s.resolveHeld(ctx, tx, id); err != nil {
+			return err
+		}
+		// AND THE REVIEW, if this message was one a refusal froze. Cancelling
+		// answers the question that review asks — not by sending, but by
+		// deciding not to — and one left live shows a decider work about a
+		// message that is already dead.
+		//
+		// AFTER the message row, which is the lock order every other path
+		// takes: the resume claims the scheduled_send FOR UPDATE and then
+		// resolves its review. Closing the review first here would take the two
+		// locks in the opposite order, and a cancel racing a resume would
+		// deadlock — Postgres would abort one of them with a fault neither
+		// caller could act on.
+		if s.reviewCloser != nil {
+			return s.reviewCloser.CancelReviewForIntentTx(ctx, tx, id)
+		}
+		return nil
 	}
 }
 

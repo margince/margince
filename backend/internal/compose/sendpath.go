@@ -159,6 +159,10 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// works on one transport and silently 500s on the next.
 		WithScheduleTimer(send.ScheduleTimer).
 		WithHeldNotifier(send.HeldNotifier).
+		// Wired unconditionally: it needs nothing but the caller's transaction,
+		// so a deployment cannot forget it and leave a cancelled message's review
+		// standing in front of a decider.
+		WithReviewCloser(reviewCloser{}).
 		// Wired unconditionally, like the unsubscribe linker below: it needs
 		// nothing but the caller's transaction, so a deployment cannot forget
 		// it and leave an account-started send unable to resolve anyone.
@@ -306,6 +310,10 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		})).
 		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
 		WithHeldNotifier(send.HeldNotifier).
+		// Wired unconditionally: it needs nothing but the caller's transaction,
+		// so a deployment cannot forget it and leave a cancelled message's review
+		// standing in front of a decider.
+		WithReviewCloser(reviewCloser{}).
 		WithDraftOutcome(send.DraftOutcome)
 }
 
