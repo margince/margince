@@ -17193,6 +17193,8 @@ export interface components {
                 backfillComplete?: boolean;
                 /** @description The mirror is held still by a pending overlay→native flip: the sweep skips this workspace entirely, so staleness grows on purpose. Stated rather than left to be inferred from a mirror that merely looks idle. */
                 frozenForFlip?: boolean;
+                /** @description How many of the class's mirror rows the CURRENT declaration cannot project. It is what tells the two readings of `stale` apart, and they want opposite responses: `stale` with ZERO here is converging — the sweep has not reached those rows and will — while `stale` with a NON-ZERO count never converges on its own and holds `force_fresh_incomplete` shut until somebody repairs the mapping. Zero means wait; non-zero means look. A count and not a list, because the question an operator is answering is whether anything needs them, not which ids. */
+                unprojectableRows?: number;
             }[];
         };
         /** @description The incumbent REST budget window's consumption and degradation band, its per-source breakdown, honest headroom, and the per-second Search window (overlay-budget.md "The budget read (wire shape)", OVB-AC-1/AC-5). */
@@ -17237,6 +17239,8 @@ export interface components {
             ready: boolean;
             /** @description Why the flip cannot run, empty when ready. `incumbent_unreachable` is the OVA-AC-6(a) honest block — the connection is revoked/error, so the force-fresh sync cannot pass; the workspace stays in overlay on its last mirror. */
             blocking: ("incumbent_unreachable" | "force_fresh_incomplete" | "pending_sync_draining" | "unresolved_conflicts" | "export_missing")[];
+            /** @description How many mirror rows the CURRENT declaration cannot project — a SUBSET of what holds `force_fresh_incomplete`, and the only part of it that never clears on its own. It is sent whether or not the flip is blocked, and zero is a real answer: an operator waiting on `force_fresh_incomplete` with zero here is waiting on a sweep that will finish, while a non-zero count is waiting on somebody repairing the mapping. Which class holds them is on the sync-status read, per object. */
+            unprojectable_rows?: number;
             /** @description Open incumbent-wins conflicts awaiting acceptance; each blocks the flip. Empty in this build: branch 1 reconciliation resolves incumbent-wins at ingest and persists no conflict queue, so the producer arrives with write-back (branch 2). The field is required by OVA-WIRE-7's response shape. */
             unresolved_conflicts: components["schemas"]["OverlayFlipUnresolvedConflict"][];
             snapshot?: components["schemas"]["OverlayFlipSnapshot"];

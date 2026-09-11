@@ -66,6 +66,16 @@ type FlipChecks struct {
 	// PendingSyncCount: rows with un-drained local writes — the flip
 	// waits until they drain (AC-mode-flip-4).
 	PendingSyncCount int
+	// UnprojectableRows: how many mirror rows the CURRENT declaration cannot
+	// project, across every class.
+	//
+	// It is a SUBSET of what holds ForceFreshDone shut, and the useful one:
+	// the rest of that staleness drains by itself, while these rows never do.
+	// An operator blocked by force_fresh_incomplete is exactly the person who
+	// needs to know which of the two they are waiting on, and telling them
+	// the preflight failed without telling them how much is stuck leaves them
+	// waiting on a sweep that will never clear it.
+	UnprojectableRows int
 	// LastSyncedAt is the mirror's freshest watermark (zero on an empty
 	// mirror) — the emergency cutover's staleness disclosure and the
 	// export-recency check both read it.
@@ -118,18 +128,20 @@ func (s *Service) FlipChecks(ctx context.Context) (FlipChecks, error) {
 			return err
 		}
 
-		var pending, stale int
+		var pending, stale, unprojectable int
 		var lastSynced *time.Time
 		if err := tx.QueryRow(
 			ctx, `
 			SELECT count(*) FILTER (WHERE sync_state = $1),
 			       count(*) FILTER (WHERE sync_state = $2 OR `+staleProjectionSQL+`),
+			       count(*) FILTER (WHERE `+staleProjectionSQL+`),
 			       count(*), max(last_synced_at)
 			FROM overlay_mirror`, syncStatePendingSync, syncStateStale, currentFingerprints,
-		).Scan(&pending, &stale, &checks.MirrorRows, &lastSynced); err != nil {
+		).Scan(&pending, &stale, &unprojectable, &checks.MirrorRows, &lastSynced); err != nil {
 			return fmt.Errorf("overlay: aggregating mirror state for the flip preflight: %w", err)
 		}
 		checks.PendingSyncCount = pending
+		checks.UnprojectableRows = unprojectable
 		if lastSynced != nil {
 			checks.LastSyncedAt = *lastSynced
 		}
