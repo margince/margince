@@ -8400,6 +8400,25 @@ export const en = {
   "person.research.dismiss": "Dismiss",
   "person.research.discard": "Discard",
   "person.research.save": "Review & save {count} claims",
+  // A prose claim becomes a stored value only once a reader says which field it
+  // fills — the judgement the closed field enum exists to force. The value and
+  // its citation are prefilled from the run and stay editable.
+  "person.research.mapField": "Profile field",
+  "person.research.mapFieldPlaceholder": "Choose a field",
+  "person.research.mapValue": "Value",
+  "person.research.mapQuote": "Source quote",
+  "person.research.mapUrl": "Source link",
+  "person.research.mapUrlInvalid": "Enter an http or https link.",
+  "person.research.mapIncomplete":
+    "Add a value, a quote and a link to save this claim.",
+  "person.research.saved": "{count} claims added to the record",
+  "person.research.field.title": "Job title",
+  "person.research.field.role": "Role",
+  "person.research.field.org_name": "Company",
+  "person.research.field.phone": "Phone",
+  "person.research.field.linkedin": "LinkedIn",
+  "person.research.field.address": "Address",
+  "person.research.field.website": "Website",
   "person.research.evidenceOrOmit":
     "AI-assisted · evidence-or-omit · public information only",
   "person.meeting.title": "Meeting brief",

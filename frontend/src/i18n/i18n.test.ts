@@ -20,6 +20,10 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // The name of the network, offered as a profile field in the research drawer.
+  // "LinkedIn" is the brand and is written the same in every catalog; the other
+  // six field labels beside it are translated normally.
+  "person.research.field.linkedin",
   // The product name of the buyer surface.
   "room.card.title",
   // Two sales nouns Vietnamese borrows rather than translates, on the
