@@ -88,7 +88,7 @@ func (d *deliveryEnv) stage(t *testing.T, activity ids.UUID, messageID string, f
 
 // timelineRow reads the contact's timeline and answers the email row for one
 // message, which is the projection the screen draws.
-func (d *deliveryEnv) timelineRow(t *testing.T, who context.Context, activity ids.UUID) *crmcontracts.EmailSummary {
+func (d *deliveryEnv) timelineRow(who context.Context, t *testing.T, activity ids.UUID) *crmcontracts.EmailSummary {
 	t.Helper()
 	page, _, err := d.Activities.ListActivities(who, activities.ListActivitiesInput{
 		EntityType: strPtr("person"), EntityID: &d.contact,
@@ -121,7 +121,7 @@ func TestTheTimelineTellsAParkedMessageFromADeliveredOne(t *testing.T) {
 	}
 	logged := d.sent(t, "Called instead")
 
-	ok := d.timelineRow(t, d.author, delivered).Delivery
+	ok := d.timelineRow(d.author, t, delivered).Delivery
 	if ok == nil || ok.State != crmcontracts.EmailDeliveryStateSent {
 		t.Fatalf("the delivered message reported %v, want sent", ok)
 	}
@@ -129,7 +129,7 @@ func TestTheTimelineTellsAParkedMessageFromADeliveredOne(t *testing.T) {
 		t.Error("a sent message carried no moment it was accepted")
 	}
 
-	held := d.timelineRow(t, d.author, refused).Delivery
+	held := d.timelineRow(d.author, t, refused).Delivery
 	if held == nil || held.State != crmcontracts.EmailDeliveryStateParked {
 		t.Fatalf("the parked message reported %v — the rep is being told it went", held)
 	}
@@ -138,7 +138,7 @@ func TestTheTimelineTellsAParkedMessageFromADeliveredOne(t *testing.T) {
 			held.Reason)
 	}
 
-	if none := d.timelineRow(t, d.author, logged).Delivery; none != nil {
+	if none := d.timelineRow(d.author, t, logged).Delivery; none != nil {
 		t.Errorf("a message that was only logged reported %v; it was never handed to a provider",
 			none)
 	}
@@ -158,7 +158,7 @@ func TestABouncedMessageIsNotReportedAsSent(t *testing.T) {
 	}
 	// Admitted as sent first, so the state below is the bounce's doing rather
 	// than a delivery that never reported anything.
-	if before := d.timelineRow(t, d.author, returned).Delivery; before == nil ||
+	if before := d.timelineRow(d.author, t, returned).Delivery; before == nil ||
 		before.State != crmcontracts.EmailDeliveryStateSent {
 		t.Fatalf("before the bounce the row reported %v; the case below would prove nothing", before)
 	}
@@ -176,7 +176,7 @@ func TestABouncedMessageIsNotReportedAsSent(t *testing.T) {
 		t.Fatalf("recording the bounce: marked=%v err=%v", marked, err)
 	}
 
-	after := d.timelineRow(t, d.author, returned).Delivery
+	after := d.timelineRow(d.author, t, returned).Delivery
 	if after == nil || after.State != crmcontracts.EmailDeliveryStateBounced {
 		t.Fatalf("the returned message reported %v, want bounced", after)
 	}
@@ -205,7 +205,7 @@ func TestTheTimelineSaysWhatAMessageCarriedAfterTheDocumentIsArchived(t *testing
 		t.Fatalf("archiving the document: %v", err)
 	}
 
-	row := d.timelineRow(t, d.author, carried)
+	row := d.timelineRow(d.author, t, carried)
 	if row.AttachmentCount != 0 {
 		t.Fatalf("attachment_count = %d after archiving; the case below would not be showing "+
 			"the snapshot", row.AttachmentCount)
@@ -244,7 +244,7 @@ func TestAWithheldRowSaysNothingAboutDelivery(t *testing.T) {
 
 	// Admitted first, so the silence below is the audience's doing rather than
 	// a delivery that never reported anything.
-	if before := d.timelineRow(t, colleague, message).Delivery; before == nil ||
+	if before := d.timelineRow(colleague, t, message).Delivery; before == nil ||
 		before.State != crmcontracts.EmailDeliveryStateParked {
 		t.Fatalf("the colleague saw %v before limiting; the withheld case would prove nothing",
 			before)
@@ -254,7 +254,7 @@ func TestAWithheldRowSaysNothingAboutDelivery(t *testing.T) {
 		t.Fatalf("limiting: %v", err)
 	}
 
-	held := d.timelineRow(t, colleague, message)
+	held := d.timelineRow(colleague, t, message)
 	if held.DisplayStatus != crmcontracts.EmailAccessStatusWithheld {
 		t.Fatalf("display_status = %q, want withheld", held.DisplayStatus)
 	}
@@ -264,7 +264,7 @@ func TestAWithheldRowSaysNothingAboutDelivery(t *testing.T) {
 	}
 
 	// The author is in the audience and still sees what happened to their own.
-	if own := d.timelineRow(t, d.author, message).Delivery; own == nil ||
+	if own := d.timelineRow(d.author, t, message).Delivery; own == nil ||
 		own.State != crmcontracts.EmailDeliveryStateParked {
 		t.Errorf("the author lost the state of their own message: %v", own)
 	}

@@ -35,6 +35,8 @@ import (
 // activities.OutboundFile against comms.OutboundFile, which is the shape of the
 // column itself.
 func TestTheStagedFileSnapshotIsReadBackInTheSpellingItWasWrittenIn(t *testing.T) {
+	t.Parallel()
+
 	written := storedKeys(reflect.TypeOf(comms.OutboundFile{}))
 	read := storedKeys(reflect.TypeOf(activities.OutboundFile{}))
 

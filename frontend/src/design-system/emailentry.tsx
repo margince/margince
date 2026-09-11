@@ -105,6 +105,19 @@ const OUTBOUND_PHRASE: Record<
   withheld: ["email.outgoingTo", "email.outgoing"],
 };
 
+// Why a message did not arrive, in the words it was recorded with — the half
+// of the answer a rep can act on.
+//
+// Only for a state that HAS one. A sent message's reason would be the last
+// park it recovered from, and a pending one has not been attempted, so there
+// is nothing yet to say about why it stopped.
+function troubleReason(delivery: EmailSummary["delivery"]): string | null {
+  if (delivery?.state !== "parked" && delivery?.state !== "bounced") {
+    return null;
+  }
+  return delivery.reason?.trim() || null;
+}
+
 // What the row draws, decided in one place.
 //
 // Every field the withheld status governs is settled here TOGETHER, from the
@@ -128,13 +141,7 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
   );
   const staged = delivery?.files;
   return {
-    // Why it did not arrive, in the words it was recorded with — the half of
-    // the answer a rep can act on. Only for a state that HAS a reason: a sent
-    // message's is the last park it recovered from.
-    trouble:
-      delivery?.state === "parked" || delivery?.state === "bounced"
-        ? delivery.reason?.trim() || null
-        : null,
+    trouble: troubleReason(delivery),
     // The names of the files, for the chip's tooltip.
     stagedNames: staged?.map((file) => file.filename) ?? null,
     withheld,

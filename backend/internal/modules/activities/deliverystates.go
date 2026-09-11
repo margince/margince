@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -91,15 +92,15 @@ func DeliveryStatesFor(
 // applyDeliveryStates stamps onto the email rows of a page what happened to
 // each message.
 //
-// It does not decide which rows may carry one — emailIDsOf does, and a row it
-// left out has no entry here and so is told nothing. That is the whole reason
-// the two are separate: a withheld summary has had its content stripped, and
-// "this message you may not read was parked because the recipient blocked us"
-// is that content in smaller print, so the rule about it is spelled once, for
-// every fact a page picks up, rather than again per fact.
+// It does not decide which rows may carry one. emailIDsOf does, and a row it
+// left out has no entry here and so is told nothing — which is why the two are
+// separate: a withheld summary has had its content stripped, and "this message
+// you may not read was parked because the recipient blocked us" is that content
+// in smaller print. That rule governs every fact a page picks up, so it sits
+// where the ids are chosen rather than being restated for each one.
 //
-// This is the only writer of EmailSummary.Delivery. The timeline page and the
-// single-message presentation both reach it here, the latter as a page of one.
+// The timeline page and the single-message presentation both reach the delivery
+// through here, the latter as a page of one.
 func applyDeliveryStates(page []crmcontracts.Activity, states map[ids.UUID]DeliveryState) {
 	for i := range page {
 		summary := page[i].EmailSummary
@@ -109,6 +110,24 @@ func applyDeliveryStates(page []crmcontracts.Activity, states map[ids.UUID]Deliv
 		state, known := states[ids.UUID(page[i].Id)]
 		summary.Delivery = contractDelivery(state, known)
 	}
+}
+
+// withDeliveryOn fills in what happened to ONE message.
+//
+// A page of one, so which rows may carry a delivery is decided where the
+// timeline decides it. Not WithEmailRowFacts: the single-message read already
+// has the attachments in hand, and counting them again would be a statement
+// for a number that caller can see.
+func withDeliveryOn(
+	ctx context.Context, tx pgx.Tx, id openapi_types.UUID, summary *crmcontracts.EmailSummary,
+) error {
+	row := []crmcontracts.Activity{{Id: id, EmailSummary: summary}}
+	states, err := DeliveryStatesFor(ctx, tx, emailIDsOf(row))
+	if err != nil {
+		return err
+	}
+	applyDeliveryStates(row, states)
+	return nil
 }
 
 // contractDelivery renders one delivery for the wire, or nil when the message
