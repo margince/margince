@@ -59,7 +59,19 @@ func retentionActionCheck(t *testing.T) []string {
 		}
 		out := make([]string, 0, len(values))
 		for _, value := range values {
-			out = append(out, value[1])
+			// SQL doubles a quote to escape it; the stored value has one.
+			out = append(out, strings.ReplaceAll(value[1], "''", "'"))
+		}
+		// EVERY literal, or none of them. A value the pattern cannot read is
+		// dropped from the set and the remaining ones still match the
+		// contract's — so the gate would pass while the two had diverged by
+		// exactly the value nobody could parse, which is the failure a census
+		// must not have. Removing what was read must leave no quote behind.
+		if rest := quotedSQLText.ReplaceAllString(line, ""); strings.Contains(rest, "'") {
+			t.Fatalf("the retention action CHECK carries a quoted value this reader cannot parse:\n\t%s\n"+
+				"It read %v and left %q. A value it cannot see is one it cannot compare, and the values "+
+				"it CAN see would still match the contract — so this gate would report agreement over a divergence",
+				line, out, rest)
 		}
 		sort.Strings(out)
 		return out
@@ -70,7 +82,11 @@ func retentionActionCheck(t *testing.T) []string {
 
 // quotedSQLText pulls the literals out of a rendered CHECK, which the catalog
 // writes as `ARRAY['archive'::text, …]`.
-var quotedSQLText = regexp.MustCompile(`'([a-z_]+)'::text`)
+// quotedSQLText matches one SQL string literal and its cast, doubled quotes
+// included. Deliberately not `[a-z_]+`: a value carrying a hyphen, a capital or
+// a space is one this reader would silently skip, and skipping is the direction
+// that reports agreement over a divergence.
+var quotedSQLText = regexp.MustCompile(`'((?:''|[^'])*)'::text`)
 
 // TestTheRetentionActionSetIsOneSet holds the three spellings together.
 func TestTheRetentionActionSetIsOneSet(t *testing.T) {
