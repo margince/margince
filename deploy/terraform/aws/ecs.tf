@@ -100,11 +100,19 @@ locals {
   shared_env = [
     { name = "MARGINCE_CONFIG", value = "/app/config/margince.yaml" },
     { name = "MARGINCE_REDIS", value = "${local.redis_host}:6379" },
+    # elasticache.tf's transit_encryption_mode = "required" refuses a
+    # plaintext connection outright — this is what makes the app's own
+    # connection attempts negotiate TLS instead of failing to connect at all.
+    { name = "MARGINCE_REDIS_TLS", value = "true" },
     { name = "MARGINCE_PUBLIC_BASE_URL", value = var.public_base_url },
     { name = "MARGINCE_BLOBSTORE_ENDPOINT", value = local.blobstore_endpoint },
     { name = "MARGINCE_BLOBSTORE_BUCKET", value = aws_s3_bucket.blobstore.bucket },
     { name = "MARGINCE_BLOBSTORE_REGION", value = var.aws_region },
     { name = "MARGINCE_BLOBSTORE_USE_SSL", value = "true" },
+    # s3.tf's DenyWrongKMSKey statement refuses any write that doesn't carry
+    # this exact key id — without this variable set, the client would send no
+    # SSE header at all and every upload would be denied.
+    { name = "MARGINCE_BLOBSTORE_KMS_KEY_ID", value = aws_kms_key.data.arn },
     { name = "MARGINCE_LOG_FORMAT", value = "json" },
   ]
 
@@ -283,6 +291,17 @@ resource "aws_ecs_service" "api" {
     container_port   = 8080
   }
 
+  # A bad deploy without this sits at whatever health the ALB reports with no
+  # automatic recovery — rollback is what turns a failed rollout back into a
+  # working one without a human re-running apply. Grace period covers the
+  # migrate-then-serve startup path (see the Dockerfile entrypoint) so a slow
+  # first boot is not mistaken for a failed one mid-rollout.
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+  health_check_grace_period_seconds = 60
+
   depends_on = [aws_lb_listener.https]
 }
 
@@ -297,6 +316,13 @@ resource "aws_ecs_service" "worker" {
     subnets          = aws_subnet.private[*].id
     security_groups  = [aws_security_group.ecs_tasks.id]
     assign_public_ip = false
+  }
+
+  # No load balancer on this service, so no health_check_grace_period_seconds —
+  # rollback still protects against a worker that crash-loops on boot.
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
   }
 }
 
@@ -318,6 +344,12 @@ resource "aws_ecs_service" "web" {
     container_name   = "web"
     container_port   = 8080
   }
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+  health_check_grace_period_seconds = 60
 
   depends_on = [aws_lb_listener.https]
 }

@@ -12,6 +12,10 @@ resource "aws_lb" "this" {
   # as-is rather than dropped at the ALB — the parsing boundary this exists
   # to enforce (CWE-444, request smuggling via inconsistent interpretation).
   drop_invalid_header_fields = true
+
+  # AWS's own default is false: a fat-fingered destroy or apply-time replace
+  # would otherwise take down the one public entry point with no confirmation.
+  enable_deletion_protection = true
 }
 
 # HTTP, not HTTPS, from here to the ECS targets — deliberately, matching the

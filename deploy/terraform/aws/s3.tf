@@ -61,12 +61,30 @@ resource "aws_s3_bucket_lifecycle_configuration" "blobstore" {
       days_after_initiation = 7
     }
   }
+
+  # Versioning above means a delete or overwrite keeps its prior version
+  # rather than losing it — but with no expiration those noncurrent versions
+  # accumulate forever. 90 days is recovery time for an accidental delete
+  # without unbounded storage growth.
+  rule {
+    id     = "expire-noncurrent-versions"
+    status = "Enabled"
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90
+    }
+  }
 }
 
 resource "aws_s3_bucket_versioning" "blobstore" {
   bucket = aws_s3_bucket.blobstore.id
   versioning_configuration {
-    status = "Disabled"
+    # A CRM attachment store with no versioning has no recovery from an
+    # accidental overwrite or delete — a bug, a bad actor, or client error is
+    # unrecoverable otherwise. The lifecycle rule below adds a
+    # noncurrent-version expiration so storage doesn't grow unbounded.
+    status = "Enabled"
   }
 }
 
@@ -93,25 +111,41 @@ resource "aws_s3_bucket_policy" "blobstore_tls_only" {
           Bool = { "aws:SecureTransport" = "false" }
         }
       },
+      {
+        # The bucket default (apply_server_side_encryption_by_default, above)
+        # does not stop an explicit request from overriding it — S3 honors
+        # whatever encryption header a PutObject carries over the bucket's
+        # default. backend/internal/platform/blobstore/s3.go now sends
+        # ServerSideEncryption: encrypt.NewSSEKMS(keyID, nil) on every write
+        # (MARGINCE_BLOBSTORE_KMS_KEY_ID, ecs.tf), so this deny can land
+        # without refusing the app's own uploads — the invariant's other
+        # writer. Denies AES256 and any KMS key that isn't this stack's own.
+        Sid       = "DenyWrongEncryption"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.blobstore.arn}/*"
+        Condition = {
+          StringNotEquals = {
+            "s3:x-amz-server-side-encryption" = "aws:kms"
+          }
+        }
+      },
+      {
+        Sid       = "DenyWrongKMSKey"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.blobstore.arn}/*"
+        Condition = {
+          StringNotEqualsIfExists = {
+            "s3:x-amz-server-side-encryption-aws-kms-key-id" = aws_kms_key.data.arn
+          }
+        }
+      },
     ]
   })
 }
-
-# What this policy deliberately does NOT add: a deny on any PutObject that
-# does not explicitly carry x-amz-server-side-encryption: aws:kms plus this
-# stack's key id. That would be the server-side backstop for object writes,
-# matching what DenyInsecureTransport is for transport — but
-# backend/internal/platform/blobstore/s3.go's PutObject call
-# (minio.PutObjectOptions{ContentType: contentType}) sets NO SSE headers at
-# all, checked fresh in this session, not assumed. It relies entirely on the
-# bucket's default encryption (apply_server_side_encryption_by_default,
-# above) to apply KMS server-side. Adding that deny here, alone, would
-# refuse every upload this app makes — the policy and the client are one
-# invariant with two writers (AGENTS.md's own rule for exactly this shape of
-# bug), and only the Terraform half is in this PR. The Go side needs
-# `minio.PutObjectOptions{ServerSideEncryption: encrypt.NewSSEKMS(keyID, nil)}`
-# (or equivalent) before this deny can land without breaking the feature it
-# would otherwise protect.
 
 resource "aws_iam_user" "blobstore" {
   name = "${var.name_prefix}-blobstore"

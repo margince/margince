@@ -17,6 +17,30 @@ resource "aws_efs_mount_target" "config" {
   security_groups = [aws_security_group.efs.id]
 }
 
+# ecs.tf's task volumes already request transit_encryption = ENABLED
+# client-side; this is the server-side backstop, mirroring s3.tf's
+# DenyInsecureTransport — the mount itself refuses a non-TLS client
+# regardless of what the task definition asks for.
+resource "aws_efs_file_system_policy" "config" {
+  file_system_id = aws_efs_file_system.config.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "DenyInsecureTransport"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "elasticfilesystem:*"
+        Resource  = aws_efs_file_system.config.arn
+        Condition = {
+          Bool = { "aws:SecureTransport" = "false" }
+        }
+      },
+    ]
+  })
+}
+
 resource "aws_efs_access_point" "config" {
   file_system_id = aws_efs_file_system.config.id
 
