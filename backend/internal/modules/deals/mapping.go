@@ -145,6 +145,16 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 		attribution := string(*req.PartnerAttribution)
 		in.PartnerAttribution = &attribution
 	}
+	in.Description = req.Description
+	if req.CommercialMotion != nil {
+		motion := string(*req.CommercialMotion)
+		in.CommercialMotion = &motion
+	}
+	if req.Priority != nil {
+		priority := string(*req.Priority)
+		in.Priority = &priority
+	}
+	in.AcquisitionSource = req.AcquisitionSource
 	if req.ExpectedCloseDate != nil {
 		in.ExpectedClose = &req.ExpectedCloseDate.Time
 	}
@@ -170,6 +180,16 @@ func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) Updat
 	if req.ExpectedCloseDate != nil {
 		in.ExpectedClose = &req.ExpectedCloseDate.Time
 	}
+	in.Description = req.Description
+	if req.CommercialMotion != nil {
+		motion := string(*req.CommercialMotion)
+		in.CommercialMotion = &motion
+	}
+	if req.Priority != nil {
+		priority := string(*req.Priority)
+		in.Priority = &priority
+	}
+	in.AcquisitionSource = req.AcquisitionSource
 	if req.ForecastCategory != nil {
 		cat := string(*req.ForecastCategory)
 		in.ForecastCategory = &cat

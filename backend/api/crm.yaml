@@ -4239,6 +4239,21 @@ paths:
           in: query
           schema: { type: string, enum: [sourced, influenced] }
           description: Deals a partner brought (`sourced`) or merely helped (`influenced`).
+        - name: commercial_motion
+          in: query
+          description: >-
+            `unset` matches deals with no motion recorded, which no enum value can express.
+          schema: { type: string, enum: [new_business, renewal, upsell, cross_sell, expansion, existing_business, unset] }
+        - name: priority
+          in: query
+          description: '`unset` matches deals nobody has prioritised.'
+          schema: { type: string, enum: [low, medium, high, unset] }
+        - name: acquisition_source
+          in: query
+          description: >-
+            An acquisition-source key, or `unset` for unclassified deals. A retired key still
+            filters, so history stays reachable after the source leaves the picker.
+          schema: { type: string }
         - name: tag_id
           in: query
           schema:
@@ -8297,6 +8312,80 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+
+  /acquisition-sources:
+    get:
+      tags: [Deals]
+      operationId: listAcquisitionSources
+      summary: List deal acquisition sources, active and retired, in display order.
+      description: |
+        The administered business channels a deal can be attributed to. This list is
+        deliberately separate from `/lead-sources`: that one also models how a RECORD
+        reached Margince (connector, import, crawl) and scores lead intent, while this
+        one only names how an OPPORTUNITY reached the business. Retired entries are
+        returned so a deal still carrying one renders its label and a filter can still
+        find it; they cannot be newly assigned.
+      responses:
+        '200':
+          description: The acquisition source list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AcquisitionSourceListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Deals]
+      operationId: createAcquisitionSource
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Add an acquisition source.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAcquisitionSourceRequest' }
+      responses:
+        '201':
+          description: Created acquisition source.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AcquisitionSource' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /acquisition-sources/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Deals]
+      operationId: updateAcquisitionSource
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Relabel, reorder or retire an acquisition source.
+      description: |
+        Retirement is `active: false`, and there is no delete: a key a deal has ever
+        carried must stay resolvable, or that deal's history stops rendering. Relabelling
+        changes what readers see and never rewrites the stored key, so reports keyed on it
+        stay comparable across the rename.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAcquisitionSourceRequest' }
+      responses:
+        '200':
+          description: Updated acquisition source.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AcquisitionSource' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /lead-disqualify-reasons:
     get:
@@ -31038,6 +31127,45 @@ components:
             What the partner named by `partner_company_id` did: `sourced` (brought the deal) or
             `influenced` (helped one we had). Travels with the partner — naming a partner
             defaults it to `sourced`. Commission accrues on `sourced` only.
+        description:
+          type: [string, 'null']
+          maxLength: 20000
+          description: >-
+            The human-authored statement of what the customer needs, what is in scope and what
+            outcome is intended. Distinct from the GENERATED deal briefing: this is what a person
+            wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler
+            as evidence, never as an instruction to follow.
+        commercial_motion:
+          type: [string, 'null']
+          enum: [new_business, renewal, upsell, cross_sell, expansion, existing_business, null]
+          description: >-
+            Why this deal exists commercially: `new_business` (first purchase by this customer),
+            `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more
+            capacity or a higher tier of something they already have), `cross_sell` (a different
+            offering to an existing customer), `expansion` (growth spanning offerings, or outside
+            the more specific choices), `existing_business` (the relationship is known, the motion
+            is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a
+            reporting classification, not revenue split across motions. Null means unknown, which
+            is different from `existing_business`: unknown has not been asked, `existing_business`
+            has been asked and answered "not more precisely than this".
+        priority:
+          type: [string, 'null']
+          enum: [low, medium, high, null]
+          description: >-
+            Human importance, set by a person and never derived. Deliberately independent of amount,
+            score, stage and the computed urgency a worklist reads: those already exist, and a field
+            that merely restates them would be a second answer to a question the product answers.
+            Null is "nobody has said", not "medium" — new deals are born null and closing one
+            preserves what it held.
+        acquisition_source:
+          type: [string, 'null']
+          description: >-
+            The business channel this opportunity came from, as an administered key from
+            `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the
+            technical `source` field beside it: `source` records how the RECORD reached Margince
+            (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the
+            business. A deal typed in by hand can be a referral; an imported one can be outbound.
+            Null means unclassified, which is different from the explicit `other` key.
         project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.' }
         owner_id: { type: [string, 'null'], format: uuid }
         writable:
@@ -31111,6 +31239,42 @@ components:
           description: >-
             `sourced` or `influenced`. Naming a partner without this field attributes the
             deal `sourced`; an attribution for a deal naming no partner is refused 422.
+        description:
+          type: [string, 'null']
+          maxLength: 20000
+          description: >-
+            The human-authored statement of what the customer needs, what is in scope and what
+            outcome is intended. Distinct from the GENERATED deal briefing: this is what a person
+            wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler
+            as evidence, never as an instruction to follow.
+        commercial_motion:
+          type: [string, 'null']
+          enum: [new_business, renewal, upsell, cross_sell, expansion, existing_business, null]
+          description: >-
+            Why this deal exists commercially: `new_business` (first purchase by this customer),
+            `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more
+            capacity or a higher tier of something they already have), `cross_sell` (a different
+            offering to an existing customer), `expansion` (growth spanning offerings, or outside
+            the more specific choices), `existing_business` (the relationship is known, the motion
+            is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a
+            reporting classification, not revenue split across motions. Null means unknown, which
+            is different from `existing_business`: unknown has not been asked, `existing_business`
+            has been asked and answered "not more precisely than this".
+        priority:
+          type: [string, 'null']
+          enum: [low, medium, high, null]
+          description: >-
+            Human importance, set by a person and never derived. Deliberately independent of amount,
+            score, stage and the computed urgency a worklist reads: those already exist, and a field
+            that merely restates them would be a second answer to a question the product answers.
+            Null is "nobody has said", not "medium" — new deals are born null and closing one
+            preserves what it held.
+        acquisition_source:
+          type: [string, 'null']
+          description: >-
+            An active key from `/acquisition-sources`. A retired key is refused for a NEW
+            assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it
+            through unrelated edits. Null clears it.
         project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this deal belongs to; must name the same company as the deal.' }
         owner_id: { type: [string, 'null'], format: uuid }
         expected_close_date: { type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).' }
@@ -31132,6 +31296,42 @@ components:
           description: >-
             `sourced` or `influenced`. Naming a partner without this field attributes the
             deal `sourced`; an attribution for a deal naming no partner is refused 422.
+        description:
+          type: [string, 'null']
+          maxLength: 20000
+          description: >-
+            The human-authored statement of what the customer needs, what is in scope and what
+            outcome is intended. Distinct from the GENERATED deal briefing: this is what a person
+            wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler
+            as evidence, never as an instruction to follow.
+        commercial_motion:
+          type: [string, 'null']
+          enum: [new_business, renewal, upsell, cross_sell, expansion, existing_business, null]
+          description: >-
+            Why this deal exists commercially: `new_business` (first purchase by this customer),
+            `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more
+            capacity or a higher tier of something they already have), `cross_sell` (a different
+            offering to an existing customer), `expansion` (growth spanning offerings, or outside
+            the more specific choices), `existing_business` (the relationship is known, the motion
+            is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a
+            reporting classification, not revenue split across motions. Null means unknown, which
+            is different from `existing_business`: unknown has not been asked, `existing_business`
+            has been asked and answered "not more precisely than this".
+        priority:
+          type: [string, 'null']
+          enum: [low, medium, high, null]
+          description: >-
+            Human importance, set by a person and never derived. Deliberately independent of amount,
+            score, stage and the computed urgency a worklist reads: those already exist, and a field
+            that merely restates them would be a second answer to a question the product answers.
+            Null is "nobody has said", not "medium" — new deals are born null and closing one
+            preserves what it held.
+        acquisition_source:
+          type: [string, 'null']
+          description: >-
+            An active key from `/acquisition-sources`. A retired key is refused for a NEW
+            assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it
+            through unrelated edits. Null clears it.
         project_id: { type: [string, 'null'], format: uuid }
         owner_id: { type: [string, 'null'], format: uuid }
         status: { type: string, enum: [open, won, lost] }
@@ -34345,6 +34545,57 @@ components:
       enum: [high, neutral, low]
       x-enum-varnames: [LeadSourceIntentHigh, LeadSourceIntentNeutral, LeadSourceIntentLow]
       description: 'What the scorer makes of a lead from this source: high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither (formulas §3.1).'
+
+    AcquisitionSource:
+      type: object
+      description: One administered business channel a deal can be attributed to.
+      required: [id, key, label, sort_order, active, system, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        key:
+          type: string
+          description: >-
+            The stable identifier stored on the deal. Lowercase, never changes once created —
+            relabelling edits `label`, so a report keyed on the key survives the rename.
+        label: { type: string, description: What readers see. }
+        sort_order: { type: integer, description: Display order in pickers and settings. }
+        active:
+          type: boolean
+          description: >-
+            False is retired: still readable and still filterable on deals that carry it,
+            but refused for a new assignment.
+        system:
+          type: boolean
+          readOnly: true
+          description: Seeded with the installation. Fully editable; it simply cannot be removed.
+        version: { type: integer, format: int64, readOnly: true }
+        created_at: { type: string, format: date-time, readOnly: true }
+        updated_at: { type: string, format: date-time, readOnly: true }
+
+    AcquisitionSourceListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/AcquisitionSource' } }
+
+    CreateAcquisitionSourceRequest:
+      type: object
+      required: [label]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{0,63}$'
+          description: Derived from the label when omitted.
+        label: { type: string, minLength: 1, maxLength: 120 }
+        sort_order: { type: integer }
+
+    UpdateAcquisitionSourceRequest:
+      type: object
+      description: Every field optional; an omitted one is left alone.
+      properties:
+        label: { type: string, minLength: 1, maxLength: 120 }
+        sort_order: { type: integer }
+        active: { type: boolean }
 
     LeadSource:
       type: object

@@ -317,6 +317,16 @@ func (s Server) ListDeals(w http.ResponseWriter, r *http.Request, params crmcont
 			// and answering the whole mirror while reading as "the commit
 			// bucket" is the failure this list refuses rather than makes.
 			{paramForecastCategory, params.ForecastCategory != nil},
+			// The commercial context is ours in exactly the forecast's sense.
+			// A mirrored deal carries whatever the incumbent recorded about
+			// why it exists, how much it matters and where it came from; this
+			// product neither writes those columns on a mirror nor maps the
+			// incumbent's own, so there is nothing here to narrow by. Refused
+			// rather than dropped, because a dropped dial answers the whole
+			// mirror while reading as the narrowed set.
+			{"commercial_motion", params.CommercialMotion != nil},
+			{"priority", params.Priority != nil},
+			{"acquisition_source", params.AcquisitionSource != nil},
 		},
 		nil, params.Cursor, params.Limit, overlayWireDeal,
 		func(data []crmcontracts.Deal, page crmcontracts.PageInfo) any {

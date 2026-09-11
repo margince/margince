@@ -45,10 +45,20 @@ type UpdateDealInput struct {
 	// the store refuses the pair half-set rather than storing a claim about
 	// a partner the deal does not name.
 	PartnerAttribution *string
-	ExpectedClose      *time.Time
-	ForecastCategory   *string
-	WaitUntil          *time.Time
-	IfVersion          *int64
+	// Description is the human-authored brief. Cleared through Clear, like
+	// every other nullable column: a nil pointer here means "not supplied".
+	Description *string
+	// CommercialMotion, Priority and AcquisitionSource carry the deal's
+	// commercial context. A retired acquisition source stays on a deal that
+	// already holds it and is refused for a new assignment — the catalog
+	// check runs in the patch, where the current value is known.
+	CommercialMotion  *string
+	Priority          *string
+	AcquisitionSource *string
+	ExpectedClose     *time.Time
+	ForecastCategory  *string
+	WaitUntil         *time.Time
+	IfVersion         *int64
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (storekit customcolumns).

@@ -53,6 +53,16 @@ type CreateDealInput struct {
 	OwnerExact    bool
 	ExpectedClose *time.Time
 	Source        string
+	// Description is the human-authored brief. Distinct from the GENERATED
+	// deal briefing: no assembler writes this one.
+	Description *string
+	// CommercialMotion, Priority and AcquisitionSource are the deal's
+	// commercial context. All three are optional and born null — priority
+	// in particular is never defaulted from amount, score or stage, because
+	// a value nobody chose reads exactly like one somebody did.
+	CommercialMotion  *string
+	Priority          *string
+	AcquisitionSource *string
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (storekit customcolumns).
@@ -263,6 +273,16 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	if err := ensureBirthLinksVisible(ctx, tx, in, s.ensureProjectAttachable); err != nil {
 		return crmcontracts.Deal{}, err
 	}
+
+	// A newborn deal has no current source, so every named key is a NEW
+	// assignment and a retired one is refused. The FK below would catch an
+	// unknown key, but not a retired one — the row exists, it is simply no
+	// longer a choice.
+	if in.AcquisitionSource != nil {
+		if err := ensureAssignableAcquisitionSource(ctx, tx, *in.AcquisitionSource, nil); err != nil {
+			return crmcontracts.Deal{}, err
+		}
+	}
 	// Visible is not enough for the partner: it must actually BE one, or the
 	// deal reads as credited and can never earn anything (the accrual prices
 	// from the partner row's margin tier).
@@ -277,18 +297,28 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		id, in.Name, in.AmountMinor, in.Currency, in.PipelineID, in.StageID,
 		in.CompanyID, in.PartnerCompanyID, born.attribution,
 		in.ProjectID, in.OwnerID, in.ExpectedClose, in.Source, born.by,
+		in.Description, in.CommercialMotion, in.Priority, in.AcquisitionSource,
 	})
 	_, err := tx.Exec(ctx,
 		`INSERT INTO deal (id, name, amount_minor, currency, pipeline_id, stage_id,
 		                   company_id, partner_company_id, partner_attribution,
-		                   project_id, owner_id, expected_close_date, source, captured_by`+cfCols+`)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14`+cfHolders+`)`,
+		                   project_id, owner_id, expected_close_date, source, captured_by,
+		                   description, commercial_motion, priority, acquisition_source`+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+		         $15, $16, $17, $18`+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Covers the remaining FKs (pipeline, owner); the stage/pipeline
 		// pairing and the company target were pre-checked above.
 		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameCompanyConstraint {
 			return crmcontracts.Deal{}, &DealProjectCompanyMismatchError{}
+		}
+		// The acquisition-source FK names a key the catalog does not hold.
+		// Told apart from the record FKs below because the caller's fix is
+		// different: a bad source is a field to correct, not a missing deal.
+		if constraint, ok := storekit.ForeignKeyViolation(err); ok &&
+			constraint == dealAcquisitionSourceConstraint {
+			return crmcontracts.Deal{}, &UnknownAcquisitionSourceError{}
 		}
 		if storekit.IsForeignKeyViolation(err) {
 			return crmcontracts.Deal{}, apperrors.ErrNotFound

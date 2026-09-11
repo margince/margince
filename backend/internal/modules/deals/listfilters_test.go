@@ -25,6 +25,7 @@ func TestEveryDeclaredDealsFilterNarrowsSomething(t *testing.T) {
 		"forecast_category":   "commit",
 		"pipeline_id":         id, "project_id": id, "stage_id": id, "stalled": "false", "status": "open",
 		"tag_id": id, "tag_mode": "all",
+		"commercial_motion": "new_business", "priority": "high", "acquisition_source": "referral",
 	})
 }
 
@@ -39,9 +40,10 @@ func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		want   []string
 	}{
 		{datasource.EntityDeal, []string{
+			"acquisition_source", "commercial_motion",
 			"company_id", "forecast_category", "owner_id", "partner_attribution",
 			"partner_company_id", "partner_sourced",
-			"pipeline_id", "project_id", "stage_id", "stalled", "status",
+			"pipeline_id", "priority", "project_id", "stage_id", "stalled", "status",
 			"tag_id", "tag_mode",
 		}},
 	} {

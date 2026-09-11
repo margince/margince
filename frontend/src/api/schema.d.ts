@@ -5538,6 +5538,58 @@ export interface paths {
         patch: operations["updateLeadSource"];
         trace?: never;
     };
+    "/acquisition-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List deal acquisition sources, active and retired, in display order.
+         * @description The administered business channels a deal can be attributed to. This list is
+         *     deliberately separate from `/lead-sources`: that one also models how a RECORD
+         *     reached Margince (connector, import, crawl) and scores lead intent, while this
+         *     one only names how an OPPORTUNITY reached the business. Retired entries are
+         *     returned so a deal still carrying one renders its label and a filter can still
+         *     find it; they cannot be newly assigned.
+         */
+        get: operations["listAcquisitionSources"];
+        put?: never;
+        /** Add an acquisition source. */
+        post: operations["createAcquisitionSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition-sources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Relabel, reorder or retire an acquisition source.
+         * @description Retirement is `active: false`, and there is no delete: a key a deal has ever
+         *     carried must stay resolvable, or that deal's history stops rendering. Relabelling
+         *     changes what readers see and never rewrites the stored key, so reports keyed on it
+         *     stay comparable across the rename.
+         */
+        patch: operations["updateAcquisitionSource"];
+        trace?: never;
+    };
     "/lead-disqualify-reasons": {
         parameters: {
             query?: never;
@@ -22095,6 +22147,20 @@ export interface components {
              * @enum {string|null}
              */
             partner_attribution?: "sourced" | "influenced" | null;
+            /** @description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a person wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow. */
+            description?: string | null;
+            /**
+             * @description Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+             * @enum {string|null}
+             */
+            commercial_motion?: "new_business" | "renewal" | "upsell" | "cross_sell" | "expansion" | "existing_business" | null;
+            /**
+             * @description Human importance, set by a person and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+             * @enum {string|null}
+             */
+            priority?: "low" | "medium" | "high" | null;
+            /** @description The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key. */
+            acquisition_source?: string | null;
             /**
              * Format: uuid
              * @description The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
@@ -22178,6 +22244,20 @@ export interface components {
              * @enum {string|null}
              */
             partner_attribution?: "sourced" | "influenced" | null;
+            /** @description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a person wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow. */
+            description?: string | null;
+            /**
+             * @description Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+             * @enum {string|null}
+             */
+            commercial_motion?: "new_business" | "renewal" | "upsell" | "cross_sell" | "expansion" | "existing_business" | null;
+            /**
+             * @description Human importance, set by a person and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+             * @enum {string|null}
+             */
+            priority?: "low" | "medium" | "high" | null;
+            /** @description An active key from `/acquisition-sources`. A retired key is refused for a NEW assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it through unrelated edits. Null clears it. */
+            acquisition_source?: string | null;
             /**
              * Format: uuid
              * @description The body of work this deal belongs to; must name the same company as the deal.
@@ -22211,6 +22291,20 @@ export interface components {
              * @enum {string|null}
              */
             partner_attribution?: "sourced" | "influenced" | null;
+            /** @description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a person wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow. */
+            description?: string | null;
+            /**
+             * @description Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+             * @enum {string|null}
+             */
+            commercial_motion?: "new_business" | "renewal" | "upsell" | "cross_sell" | "expansion" | "existing_business" | null;
+            /**
+             * @description Human importance, set by a person and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+             * @enum {string|null}
+             */
+            priority?: "low" | "medium" | "high" | null;
+            /** @description An active key from `/acquisition-sources`. A retired key is refused for a NEW assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it through unrelated edits. Null clears it. */
+            acquisition_source?: string | null;
             /** Format: uuid */
             project_id?: string | null;
             /** Format: uuid */
@@ -25150,6 +25244,42 @@ export interface components {
          * @enum {string}
          */
         LeadSourceIntent: "high" | "neutral" | "low";
+        /** @description One administered business channel a deal can be attributed to. */
+        AcquisitionSource: {
+            /** Format: uuid */
+            id: string;
+            /** @description The stable identifier stored on the deal. Lowercase, never changes once created — relabelling edits `label`, so a report keyed on the key survives the rename. */
+            key: string;
+            /** @description What readers see. */
+            label: string;
+            /** @description Display order in pickers and settings. */
+            sort_order: number;
+            /** @description False is retired: still readable and still filterable on deals that carry it, but refused for a new assignment. */
+            active: boolean;
+            /** @description Seeded with the installation. Fully editable; it simply cannot be removed. */
+            readonly system: boolean;
+            /** Format: int64 */
+            readonly version: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        AcquisitionSourceListResponse: {
+            data: components["schemas"]["AcquisitionSource"][];
+        };
+        CreateAcquisitionSourceRequest: {
+            /** @description Derived from the label when omitted. */
+            key?: string;
+            label: string;
+            sort_order?: number;
+        };
+        /** @description Every field optional; an omitted one is left alone. */
+        UpdateAcquisitionSourceRequest: {
+            label?: string;
+            sort_order?: number;
+            active?: boolean;
+        };
         /** @description One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees. */
         LeadSource: {
             /** Format: uuid */
@@ -38599,6 +38729,12 @@ export interface operations {
                 partner_sourced?: boolean;
                 /** @description Deals a partner brought (`sourced`) or merely helped (`influenced`). */
                 partner_attribution?: "sourced" | "influenced";
+                /** @description `unset` matches deals with no motion recorded, which no enum value can express. */
+                commercial_motion?: "new_business" | "renewal" | "upsell" | "cross_sell" | "expansion" | "existing_business" | "unset";
+                /** @description `unset` matches deals nobody has prioritised. */
+                priority?: "low" | "medium" | "high" | "unset";
+                /** @description An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker. */
+                acquisition_source?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
                  *
@@ -43532,6 +43668,121 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeadSource"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listAcquisitionSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The acquisition source list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcquisitionSourceListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createAcquisitionSource: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAcquisitionSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created acquisition source. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcquisitionSource"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateAcquisitionSource: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAcquisitionSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated acquisition source. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcquisitionSource"];
                 };
             };
             403: components["responses"]["Forbidden"];
