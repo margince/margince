@@ -193,6 +193,33 @@ type Copy struct {
 	ConfirmRecordBody     string
 	ConfirmConsentSubject string
 	ConfirmConsentBody    string
+	// ConfirmMarketingAsk is the QUESTION ON THE PAGE, not in the mail — the
+	// sentence beside the yes/no a subject actually answers.
+	//
+	// It lives in this catalog rather than in the frontend's because it is the
+	// proposition a consent is given to, and a proof row that quoted a string
+	// the client sent would be evidence the client wrote. Published through the
+	// same text-version machinery as the mail wording, so the grant can name
+	// the row the controller published.
+	//
+	// ConfirmMarketingYes and ConfirmMarketingNo are the two answers, here for
+	// the same reason: what a subject chose is part of what they were asked.
+	ConfirmMarketingAsk string
+	ConfirmMarketingYes string
+	ConfirmMarketingNo  string
+	// ConfirmSubscriptionAsk is the OTHER question, and the two are not
+	// interchangeable. A record-confirmation link asks the generic marketing
+	// question above; a dedicated subscription link names the purpose it was
+	// minted for — "confirm that you want to receive {purpose}" — which is a
+	// narrower and more specific proposition.
+	//
+	// Binding either door to the other's sentence would record somebody
+	// agreeing to something they were not asked, which is the defect the whole
+	// published-question change exists to end.
+	//
+	// {purpose} is substituted with the purpose's own label at render time.
+	ConfirmSubscriptionAsk     string
+	ConfirmSubscriptionConfirm string
 	// ConfirmPersonal says the link is the reader's alone. ConfirmExpiry is
 	// APPENDED to it when the link has a date, with the date as %s.
 	//

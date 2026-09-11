@@ -95,6 +95,23 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 	} else {
 		log.Info("installation bound to existing company", "workspace_id", wsID.String())
 	}
+	// THE PUBLISHED WORDING, ON EVERY BOOT and not only on the one that creates
+	// the workspace.
+	//
+	// seedConsentText runs inside workspace seeding, which an EXISTING
+	// installation skips entirely — so an upgrade would add the columns that
+	// pin which wording a link asks, start pinning them, and never publish the
+	// rows they point at. Every grant after that upgrade would name a version
+	// nothing had published, which is the fallback path and exactly the silence
+	// this change exists to end.
+	//
+	// Safe to repeat: PublishTextVersionTx is idempotent on key+version+locale
+	// and REFUSES when the same version's words have changed, so a boot that
+	// finds the wording edited without a version bump fails loudly here rather
+	// than quietly serving one thing and having past proofs name another.
+	if err := publishConsentWording(ctx, pool, wsID.UUID); err != nil {
+		return err
+	}
 	// `setting` is not tenant-scoped, so a bootstrap over a database that still
 	// holds a previous installation's rows creates a new workspace beside them
 	// and keeps the OLD identity. The values in margince.yaml are then read,
@@ -335,20 +352,6 @@ func seedConsent(ctx context.Context, tx pgx.Tx, configured []deployconfig.Conse
 		return err
 	}
 	return seedConsentText(ctx, tx)
-}
-
-// seedConsentText publishes the installation's own wording beside the purpose
-// catalog and the retention defaults, in the same transaction.
-//
-// Here rather than at a later door because a proof row may name a version from
-// the first grant onwards: wording published after the fact would leave the
-// earliest proofs pointing at nothing, and those are exactly the rows nobody
-// can reconstruct later.
-func seedConsentText(ctx context.Context, tx pgx.Tx) error {
-	if err := consent.PublishControllerTemplatesTx(ctx, tx, time.Now()); err != nil {
-		return err
-	}
-	return consent.SeedDefaultRetentionTx(ctx, tx)
 }
 
 // seedRetentionPosture turns the retain-only posture on when the deployment asked

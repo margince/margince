@@ -278,6 +278,16 @@ type RecordInput struct {
 	// demonstrability). Nil keeps the API-surface defaults.
 	PolicyText    *string
 	PolicyVersion *string
+	// TextVersionID names the PUBLISHED wording this grant rests on, where the
+	// door knows which one the subject read. It is what makes the proof
+	// checkable: a reader follows it to the row the controller published rather
+	// than trusting policy_text, which on a public door arrived in the same
+	// request as the answer it evidences.
+	//
+	// Zero on every door that cannot say — a link minted before the question
+	// was pinned, an API caller stating their own wording — and those rows keep
+	// the weaker evidence they always had.
+	TextVersionID ids.UUID
 	// NeverOverrideExisting is the anonymous-capture rule: a public
 	// surface asserting "granted" must not flip a decision already on
 	// record — above all a WITHDRAWAL, which an attacker knowing only an

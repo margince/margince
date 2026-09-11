@@ -264,6 +264,33 @@ func morningLines(line writeLine) {
 // speak to a stranger the installation holds a record about, and about their
 // own rights.
 func confirmLines(line writeLine) {
+	// THE QUESTION THE PAGE ASKS, which is what a consent is given TO. Its
+	// translations are the ones the confirm screen shipped, moved here so the
+	// proof can name a published row rather than quoting whatever arrived with
+	// the answer.
+	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
+		"News from time to time, roughly once a month. You decide, and I will hold to it.",
+		"Neuigkeiten ab und zu, etwa einmal im Monat. Sie entscheiden, ich halte mich daran.",
+		"Tin tức thỉnh thoảng, khoảng mỗi tháng một lần. Bạn quyết định, và tôi sẽ tuân theo.")
+	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
+		"Yes, keep me posted",
+		"Ja, halten Sie mich auf dem Laufenden",
+		"Có, hãy gửi tin cho tôi")
+	line(func(c *Copy) *string { return &c.ConfirmMarketingNo },
+		"No thanks, just keep my details correct",
+		"Nein danke, nur meine Daten korrekt halten",
+		"Không, chỉ cần giữ thông tin của tôi chính xác")
+	// THE DEDICATED SUBSCRIPTION LINK'S OWN QUESTION, which names the purpose
+	// rather than describing a frequency. A grant through that door binds this;
+	// one through the record-confirmation door binds the pair above.
+	line(func(c *Copy) *string { return &c.ConfirmSubscriptionAsk },
+		"Confirm that you want to receive {purpose}.",
+		"Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
+		"Xác nhận rằng bạn muốn nhận {purpose}.")
+	line(func(c *Copy) *string { return &c.ConfirmSubscriptionConfirm },
+		"Yes, subscribe me",
+		"Ja, ich möchte das Abo",
+		"Có, đăng ký cho tôi")
 	line(func(c *Copy) *string { return &c.ConfirmRecordSubject },
 		"Your details, and whether we may stay in touch",
 		"Ihre Daten, und ob wir in Kontakt bleiben dürfen",

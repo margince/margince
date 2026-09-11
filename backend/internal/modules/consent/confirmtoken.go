@@ -94,6 +94,14 @@ type ConfirmRef struct {
 	// also edit the record would be a wider capability than the mail described.
 	Kind      string
 	PurposeID ids.PurposeID
+	// QuestionLocale and QuestionVersion name the published subscription
+	// question this link will ask, pinned when it was minted. They are what
+	// lets a grant point at the row the subject actually read rather than at
+	// whatever is deployed when they click. Empty and zero on a link minted
+	// before they were recorded.
+	QuestionKey     string
+	QuestionLocale  string
+	QuestionVersion int
 }
 
 // IssueConfirmToken mints the single-use link for one contact and returns the
@@ -255,13 +263,27 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 		}
 		// A confirm_token row is a security artifact, not a kernel entity, so
 		// the row id stays untyped — as consent_doi_token's does.
+		// THE QUESTION THIS LINK WILL ASK, pinned now rather than read back when
+		// the subject answers. The page renders in the installation's mail
+		// language, and both that and the question's version can change between
+		// the mail going out and the click coming back — so a grant resolving
+		// either at proof time would name wording the subject never saw.
+		//
+		// The language is resolved through the same call that renders the mail
+		// below, so the row and the page cannot disagree about which one.
+		questionLocale := s.mailLanguage(ctx, tx)
+		// WHICH question, decided from the link kind so the pin and the page
+		// cannot disagree about what the subject will be asked.
+		questionKey := QuestionKeyForLink(kind)
 		var tokenRowID ids.UUID
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO confirm_token (contact_id, token_hash, delivered_to, issued_at, expires_at, kind, purpose_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO confirm_token (contact_id, token_hash, delivered_to, issued_at, expires_at, kind, purpose_id,
+			                           question_key, question_locale, question_version)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 			RETURNING id`,
 			contactID, hashPublicToken(token), deliveredTo, issued, expires,
-			kind, nullablePurpose(purposeID)).Scan(&tokenRowID); err != nil {
+			kind, nullablePurpose(purposeID),
+			questionKey, questionLocale, marketingQuestionVersion).Scan(&tokenRowID); err != nil {
 			return err
 		}
 		// The address is audited because it is the evidence: a later reader
@@ -357,19 +379,34 @@ func (s *Store) subjectOfConfirmTokenTx(ctx context.Context, tx pgx.Tx, token st
 func (s *Store) spendConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string) (ConfirmRef, error) {
 	var ref ConfirmRef
 	var purposeID *ids.PurposeID
+	// The published question this link pinned, which the grant names.
+	var questionKey *string
+	var questionLocale *string
+	var questionVersion *int
 	err := tx.QueryRow(ctx, `
 		UPDATE confirm_token ct SET consumed_at = $2
 		WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
 		  AND EXISTS (SELECT 1 FROM contact p
 		               WHERE p.id = ct.contact_id AND p.archived_at IS NULL)
-		RETURNING ct.contact_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id`,
+		RETURNING ct.contact_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id,
+		          ct.question_key, ct.question_locale, ct.question_version`,
 		hashPublicToken(token), s.now().UTC()).Scan(
-		&ref.ContactID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID)
+		&ref.ContactID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID,
+		&questionKey, &questionLocale, &questionVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ConfirmRef{}, fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
 	}
 	if purposeID != nil {
 		ref.PurposeID = *purposeID
+	}
+	if questionKey != nil {
+		ref.QuestionKey = *questionKey
+	}
+	if questionLocale != nil {
+		ref.QuestionLocale = *questionLocale
+	}
+	if questionVersion != nil {
+		ref.QuestionVersion = *questionVersion
 	}
 	return ref, err
 }
