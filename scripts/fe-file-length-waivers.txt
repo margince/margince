@@ -11,7 +11,7 @@
 # Format: <frozen-line-count> <path>
 1035 frontend/src/App.tsx
 612 frontend/src/app/account.tsx
-1488 frontend/src/app/agentrail.test.tsx
+1442 frontend/src/app/agentrail.test.tsx
 1571 frontend/src/app/agentrail.tsx
 589 frontend/src/app/palette.tsx
 1031 frontend/src/app/shell.tsx

@@ -12,52 +12,6 @@ import type { MarginceCoreState } from "../design-system/margince-core";
  * here is the words those readings are said in.
  */
 
-/**
- * The agent's tasks, in words a person who does not work on this product can
- * read.
- *
- * The wire carries `growth_fit` and `site_fact_extract`, which are the names of
- * INVOCATION SITES — correct for a trace, and meaningless to the salesperson
- * whose company page they ran on. A recap that prints them is a log with a
- * friendlier heading: the reader learns that something happened five times and
- * nothing about what.
- *
- * Each line says what the agent DID, in the past tense, from the reader's side
- * rather than the pipeline's. A task with no entry falls back to its token with
- * the underscores opened up, so a task added upstream degrades to something
- * readable instead of disappearing.
- */
-export const TASK_SAID: Readonly<Record<string, string>> = {
-  account_scan: "Read what an account needs",
-  agent_loop: "Worked through a request",
-  brief_ranking: "Ranked your morning brief",
-  capture_classify: "Sorted captured mail",
-  owed_verdict: "Read which messages are waiting on you",
-  capture_counterparty_verdict: "Decided who a message was with",
-  cert_judge: "Checked its own answer",
-  cold_start: "Set up your workspace",
-  corpus_ask: "Answered from your documents",
-  deal_health: "Read the health of a deal",
-  document_extract: "Pulled fields out of a document",
-  draft_reply: "Drafted a reply",
-  embeddings: "Indexed records for search",
-  enrich: "Filled in contact details",
-  growth_fit: "Scored how well a company fits",
-  nl_search: "Answered a search",
-  offer_draft: "Drafted an offer",
-  rate_extract: "Read pricing off a page",
-  signal_extract: "Found signals in a thread",
-  stage_evidence_extract: "Checked what a deal still needs",
-  site_extract: "Read a company website",
-  site_fact_extract: "Pulled facts off a web page",
-  site_triage: "Picked which pages to read",
-  summarize: "Wrote a summary",
-  transcript: "Processed a call transcript",
-  propose_roles: "Read the buying roles from their messages",
-  transcript_propose: "Proposed next steps from a call",
-  voice_build: "Learned your writing voice",
-};
-
 export const LABELS = {
   /** The month's estimated spend, and it says estimated by saying "so far":
    *  the server prices on read, so the figure moves as rates change. */
@@ -76,7 +30,10 @@ export const LABELS = {
   recap: "What it has done",
   justNow: "just now",
   fullLog: "Full log",
-  logUnreadable: "The call log is not readable on this seat",
+  /** The recap when the feed answered and this person's day holds nothing yet.
+   *  It is bounded to what SETTLED today, so an empty list is a quiet morning
+   *  rather than an agent that has never run. */
+  nothingToday: "nothing has finished today",
   model: "model",
   sources: "sources",
   tools: "tools",
