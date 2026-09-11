@@ -51,6 +51,25 @@ type ScheduleTimer interface {
 	ScheduleTx(ctx context.Context, tx pgx.Tx, id ids.UUID, due time.Time) error
 }
 
+// ReviewCloser closes the review a cancelled message leaves behind.
+//
+// A refusal freezes the message and opens a review for it. A rep who then
+// cancels the message has answered that review — not by sending, but by
+// deciding not to — and a review left live shows a decider work about a message
+// that is already dead. Somebody may then record an override for a send that
+// cannot happen.
+//
+// Injected because consent is a sibling module and this one may not reach into
+// it. Nil is a composition with no review surface, and a cancel then does what
+// it always did: the review it leaves behind is the state this seam exists to
+// end, not a reason to refuse the cancel.
+//
+// In the CALLER's transaction, so the message stopping and the review closing
+// are one fact.
+type ReviewCloser interface {
+	CancelReviewForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) error
+}
+
 // HeldNotifier puts a stopped message in front of the human who scheduled it.
 //
 // A message the system refused to send is a decision waiting for a rep, and a
