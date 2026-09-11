@@ -153,7 +153,7 @@ func DealsInstallation() deals.Installation { return installseam.Deals() }
 
 // ContractTimezone is the installation timezone seam the contracts module reads
 // its calendar "today" through — the SAME setting deals resolves, so a contract
-// and a deal cannot disagree about which day it is.
+// and a deal read one installation day.
 //
 // The UNGATED reader: deriving "today" is internal to a write the caller is
 // already authorized for, and a contract writer holds `contract`, not

@@ -69,7 +69,7 @@ func WithNoticeCases(n NoticeCases) Option {
 // THE INSTALLATION'S midnight, not UTC's — storekit.StartOfNextDay derives it
 // in the installation's zone, exact on the two mornings a year the clocks move
 // where a truncated 24 hours would land an hour off. The same primitive backs
-// every calendar-day surface, so this feed cannot drift from the rest.
+// every calendar-day surface the product derives.
 //
 // ONCE PER ASSEMBLY, and the answer is carried to every lane that needs it. An
 // operator moving the installation mid-read would otherwise give one lane
@@ -93,8 +93,8 @@ func (s *Service) endOfDay(ctx context.Context, asOf time.Time) (time.Time, *tim
 // The forward lanes ask what is still coming and stop at endOfDay; a lane about
 // what already happened needs where today began, and "today" has to mean the
 // same thing at both ends or a meeting at 08:00 falls between them. Both ends
-// are the storekit primitive's, so a backward lane and a forward one cannot
-// disagree about where the day is.
+// come from the storekit primitive, so a backward lane and a forward one
+// measure the day by one rule.
 func (s *Service) startOfDay(ctx context.Context, asOf time.Time) (time.Time, error) {
 	loc, err := s.location(ctx)
 	if err != nil {

@@ -110,8 +110,8 @@ type briefFacts struct {
 	seatsReadable bool
 	// today is the installation-zone calendar day the timing factor measures
 	// "days until expected close" from — the SAME day brief_run.local_day is
-	// stamped in, resolved once in the gather transaction so the score and the
-	// run it belongs to cannot disagree about which morning it is.
+	// stamped in, resolved once in the gather transaction so the score reads the
+	// morning the run belongs to.
 	today time.Time
 }
 
