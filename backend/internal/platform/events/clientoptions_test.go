@@ -164,7 +164,7 @@ func TestAnUnparseableAddressIsRefusedBeforeDialling(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := NewClient(ctx, "localhost:16379/notanumber", "secret")
+	_, err := NewClient(ctx, "localhost:16379/notanumber", "secret", false)
 	if err == nil {
 		t.Fatal("an address naming a logical database that is not a number was accepted")
 	}

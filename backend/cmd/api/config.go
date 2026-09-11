@@ -29,7 +29,11 @@ type apiConfig struct {
 	// instance reachable by anything but this deployment has to require one —
 	// the desktop bundle's loopback bus does, and generates it per
 	// installation.
-	redisPassword         string
+	redisPassword string
+	// redisTLS is a string ("true"/"false"), not a bool: cliflags.Env only
+	// binds *string targets (see cliflags.go), the same reason
+	// MARGINCE_BLOBSTORE_USE_SSL is a string in blobstore.Config.
+	redisTLS              string
 	inlineRelay           bool
 	routingPath           string
 	fakeBrain             bool
@@ -94,6 +98,8 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 	env.String(fs, &cfg.redisAddr, "redis", "MARGINCE_REDIS", "localhost:16379", "Redis address (event bus)")
 	env.String(fs, &cfg.redisPassword, "redis-password", "MARGINCE_REDIS_PASSWORD", "",
 		"Event-bus credential, where the instance requires one")
+	env.String(fs, &cfg.redisTLS, "redis-tls", "MARGINCE_REDIS_TLS", "false",
+		"connect to the event-bus Redis over TLS; the literal \"true\" enables it — required when the instance refuses a plaintext connection (e.g. ElastiCache with transit_encryption_mode=required)")
 	fs.BoolVar(&cfg.inlineRelay, "inline-relay", true, "run the outbox relay in this process (false when cmd/worker runs it)")
 	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else. Nothing reads a routing file any more: the debug lanes take --model or --ai-fake, and the certification runner is told its model outright")
 	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "drive the AI surfaces with the offline fake model (dev/test only)")
