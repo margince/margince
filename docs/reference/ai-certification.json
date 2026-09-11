@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 43,
+    "sites": 45,
     "sites_best_current": 1,
     "sites_best_partial": 0,
     "sites_best_stale": 41,
-    "sites_absent": 1,
-    "scenarios": 161,
+    "sites_absent": 3,
+    "scenarios": 163,
     "records": 74,
     "bindings": 10
   },
@@ -4653,6 +4653,23 @@
     },
     {
       "task": "summarize",
+      "site": "meeting_brief",
+      "key": "summarize/meeting_brief",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "meeting_brief_reads_the_thread_that_matters",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/meeting_brief_reads_the_thread_that_matters_01.yaml"
+        }
+      ],
+      "records": []
+    },
+    {
+      "task": "summarize",
       "site": "meeting_plan",
       "key": "summarize/meeting_plan",
       "scope": "full_invocation",
@@ -4905,6 +4922,23 @@
           }
         }
       ]
+    },
+    {
+      "task": "voice_build",
+      "site": "demo_draft",
+      "key": "voice_build/demo_draft",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "the_card_shows_a_line_in_the_built_voice",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/voice_build/demo_draft_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "voice_build",

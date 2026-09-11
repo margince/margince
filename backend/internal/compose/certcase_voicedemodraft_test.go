@@ -43,10 +43,10 @@ const demoFixture = `{
 	"voice_profile_md": "# Voice DNA\n\nWrites like an operator confirming a date.",
 	"exemplars": [{"register":"customer_email","kind":"email",
 		"text":"We can hold the tolerance, but it adds a grinding pass and about two days."}],
-	"stats": {"word_count": 809}
+	"stats": {"sample_count": 4, "word_count": 809, "sentence_count": 79, "mean_sentence_words": 10.24, "median_sentence_words": 10, "sentence_word_stddev": 5.44, "em_dash_per_100_words": 0, "question_per_100_words": 0.12, "exclaim_per_100_words": 0, "ellipsis_per_100_words": 0, "line_breaks_per_100_words": 11.12, "register_words": {"customer_email": 438, "internal_chat": 371}, "top_words": ["that", "this", "thing", "what", "will", "before", "have", "need", "tell", "with", "because", "customer"]}
 }`
 
-const demoExpectation = `{"names_token":"grinding pass"}`
+const demoExpectation = `0.6`
 
 func preparedDemoCase(t *testing.T) aitasks.PreparedCase {
 	t.Helper()
@@ -57,30 +57,37 @@ func preparedDemoCase(t *testing.T) aitasks.PreparedCase {
 	return prepared
 }
 
-func TestTheDemoDraftCaseAcceptsADraftInTheBuiltVoice(t *testing.T) {
+func TestTheDemoDraftCaseAcceptsADraftThatSitsCloseToTheCorpus(t *testing.T) {
 	t.Parallel()
 	prepared := preparedDemoCase(t)
+	// The corpus averages ten words a sentence. What is measured here is that
+	// RHYTHM, not the words themselves — a content token would reward
+	// parroting, which is why this site takes eval_draft's floor instead.
 	got := prepared.Evaluate(aitasks.Trace{
-		Output: `{"subject":"Week three","body":"It adds a grinding pass. Two days, no more."}`,
+		Output: `{"subject":"Week three","body":"It runs late by two days and I would rather say so now. ` +
+			`The coating sample comes back on Thursday and I will confirm then. Nothing else has moved."}`,
 	})
 	if got.Result != aitasks.OutcomeAccepted {
 		t.Errorf("outcome = %q (%s), want accepted", got.Result, got.Detail)
 	}
 }
 
-// Readable, competent, and in nobody's voice — the outcome that makes a voice
-// build worthless to the member reading the card.
-func TestTheDemoDraftCaseNamesADraftInNobodysVoice(t *testing.T) {
+// Readable, competent, and in nobody's rhythm — one long hedging sentence where
+// the corpus runs short and plain. This is the outcome that makes a voice build
+// worthless to the member reading the card.
+func TestTheDemoDraftCaseNamesADraftThatSitsFarFromTheCorpus(t *testing.T) {
 	t.Parallel()
 	prepared := preparedDemoCase(t)
 	got := prepared.Evaluate(aitasks.Trace{
-		Output: `{"subject":"Update","body":"I wanted to reach out with a quick status update."}`,
+		Output: `{"subject":"Update","body":"I wanted to reach out and provide you with a comprehensive status ` +
+			`update regarding the current state of the project and the various workstreams that are presently ` +
+			`in flight across the wider team at this point in time."}`,
 	})
 	if got.Result != aitasks.OutcomeWrongAnswer {
 		t.Fatalf("outcome = %q (%s), want wrong_answer", got.Result, got.Detail)
 	}
-	if !strings.Contains(got.Detail, "grinding pass") {
-		t.Errorf("detail = %q, want it to name the phrase the draft never wrote", got.Detail)
+	if !strings.Contains(got.Detail, "expects at least") {
+		t.Errorf("detail = %q, want it to name the floor the draft missed", got.Detail)
 	}
 }
 
@@ -98,7 +105,7 @@ func TestTheDemoDraftCaseReportsAnUnreadableReplyAsInvalid(t *testing.T) {
 func TestTheDemoDraftCaseIssuesTheProductionRequest(t *testing.T) {
 	t.Parallel()
 	prepared := preparedDemoCase(t)
-	stub := &demoStub{reply: `{"subject":"Week three","body":"It adds a grinding pass."}`}
+	stub := &demoStub{reply: `{"subject":"Week three","body":"It runs late. Two days, no more."}`}
 	trace, err := prepared.Run(context.Background(), stub)
 	if err != nil {
 		t.Fatalf("running the case: %v", err)
@@ -140,16 +147,16 @@ func TestTheDemoDraftCaseRefusesScenariosThatMeasureNothing(t *testing.T) {
 			want:     "own-authored words",
 		},
 		{
-			name:     "no phrase admits a draft in anybody's voice",
+			name:     "a floor every draft clears asserts nothing",
 			fixture:  demoFixture,
-			expected: `{"names_token":"   "}`,
-			want:     "names no phrase of this voice",
+			expected: `0`,
+			want:     "which every draft clears",
 		},
 		{
-			name:     "a phrase this voice never produced could only be invented",
+			name:     "a floor above 1 can never be met",
 			fixture:  demoFixture,
-			expected: `{"names_token":"synergistic alignment"}`,
-			want:     "appears in neither the profile nor its examples",
+			expected: `1.5`,
+			want:     "at most 1",
 		},
 		{
 			name:     "a fixture of the wrong shape",
@@ -161,7 +168,7 @@ func TestTheDemoDraftCaseRefusesScenariosThatMeasureNothing(t *testing.T) {
 			name:     "an expectation of the wrong shape",
 			fixture:  demoFixture,
 			expected: `"just a string"`,
-			want:     "not this site's shape",
+			want:     "not a stylometric floor",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

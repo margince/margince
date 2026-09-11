@@ -39,10 +39,15 @@ func (s *briefStub) Complete(_ context.Context, req model.Request) (model.Respon
 	return model.Response{Text: s.reply}, nil
 }
 
+// briefToken is the account-specific phrase a correct brief must carry: one
+// this fixture's own conversation produced, so a brief that never writes it
+// would read the same about any account.
+const briefToken = "quote tracking"
+
 // briefCaseFor builds the case over a meeting whose own activity id is the
 // record a correct brief cites. The meeting is always citable (knownRecords
 // seeds it), so the test needs no id smuggled out of the prompt.
-func briefCaseFor(token string) (*meetingBriefCase, string) {
+func briefCaseFor() (*meetingBriefCase, string) {
 	meeting := ids.NewV7().String()
 	now := time.Date(2026, time.August, 4, 12, 0, 0, 0, time.UTC)
 	return &meetingBriefCase{
@@ -54,7 +59,7 @@ func briefCaseFor(token string) (*meetingBriefCase, string) {
 			Now:        now,
 		},
 		mustCite:  meeting,
-		mustName:  token,
+		mustName:  briefToken,
 		citeLabel: "wish_list",
 	}, meeting
 }
@@ -67,7 +72,7 @@ func sectionsReply(text, activityID string) string {
 
 func TestTheMeetingBriefCaseAcceptsAGroundedSpecificBrief(t *testing.T) {
 	t.Parallel()
-	c, meeting := briefCaseFor("quote tracking")
+	c, meeting := briefCaseFor()
 	got := c.Evaluate(aitasks.Trace{Output: sectionsReply("They asked for quote tracking.", meeting)})
 	if got.Result != aitasks.OutcomeAccepted {
 		t.Errorf("outcome = %q (%s), want accepted", got.Result, got.Detail)
@@ -78,7 +83,7 @@ func TestTheMeetingBriefCaseAcceptsAGroundedSpecificBrief(t *testing.T) {
 // names what this account asked for would read the same about any of them.
 func TestTheMeetingBriefCaseNamesAGenericBrief(t *testing.T) {
 	t.Parallel()
-	c, meeting := briefCaseFor("quote tracking")
+	c, meeting := briefCaseFor()
 	got := c.Evaluate(aitasks.Trace{Output: sectionsReply("They have priorities this quarter.", meeting)})
 	if got.Result != aitasks.OutcomeWrongAnswer {
 		t.Fatalf("outcome = %q (%s), want wrong_answer", got.Result, got.Detail)
@@ -92,7 +97,7 @@ func TestTheMeetingBriefCaseNamesAGenericBrief(t *testing.T) {
 // them all. Production shows the deterministic floor for this, not prose.
 func TestTheMeetingBriefCaseReportsABriefAboutAnotherMeetingAsAbstained(t *testing.T) {
 	t.Parallel()
-	c, _ := briefCaseFor("quote tracking")
+	c, _ := briefCaseFor()
 	elsewhere := ids.NewV7().String()
 	got := c.Evaluate(aitasks.Trace{Output: sectionsReply("They asked for quote tracking.", elsewhere)})
 	if got.Result != aitasks.OutcomeAbstained {
@@ -102,7 +107,7 @@ func TestTheMeetingBriefCaseReportsABriefAboutAnotherMeetingAsAbstained(t *testi
 
 func TestTheMeetingBriefCaseReportsAnUnreadableReplyAsInvalid(t *testing.T) {
 	t.Parallel()
-	c, _ := briefCaseFor("quote tracking")
+	c, _ := briefCaseFor()
 	got := c.Evaluate(aitasks.Trace{Output: "I cannot help with that."})
 	if got.Result != aitasks.OutcomeInvalid {
 		t.Errorf("outcome = %q (%s), want invalid", got.Result, got.Detail)
@@ -113,7 +118,7 @@ func TestTheMeetingBriefCaseReportsAnUnreadableReplyAsInvalid(t *testing.T) {
 // is the site's own, and the reply is handed back untouched.
 func TestTheMeetingBriefCaseIssuesTheProductionRequest(t *testing.T) {
 	t.Parallel()
-	c, meeting := briefCaseFor("quote tracking")
+	c, meeting := briefCaseFor()
 	stub := &briefStub{reply: sectionsReply("They asked for quote tracking.", meeting)}
 	trace, err := c.Run(context.Background(), stub)
 	if err != nil {

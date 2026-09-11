@@ -371,12 +371,11 @@ func TestEveryPriorMeetingCitesTheMeetingItNames(t *testing.T) {
 	}
 }
 
-// An attendee with no recorded last contact and no first-time mark is a real
-// assembly: the assembler leaves LastTouch unset when it found no prior
-// activity it could date. Rendering one used to dereference the nil and take
-// the whole brief down with a panic, where the contract is that a brief always
-// has a deterministic floor to fall back to.
-func TestAnAttendeeWithNoRecordedContactDoesNotTakeTheBriefDown(t *testing.T) {
+// FirstTime and a nil LastTouch are one fact with two spellings, and the
+// renderer must agree with the assembler about which. Reading only the flag
+// dereferenced the date for any caller that set neither — a panic where the
+// contract is that a brief always has a deterministic floor to fall back to.
+func TestAnAttendeeWithNoRecordedContactReadsAsAFirstMeeting(t *testing.T) {
 	t.Parallel()
 	in := Input{
 		ActivityID: "01998f00-0000-7000-8000-00000000000a",
@@ -386,13 +385,12 @@ func TestAnAttendeeWithNoRecordedContactDoesNotTakeTheBriefDown(t *testing.T) {
 		Attendees: []AttendeeIn{{
 			PersonID: "01998f00-0000-7000-8000-00000000000b",
 			FullName: "Rainer Vogt",
-			// Neither FirstTime nor LastTouch: nothing is known about when
-			// anyone last spoke to them.
+			// Neither spelling set, which is what a caller assembling an
+			// attendee by hand produces.
 		}},
 	}
-	sections := Deterministic(in)
 	var line string
-	for _, section := range sections {
+	for _, section := range Deterministic(in) {
 		if section.Kind != crmcontracts.MeetingBriefSectionKindAttendees {
 			continue
 		}
@@ -403,11 +401,33 @@ func TestAnAttendeeWithNoRecordedContactDoesNotTakeTheBriefDown(t *testing.T) {
 	if !strings.Contains(line, "Rainer Vogt") {
 		t.Fatalf("the attendees section never named the attendee: %q", line)
 	}
-	// Saying nothing about timing is the honest line. Claiming either a first
-	// meeting or a date would be a fact nobody can check.
-	for _, invented := range []string{"first time", "last spoke"} {
-		if strings.Contains(line, invented) {
-			t.Errorf("the line claims %q about an attendee with no recorded contact: %q", invented, line)
-		}
+	if !strings.Contains(line, "first time") {
+		t.Errorf("an attendee with no recorded contact did not read as a first meeting: %q", line)
+	}
+	if strings.Contains(line, "last spoke") {
+		t.Errorf("the line dated a contact that was never recorded: %q", line)
 	}
 }
+
+// The invariant the renderer now relies on, held where it is produced: the
+// assembler's flag is the date's own emptiness, so the two can never disagree.
+func TestTheAssemblerDerivesFirstTimeFromTheDate(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name string
+		last *time.Time
+		want bool
+	}{
+		{name: "no recorded contact is a first meeting", last: nil, want: true},
+		{name: "a recorded contact is not", last: ptrTime(time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)), want: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := (attendeeRow{LastTouch: tc.last}).firstTime(); got != tc.want {
+				t.Errorf("firstTime() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func ptrTime(t time.Time) *time.Time { return &t }

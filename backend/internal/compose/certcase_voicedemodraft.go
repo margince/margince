@@ -14,11 +14,13 @@ package compose
 // It certifies the shipped path: the request is voiceDemoDraftRequest and the
 // reply is read by readVoiceEvalDraft, the same reader production trusts.
 //
-// What the expectation MEANS here is narrower than eval_draft's floor beside
-// it. That site measures how CLOSE a draft sits to the corpus, which is a
-// number. This one asks whether the card can show anything at all: a reply the
-// production reader refuses leaves the card blank, and a draft that writes in
-// nobody's particular voice would read the same for every member.
+// The expectation is eval_draft's, deliberately: a stylometric floor, measured
+// by the same stylometricProximity the evaluation itself spends. A content
+// token would have been the wrong instrument — this call answers a FIXED
+// hypothetical task about unspecified work, and the prompt forbids inventing
+// particulars, so a phrase from the corpus is one the correct answer has no
+// reason to reach for. Asking for it would reward parroting an exemplar and
+// fail the drafts that did the job.
 
 import (
 	"context"
@@ -44,12 +46,6 @@ type voiceDemoDraftFixture struct {
 	Stats          ai.VoiceStats      `json:"stats"`
 }
 
-// voiceDemoDraftExpectation is what a readable demonstration must contain: a
-// phrase this corpus produced and a generic draft would not.
-type voiceDemoDraftExpectation struct {
-	NamesToken string `json:"names_token"`
-}
-
 // voiceDemoDraftCases serves the draft the profile card shows.
 type voiceDemoDraftCases struct{}
 
@@ -70,11 +66,15 @@ func (voiceDemoDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.P
 	if err := json.Unmarshal(fixture, &f); err != nil {
 		return nil, fmt.Errorf("%s: the fixture is not the shape this site takes: %w", voiceDemoDraftSite, err)
 	}
-	var want voiceDemoDraftExpectation
-	if err := json.Unmarshal(expected, &want); err != nil {
-		return nil, fmt.Errorf("%s: the expected answer is not this site's shape: %w", voiceDemoDraftSite, err)
+	// A correct draft differs from an incorrect one in how close it sits to the
+	// corpus, so the expectation IS that number rather than a wrapper carrying
+	// it — the same shape eval_draft takes.
+	var floor float64
+	if err := json.Unmarshal(expected, &floor); err != nil {
+		return nil, fmt.Errorf(
+			"%s: the expected answer is not a stylometric floor in [0,1]: %w", voiceDemoDraftSite, err)
 	}
-	if err := refuseUndemonstrableVoice(f, want); err != nil {
+	if err := refuseUndemonstrableVoice(f, floor); err != nil {
 		return nil, err
 	}
 	return &voiceDemoDraftCase{
@@ -84,13 +84,13 @@ func (voiceDemoDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.P
 			Stats:     f.Stats,
 			Exemplars: f.Exemplars,
 		},
-		mustName: want.NamesToken,
+		floor: floor,
 	}, nil
 }
 
 // refuseUndemonstrableVoice names a scenario that would measure nothing, at
 // parse time rather than after a paid run.
-func refuseUndemonstrableVoice(f voiceDemoDraftFixture, want voiceDemoDraftExpectation) error {
+func refuseUndemonstrableVoice(f voiceDemoDraftFixture, floor float64) error {
 	switch {
 	case strings.TrimSpace(f.VoiceProfileMD) == "":
 		return fmt.Errorf("%s: the fixture carries no built profile, so there is no voice to demonstrate",
@@ -101,22 +101,14 @@ func refuseUndemonstrableVoice(f voiceDemoDraftFixture, want voiceDemoDraftExpec
 	case f.Stats.WordCount < ai.StarterVoiceWords:
 		return fmt.Errorf("%s: the fixture's corpus is %d own-authored words, and a build needs at least %d",
 			voiceDemoDraftSite, f.Stats.WordCount, ai.StarterVoiceWords)
-	case strings.TrimSpace(want.NamesToken) == "":
+	case floor <= 0:
 		return fmt.Errorf(
-			"%s: the expectation names no phrase of this voice, so a draft in anybody's voice would satisfy it",
-			voiceDemoDraftSite)
-	}
-	// And the phrase has to be one this VOICE produced. A token the profile and
-	// its examples never contain could only be invented, so the scenario would
-	// fail every correct draft.
-	corpus := f.VoiceProfileMD
-	for _, exemplar := range f.Exemplars {
-		corpus += " " + exemplar.Text
-	}
-	if !strings.Contains(corpus, want.NamesToken) {
+			"%s: the scenario expects a floor of %g, which every draft clears — including one with nothing in "+
+				"common with the corpus — so it asserts nothing", voiceDemoDraftSite, floor)
+	case floor > 1:
 		return fmt.Errorf(
-			"%s: the expectation's phrase %q appears in neither the profile nor its examples, so only an invented "+
-				"draft could carry it", voiceDemoDraftSite, want.NamesToken)
+			"%s: the scenario expects a floor of %g, and stylometric proximity is at most 1",
+			voiceDemoDraftSite, floor)
 	}
 	return nil
 }
@@ -125,7 +117,7 @@ func refuseUndemonstrableVoice(f voiceDemoDraftFixture, want voiceDemoDraftExpec
 type voiceDemoDraftCase struct {
 	personality string
 	artifact    ai.VoiceArtifact
-	mustName    string
+	floor       float64
 }
 
 // Run issues the one request this site sends, bare — and so does the build: the
@@ -142,20 +134,25 @@ func (c *voiceDemoDraftCase) Run(ctx context.Context, completer aitasks.Complete
 	return trace, nil
 }
 
-// Evaluate runs the production reader and asks whether the card could show
-// what came back, in a voice a reader would recognise as this member's.
+// Evaluate runs the production reader, then measures the draft against the
+// corpus fingerprint with the evaluation's own instrument. The order is the
+// meaning: a draft the reader refuses has no fingerprint to disagree with, and
+// production shows a blank card for it — the state the whole step exists to
+// avoid.
 func (c *voiceDemoDraftCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	reply, err := readVoiceEvalDraft(trace.Output)
 	if err != nil {
-		// Production shows a blank card for exactly this, which is the state
-		// the whole step exists to avoid.
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
-	if !strings.Contains(reply.subject+" "+reply.body, c.mustName) {
-		return aitasks.Outcome{
-			Result: aitasks.OutcomeWrongAnswer,
-			Detail: fmt.Sprintf("never wrote %q, so the draft would read the same in anybody's voice", c.mustName),
-		}
+	proximity := stylometricProximity(c.artifact.Stats, reply.body)
+	result := aitasks.OutcomeAccepted
+	detail := fmt.Sprintf("the draft sits at %.4f of the corpus fingerprint", proximity)
+	if proximity < c.floor {
+		result = aitasks.OutcomeWrongAnswer
+		detail += fmt.Sprintf(", and the scenario expects at least %.4f", c.floor)
 	}
-	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+	if len(reply.tells) > 0 {
+		detail += "; " + voiceEvalTellNote(reply.tells)
+	}
+	return aitasks.Outcome{Result: result, Detail: detail}
 }

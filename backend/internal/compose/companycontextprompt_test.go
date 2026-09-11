@@ -203,10 +203,12 @@ func TestMissingCompanyContextIsExplicitMetadataWithoutGuessedData(t *testing.T)
 	}
 }
 
-// account_scan is the vehicle because it is the task that DECLARES a
-// conditional policy and opts in at its own call site. What is proved is the
-// mechanism, not that one task: a conditional policy reads nothing until the
-// caller asks, and the selector is consumed rather than forwarded.
+// account_scan is the vehicle rather than summarize because it is the task that
+// both declares a conditional policy AND opts in at its own call site, so the
+// test exercises the whole mechanism instead of only its refusal half.
+// summarize declares one that nothing has ever requested — deliberately, per
+// ADR-0065 and the assertion in tasks_gen_test.go that it stay conditional — so
+// a test driven through it can never reach the injection path at all.
 func TestConditionalPolicyRequiresExplicitOptIn(t *testing.T) {
 	reader := &contextReaderStub{result: people.CompanyContext{
 		Fingerprint: strings.Repeat("b", 64),

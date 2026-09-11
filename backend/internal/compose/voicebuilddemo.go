@@ -38,20 +38,11 @@ func voiceDemoDraftSystemFor(fence promptfence.Fence) string {
 const voiceDemoTask = "Write a short reply to a colleague who asked how a piece of work is going and when they can expect it. " +
 	"Invent no names, dates, figures or commitments — write only what could be said without them."
 
-// demonstrationDraft asks for ONE draft in the built voice, for a corpus that
-// could spare no sample to score against.
-//
-// IT IS NOT AN EVALUATION AND NEVER BECOMES ONE. Nothing was held out, so
-// there is nothing this was scored against: it carries no score, never reaches
-// the median, and leaves the version as unevaluated as it was. What it is for
-// is the reader — a profile with not one line of its own writing on screen is
-// a profile nobody can judge, and the voice step exists to be judged.
-//
-// voiceDemoDraftRequest builds the one request this site sends. Named and
-// exported to the certification case for the reason every other site's builder
-// is: a case that rebuilt it would measure a copy, and a copy stays green
-// through the change that breaks the original. It was inline until the prompt
-// census found this prompt reaching a provider with nothing grading the reply.
+// voiceDemoDraftRequest builds the one request this site sends. Named, rather
+// than inline, for the reason every other site's builder is: the certification
+// case must issue the request production issues, and a case that rebuilt it
+// would measure a copy — a copy stays green through the change that breaks the
+// original.
 //
 //promptlang:exempt a draft reproducing one member's writing voice from their own profile; their exemplars decide the language, and a rule of ours would answer in the wrong one
 //promptvoice:exempt a draft reproducing one member's own writing voice; imposing our register is the one thing it must not do.
@@ -71,6 +62,14 @@ func voiceDemoDraftRequest(personality string, artifact ai.VoiceArtifact) model.
 // body, which is what the profile card shows.
 const voiceDemoDraftMaxTokens = 1200
 
+// demonstrationDraft asks for ONE draft in the built voice, for a corpus that
+// could spare no sample to score against.
+//
+// IT IS NOT AN EVALUATION AND NEVER BECOMES ONE. Nothing was held out, so there
+// is nothing this was scored against: it carries no score, never reaches the
+// median, and leaves the version as unevaluated as it was. What it is for is the
+// reader — a profile with not one line of its own writing on screen is a profile
+// nobody can judge, and the voice step exists to be judged.
 func demonstrationDraft(ctx context.Context, brain completer, artifact ai.VoiceArtifact, personality string) ([]map[string]any, error) {
 	resp, err := ai.Ask(ctx, brain, voiceDemoDraftRequest(personality, artifact), func(text string) error {
 		_, readErr := readVoiceEvalDraft(text)

@@ -266,16 +266,13 @@ func attendeeLine(attendee AttendeeIn, now time.Time) string {
 		parts = append(parts, readableRole(attendee.DealRole))
 	}
 	line := strings.Join(parts, ", ")
-	if attendee.FirstTime {
+	// FirstTime and a nil LastTouch are ONE fact with two spellings: the
+	// assembler derives the flag from the date (attendeeRow.firstTime), so an
+	// attendee with no recorded contact IS the first-time case. Reading only
+	// the flag made the pair a dereference waiting for a caller that set
+	// neither — and the brief panicked instead of degrading to its floor.
+	if attendee.FirstTime || attendee.LastTouch == nil {
 		return line + " — first time you are meeting them."
-	}
-	// No recorded last contact is NOT the same as a first meeting: the
-	// assembler leaves it unset when it found no prior activity it could date,
-	// and claiming either would be a fact nobody can check. Saying nothing about
-	// timing is the honest line — and dereferencing it took the whole brief down
-	// with a panic rather than degrading to the floor.
-	if attendee.LastTouch == nil {
-		return line
 	}
 	days := elapsed.Days(*attendee.LastTouch, now)
 	if days <= 0 {

@@ -48,12 +48,12 @@ fixture:
   stats: {"sample_count":4,"word_count":809,"sentence_count":79,"mean_sentence_words":10.24,"median_sentence_words":10,"sentence_word_stddev":5.44,"em_dash_per_100_words":0,"question_per_100_words":0.12,"exclaim_per_100_words":0,"ellipsis_per_100_words":0,"line_breaks_per_100_words":11.12,"register_words":{"customer_email":438,"internal_chat":371},"top_words":["that","this","thing","what","will","before","have","need","tell","with","because","customer"]}
 expect:
   outcome: accepted
-  # "grinding pass" is this author's own phrase, from their own example. A draft
-  # in their voice about their own work reaches for it; a draft in the generic
-  # assistant register writes around it. It is the cheapest available proof that
-  # the card is showing THIS member's writing rather than a competent stranger's.
-  answer:
-    names_token: grinding pass
+  # A stylometric floor, the same instrument and the same shape eval_draft
+  # beside it uses. Deliberately NOT a phrase from the corpus: this call answers
+  # a fixed hypothetical about unspecified work and is forbidden from inventing
+  # particulars, so a correct draft has no reason to reach for one — asking for
+  # it would reward parroting an exemplar and fail the drafts that did the job.
+  answer: 0.6
   rubric: >
     The card exists so a member can read one line of their built voice and judge
     it. Score whether the draft reads as this author — verdict first, short
@@ -62,7 +62,9 @@ expect:
     competent, or that opens with pleasantries, or that reaches for vocabulary
     this corpus never produces, defeats the step: the member looks at the card
     and sees a model, which is the one outcome that makes a voice build
-    worthless.
+    worthless. The deterministic half of the score is how close the draft's own
+    sentence rhythm and punctuation rates sit to the corpus fingerprint; this
+    rubric is the other half.
   bands:
     certified_min: 70
     degraded_min: 50
