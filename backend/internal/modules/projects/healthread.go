@@ -119,6 +119,9 @@ func (s *Store) CurrentHealthTx(
 		arg(id)), args...)
 	out, err := scanHealth(row)
 	if errors.Is(err, pgx.ErrNoRows) {
+		//nolint:nilnil // "nobody has judged this project" IS the answer, not a
+		// missing one — and it is a different answer from "judged and found
+		// healthy", which is why the page renders the two differently.
 		return nil, nil
 	}
 	if err != nil {

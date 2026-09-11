@@ -32,9 +32,10 @@ import (
 )
 
 const (
-	healthTable      = "project_health_assessment"
-	healthNoteColumn = "note"
-	healthMaxNote    = 4000
+	healthTable       = "project_health_assessment"
+	healthStateColumn = "state"
+	healthNoteColumn  = "note"
+	healthMaxNote     = 4000
 )
 
 // RecordHealthInput is an appended judgement.
@@ -107,7 +108,7 @@ func (s *Store) RecordHealth(
 			return fmt.Errorf("insert project health assessment: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "project_health_assessment", id, nil,
-			map[string]any{"project_id": in.ProjectID.String(), "state": string(in.State)}); err != nil {
+			map[string]any{"project_id": in.ProjectID.String(), healthStateColumn: string(in.State)}); err != nil {
 			return err
 		}
 		out, err = readHealthAssessment(ctx, tx, id)
@@ -183,9 +184,9 @@ func (s *Store) CorrectHealth(
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "project_health_assessment", id, nil,
 			map[string]any{
-				"project_id": in.ProjectID.String(),
-				"state":      string(in.State),
-				"corrects":   in.AssessmentID.String(),
+				"project_id":      in.ProjectID.String(),
+				healthStateColumn: string(in.State),
+				"corrects":        in.AssessmentID.String(),
 			}); err != nil {
 			return err
 		}
@@ -202,7 +203,7 @@ func checkHealthJudgement(
 ) (*string, error) {
 	if !state.Valid() {
 		return nil, &values.ParseError{
-			Field: "state", Code: "invalid_state",
+			Field: healthStateColumn, Code: "invalid_state",
 			Message: "state is one of on_track, at_risk, off_track",
 		}
 	}

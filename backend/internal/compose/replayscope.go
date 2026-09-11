@@ -346,9 +346,11 @@ var replayableOperations = map[string]replayTarget{
 	// A health assessment hangs on the project and has no owner of its own, so
 	// the row a replay must re-probe is the PROJECT: telling somebody how a
 	// delivery is going is something to say only to a caller who may still open
-	// it. The project id is in the response body, as project_id.
-	"POST /v1/projects/{id}/health-assessments":                             {object: tableProject, table: tableProject, idPath: "project_id"},
-	"POST /v1/projects/{id}/health-assessments/{assessment_id}/corrections": {object: tableProject, table: tableProject, idPath: "project_id"},
+	// it. Read from the ROUTE rather than the stored body, because the route is
+	// what the caller asked about and the body is what a previous call chose to
+	// record.
+	"POST /v1/projects/{id}/health-assessments":                             {object: tableProject, table: tableProject, pathParam: "id"},
+	"POST /v1/projects/{id}/health-assessments/{assessment_id}/corrections": {object: tableProject, table: tableProject, pathParam: "id"},
 	"PATCH /v1/record-roles/{id}":                                           {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/lead-disqualify-reasons":                                      {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/lead-disqualify-reasons/{id}":                                {object: objectCustomField, rowNote: noOwnerCatalog},

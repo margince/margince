@@ -99,7 +99,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	// judges, which the body names as project_id. Probed rather than waved
 	// through, because a replay hands back how a delivery is going — something
 	// to say only to a caller who may still open that project.
-	"ProjectHealthAssessment": {object: "project", table: "project", idPath: "project_id"},
+	"ProjectHealthAssessment": {object: "project", table: "project", pathParam: "id"},
 	// An assignment has no owner column: its visibility IS the record it hangs
 	// on, and the body names that record polymorphically exactly as a grant
 	// does. Probed rather than waved through for lacking an owner, because a
