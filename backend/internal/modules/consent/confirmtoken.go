@@ -30,7 +30,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -318,54 +317,6 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 		return IssuedConfirm{}, err
 	}
 	return out, nil
-}
-
-// ResolveConfirmToken answers whose record a confirm link opens. Unknown,
-// expired, already-spent and belonging-to-an-archived-subject read as absent,
-// all four identically, so the surface never becomes an oracle for which it was.
-//
-// The liveness test is here rather than in the card read, so both verbs get it
-// from one statement. An ordinary archive does not delete these rows — only
-// Art. 17 erasure and the retention anonymizer do — so a rep archiving a contact
-// who holds a live link would otherwise leave the next click answering 500,
-// and a submit would burn the link before refusing.
-//
-// Resolution runs outside row-level security for the same reason the preference
-// resolver does: the surface it serves has no session, and the token IS the
-// authorization.
-//
-// It stamps opened_at on first resolution, which is the ask-to-click chain a
-// later reader follows from the token row: the mail went out at issued_at, the
-// contact opened it at opened_at, and the answer landed at consumed_at.
-func (s *Store) ResolveConfirmToken(ctx context.Context, token string) (ConfirmRef, error) {
-	var ref ConfirmRef
-	// The kind is read HERE and not only at the spend, because the read is a
-	// disclosure of its own: a consent link's page must show the subscription
-	// question and not the contact's record card. Gating the write and leaving
-	// the read open would hand whoever holds a consent link everything the
-	// record page shows, which is wider than the mail that carried it.
-	var purposeID *ids.PurposeID
-	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, `
-			UPDATE confirm_token ct SET opened_at = coalesce(ct.opened_at, $2)
-			WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
-			  AND EXISTS (SELECT 1 FROM contact p
-			               WHERE p.id = ct.contact_id AND p.archived_at IS NULL)
-			RETURNING ct.contact_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id`,
-			hashPublicToken(token), s.now().UTC()).Scan(
-			&ref.ContactID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
-		if purposeID != nil {
-			ref.PurposeID = *purposeID
-		}
-		return err
-	})
-	if err != nil {
-		return ConfirmRef{}, err
-	}
-	return ref, nil
 }
 
 // subjectOfConfirmTokenTx names whose link this is, without taking a row lock.

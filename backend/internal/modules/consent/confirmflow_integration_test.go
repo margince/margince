@@ -225,13 +225,13 @@ func TestASpentLinkOpensNothing(t *testing.T) {
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
 
-	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token); err != nil {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); err != nil {
 		t.Fatalf("resolve a live link: %v", err)
 	}
 	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{}); err != nil {
 		t.Fatalf("submit: %v", err)
 	}
-	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("resolve a spent link: %v, want not-found", err)
 	}
 }
@@ -357,7 +357,7 @@ func TestARefusedAnswerLeavesNoStagedCorrections(t *testing.T) {
 	}
 	// And the link is unspent, so the contact can answer again rather than
 	// having burned their one chance on a server-side fault.
-	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token); err != nil {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); err != nil {
 		t.Errorf("the link was spent by a refused submit: %v", err)
 	}
 }
@@ -375,7 +375,7 @@ func TestAnUnofferedFieldIsRefusedWithoutSpendingTheLink(t *testing.T) {
 	if !errors.As(err, &invalid) {
 		t.Fatalf("err = %v, want a validation error on the field", err)
 	}
-	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token); err != nil {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); err != nil {
 		t.Errorf("a refused submit spent the link: %v", err)
 	}
 }
@@ -387,10 +387,10 @@ func TestAFreshLinkRetiresTheOneBeforeIt(t *testing.T) {
 	first := issueLink(t, e)
 	second := issueLink(t, e)
 
-	if _, err := e.store.ResolveConfirmToken(e.ctx, first.Token); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, first.Token, FetchByAHuman); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("the superseded link still opens: %v", err)
 	}
-	if _, err := e.store.ResolveConfirmToken(e.ctx, second.Token); err != nil {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, second.Token, FetchByAHuman); err != nil {
 		t.Errorf("the fresh link does not open: %v", err)
 	}
 }
@@ -451,7 +451,7 @@ func TestALinkHeldByAnArchivedSubjectReadsAsAbsent(t *testing.T) {
 	link := issueLink(t, e)
 	archiveConsentSubject(t, e.owner, "contact", e.contact.UUID)
 
-	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("resolve: %v, want not-found — an archived subject's link reads as absent", err)
 	}
 	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{}); !errors.Is(err, apperrors.ErrNotFound) {

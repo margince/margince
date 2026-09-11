@@ -256,7 +256,7 @@ func TestAMintedLinkOpensTheSubjectsOwnRecord(t *testing.T) {
 	}
 	token = strings.Fields(token)[0]
 
-	ref, err := e.store.ResolveConfirmToken(context.Background(), token)
+	ref, err := e.store.ResolveConfirmToken(context.Background(), token, FetchByAHuman)
 	if err != nil {
 		t.Fatalf("resolve the token that was actually sealed: %v", err)
 	}

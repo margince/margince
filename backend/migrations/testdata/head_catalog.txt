@@ -2320,6 +2320,8 @@ public.confirm_token.consumed_at timestamp with time zone gen=- def=-
 public.confirm_token.contact_id uuid NOT NULL gen=- def=-
 public.confirm_token.delivered_to text NOT NULL gen=- def=-
 public.confirm_token.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.confirm_token.fetch_count integer NOT NULL gen=- def=0
+public.confirm_token.first_fetched_at timestamp with time zone gen=- def=-
 public.confirm_token.id uuid NOT NULL gen=- def=uuidv7()
 public.confirm_token.issued_at timestamp with time zone NOT NULL gen=- def=now()
 public.confirm_token.kind text NOT NULL gen=- def='record_confirmation'::text
