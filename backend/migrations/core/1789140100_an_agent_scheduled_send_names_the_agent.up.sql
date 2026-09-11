@@ -27,15 +27,20 @@ SET LOCAL lock_timeout = '3s';
 -- are facts an agent may legitimately lack, and requiring them would refuse
 -- writes the store makes on purpose (activities/scheduledsendprovenance.go
 -- states both rules). The actor id is the one thing no agent can lack, because
--- the actor is what "an agent scheduled this" means.
+-- the actor is what "an agent scheduled this" means — and it has to be a NAME
+-- rather than the empty string, which IS NOT NULL alone admits. The writers
+-- pass principal.ID through unchecked, so a blank would satisfy the column and
+-- then reach the fire path as an agent row naming nobody: the same hole with a
+-- different spelling.
 --
--- The change is four words: the all-NULL arm now says which rows it is for.
+-- The all-NULL arm now says which rows it is for, which is the change.
 -- Spelled as a plain disjunction rather than a CASE because pg_get_constraintdef
 -- renders a CASE across five lines, and testdata/head_catalog.txt is one
 -- constraint per line.
 ALTER TABLE scheduled_send
     DROP CONSTRAINT IF EXISTS scheduled_send_agent_provenance_shape,
     ADD CONSTRAINT scheduled_send_agent_provenance_shape CHECK (
-        ((principal_kind = 'agent'::text) AND (agent_actor_id IS NOT NULL))
+        ((principal_kind = 'agent'::text) AND (agent_actor_id IS NOT NULL)
+            AND (length(btrim(agent_actor_id)) > 0))
         OR ((principal_kind <> 'agent'::text) AND (agent_actor_id IS NULL)
             AND (agent_passport_id IS NULL) AND (agent_on_behalf_of IS NULL)));

@@ -37,11 +37,14 @@ import (
 // the provenance shape.
 func scheduleAs(t *testing.T, owner *pgx.Conn, kind string, actorID *string) error {
 	t.Helper()
+	// A scheduler of this case's own. The address is drawn rather than spelled
+	// because app_user.email is unique and these cases differ by a value that
+	// does not make a distinct one — two of them name an actor.
 	var scheduledBy string
 	if err := owner.QueryRow(context.Background(),
 		`INSERT INTO app_user (email, display_name, status)
-		 VALUES ($1, 'Provenance Scheduler', 'active') RETURNING id`,
-		"provenance-"+kind+"-"+boolWord(actorID != nil)+"@example.test").Scan(&scheduledBy); err != nil {
+		 VALUES (gen_random_uuid()::text || '@example.test', 'Provenance Scheduler', 'active')
+		 RETURNING id`).Scan(&scheduledBy); err != nil {
 		t.Fatalf("seeding the scheduling user: %v", err)
 	}
 	_, err := owner.Exec(context.Background(), `
@@ -52,15 +55,6 @@ func scheduleAs(t *testing.T, owner *pgx.Conn, kind string, actorID *string) err
 		        'account', '[]'::jsonb, '{}'::jsonb, $1, $2, $3)`,
 		scheduledBy, kind, actorID)
 	return err
-}
-
-// boolWord keeps the seeded addresses distinct without a counter, which would
-// be state shared between the cases below.
-func boolWord(b bool) string {
-	if b {
-		return "named"
-	}
-	return "anonymous"
 }
 
 func TestAnAgentScheduledSendMustNameTheAgent(t *testing.T) {
@@ -78,6 +72,14 @@ func TestAnAgentScheduledSendMustNameTheAgent(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "scheduled_send_agent_provenance_shape") {
 		t.Fatalf("the insert was refused by something other than the provenance shape: %v", err)
+	}
+
+	// A BLANK actor is the same hole with a different spelling: the writers
+	// pass principal.ID through unchecked, and IS NOT NULL alone admits "".
+	blank := "   "
+	if err := scheduleAs(t, owner, "agent", &blank); err == nil {
+		t.Error("an agent-kind scheduled send whose actor id is whitespace was accepted — " +
+			"it names nobody, exactly as a NULL does")
 	}
 
 	// THE ALLOW ARM, same row, one column moved: a named agent is accepted.
