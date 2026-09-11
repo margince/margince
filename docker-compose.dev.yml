@@ -212,7 +212,13 @@ services:
   # not-yet-ready backend with a bounded connect retry and creates the bucket,
   # so readiness is the store's job, not compose's.
   minio:
-    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    # FROM QUAY, NOT DOCKER HUB. The same manifest — the digest below is
+    # unchanged and pins the identical image — but `minio/minio` on Docker Hub
+    # now answers an anonymous pull with "denied: requested access to the
+    # resource is denied", so every CI job that starts this cluster failed at
+    # `db-up` before running a test. Quay is MinIO's own registry and serves
+    # this digest without credentials.
+    image: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
