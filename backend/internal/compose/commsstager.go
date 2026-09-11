@@ -215,7 +215,14 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 	if recordErr != nil || review.ID.IsZero() {
 		return pending.cause
 	}
-	return &consent.SendRefusedError{ReviewID: review.ID, Cause: pending.cause}
+	return &consent.SendRefusedError{
+		ReviewID: review.ID, Cause: pending.cause,
+		// DECIDED HERE, because this is where the principal is known. Routing a
+		// decision is human-only and bound to the review's own initiator, so
+		// naming it for an agent would promise a move it cannot make — and an
+		// agent that tries and is refused was sent there by us.
+		Actions: actionsForRefusal(ctx, review),
+	}
 }
 
 // StageChannelTx is the same staging for a channel reply: the channel-shaped row
@@ -304,4 +311,27 @@ func anyEnforcedDenial(denied []commsauthz.Decision) bool {
 		}
 	}
 	return false
+}
+
+// actionsForRefusal names what THIS caller may do about a refusal.
+//
+// One action today and a list on purpose: the shape is what a caller reads, and
+// a second action arriving later should not change it. An empty list is a real
+// answer — the caller may do nothing but stop and report, and the reference
+// still travels so a person reading their transcript can pick the review up.
+func actionsForRefusal(ctx context.Context, review consent.Review) []string {
+	// The review must have a message to decide about. One refused without an
+	// intent — a channel reply, whose shape the held row cannot carry — is not
+	// routable, and offering the route would send the caller into a refusal.
+	if review.IntentID.IsZero() {
+		return nil
+	}
+	// A PERSON, and the one whose message it was. Routing is human-only
+	// (agents and connectors are refused) and scoped to the initiator, so an
+	// agent acting for somebody is told nothing rather than told wrong.
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman {
+		return nil
+	}
+	return []string{"request_decision"}
 }

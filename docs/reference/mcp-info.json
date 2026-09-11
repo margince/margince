@@ -10,16 +10,16 @@
   "totals": {
     "tools": 76,
     "resources": 12,
-    "tool_catalog_bytes": 222866,
+    "tool_catalog_bytes": 223542,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 56862,
+    "approx_wire_tokens_total": 57031,
     "largest_tool_bytes": 8975,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 58858,
-      "input_schema_bytes": 45629,
+      "input_schema_bytes": 46305,
       "output_schema_bytes": 101954,
-      "description_plus_input_schema_bytes": 104487
+      "description_plus_input_schema_bytes": 105163
     }
   },
   "tools": {
@@ -12681,7 +12681,7 @@
               "type": "string"
             },
             "consent_purpose": {
-              "description": "Purpose key the recipients must have granted",
+              "description": "Legacy purpose key, optional. communication_context is what the engine decides on; this is read only where the context leaves the question open. Naming neither is allowed and the server resolves what it can from the thread, but a message it cannot place is refused rather than guessed at",
               "type": "string"
             },
             "evidence": {
@@ -12772,7 +12772,6 @@
             "to",
             "subject",
             "body",
-            "consent_purpose",
             "links"
           ],
           "type": "object"
@@ -12927,7 +12926,7 @@
               "type": "string"
             },
             "consent_purpose": {
-              "description": "Purpose key the recipients must have granted",
+              "description": "Legacy purpose key, optional. communication_context is what the engine decides on; this is read only where the context leaves the question open. Naming neither is allowed and the server resolves what it can from the thread, but a message it cannot place is refused rather than guessed at",
               "type": "string"
             },
             "evidence": {
@@ -12988,8 +12987,7 @@
             "activity_id",
             "to",
             "subject",
-            "body",
-            "consent_purpose"
+            "body"
           ],
           "type": "object"
         },
@@ -13138,7 +13136,7 @@
               "type": "string"
             },
             "consent_purpose": {
-              "description": "Purpose key the recipient must have granted",
+              "description": "Legacy purpose key, optional. communication_context is what the engine decides on; this is read only where the context leaves the question open. Naming neither is allowed and the server resolves what it can from the thread, but a message it cannot place is refused rather than guessed at",
               "type": "string"
             },
             "evidence": {
@@ -13177,8 +13175,7 @@
           },
           "required": [
             "activity_id",
-            "body",
-            "consent_purpose"
+            "body"
           ],
           "type": "object"
         },

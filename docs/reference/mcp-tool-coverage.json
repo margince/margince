@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 39,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 12467,
+    "tokens_served_but_never_driven": 12636,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 7,
@@ -1179,7 +1179,7 @@
   "tools": [
     {
       "name": "send_account_email",
-      "tokens": 767,
+      "tokens": 823,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1191,7 +1191,7 @@
     },
     {
       "name": "send_email",
-      "tokens": 698,
+      "tokens": 754,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1205,7 +1205,7 @@
     },
     {
       "name": "send_message",
-      "tokens": 546,
+      "tokens": 603,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],

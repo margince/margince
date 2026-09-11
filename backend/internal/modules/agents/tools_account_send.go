@@ -43,12 +43,12 @@ func (t sendAccountEmailTool) Spec() mcp.ToolSpec {
 		Description:   sendAccountEmailCopy.render(),
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendAccountEmail",
-		InputSchema: schema(`{"type":"object","required":["to","subject","body","consent_purpose","links"],"properties":{
+		InputSchema: schema(`{"type":"object","required":["to","subject","body","links"],"properties":{
 			"to":{"type":"array","items":{"type":"string","format":"email"},"minItems":1},
 			"cc":{"type":"array","items":{"type":"string","format":"email"}},
 			"subject":{"type":"string"},
 			"body":{"type":"string"},
-			"consent_purpose":{"type":"string","description":"Purpose key the recipients must have granted"},
+			"consent_purpose":{"type":"string","description":"Legacy purpose key, optional. communication_context is what the engine decides on; this is read only where the context leaves the question open. Naming neither is allowed and the server resolves what it can from the thread, but a message it cannot place is refused rather than guessed at"},
 			"scheduled_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"scheduled_tz":{"type":"string","description":"IANA zone name the moment was chosen in (e.g. Europe/Berlin), required with scheduled_at. The send is deferred to that instant: no activity exists until it fires, and every gate re-runs then."},
 			"links":{"type":"array","minItems":1,"items":{"type":"object","required":["entity_type","entity_id"],"properties":{

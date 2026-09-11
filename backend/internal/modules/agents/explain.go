@@ -253,7 +253,8 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 // elsewhere but absent from the table is a figure nobody knows to keep true.
 func faultExplanation(fault httperr.Fault) string {
 	if len(fault.Fields) == 0 {
-		return echoSafe(fault.Code, maxBadArgsDetail) + ": " + echoSafe(fault.Detail, MaxFaultDetail)
+		return echoSafe(fault.Code, maxBadArgsDetail) + ": " +
+			echoSafe(fault.Detail, MaxFaultDetail) + faultReferenceSuffix(fault)
 	}
 
 	parts := make([]string, 0, len(fault.Fields))
@@ -363,4 +364,49 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 		staged.ApprovalID.String() + "\". " +
 		"Blocks THIS call only — do the rest of what you were asked that does not depend on it, " +
 		"and report what you DID alongside what is waiting."
+}
+
+// faultReferenceSuffix names what a refusal left behind, in the one place an
+// agent reliably reads.
+//
+// THE TOOL SURFACE HAS NO STRUCTURED ERROR SHAPE. A tool failure is
+// `{isError: true, content: [text]}` — the MCP spec's shape — so a refusal's
+// Details map has nowhere to go on this door, and the seam that built it
+// (apperrors.ReferencedFault) would stop at the REST renderer.
+//
+// So the reference is appended to the text in a form an agent can act on: a
+// fixed prefix, a bare id, and the actions it may take. Not JSON, because the
+// content block is prose a model reads; a stable sentence is what it can be
+// asked to look for, and the id is a uuid that cannot be confused with the
+// words around it.
+//
+// AN EMPTY REFERENCE APPENDS NOTHING. Most faults carry none, and a trailing
+// "review:" with nothing after it is worse than silence.
+func faultReferenceSuffix(fault httperr.Fault) string {
+	if len(fault.Details) == 0 {
+		return ""
+	}
+	reference, ok := fault.Details["review_id"].(string)
+	if !ok || reference == "" {
+		return ""
+	}
+	suffix := " (review " + echoSafe(reference, maxBadArgsDetail)
+	if actions := faultActions(fault); actions != "" {
+		suffix += "; you may " + actions
+	}
+	return suffix + ")"
+}
+
+// faultActions renders what the caller may do about a refusal, or nothing when
+// the refusal names none.
+func faultActions(fault httperr.Fault) string {
+	raw, ok := fault.Details["available_actions"].([]string)
+	if !ok || len(raw) == 0 {
+		return ""
+	}
+	bounded := make([]string, 0, len(raw))
+	for _, action := range raw {
+		bounded = append(bounded, echoSafe(action, maxBadArgsDetail))
+	}
+	return strings.Join(bounded, ", ")
 }

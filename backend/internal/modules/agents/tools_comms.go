@@ -320,13 +320,13 @@ func (t sendEmailTool) Spec() mcp.ToolSpec {
 		Description:   sendEmailCopy.render(),
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendEmail",
-		InputSchema: schema(`{"type":"object","required":["activity_id","to","subject","body","consent_purpose"],"properties":{
+		InputSchema: schema(`{"type":"object","required":["activity_id","to","subject","body"],"properties":{
 			"activity_id":{"type":"string","format":"uuid"},
 			"to":{"type":"array","items":{"type":"string","format":"email"},"minItems":1},
 			"cc":{"type":"array","items":{"type":"string","format":"email"}},
 			"subject":{"type":"string"},
 			"body":{"type":"string"},
-			"consent_purpose":{"type":"string","description":"Purpose key the recipients must have granted"},
+			"consent_purpose":{"type":"string","description":"Legacy purpose key, optional. communication_context is what the engine decides on; this is read only where the context leaves the question open. Naming neither is allowed and the server resolves what it can from the thread, but a message it cannot place is refused rather than guessed at"},
 			"scheduled_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"scheduled_tz":{"type":"string","description":"IANA zone name the moment was chosen in (e.g. Europe/Berlin), required with scheduled_at. The send is deferred to that instant: no activity exists until it fires, and every gate re-runs then."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}` + sendContextProperties + `},
@@ -406,10 +406,10 @@ func (t sendMessageTool) Spec() mcp.ToolSpec {
 		Description:   sendMessageCopy.render(),
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendMessage",
-		InputSchema: schema(`{"type":"object","required":["activity_id","body","consent_purpose"],"properties":{
+		InputSchema: schema(`{"type":"object","required":["activity_id","body"],"properties":{
 			"activity_id":{"type":"string","format":"uuid","description":"The captured conversation being replied to"},
 			"body":{"type":"string","minLength":1},
-			"consent_purpose":{"type":"string","description":"Purpose key the recipient must have granted"},
+			"consent_purpose":{"type":"string","description":"Legacy purpose key, optional. communication_context is what the engine decides on; this is read only where the context leaves the question open. Naming neither is allowed and the server resolves what it can from the thread, but a message it cannot place is refused rather than guessed at"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}` + sendContextProperties + `},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SendMessageResult](),
