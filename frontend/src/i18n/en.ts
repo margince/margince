@@ -3657,6 +3657,11 @@ export const en = {
   "compose.consentBlockedTitle": "Send blocked — no consent",
   "compose.consentBlocked":
     "A recipient has not granted consent for this purpose, so the send was suppressed (default-deny).",
+  "directSend.open": "Send with a recorded exception",
+  "directSend.opening": "Opening…",
+  "directSend.alreadySettled":
+    "This has already been decided. Open the review to see what happened.",
+  "directSend.couldNotOpen": "The review could not be opened. Try again.",
   "directSend.title": "Send anyway, on your own authority",
   "directSend.confirm": "Record the exception and send",
   "directSend.failed":

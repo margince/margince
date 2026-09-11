@@ -31,10 +31,14 @@ export type SendReview = Readonly<{
 // English, and putting `request_decision` in front of a reader as a button
 // label tells them nothing.
 //
+// TWO, and a caller sees one of them. Which depends on whether they hold the
+// authority to overrule the engine themselves — the server decides, because it
+// is the side that knows.
+//
 // Dropping is safe because the reference survives. A rep still sees that a
 // review exists and can open it; what they lose is one shortcut, which is the
 // cost of a client older than its server.
-export const SEND_REVIEW_ACTIONS = ["request_decision"] as const;
+export const SEND_REVIEW_ACTIONS = ["request_decision", "direct_send"] as const;
 export type SendReviewAction = (typeof SEND_REVIEW_ACTIONS)[number];
 
 // sendReviewOf reads the review a refusal named, or null when it named none.

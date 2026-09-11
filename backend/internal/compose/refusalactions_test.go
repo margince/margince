@@ -31,9 +31,39 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 		want   []string
 	}{
 		{
-			// The rep who pressed send. Routing is theirs to do.
-			name: "a person whose message it was", actor: principal.Principal{Type: principal.PrincipalHuman},
+			// A rep with no authority to overrule the engine. Asking somebody
+			// who has is the move they can make.
+			name: "a person who cannot direct a send", actor: principal.Principal{Type: principal.PrincipalHuman},
 			review: held, want: []string{"request_decision"},
+		},
+		{
+			// A rep who holds the grant is offered the SEND, not the ask.
+			// Telling them to ask a colleague would be telling them to go
+			// around themselves.
+			name: "a person who may direct a send",
+			actor: principal.Principal{
+				Type: principal.PrincipalHuman,
+				Permissions: principal.Permissions{
+					Objects: map[string]principal.ObjectGrant{
+						consent.EntityCommunicationException: {Create: true},
+					},
+				},
+			},
+			review: held, want: []string{"direct_send"},
+		},
+		{
+			// Holding the grant does not conjure a message to send. A refusal
+			// with nothing held offers nothing, whoever is asking.
+			name: "a grant holder with no message to decide about",
+			actor: principal.Principal{
+				Type: principal.PrincipalHuman,
+				Permissions: principal.Permissions{
+					Objects: map[string]principal.ObjectGrant{
+						consent.EntityCommunicationException: {Create: true},
+					},
+				},
+			},
+			review: consent.Review{},
 		},
 		{
 			// An agent cannot route: the door refuses non-humans outright.

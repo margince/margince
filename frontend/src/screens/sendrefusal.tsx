@@ -7,6 +7,7 @@
 
 import { useT } from "../i18n";
 import type { Refusal } from "./compose";
+import { DirectSendAction } from "./directsendaction";
 import type { SendReview } from "./sendreview";
 import { ReviewReference, SendReviewActions } from "./sendreviewaction";
 
@@ -44,6 +45,11 @@ export function SendRefusal({
             gets a fresh control rather than the first one's success state —
             which would show "Asked" for a message nobody has asked about. */}
         {review && <SendReviewActions key={review.reviewId} review={review} />}
+        {/* The other answer to the same question, for a rep who holds the
+            authority. The server offers one or the other, never both. */}
+        {review && (
+          <DirectSendAction key={`direct-${review.reviewId}`} review={review} />
+        )}
         {/* AND THE REFERENCE, whether or not there is an action to offer. A
             server naming an action this build cannot draw leaves the rep with
             this, which is what makes dropping the action safe. */}

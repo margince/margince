@@ -45,6 +45,12 @@ import (
 // installation that delegates the first has not thereby delegated the second.
 const entityCommunicationException = "communication_exception"
 
+// EntityCommunicationException is the same object, exported because compose
+// decides which action to OFFER a refused caller and that decision turns on
+// this grant. Two spellings would let the offer and the door disagree about
+// who may direct a send.
+const EntityCommunicationException = entityCommunicationException
+
 // The reasons a director may give. CLOSED, because the row is read in an audit
 // and a free-text-only reason cannot be counted — an installation asking "how
 // often do we override, and for what" needs an answer it can group.

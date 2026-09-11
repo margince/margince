@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -326,12 +327,27 @@ func actionsForRefusal(ctx context.Context, review consent.Review) []string {
 	if review.IntentID.IsZero() {
 		return nil
 	}
-	// A PERSON, and the one whose message it was. Routing is human-only
-	// (agents and connectors are refused) and scoped to the initiator, so an
-	// agent acting for somebody is told nothing rather than told wrong.
+	// A PERSON, and the one whose message it was. Both doors below are
+	// human-only (agents and connectors are refused), so an agent acting for
+	// somebody is told nothing rather than told wrong.
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return nil
+	}
+	// A HOLDER OF THE GRANT IS OFFERED THE SEND, not the ask.
+	//
+	// Directing a send and asking somebody to are answers to the same question
+	// — "this was refused, now what" — and which one a person is shown is
+	// decided by what they may actually do. Offering a rep who holds the
+	// authority the chance to ask a colleague would be telling them to go
+	// around themselves; offering one who does not the direct send would be a
+	// button that fails when pressed.
+	//
+	// ONE OR THE OTHER, never both. A person holding the grant can still route
+	// a review from the review itself if they want a second opinion, which is a
+	// deliberate act rather than a choice a refusal should press on them.
+	if auth.Require(ctx, consent.EntityCommunicationException, principal.ActionCreate) == nil {
+		return []string{"direct_send"}
 	}
 	return []string{"request_decision"}
 }

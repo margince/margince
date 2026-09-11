@@ -3570,6 +3570,12 @@ export const de = {
   "compose.consentBlockedTitle": "Versand blockiert — keine Einwilligung",
   "compose.consentBlocked":
     "Ein Empfänger hat für diesen Zweck nicht eingewilligt, daher wurde der Versand unterdrückt (Standard-Ablehnung).",
+  "directSend.open": "Mit erfasster Ausnahme senden",
+  "directSend.opening": "Wird geöffnet…",
+  "directSend.alreadySettled":
+    "Darüber wurde bereits entschieden. Öffnen Sie die Prüfung, um zu sehen, was geschah.",
+  "directSend.couldNotOpen":
+    "Die Prüfung konnte nicht geöffnet werden. Versuchen Sie es erneut.",
   "directSend.title": "Trotzdem senden, auf eigene Verantwortung",
   "directSend.confirm": "Ausnahme erfassen und senden",
   "directSend.failed":
