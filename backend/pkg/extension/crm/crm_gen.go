@@ -310,6 +310,30 @@ func (e EmailAccessStatus) Valid() bool {
 	}
 }
 
+// Defines values for EmailDeliveryState.
+const (
+	Bounced EmailDeliveryState = "bounced"
+	Parked  EmailDeliveryState = "parked"
+	Pending EmailDeliveryState = "pending"
+	Sent    EmailDeliveryState = "sent"
+)
+
+// Valid indicates whether the value is a known member of the EmailDeliveryState enum.
+func (e EmailDeliveryState) Valid() bool {
+	switch e {
+	case Bounced:
+		return true
+	case Parked:
+		return true
+	case Pending:
+		return true
+	case Sent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailSummaryDirection.
 const (
 	Inbound  EmailSummaryDirection = "inbound"
@@ -538,6 +562,55 @@ type CreateActivityRequestMeetingStatus string
 // would branch on and never reach.
 type EmailAccessStatus string
 
+// EmailDelivery Whether an outbound message actually left, and why not when it did not.
+//
+// The timeline carried DIRECTION alone, which reads as a delivery state and is not one:
+// a message parked because the channel refused its files, because the recipient blocked
+// the bot, or because the credential was rejected rendered exactly like one the provider
+// confirmed. The rep was told their message went.
+type EmailDelivery struct {
+	// DeliveredAt When the provider accepted it. Null unless the state is `sent`.
+	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
+
+	// Files What the message was staged with, as it was at that moment. Empty when it carried
+	// nothing.
+	//
+	// NOT the live attachment list. Archiving or superseding a document later changes
+	// what the library holds and must change nothing about what the timeline says went
+	// out with a message that already left.
+	Files *[]EmailDeliveryFile `json:"files,omitempty"`
+
+	// Reason Why it did not arrive, in the words it was recorded with — written for a human
+	// because a rep is the one who has to act on it. Null unless the state is `parked`
+	// or `bounced`.
+	Reason *string `json:"reason,omitempty"`
+
+	// State What became of the message. `pending` is staged and not yet attempted — a real
+	// state a reader may see, and not the same as parked.
+	//
+	// `bounced` is the one state the delivery row does not spell as a status: a bounce
+	// is a later fact about a send the provider DID accept, so the row keeps `sent` and
+	// records the return beside it. A reader shown `sent` for a message that came back
+	// is told the one thing that row can never say.
+	State EmailDeliveryState `json:"state"`
+}
+
+// EmailDeliveryState What became of the message. `pending` is staged and not yet attempted — a real
+// state a reader may see, and not the same as parked.
+//
+// `bounced` is the one state the delivery row does not spell as a status: a bounce
+// is a later fact about a send the provider DID accept, so the row keeps `sent` and
+// records the return beside it. A reader shown `sent` for a message that came back
+// is told the one thing that row can never say.
+type EmailDeliveryState string
+
+// EmailDeliveryFile One file a message was staged with, frozen at staging.
+type EmailDeliveryFile struct {
+	ByteSize    *int64  `json:"byte_size,omitempty"`
+	ContentType *string `json:"content_type,omitempty"`
+	Filename    string  `json:"filename"`
+}
+
 // EmailSummary One retained email, reduced to what a row shows without opening it. Present on an
 // activity only when `kind=email`; every other kind carries none, and a reader that
 // branches on this field is asking the one question that decides the canonical row.
@@ -555,8 +628,14 @@ type EmailSummary struct {
 	// Counterparty Who the message was with, named for the row: "Ana Sommer", or "Ana Sommer +2" when
 	// the exchange had more. Null when no participant resolves to a name this caller may
 	// see — the row then says the direction alone rather than inventing a stranger.
-	Counterparty *string                `json:"counterparty,omitempty"`
-	Direction    *EmailSummaryDirection `json:"direction,omitempty"`
+	Counterparty *string `json:"counterparty,omitempty"`
+
+	// Delivery What happened to an outbound message, when this row is one and a delivery was
+	// staged for it. Absent on an inbound message, and on an outbound one logged
+	// rather than sent — neither has a delivery to report, which is a different
+	// thing from one that has not left yet.
+	Delivery  *EmailDelivery         `json:"delivery,omitempty"`
+	Direction *EmailSummaryDirection `json:"direction,omitempty"`
 
 	// DisplayStatus What a reader is allowed to know about who else reads this message, in one word the
 	// badge can print. `team` never means the whole workspace: the linked record's own scope
