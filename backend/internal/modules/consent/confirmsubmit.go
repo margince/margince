@@ -280,7 +280,7 @@ func (s *Store) recordLinkedPurposeTx(ctx context.Context, tx pgx.Tx, ref Confir
 	// THE SAME BINDING THE OTHER DOOR TAKES. A dedicated consent link is the
 	// path most double-opt-in grants actually arrive through, so leaving it on
 	// the client's sentence would have fixed the defect for the door fewer
-	// people use.
+	// callers use.
 	wording, err := s.wordingForGrantTx(ctx, tx, ref, in.MarketingWording)
 	if err != nil {
 		return err
