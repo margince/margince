@@ -48,9 +48,19 @@ import (
 type funcKey struct {
 	dir  string
 	name string
+	// isMethod separates a method from a package-level function of the SAME
+	// name. Without it, a call on a local value — helper.BuildRequest() —
+	// records an edge to the package's own BuildRequest function, and an
+	// orphan prompt builder reads as reached by a call that never touches it.
+	isMethod bool
 }
 
-func (k funcKey) String() string { return k.dir + "." + k.name }
+func (k funcKey) String() string {
+	if k.isMethod {
+		return k.dir + ".(method) " + k.name
+	}
+	return k.dir + "." + k.name
+}
 
 // promptGraph is what one walk of the tree collects.
 type promptGraph struct {
@@ -63,6 +73,9 @@ type promptGraph struct {
 	// certified site is reachable from one, because a case issues the request
 	// production issues.
 	roots map[funcKey]bool
+	// dotImported names any package that dot-imports the model package, which
+	// this scan cannot read. It is a refusal, not a finding.
+	dotImported []string
 }
 
 func TestEveryPromptIsCertified(t *testing.T) {
@@ -76,6 +89,9 @@ func TestEveryPromptIsCertified(t *testing.T) {
 	}
 	if len(g.roots) == 0 {
 		t.Fatal("found no certification case at all, so every site would read as uncertified")
+	}
+	for _, dir := range g.dotImported {
+		t.Errorf("%s dot-imports the model package, so this scan cannot see the requests it builds", dir)
 	}
 	reached := reachableFrom(g)
 	var orphans []string
@@ -134,12 +150,24 @@ func isCertificationFile(p string) bool {
 // collectFile records one file's functions, their edges and whether they mint.
 func collectFile(g *promptGraph, file *ast.File, dir string, isCert bool) {
 	imports := importsOf(file, dir)
+	// What THIS file calls the model package. An alias — or no import at all —
+	// is the difference between seeing a site and silently not seeing one, so
+	// the name is read from the file rather than assumed to be "model". The
+	// helper is promptlanguage_test.go's, which already had this problem.
+	modelPkg, importsModel := localNameFor(file, "shared/ports/model")
+	if importsModel && modelPkg == "." {
+		// A dot import spells the literal as a bare Request{}, which this scan
+		// cannot tell from any other type's. Rather than not see the site, the
+		// walk stops and says so — under-recognition is the one failure this
+		// gate must not have.
+		g.dotImported = append(g.dotImported, dir)
+	}
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Body == nil {
 			continue
 		}
-		self := funcKey{dir: dir, name: fn.Name.Name}
+		self := funcKey{dir: dir, name: fn.Name.Name, isMethod: fn.Recv != nil}
 		if isCert {
 			g.roots[self] = true
 		}
@@ -148,8 +176,12 @@ func collectFile(g *promptGraph, file *ast.File, dir string, isCert bool) {
 		// invents an edge — which makes an uncertified site look reached.
 		shadowed := boundNames(fn)
 		ast.Inspect(fn.Body, func(n ast.Node) bool {
-			if mintsSystemPrompt(n) {
+			if importsModel && mintsSystemPrompt(n, modelPkg) {
 				g.minting[self] = true
+				// A site is never its own certification. Rooting every
+				// function in a certification file would let a prompt builder
+				// written INTO one certify itself without any case issuing it.
+				delete(g.roots, self)
 			}
 			if callee, named := promptCalleeOf(n, dir, imports, shadowed); named {
 				g.calls[self] = append(g.calls[self], callee)
@@ -163,7 +195,7 @@ func collectFile(g *promptGraph, file *ast.File, dir string, isCert bool) {
 // a System field. That pairing is what makes a function a SITE: a request
 // without a system prompt is a continuation of somebody else's, and a system
 // string on its own is prompt text nobody has sent yet.
-func mintsSystemPrompt(n ast.Node) bool {
+func mintsSystemPrompt(n ast.Node, modelPkg string) bool {
 	lit, ok := n.(*ast.CompositeLit)
 	if !ok {
 		return false
@@ -173,7 +205,7 @@ func mintsSystemPrompt(n ast.Node) bool {
 		return false
 	}
 	pkg, ok := sel.X.(*ast.Ident)
-	if !ok || pkg.Name != "model" {
+	if !ok || pkg.Name != modelPkg {
 		return false
 	}
 	for _, elt := range lit.Elts {
@@ -191,6 +223,11 @@ func mintsSystemPrompt(n ast.Node) bool {
 // promptCalleeOf resolves one call expression to the function it names, in the
 // directory that function lives in. A selector is resolved through the file's
 // own imports, which is what keeps two same-named exports apart.
+//
+// A call THROUGH a value — helper.Build() — resolves to the METHOD Build, never
+// to a package-level function of that name. The two are different callees, and
+// conflating them invents an edge: an orphan builder would read as reached by a
+// method call that never touches it.
 func promptCalleeOf(n ast.Node, dir string, imports map[string]string, shadowed map[string]bool) (funcKey, bool) {
 	call, ok := n.(*ast.CallExpr)
 	if !ok {
@@ -204,24 +241,21 @@ func promptCalleeOf(n ast.Node, dir string, imports map[string]string, shadowed 
 		return funcKey{dir: dir, name: fun.Name}, true
 	case *ast.SelectorExpr:
 		pkg, isIdent := fun.X.(*ast.Ident)
-		if !isIdent {
-			// A method on an expression rather than a name. The one shape that
-			// carries a resolvable package is the constructor chain the cert
-			// cases use — runner.New(...).Run(...) — so the method belongs to
-			// whatever package built the receiver.
-			if owner, known := constructorPackage(fun.X, dir, imports); known {
-				return funcKey{dir: owner, name: fun.Sel.Name}, true
+		if isIdent && !shadowed[pkg.Name] {
+			if target, known := imports[pkg.Name]; known {
+				// pkg.Func — a package-level function in that package.
+				return funcKey{dir: target, name: fun.Sel.Name}, true
 			}
-			return funcKey{dir: dir, name: fun.Sel.Name}, true
 		}
-		if target, known := imports[pkg.Name]; known && !shadowed[pkg.Name] {
-			return funcKey{dir: target, name: fun.Sel.Name}, true
+		// Everything else is a call through a value: a receiver, a local, or a
+		// constructor chain. The callee is a METHOD, and it belongs to whatever
+		// package built the receiver — this one, unless a constructor names
+		// another.
+		owner := dir
+		if named, known := constructorPackage(fun.X, dir, imports); known {
+			owner = named
 		}
-		// An unknown qualifier is a local variable, not a package. Treat the
-		// selected name as same-package rather than dropping the edge: a
-		// missing edge is under-recognition, which is the failure this gate
-		// must not have.
-		return funcKey{dir: dir, name: fun.Sel.Name}, true
+		return funcKey{dir: owner, name: fun.Sel.Name, isMethod: true}, true
 	}
 	return funcKey{}, false
 }
@@ -341,4 +375,90 @@ func constructorPackage(recv ast.Expr, dir string, imports map[string]string) (s
 		}
 	}
 	return "", false
+}
+
+// The three ways this gate was shown to be foolable, each pinned so the fix
+// cannot be undone quietly. All three are UNDER-recognition: the gate stayed
+// green while a prompt went ungraded, which is the failure a census must not
+// have (AGENTS.md, "a census that can fail short has already failed").
+func TestTheCensusCannotBeFooled(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, src string
+		wantMint  bool
+	}{
+		{
+			name:     "the model package under an alias is still the model package",
+			src:      `package p; import m "x/shared/ports/model"; func f() m.Request { return m.Request{System: "s"} }`,
+			wantMint: true,
+		},
+		{
+			name:     "the plain spelling still counts",
+			src:      `package p; import "x/shared/ports/model"; func f() model.Request { return model.Request{System: "s"} }`,
+			wantMint: true,
+		},
+		{
+			name:     "a request with no system prompt is a continuation, not a site",
+			src:      `package p; import "x/shared/ports/model"; func f() model.Request { return model.Request{MaxTokens: 1} }`,
+			wantMint: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			file, err := parser.ParseFile(token.NewFileSet(), "p.go", tc.src, 0)
+			if err != nil {
+				t.Fatalf("parsing the case source: %v", err)
+			}
+			g := promptGraph{minting: map[funcKey]bool{}, calls: map[funcKey][]funcKey{}, roots: map[funcKey]bool{}}
+			collectFile(&g, file, "p", false)
+			if got := len(g.minting) > 0; got != tc.wantMint {
+				t.Errorf("minting = %v, want %v — the scan %s this site",
+					got, tc.wantMint, map[bool]string{true: "must see", false: "must not claim"}[tc.wantMint])
+			}
+		})
+	}
+}
+
+// A call THROUGH a value names a method, never a package-level function of the
+// same name. Conflating them invented an edge that certified an orphan.
+func TestACallThroughAValueDoesNotReachItsNamesakeFunction(t *testing.T) {
+	t.Parallel()
+	src := `package p
+func run() { helper := thing{}; helper.Build() }
+type thing struct{}
+func (thing) Build() {}
+func Build() {}`
+	file, err := parser.ParseFile(token.NewFileSet(), "p.go", src, 0)
+	if err != nil {
+		t.Fatalf("parsing: %v", err)
+	}
+	g := promptGraph{minting: map[funcKey]bool{}, calls: map[funcKey][]funcKey{}, roots: map[funcKey]bool{}}
+	collectFile(&g, file, "p", false)
+	for _, edge := range g.calls[funcKey{dir: "p", name: "run"}] {
+		if edge.name == "Build" && !edge.isMethod {
+			t.Error("a method call on a local value recorded an edge to the package-level function of that name")
+		}
+	}
+}
+
+// A prompt builder written into a certification file must not certify itself by
+// sitting there: rooting it would make the gate agree with whoever moved it.
+func TestAPromptInACertificationFileIsNotItsOwnCertification(t *testing.T) {
+	t.Parallel()
+	src := `package p
+import "x/shared/ports/model"
+func selfCertifying() model.Request { return model.Request{System: "s"} }`
+	file, err := parser.ParseFile(token.NewFileSet(), "certcase_p.go", src, 0)
+	if err != nil {
+		t.Fatalf("parsing: %v", err)
+	}
+	g := promptGraph{minting: map[funcKey]bool{}, calls: map[funcKey][]funcKey{}, roots: map[funcKey]bool{}}
+	collectFile(&g, file, "p", true)
+	self := funcKey{dir: "p", name: "selfCertifying"}
+	if !g.minting[self] {
+		t.Fatal("the scan did not see the site at all")
+	}
+	if g.roots[self] {
+		t.Error("a prompt builder inside a certification file was rooted, so it certifies itself")
+	}
 }
