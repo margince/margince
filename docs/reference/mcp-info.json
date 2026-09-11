@@ -10,16 +10,16 @@
   "totals": {
     "tools": 76,
     "resources": 12,
-    "tool_catalog_bytes": 222983,
+    "tool_catalog_bytes": 222866,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 56891,
+    "approx_wire_tokens_total": 56862,
     "largest_tool_bytes": 8975,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 58970,
+      "description_bytes": 58858,
       "input_schema_bytes": 45629,
-      "output_schema_bytes": 101959,
-      "description_plus_input_schema_bytes": 104599
+      "output_schema_bytes": 101954,
+      "description_plus_input_schema_bytes": 104487
     }
   },
   "tools": {
@@ -1604,7 +1604,7 @@
           "readOnlyHint": true,
           "title": "Check calendar availability"
         },
-        "description": "Find when a host is free, so a time can be proposed to someone. It reads free/busy over the window you ask for and books nothing. It answers for one host — the acting user unless another is named — not for the invitees. With no calendar connected for that host the slots are only what meetings recorded in this CRM leave open, and the answer says so: a free window is then no evidence the host is free, and none at all that a meeting they told you about is missing from their diary. Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already exists and the goal is walking in ready. Keep the exact start and end of the slot you intend to take; book_meeting takes those, and a slot re-derived later may no longer be free. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Find when a host is free, so a time can be proposed to someone. It reads free/busy over the window you ask for and books nothing. It answers for one host — the acting user unless another is named — not for the invitees. `calendar_backing` says what the window rests on: with no calendar connected the slots are only what meetings recorded in this CRM leave open, and for a host who is NOT the acting seat it is `unknown`, because another person's connector state is theirs. Unless it says `calendar`, a free window is no evidence the host is free, and none at all that a meeting they told you about is missing from their diary. Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already exists and the goal is walking in ready. Keep the exact start and end of the slot you intend to take; book_meeting takes those, and a slot re-derived later may no longer be free. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -1640,8 +1640,8 @@
           "properties": {
             "data": {
               "properties": {
-                "calendar_connected": {
-                  "type": "boolean"
+                "calendar_backing": {
+                  "type": "string"
                 },
                 "slots": {
                   "items": {
@@ -1666,7 +1666,7 @@
                 }
               },
               "required": [
-                "calendar_connected",
+                "calendar_backing",
                 "slots",
                 "truncated"
               ],
@@ -1881,7 +1881,7 @@
           "readOnlyHint": false,
           "title": "Commit an import"
         },
-        "description": "Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, which is the PERSON's approval and not this call's to give: nothing stages it, and an import cannot be undone from here — undoing one needs the web app. Put the dry run's counts in front of them and let them say go. The exception is a person who has already been through the file and asked for it to be loaded; they have approved it, and asking a second time is not diligence. read_import_report first, and report what it says — numbers nobody read are not a check. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, which is the PERSON's approval and not this call's to give: nothing stages it, and an import cannot be undone from here — undoing one needs the web app. Put the dry run's counts in front of them and let them say go — unless they have already been through the file and asked for it to be loaded, which is an approval and not a question to ask twice. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -8285,7 +8285,7 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. A column header is matched to a field NAME and never guessed, so an ordinary header row — `name`, `company`, `city` — places nothing without a mapping and is refused with the field list to map onto. `object` is company, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link people to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the person weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link people to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the person weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {

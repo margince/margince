@@ -69,17 +69,16 @@ const graphExpansionLimit = 50
 // anchorLinkColumn names the activity_link column an anchor type walks,
 // DERIVED from activityLinkArms rather than listed a second time.
 //
-// It was a list of its own, and it had already fallen behind by one arm: the
-// link shape has admitted a lead since core 0038, this map did not, and a lead
-// anchor therefore answered its profile and nothing else. The tool advertising
-// that walk says "what cannot be evidenced is absent rather than inferred", so
-// a model read the empty answer as a lead nothing had happened to and said so
-// to the person asking. A walk that cannot reach a record's activity must not
-// be reachable through a list somebody has to remember to extend.
+// EVERY ARM THE LINK SHAPE ADMITS IS WALKABLE. A second list is a list somebody
+// has to remember to extend, and the cost of forgetting is not a missing
+// section: the tool serving this walk tells its caller that what cannot be
+// evidenced is absent rather than inferred, so an anchor the walk does not
+// follow reads as a record nothing has happened to.
 //
-// activityLinkArms is the one that is held against the DDL's own enum
+// activityLinkArms is the list held against the DDL's own enum
 // (TestEverySubjectLinkArmIsRanked), which is why the derivation runs in this
-// direction and not the other.
+// direction and not the other, and TestEveryLinkableRecordIsWalkableAsAnAnchor
+// holds this map against that same DDL rather than against the list.
 var anchorLinkColumn = func() map[string]string {
 	columns := make(map[string]string, len(activityLinkArms))
 	for _, arm := range activityLinkArms {

@@ -150,7 +150,6 @@ backend/internal/modules/privacy/retentionrestricted.go migration 0291
 backend/internal/modules/privacy/subjectcolumns.go core 0229
 backend/internal/modules/privacy/transcriptreadings.go core 0245
 backend/internal/modules/search/binding.go migration 0114
-backend/internal/modules/search/graph.go core 0038
 backend/internal/modules/search/graphactivitysubjects.go core 0038
 backend/internal/modules/search/graphactivitysubjects.go migration 0157
 backend/internal/modules/search/pending.go migration 0114

@@ -335,12 +335,12 @@ func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType strin
 		//
 		// Only a tag that never existed is not-found here.
 		var exists bool
-		err := tx.QueryRow(ctx, `SELECT true FROM tag WHERE id = $1`, tagID).Scan(&exists)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
-		if err != nil {
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM tag WHERE id = $1)`, tagID).Scan(&exists); err != nil {
 			return err
+		}
+		if !exists {
+			return apperrors.ErrNotFound
 		}
 		// Same reasoning as applyTagTx: removing a tag CHANGES the record too,
 		// so the gate is write authority, not merely visibility.

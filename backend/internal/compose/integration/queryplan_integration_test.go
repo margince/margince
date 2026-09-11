@@ -454,6 +454,56 @@ func TestQueryPlanARadiusOverAnUnplacedWorkspaceSaysSoRatherThanAnsweringEmpty(t
 	}
 }
 
+// The note follows what the CALLER can read, not what the workspace holds.
+//
+// The probe behind it started workspace-wide, on the reasoning that "can this
+// deployment rank by distance" is a property of the deployment. It is not: the
+// answer it corrects is the caller's, and answering from a wider corpus tells a
+// caller their own empty result was a real reading of their own records.
+//
+// A company is an identity table, so ordinary ownership does not narrow it and
+// the two readers here are the capture's OWNER and a colleague — the one
+// narrowing a company record keeps. The colleague can see no placed company at all,
+// so their empty radius is unexplained unless the probe is scoped as the answer
+// is.
+func TestQueryPlanARadiusNoteFollowsWhatTheCallerCanRead(t *testing.T) {
+	q := setupQuery(t)
+	q.seedFixture(t)
+	// The only geocoded company in the workspace is an unpromoted capture of
+	// Rep1's, which capture privacy keeps from every other seat.
+	q.SeedID(t, `INSERT INTO company
+		(id, owner_id, display_name, visibility, address_line1, address_city,
+		 geocode_lat, geocode_lon, geocode_status, geocode_provider, geocode_input_hash,
+		 source, captured_by)
+		VALUES ($1, $2, 'Radius Privat GmbH', 'owner', 'Teststrasse 1', 'Teststadt',
+		        48.7758, 9.1829, 'ok', 'test', 'seeded', 'manual', 'human:x')`, q.Rep1)
+
+	const plan = `{"version": "v1", "target": "company",
+		"where": [{"field": "address", "op": "within_radius",
+		           "value": {"lat": 48.7758, "lon": 9.1829, "radius_km": 50}}],
+		"limit": 20}`
+
+	// The owner matches it, so the corpus really does carry a placed company —
+	// without this the colleague's note below would prove nothing.
+	owner := q.run(q.teamRep(q.Rep1, q.Team1), t, plan)
+	if len(owner.Rows) != 1 {
+		t.Fatalf("the capture's owner matched %d rows, so this case is not set up", len(owner.Rows))
+	}
+	if hasNote(owner, search.CodeDistanceRankingUnavailable) {
+		t.Errorf("a reader who CAN see a placed company is told distance is unavailable: %v", owner.Notes)
+	}
+
+	colleague := q.run(q.teamRep(q.Rep3, q.Team2), t, plan)
+	if len(colleague.Rows) != 0 {
+		t.Fatalf("the colleague matched %d rows of another seat's capture", len(colleague.Rows))
+	}
+	if !hasNote(colleague, search.CodeDistanceRankingUnavailable) {
+		t.Fatalf("the colleague's empty radius carries no note, so it reads as a fact about their "+
+			"customers rather than about what they can see: coverage %q, notes %v",
+			colleague.Coverage, colleague.Notes)
+	}
+}
+
 // The whole point, against Postgres: a radius on a company returns the ones
 // inside it, NEAREST FIRST, each saying how far.
 //

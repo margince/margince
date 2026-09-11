@@ -1811,7 +1811,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 774,
+      "tokens": 723,
       "agents": [],
       "required_by_cases": [
         "case10_finish_the_import",
@@ -2193,6 +2193,39 @@
       }
     },
     {
+      "name": "check_availability",
+      "tokens": 365,
+      "agents": [],
+      "required_by_cases": [
+        "case23_find_us_a_slot"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "search_context",
       "tokens": 343,
       "agents": [],
@@ -2271,39 +2304,6 @@
           "cases_below_their_bar": [
             "case41_close_the_project"
           ]
-        }
-      }
-    },
-    {
-      "name": "check_availability",
-      "tokens": 329,
-      "agents": [],
-      "required_by_cases": [
-        "case23_find_us_a_slot"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
         }
       }
     },
@@ -2577,43 +2577,6 @@
       }
     },
     {
-      "name": "commit_import",
-      "tokens": 217,
-      "agents": [],
-      "required_by_cases": [
-        "case10_finish_the_import"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
-        }
-      }
-    },
-    {
       "name": "disqualify_lead",
       "tokens": 209,
       "agents": [],
@@ -2678,6 +2641,43 @@
           "passed": 2,
           "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "commit_import",
+      "tokens": 204,
+      "agents": [],
+      "required_by_cases": [
+        "case10_finish_the_import"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
         }
       }
     },

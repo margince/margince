@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1626 | 4% | 21584 | 6 | 6 |
 | `overnight_at_risk_sweep` | 7 | 2499 | 7% | 20711 | 15 | 10 |
-| _whole served catalog, for scale_ | 76 | 24126 | 73% | — | — | — |
+| _whole served catalog, for scale_ | 76 | 24098 | 73% | — | — | — |
 
 ### `morning_brief`
 
@@ -126,7 +126,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 272 tokens, mean 317, across 76 served tools.
+Median 272 tokens, mean 316, across 76 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -136,8 +136,8 @@ a term in an addition.
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
 | `run_report` | 1010 | 3 scenarios |
-| `preview_import` | 774 | — |
 | `send_account_email` | 767 | — |
+| `preview_import` | 723 | — |
 | `send_email` | 698 | 1 scenario |
 | `log_activity` | 676 | 1 scenario |
 | `update_record` | 581 | 4 scenarios |
@@ -157,11 +157,11 @@ a term in an addition.
 | `review_commitments` | 401 | 1 scenario |
 | `enrich` | 391 | — |
 | `search_records` | 382 | 9 scenarios |
+| `check_availability` | 365 | — |
 | `describe_report_vocabulary` | 349 | — |
 | `describe_record_fields` | 345 | — |
 | `search_context` | 343 | — |
 | `advance_project_phase` | 340 | — |
-| `check_availability` | 329 | — |
 | `forecast_input_checks` | 324 | — |
 | `prep_for_meeting` | 324 | — |
 | `demote_lead` | 316 | — |
@@ -184,13 +184,13 @@ a term in an addition.
 | `apply_tag` | 226 | — |
 | `create_task` | 220 | — |
 | `read_record` | 220 | 3 scenarios |
-| `commit_import` | 217 | — |
 | `whats_slipping_this_week` | 211 | 2 scenarios |
 | `disqualify_lead` | 209 | — |
 | `list_input_checks` | 209 | — |
 | `at_risk_relationships` | 208 | — |
 | `read_brief` | 206 | — |
 | `update_tag` | 205 | — |
+| `commit_import` | 204 | — |
 | `relink_activities` | 204 | — |
 | `merge_tags` | 198 | — |
 | `relink_thread` | 196 | — |

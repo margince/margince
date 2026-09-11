@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 76 |
 | Resources | 12 |
-| Tool catalog | 217.8 KB |
+| Tool catalog | 217.6 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 56891 |
+| Approx. wire tokens | 56862 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 99.6 KB | 45% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 57.6 KB | 26% | Yes, every step |
+| Descriptions (incl. governance clause) | 57.5 KB | 26% | Yes, every step |
 | Input schemas | 44.6 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.0 KB | 7% | Partly |
-| **Description + input schema** | **102.1 KB** | **46%** | **the recurring cost** |
+| **Description + input schema** | **102.0 KB** | **46%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -73,7 +73,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.8 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 2.8 KB |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.5 KB |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.7 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.1 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.8 KB |
@@ -111,7 +111,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 4.5 KB |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 4.3 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.6 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
@@ -2016,7 +2016,7 @@ Answer "what has been going on with this?" for one person, company, deal, lead, 
 
 **Check calendar availability**
 
-Find when a host is free, so a time can be proposed to someone. It reads free/busy over the window you ask for and books nothing. It answers for one host — the acting user unless another is named — not for the invitees. With no calendar connected for that host the slots are only what meetings recorded in this CRM leave open, and the answer says so: a free window is then no evidence the host is free, and none at all that a meeting they told you about is missing from their diary. Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already exists and the goal is walking in ready. Keep the exact start and end of the slot you intend to take; book_meeting takes those, and a slot re-derived later may no longer be free. (Governance: runs immediately; requires passport scope "read".)
+Find when a host is free, so a time can be proposed to someone. It reads free/busy over the window you ask for and books nothing. It answers for one host — the acting user unless another is named — not for the invitees. `calendar_backing` says what the window rests on: with no calendar connected the slots are only what meetings recorded in this CRM leave open, and for a host who is NOT the acting seat it is `unknown`, because another person's connector state is theirs. Unless it says `calendar`, a free window is no evidence the host is free, and none at all that a meeting they told you about is missing from their diary. Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already exists and the goal is walking in ready. Keep the exact start and end of the slot you intend to take; book_meeting takes those, and a slot re-derived later may no longer be free. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -2062,8 +2062,8 @@ Find when a host is free, so a time can be proposed to someone. It reads free/bu
   "properties": {
     "data": {
       "properties": {
-        "calendar_connected": {
-          "type": "boolean"
+        "calendar_backing": {
+          "type": "string"
         },
         "slots": {
           "items": {
@@ -2088,7 +2088,7 @@ Find when a host is free, so a time can be proposed to someone. It reads free/bu
         }
       },
       "required": [
-        "calendar_connected",
+        "calendar_backing",
         "slots",
         "truncated"
       ],
@@ -2306,7 +2306,7 @@ Renders its result in [`ui://margince/geo-probe.html`](#geo_probe_view), visible
 
 **Commit an import**
 
-Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, which is the PERSON's approval and not this call's to give: nothing stages it, and an import cannot be undone from here — undoing one needs the web app. Put the dry run's counts in front of them and let them say go. The exception is a person who has already been through the file and asked for it to be loaded; they have approved it, and asking a second time is not diligence. read_import_report first, and report what it says — numbers nobody read are not a check. (Governance: runs immediately; requires passport scope "write".)
+Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, which is the PERSON's approval and not this call's to give: nothing stages it, and an import cannot be undone from here — undoing one needs the web app. Put the dry run's counts in front of them and let them say go — unless they have already been through the file and asked for it to be loaded, which is an approval and not a question to ask twice. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -9063,7 +9063,7 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
 
 **Preview an import**
 
-Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. A column header is matched to a field NAME and never guessed, so an ordinary header row — `name`, `company`, `city` — places nothing without a mapping and is refused with the field list to map onto. `object` is company, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link people to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the person weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope "write".)
+Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link people to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the person weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 

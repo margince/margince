@@ -95,9 +95,18 @@ type Tags interface {
 	// transaction; asked earlier so a failed apply leaves nothing behind.
 	EnsureTaggable(ctx context.Context, entityType string, entityID ids.UUID) error
 	// FindTag answers the id of the live workspace tag with this name, or
-	// ok=false when there is none. Remove uses it: a name that names nothing
-	// means the tagging is already absent.
+	// ok=false when there is none.
 	FindTag(ctx context.Context, name string) (ids.UUID, bool, error)
+	// FindTagToRemove answers the id of the workspace tag with this name, LIVE
+	// OR RETIRED, or ok=false when the name has never been coined.
+	//
+	// Removing is the one verb that must reach a retired word, and it is the
+	// only one: retiring a tag is what leaves it on the records already
+	// carrying it, those assignments are still reported by the record read, and
+	// a live-only lookup here answers "the tagging is already absent" about a
+	// row that is still there. Applying keeps the live-only rule, because
+	// putting a retired word back on a record coins it again.
+	FindTagToRemove(ctx context.Context, name string) (ids.UUID, bool, error)
 	// ResolveTag answers the id of an EXISTING workspace tag with this name
 	// and refuses when there is none. It never creates: the vocabulary is
 	// governed, so a tool that coined a word on a name it did not recognise
@@ -370,11 +379,16 @@ func (t removeTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMess
 	// It LOOKS UP, never creates. Minting a tag in order to remove it is
 	// nonsense, and a name that names nothing means the tagging is already
 	// absent, which is the state the caller asked for.
+	//
+	// A RETIRED name still resolves here. It is the case this verb exists for:
+	// retiring a word is what stranded it on the records carrying it, the
+	// record read hands those assignments back, and a live-only lookup told the
+	// caller the tagging was already gone while the row stayed.
 	if args.TagID.IsZero() {
 		if args.TagName == "" {
 			return nil, &BadArgsError{Cause: errors.New("give tag_id or tag_name")}
 		}
-		found, ok, err := t.tags.FindTag(ctx, args.TagName)
+		found, ok, err := t.tags.FindTagToRemove(ctx, args.TagName)
 		if err != nil {
 			return nil, err
 		}

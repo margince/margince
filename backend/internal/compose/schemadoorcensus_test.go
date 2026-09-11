@@ -55,6 +55,17 @@ import (
 // than a description of the surface itself.
 const schemaDocumentPrefix = "margince://schema/"
 
+// TWO LIMITS, stated because a census is read as proving more than it does.
+//
+// A "door" here is a zero-argument tool whose prose names the document's URI,
+// so the tool copy is paying description tokens to satisfy this walk: an edit
+// that drops the URI reds the gate with a message about a missing door rather
+// than about a missing sentence.
+//
+// And it proves a door is REGISTERED, not that it answers. describe_report_
+// vocabulary and describe_analytics_vocabulary are registered on every build
+// behind readers that refuse at call time, so in an overlay workspace this
+// census says a tools-only caller can reach a vocabulary they cannot.
 func TestEveryPublishedSchemaDocumentHasAToolThatAnswersIt(t *testing.T) {
 	specs := servedSurface(t).Specs()
 	if len(specs) == 0 {

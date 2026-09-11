@@ -278,6 +278,12 @@ func TestEverySubjectLinkArmIsRanked(t *testing.T) {
 // now derived from that list. A census whose expected side is the thing under
 // test passes by construction and would go on passing if both fell behind the
 // table together.
+//
+// WHAT IT PROVES IS THAT THE MAP HAS THE KEY, which is the thing that silently
+// fell behind — not that the walk returns anything. A leg with the column and
+// an empty answer still passes here. The behaviour is held in the integration
+// lane by TestALeadAnchorWalksItsOwnTimeline, which asserts the activity comes
+// back by name; do not read this cheap census as covering that.
 func TestEveryLinkableRecordIsWalkableAsAnAnchor(t *testing.T) {
 	declared := activityLinkEntityTypes(t)
 	if len(declared) == 0 {

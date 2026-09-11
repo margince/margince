@@ -210,19 +210,14 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 	// a caller only needs when narrowing: a description still listing one
 	// report's names would be the same second copy in a shorter font.
 	//
-	// THE DIMENSIONS WERE TRIED HERE AND DO NOT FIT, which is worth writing down
-	// because the argument for them is good. Asked for an inbound-against-outbound
-	// split, every run read `activities-by-kind: count as activities grouped by
-	// kind`, concluded no prebuilt report reached direction, and went to the
-	// ad-hoc engine; `direction` is one of that report's dimensions. Publishing
-	// them costs ~220 tokens and run_report renders ~990 against the 1024 one tool
-	// may take, so it buys the fix by breaking the ration
-	// (TestNoSingleToolTakesMoreOfTheWindowThanItsShare, which fails at ~1220).
-	// What stands in their place is the sentence saying a default is not a
-	// report's reach — no enumeration, and it attacks the same false conclusion.
-	// If that sentence does not move the measurement, the case for enlarging
-	// run_report's share has a number behind it and this comment is where it
-	// starts.
+	// THE DIMENSIONS BELONG HERE AND DO NOT FIT. A report's admitted group_by
+	// names are a selection signal exactly as its default is — a caller that
+	// cannot see `direction` on activities-by-kind concludes no prebuilt report
+	// reaches it — and publishing them costs more of the single-tool ration
+	// than run_report has left. What stands in their place is the sentence
+	// saying a default is not a report's reach, which attacks the same wrong
+	// conclusion with no enumeration. Widening the ration is a decision with a
+	// measurement behind it: #5333.
 	//
 	// DERIVED from the fixture rather than listed, so renaming a name in
 	// twoReportCatalog() cannot leave this passing while the description recites

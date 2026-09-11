@@ -1146,8 +1146,8 @@
       "data": {
         "type": "object",
         "properties": {
-          "calendar_connected": {
-            "type": "boolean"
+          "calendar_backing": {
+            "type": "string"
           },
           "slots": {
             "type": "array",
@@ -1172,7 +1172,7 @@
           }
         },
         "required": [
-          "calendar_connected",
+          "calendar_backing",
           "slots",
           "truncated"
         ]
