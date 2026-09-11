@@ -200,6 +200,17 @@ func (s *Store) MatchLinkedInConnectionsForPerson(ctx context.Context, owner, pe
 // contact you cannot see exists.
 const ghostOwnerCapturePrivacy = `(p.visibility <> 'owner' OR p.owner_id = g.owner_user_id)`
 
+// noConfirmedRivalConnection excludes a contact the same member already has a
+// confirmed LinkedIn connection to. One contact is not two different
+// connections of the same colleague, so a second one is not matched onto them.
+// The address tier and the name tier both apply it, over the same g (connection)
+// and p (person) aliases.
+const noConfirmedRivalConnection = `NOT EXISTS (
+			           SELECT 1 FROM linkedin_connection other
+			            WHERE other.matched_person_id = p.id
+			              AND other.owner_user_id = g.owner_user_id
+			              AND other.match_status = 'confirmed')`
+
 // emailMatchCandidates reads the ghosts whose address is already a known
 // contact's address. An address identifies a person, so every such pair is
 // confirmable: the applier auto-confirms it for a caller that may edit a contact
@@ -235,6 +246,7 @@ func emailMatchCandidates(ctx context.Context, tx pgx.Tx, owner, onlyPerson ids.
 		   AND ($%[1]d::uuid IS NULL OR g.owner_user_id = $%[1]d)
 		   AND ($%[3]d::uuid IS NULL OR p.id = $%[3]d)
 		   AND `+ghostOwnerCapturePrivacy+`
+		   AND `+noConfirmedRivalConnection+`
 		   AND (%[2]s)`, ownerPos, visible, personPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("people: reading LinkedIn address matches: %w", err)
@@ -303,11 +315,7 @@ var nameEmployerCandidatesSQL = `
 		       -- arrives as SQL NULL and ` + "`<> ALL(NULL)`" + ` is NULL — which would
 		       -- reject every contact; the empty array admits them all.
 		       AND p.id <> ALL(COALESCE($%[4]d::uuid[], '{}'))
-		       AND NOT EXISTS (
-		           SELECT 1 FROM linkedin_connection other
-		            WHERE other.matched_person_id = p.id
-		              AND other.owner_user_id = g.owner_user_id
-		              AND other.match_status = 'confirmed')
+		       AND ` + noConfirmedRivalConnection + `
 		),
 		candidate AS (
 		    -- The count is over distinct PEOPLE one ghost matches, which is what

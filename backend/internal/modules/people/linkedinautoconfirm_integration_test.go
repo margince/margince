@@ -192,6 +192,40 @@ func TestAContactTheAddressTierConfirmsIsNotAlsoNameSuggested(t *testing.T) {
 	}
 }
 
+// One contact is not two of a colleague's connections, on the address tier as
+// on the name tier: a second connection carrying an address already confirmed
+// against a contact is not confirmed onto them again — it would double-count the
+// colleague's reach into that contact's account.
+func TestAnAddressIsNotConfirmedOntoAContactAlreadyMet(t *testing.T) {
+	e := setupDedupe(t)
+	dana := e.seedContact(t, "Dana Buyer")
+	e.seedEmail(t, dana, "dana@acme.test")
+	// The owner already has a confirmed connection to Dana.
+	if err := e.store.tx(e.as(), func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.as(), `
+			INSERT INTO linkedin_connection
+			  (owner_user_id, full_name, normalized_name, matched_person_id, match_status, source)
+			VALUES ($1, 'Dana Buyer', 'dana buyer', $2, 'confirmed', 'csv_export')`,
+			e.rep, dana)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the confirmed connection: %v", err)
+	}
+	// A second connection of the owner's carrying the same address.
+	e.seedEmailGhost(t, "Dana B Buyer", "dana@acme.test", "https://www.linkedin.com/in/dana-2")
+
+	res, err := e.store.MatchLinkedInConnections(e.as(), e.rep)
+	if err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	if res.Confirmed != 0 {
+		t.Errorf("the pass reported %+v, want nothing confirmed — the contact is already met", res)
+	}
+	if status, _ := e.ghostStatus(t, "Dana B Buyer"); status != "unmatched" {
+		t.Errorf("the duplicate connection is %q, want unmatched — one contact is not two of a colleague's connections", status)
+	}
+}
+
 // assertConfirmWroteEverything checks the whole write shape a confirmation owes:
 // the handle on the contact, an audit row on both the connection and the
 // contact, and the two events.
