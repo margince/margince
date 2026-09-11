@@ -3529,6 +3529,11 @@ export const vi = {
   "compose.consentBlockedTitle": "Bị chặn gửi — chưa có chấp thuận",
   "compose.consentBlocked":
     "Một người nhận chưa chấp thuận cho mục đích này, nên lượt gửi bị chặn (mặc định từ chối).",
+  "directSend.open": "Gửi kèm ngoại lệ được ghi nhận",
+  "directSend.opening": "Đang mở…",
+  "directSend.alreadySettled":
+    "Việc này đã được quyết định. Hãy mở phần xem xét để biết điều gì đã xảy ra.",
+  "directSend.couldNotOpen": "Không mở được phần xem xét. Hãy thử lại.",
   "directSend.title": "Vẫn gửi, theo thẩm quyền của bạn",
   "directSend.confirm": "Ghi nhận ngoại lệ và gửi",
   "directSend.failed":

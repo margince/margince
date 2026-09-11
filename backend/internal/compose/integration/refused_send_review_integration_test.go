@@ -768,12 +768,50 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 	// pass while the refusal promised a move this caller cannot make — which is
 	// the bug it exists to catch.
 	//
-	// This caller is the human who pressed send, so routing a decision is
-	// theirs to do.
+	// The fixture signs in as an admin, who holds communication_exception — so
+	// the move offered is the SEND rather than the ask. Which one a person sees
+	// is the server's decision and turns on that grant; the test below takes
+	// the grant away and watches the offer change.
+	if len(problem.Details.AvailableActions) != 1 ||
+		problem.Details.AvailableActions[0] != "direct_send" {
+		t.Errorf("the refusal offers %v, want exactly [direct_send] — a rep who may overrule the "+
+			"engine is offered the send, not a note asking somebody else to",
+			problem.Details.AvailableActions)
+	}
+}
+
+// A REP WHO CANNOT OVERRULE THE ENGINE IS OFFERED THE ASK INSTEAD.
+//
+// The two are answers to one question — "this was refused, now what" — and
+// which a person sees is decided by what they may actually do. Offering a
+// holder the ask would tell them to go around themselves; offering somebody
+// without the grant the send would be a button that fails when pressed.
+func TestARepWhoCannotOverruleTheEngineIsOfferedTheAsk(t *testing.T) {
+	c := setupConsent(t)
+
+	// The seat loses the grant that makes somebody a director.
+	if _, err := c.Owner.Exec(context.Background(), `
+		UPDATE role SET permissions = jsonb_set(
+			permissions, '{objects,communication_exception}',
+			'{"create":false,"read":false,"update":false,"delete":false}'::jsonb, true)`); err != nil {
+		t.Fatalf("removing the grant: %v", err)
+	}
+
+	var problem struct {
+		Details struct {
+			AvailableActions []string `json:"available_actions"`
+		} `json:"details"`
+	}
+	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"}, "consent_purpose": "marketing_email",
+	}, nil, &problem); status != http.StatusConflict {
+		t.Fatalf("marketing send with no grant → %d, want 409", status)
+	}
 	if len(problem.Details.AvailableActions) != 1 ||
 		problem.Details.AvailableActions[0] != "request_decision" {
-		t.Errorf("the refusal offers %v, want exactly [request_decision] — a rep who was refused "+
-			"is told what they may do about it", problem.Details.AvailableActions)
+		t.Errorf("the refusal offers %v, want exactly [request_decision] — a rep who cannot "+
+			"direct a send would press a button that fails", problem.Details.AvailableActions)
 	}
 }
 

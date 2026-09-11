@@ -63,6 +63,10 @@ export function SendReviewActions({
       queryClient.invalidateQueries({ queryKey: ["communication-review"] }),
   });
 
+  // THE DIRECT SEND IS THE OTHER ANSWER to the same question, and it is not
+  // this component's to draw: it needs the review itself — the held message,
+  // the served warning — which a refusal does not carry. SendRefusal fetches
+  // that and opens the modal.
   if (!review.actions.includes("request_decision")) {
     return null;
   }
