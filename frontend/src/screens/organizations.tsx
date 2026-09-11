@@ -64,6 +64,11 @@ import {
 } from "./company360";
 import { NewDealAction } from "./companyactions";
 import { CompanyApprovalsPanel } from "./companyapprovals";
+import {
+  citationHasReceipt,
+  citationOpensRecord,
+  openCitation,
+} from "./companycitations";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyContractsCard } from "./companycontracts";
 import { CompanyDocumentsCard } from "./companydocuments";
@@ -2456,38 +2461,6 @@ function CompanyTasksTab({
       }
     />
   );
-}
-
-// openCitation routes a cited record to its own screen. The brief, the
-// prepared answers and the suggestions all cite the same records, so they
-// share one route — a second copy would drift and send one card's reader to
-// the wrong screen.
-// A citation goes to one of two places. A deal or a person has a screen of its
-// own; a fact or a profile field has no screen, but it does have a receipt —
-// where the value came from and what could not be recorded about it — which is
-// what the reader wanted when they clicked the chip.
-function citationOpensRecord(entityType: string): boolean {
-  return entityType === "deal" || entityType === "person";
-}
-
-// An activity opens the MESSAGE, in the account page's own email drawer.
-//
-// The kinds a receipt can be written for. Narrowing HERE rather than asserting
-// at the fetch is what keeps the modal's contract honest: a kind that grows a
-// receipt upstream fails to compile until this decision learns about it.
-function citationHasReceipt(
-  entityType: string,
-): entityType is CitedRecord["entityType"] {
-  return entityType === "fact" || entityType === "profile_field";
-}
-
-function openCitation(entityType: string, entityId: string) {
-  if (entityType === "deal") {
-    navigate({ screen: "deals", id: entityId });
-  }
-  if (entityType === "person") {
-    navigate({ screen: "contacts", id: entityId });
-  }
 }
 
 // The reference material a reader opens when the summary above is not enough.
