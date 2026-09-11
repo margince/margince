@@ -303,9 +303,7 @@ describe("the deals tab", () => {
           // picker had nothing to do with.
           return page([{ id: "d-9", name: "Depot expansion 2027" }]);
         },
-        "GET /organizations": () => {
-          // The contract path is still /organizations; the record is called a
-          // company, which is the word this marker uses.
+        "GET /companies": () => {
           searched.push("companies");
           return page([]);
         },

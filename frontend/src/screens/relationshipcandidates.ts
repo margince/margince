@@ -17,7 +17,7 @@ export type Candidate = { id: string; name: string };
 // include_anchor: recording that a person works at the company running the CRM
 // is an ordinary, frequent fact. The list hides the own company by default
 // because it answers "which companies are we selling to"; this question is a
-// different one, so it opts back in (ADR-0082/A127).
+// different one, so it opts back in (ADR-0082).
 async function searchCompanyCandidates(q: string): Promise<Candidate[]> {
   const { data, error } = await api.GET("/companies", {
     params: { query: { q, limit: 10, include_anchor: true } },
@@ -62,9 +62,9 @@ async function searchDealCandidates(q: string): Promise<Candidate[]> {
 }
 
 // The entity kinds this tab can ever pick as a relationship's other side —
-// company/person/deal, per the rel_*_shape CHECKs (migration 0007). A
-// lead has no relationship edges (it is promoted into a person first) and a
-// project seats its stakeholders through its own endpoint, so
+// company/person/deal, which is what the rel_*_shape CHECKs admit. A lead has
+// no relationship edges (it is promoted into a person first) and a project
+// seats its stakeholders through its own endpoint, so
 // this narrows EntityKind rather than switching on a kind the module can
 // never produce.
 export type RelationshipEntity = Exclude<EntityKind, "lead" | "project">;
