@@ -390,6 +390,50 @@ resource "aws_wafv2_web_acl" "alb" {
     }
   }
 
+  # backend/internal/modules/identity/handlers.go's own limiters
+  # (loginPerIP: 30/min, loginFailures: 10/min per email+IP) are, by their own
+  # comment, "single-binary scope" — in-memory per api TASK, not shared
+  # across the fleet. With api_desired_count/api_autoscaling_max_count
+  # (variables.tf) putting 2-4 api tasks behind this ALB, an attacker's
+  # requests spread across tasks by the ALB see up to N independent budgets,
+  # not one shared one — the effective fleet-wide ceiling scales UP with
+  # every task ECS adds, which is exactly backwards for a login endpoint.
+  # This rule closes that gap the only place that sees traffic before it
+  # fans out to any task at all: 100/5min (WAF's floor — rate_based_statement
+  # can't go lower) is tighter per-IP than any single task's own 30/min, and
+  # unlike the app's limiter, it holds regardless of fleet size.
+  rule {
+    name     = "RateLimitAuthPaths"
+    priority = 6
+    action {
+      block {}
+    }
+    statement {
+      rate_based_statement {
+        limit              = 100
+        aggregate_key_type = "IP"
+        scope_down_statement {
+          byte_match_statement {
+            search_string         = "/v1/auth/"
+            positional_constraint = "STARTS_WITH"
+            field_to_match {
+              uri_path {}
+            }
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      sampled_requests_enabled   = true
+      metric_name                = "${var.name_prefix}-rate-limit-auth"
+    }
+  }
+
   visibility_config {
     cloudwatch_metrics_enabled = true
     sampled_requests_enabled   = true
@@ -421,4 +465,22 @@ resource "aws_cloudwatch_log_group" "waf" {
 resource "aws_wafv2_web_acl_logging_configuration" "alb" {
   resource_arn            = aws_wafv2_web_acl.alb.arn
   log_destination_configs = [aws_cloudwatch_log_group.waf.arn]
+
+  # WAF logs the full request by default — headers included. Without this,
+  # every session cookie and bearer token that ever crossed the ALB sits in
+  # plaintext in a CloudWatch Logs group retained for
+  # var.log_retention_days, readable by anyone with logs:GetLogEvents on it.
+  # Redacting here doesn't stop the request from being evaluated (WAF still
+  # sees the real header when deciding allow/block); it only replaces the
+  # value with REDACTED in what gets written to aws_cloudwatch_log_group.waf.
+  redacted_fields {
+    single_header {
+      name = "authorization"
+    }
+  }
+  redacted_fields {
+    single_header {
+      name = "cookie"
+    }
+  }
 }

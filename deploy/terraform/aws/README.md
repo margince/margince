@@ -226,11 +226,36 @@ SSE-S3-only bucket (`aws_s3_bucket.alb_logs` — Elastic Load Balancing does not
 support SSE-KMS for this destination, unlike every other bucket in this
 stack) with a 90-day expiry and a bucket policy scoped to this account's
 load balancers only. A baseline `aws_wafv2_web_acl` sits in front of it: AWS's
-Managed Common Rule Set, Known Bad Inputs, and IP Reputation rule groups,
-plus a 2000-req/5-min per-IP rate limit — all in blocking mode, logged to
-`aws-waf-logs-<name_prefix>` in CloudWatch Logs. This is a floor, not tuned
-rules for any particular deployment's traffic; see the shared README's "What
-this does NOT cover".
+Managed Common Rule Set, Known Bad Inputs, IP Reputation, and SQLi rule
+groups, a 2000-req/5-min per-IP rate limit, plus a second, tighter
+100-req/5-min-per-IP rule scoped to `/v1/auth/*` — all in blocking mode,
+logged to `aws-waf-logs-<name_prefix>` in CloudWatch Logs with the
+`authorization` and `cookie` headers redacted from what's actually written
+(WAF logs the full request by default; without this, every bearer token and
+session cookie that crossed the ALB would sit in plaintext in a CloudWatch
+Logs group). The auth-path rule exists because
+`backend/internal/modules/identity/handlers.go`'s own login limiters are, by
+their own comment, "single-binary scope" — in-memory per api task, not
+shared across the fleet, so `api_autoscaling_max_count` (`variables.tf`)
+scaling out to more tasks scales the *effective* fleet-wide login-attempt
+budget up too, backwards for what a login endpoint wants. This WAF rule is
+the one point that sees traffic before it fans out to any task. This is a
+floor, not tuned rules for any particular deployment's traffic; see the
+shared README's "What this does NOT cover".
+
+**VPC endpoints** (`vpc-endpoints.tf`): every endpoint (the S3 Gateway
+endpoint and all 5 interface endpoints) now carries a policy restricting use
+to THIS account's own IAM principals (`aws:PrincipalAccount`) — actions and
+resources are deliberately left to IAM (already scoped per role in
+`iam.tf`; duplicating that here would drift). What this adds that IAM can't:
+if a task ever ended up holding another account's credentials (a
+copy-pasted key, a supply-chain compromise), those credentials could still
+authenticate to AWS, but this condition refuses them at the endpoint before
+the call reaches the service. Deliberately NOT an `s3:ResourceAccount`-style
+restriction on the S3 endpoint specifically — that same Gateway endpoint
+also carries ECR's own image-layer blob storage, which lives in AWS-owned
+buckets outside this account; restricting by resource account would break
+every image pull.
 
 **Tags**: every resource that supports tags carries `Project`/`ManagedBy`
 (provider `default_tags`, `versions.tf`) plus a per-stack `Environment`
@@ -315,6 +340,26 @@ second bucket standing up to hold nothing but a different prefix.
 
 **Deliberately not done**:
 
+- **GuardDuty.** VPC Flow Logs (`network.tf`) and the WAF logs above are raw
+  signal, not analysis — nothing in this stack currently looks at either for
+  an actual threat pattern. GuardDuty is the service that does (it consumes
+  Flow Logs, DNS logs, and CloudTrail directly, no VPC placement needed),
+  and it would put those Flow Logs added this round to first use. Not
+  enabled here because it's a new account/region-level service with its own
+  ongoing per-GB-analyzed billing — an operator's own opt-in, not a default
+  this stack picks silently the way a resource-level Terraform tweak can.
+- **Network ACLs.** Left at the account default (allow all), on purpose —
+  every security group in `network.tf` is already scoped to exactly the
+  traffic each resource needs; a NACL adds a second, stateless enforcement
+  layer on top with its own rule-numbering and return-traffic bookkeeping to
+  keep in sync by hand, for marginal incremental narrowing over what the
+  SGs already refuse. A real add for a compliance mandate that specifically
+  asks for defense-in-depth at the subnet layer, not a default.
+- **Shield Advanced / WAF Bot Control.** Both are real, both are metered
+  per-month options on top of what's here (Shield Advanced for L3/L4 DDoS
+  with a cost-protection SLA, Bot Control for bot-traffic classification) —
+  left for an operator whose traffic and threat model actually calls for
+  them, per the shared README's "What this does NOT cover".
 - **Secrets Manager rotation** for `owner_dsn`/`app_dsn` needs a custom
   rotation Lambda — AWS's canned single-user rotation templates rotate a
   JSON secret shaped `{host, username, password, ...}`, and these secrets are
