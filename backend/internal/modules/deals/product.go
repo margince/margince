@@ -221,13 +221,13 @@ const (
 	productActiveField = "active"
 )
 
-var productListFields = map[string]string{
-	listCreatedAtColumn: storekit.KindTimestamp,
-	listUpdatedAtColumn: storekit.KindTimestamp,
-	productNameColumn:   fieldcatalog.TypeText,
-	productSkuColumn:    fieldcatalog.TypeText,
-	productPriceColumn:  fieldcatalog.TypeCurrency,
-	productActiveField:  fieldcatalog.TypeBoolean,
+var productListFields = map[string]storekit.SortField{
+	listCreatedAtColumn: storekit.Column(storekit.KindTimestamp),
+	listUpdatedAtColumn: storekit.Column(storekit.KindTimestamp),
+	productNameColumn:   storekit.Column(fieldcatalog.TypeText),
+	productSkuColumn:    storekit.Column(fieldcatalog.TypeText),
+	productPriceColumn:  storekit.Column(fieldcatalog.TypeCurrency),
+	productActiveField:  storekit.Column(fieldcatalog.TypeBoolean),
 }
 
 func (s *Store) ListProducts(ctx context.Context, in ListProductsInput) ([]crmcontracts.Product, storekit.Page, error) {

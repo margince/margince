@@ -14,16 +14,19 @@ package integration
 // columns were. Lars ruled on 2026-08-21 that the rule is the columns, for
 // every list in the product.
 //
-// Two of the four are reachable today and are held here. The other two are
-// JOINED columns — a stage orders by its position in its pipeline, a partner by
-// the organization's name — and the list machinery renders one quoted
-// identifier of the row's own table, so they need the sort model to take an
-// expression first. That is why this file pins two rather than four, and it is
-// stated so a reader does not read the gap as an oversight.
+// Three of them are not columns of `deal` at all. A stage orders by its
+// position in its PIPELINE — alphabetical stages are the funnel shuffled — and
+// the two organizations order by the referenced company's name. Each is held
+// here, and so is the rule that makes a reference sort safe to offer: ordering
+// by a value is reading it, so a company this reader may not open must not
+// order the page by the name it is being refused.
 
 import (
+	"context"
+	"slices"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -99,5 +102,206 @@ func TestTheDealsListStillRefusesAFieldItDoesNotPublish(t *testing.T) {
 	notPublished := "captured_by"
 	if _, _, err := f.store.ListDeals(f.ctx, deals.ListDealsInput{Sort: &notPublished}); err == nil {
 		t.Fatal("the list sorted by a column it does not publish — the vocabulary has stopped being one, and a caller can now order by anything the table holds")
+	}
+}
+
+// dealsIn lists the deals this caller sees under one sort spec, in order.
+func dealsIn(ctx context.Context, t *testing.T, e *Env, spec string) []ids.UUID {
+	t.Helper()
+	rows, _, err := e.Deals.ListDeals(ctx, deals.ListDealsInput{Sort: &spec})
+	if err != nil {
+		t.Fatalf("ListDeals(sort=%s): %v", spec, err)
+	}
+	out := make([]ids.UUID, len(rows))
+	for i, d := range rows {
+		out[i] = ids.UUID(d.Id)
+	}
+	return out
+}
+
+// A stage sorts by its place in the pipeline, which is the only order anybody
+// sorting by stage means.
+//
+// The seeded pipeline's stages are deliberately NOT in alphabetical order, so a
+// sort that fell back to the name would put them the other way round — which is
+// how the assertion tells the two apart.
+func TestTheDealsListSortsStagesByPipelineOrderAndNotByName(t *testing.T) {
+	e := Setup(t)
+	pipeline, _, _ := DealFixture(t, e)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
+
+	stages, err := e.Deals.DefaultPipeline(e.Admin())
+	if err != nil {
+		t.Fatalf("reading the seeded pipeline: %v", err)
+	}
+	// Open stages only: a deal cannot be created on Won or Lost, which are
+	// reached by advancing rather than by filing.
+	var open []crmcontracts.Stage
+	for _, st := range *stages.Stages {
+		if st.Semantic == "open" {
+			open = append(open, st)
+		}
+	}
+	if len(open) < 3 {
+		t.Fatalf("the seeded pipeline has %d open stages; this case needs three", len(open))
+	}
+	// The case turns on the two orders disagreeing. Asserted rather than
+	// assumed: rename the seeded stages into alphabetical order and this test
+	// would pass over a sort that had fallen back to the name.
+	byName := make([]string, 0, len(open))
+	for _, st := range open {
+		byName = append(byName, st.Name)
+	}
+	if slices.IsSorted(byName) {
+		t.Fatalf("the seeded open stages %v are already in alphabetical order, so this case "+
+			"cannot tell pipeline order from name order", byName)
+	}
+
+	// One deal per stage, seeded LAST-stage-first so insertion order is the
+	// reverse of the answer and the default sort cannot produce it either.
+	want := make([]ids.UUID, len(open))
+	for i := len(open) - 1; i >= 0; i-- {
+		st := ids.From[ids.StageKind](ids.UUID(open[i].Id))
+		want[i] = e.SeedDeal(t, "Deal in "+open[i].Name, pipeline, st, &e.Rep1)
+	}
+
+	assertIDOrder(t, dealsIn(ctx, t, e, "stage_id"), want, "stage ascending (pipeline order)")
+
+	reversed := make([]ids.UUID, 0, len(want))
+	for i := len(want) - 1; i >= 0; i-- {
+		reversed = append(reversed, want[i])
+	}
+	assertIDOrder(t, dealsIn(ctx, t, e, "-stage_id"), reversed, "stage descending")
+}
+
+// A reference sorts by the referenced company's NAME, which is what a reader
+// clicking the column is asking for — the id it is named after orders nothing
+// anybody can see.
+func TestTheDealsListSortsItsCompanyColumnsByTheCompanyName(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
+
+	// Named so that ordering by the company disagrees with ordering by the
+	// deal's own name, which is the only way to tell which one answered.
+	zeta := e.SeedOrg(t, "Zeta Holding", &e.Rep1)
+	alma := e.SeedOrg(t, "Alma Werke", &e.Rep1)
+	first := seedDealForCompany(t, e, "A deal", pipeline, open, zeta)
+	second := seedDealForCompany(t, e, "B deal", pipeline, open, alma)
+
+	assertIDOrder(t, dealsIn(ctx, t, e, "organization_id"),
+		[]ids.UUID{second, first}, "company ascending — Alma before Zeta")
+	assertIDOrder(t, dealsIn(ctx, t, e, "-organization_id"),
+		[]ids.UUID{first, second}, "company descending")
+}
+
+// A company this reader may not open orders the page by NOTHING.
+//
+// Ordering by a value is reading it. A page ordered by a name the reader is
+// refused would disclose it through the order — read the list ascending and
+// descending and the hidden company's position tells you where its name falls
+// in the alphabet. It sorts into the NULL tail instead, which is where every
+// deal whose company the reader cannot see lands together, and which says the
+// same thing the row itself says: nothing.
+func TestAnUnreadableCompanyOrdersTheDealsListByNothing(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
+
+	// "Alma" sorts first of the three by name. Hidden from this reader, it must
+	// sort last instead — with the deal that names no company at all.
+	hidden := e.SeedOrg(t, "Alma Werke", &e.Rep3)
+	mid := e.SeedOrg(t, "Mercator", &e.Rep1)
+	last := e.SeedOrg(t, "Zeta Holding", &e.Rep1)
+
+	secret := seedDealForCompany(t, e, "Deal with the hidden company", pipeline, open, hidden)
+	// Made private AFTER the deal is filed, which is the real sequence: a
+	// company goes capture-private while the deals naming it stay where they
+	// were.
+	e.MakeCapturePrivate(t, "organization", hidden, e.Rep3)
+	middle := seedDealForCompany(t, e, "Deal with Mercator", pipeline, open, mid)
+	zeta := seedDealForCompany(t, e, "Deal with Zeta", pipeline, open, last)
+
+	// Admitted first: the reader must SEE all three deals, so what the sort
+	// does below is the company's visibility and not the deal's.
+	if got := dealsIn(ctx, t, e, "name"); len(got) != 3 {
+		t.Fatalf("the reader sees %d deals, want 3 — this case would prove nothing about the ordering", len(got))
+	}
+
+	ascending := dealsIn(ctx, t, e, "organization_id")
+	assertIDOrder(t, ascending, []ids.UUID{middle, zeta, secret},
+		"company ascending — the unreadable one in the tail, not first")
+
+	// And the same position under the other direction. A name that really was
+	// ordering the page would move to the other end.
+	assertIDOrder(t, dealsIn(ctx, t, e, "-organization_id"), []ids.UUID{zeta, middle, secret},
+		"company descending — still the tail, because there is nothing to order by")
+}
+
+// seedDealForCompany creates a deal filed under one company, through the real
+// writer.
+func seedDealForCompany(
+	t *testing.T, e *Env, name string, pipeline ids.PipelineID, stage ids.StageID, org ids.UUID,
+) ids.UUID {
+	t.Helper()
+	orgID := ids.From[ids.OrganizationKind](org)
+	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: name, PipelineID: pipeline, StageID: stage,
+		OrganizationID: &orgID, OwnerID: userIDPtr(&e.Rep1),
+	})
+	if err != nil {
+		t.Fatalf("creating %q: %v", name, err)
+	}
+	return ids.UUID(d.Id)
+}
+
+// The page continues under a reference sort, including across the NULL tail.
+//
+// The keyset cursor carries the sort field's key and continues strictly past
+// it, so an expression sort has to render the SAME expression in the ORDER BY
+// and in the continuation — order by one and continue by another and a page
+// boundary repeats rows or skips them. One row at a time is the setting that
+// makes every boundary a boundary.
+func TestAReferenceSortPagesWithoutRepeatingOrSkipping(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
+
+	hidden := e.SeedOrg(t, "Alma Werke", &e.Rep3)
+	named := []ids.UUID{
+		seedDealForCompany(t, e, "Deal with the hidden company", pipeline, open, hidden),
+		seedDealForCompany(t, e, "Deal with Mercator", pipeline, open, e.SeedOrg(t, "Mercator", &e.Rep1)),
+		seedDealForCompany(t, e, "Deal with Zeta", pipeline, open, e.SeedOrg(t, "Zeta Holding", &e.Rep1)),
+	}
+	// Two rows in the NULL tail — the hidden company and a deal filed under no
+	// company at all — because the tail is where the continuation changes shape.
+	bare := e.SeedDeal(t, "Deal with nobody", pipeline, open, &e.Rep1)
+	e.MakeCapturePrivate(t, "organization", hidden, e.Rep3)
+
+	spec, one := "organization_id", 1
+	var walked []ids.UUID
+	var cursor *string
+	for range len(named) + 2 {
+		rows, page, err := e.Deals.ListDeals(ctx, deals.ListDealsInput{Sort: &spec, Limit: &one, Cursor: cursor})
+		if err != nil {
+			t.Fatalf("paging by company: %v", err)
+		}
+		for _, d := range rows {
+			walked = append(walked, ids.UUID(d.Id))
+		}
+		if page.NextCursor == "" {
+			break
+		}
+		next := page.NextCursor
+		cursor = &next
+	}
+
+	// Every deal once, in the same order the unpaged read gives.
+	assertIDOrder(t, walked, dealsIn(ctx, t, e, spec), "paged one at a time by company")
+	if len(walked) != len(named)+1 {
+		t.Fatalf("walked %d deals, want %d — a boundary repeated or skipped one", len(walked), len(named)+1)
+	}
+	if walked[len(walked)-1] != bare && walked[len(walked)-2] != bare {
+		t.Errorf("the company-less deal landed at %v, not in the NULL tail", walked)
 	}
 }

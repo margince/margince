@@ -82,7 +82,7 @@ func (s *Store) ListOrganizationDocuments(
 		// Keyset, not offset: the library is ordered pinned-then-newest and a
 		// page boundary has to survive a pin being added between two reads.
 		if in.Cursor != nil && *in.Cursor != "" {
-			sort, err := documentSort()
+			sort, err := documentSort(ctx)
 			if err != nil {
 				return err
 			}
@@ -122,7 +122,7 @@ func (s *Store) ListOrganizationDocuments(
 		}
 		if len(out) > lim {
 			out = out[:lim]
-			p, err := documentPage(out[len(out)-1])
+			p, err := documentPage(ctx, out[len(out)-1])
 			if err != nil {
 				return err
 			}
@@ -154,9 +154,9 @@ func (s *Store) ListOrganizationDocuments(
 // fixed here and ParseListSort is only the constructor — which is why the error
 // is returned rather than swallowed: the alternative to a parseable sort is an
 // unordered library, not a default one.
-func documentSort() (*storekit.ListSort, error) {
+func documentSort(ctx context.Context) (*storekit.ListSort, error) {
 	spec := "-pinned"
-	sort, err := storekit.ParseListSort(&spec, map[string]string{"pinned": fieldcatalog.TypeBoolean})
+	sort, err := storekit.ParseListSort(ctx, &spec, map[string]storekit.SortField{"pinned": storekit.Column(fieldcatalog.TypeBoolean)}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("activities: the document library's fixed sort no longer parses: %w", err)
 	}
@@ -448,8 +448,8 @@ func documentMetadataPatch(before crmcontracts.Attachment, in DocumentMetadata) 
 // the PINNED half as well as the house (created_at, id) tuple, because the
 // library orders on all three — a token that dropped it would strand every
 // newer unpinned document behind the pinned group.
-func documentPage(last crmcontracts.Attachment) (storekit.Page, error) {
-	sort, err := documentSort()
+func documentPage(ctx context.Context, last crmcontracts.Attachment) (storekit.Page, error) {
+	sort, err := documentSort(ctx)
 	if err != nil {
 		return storekit.Page{}, err
 	}
