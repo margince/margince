@@ -768,9 +768,7 @@ async function fetchHierarchyRollup(
 ): Promise<OrganizationHierarchyRollup> {
   const { data, error } = await api.GET(
     "/organizations/{id}/hierarchy-rollup",
-    {
-      params: { path: { id: orgId }, query: { scope: "tree" } },
-    },
+    { params: { path: { id: orgId }, query: { scope: "tree" } } },
   );
   if (error) {
     if (error.code === "fx_rate_unavailable") {
@@ -1266,12 +1264,7 @@ function useChronologySlots({
     // An account holds no currency of its own: a minor-unit column on this
     // record says so rather than printing a bare integer under a currency it
     // was never denominated in.
-    values: {
-      currency: null,
-      locale,
-      zone: recordZone,
-      nameOf: colleagueName,
-    },
+    values: { currency: null, locale, zone: recordZone, nameOf: colleagueName },
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}
