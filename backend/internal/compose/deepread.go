@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -82,15 +83,23 @@ const (
 const DeepReadPriorityLive = river.PriorityDefault
 
 // DeepReadPriorityHousekeeping is the priority a sweep-sourced deep read
-// carries: River's lowest tier (4 of 4). capture_auto_enrich_sweep and
-// domain triage's own periodic pass both run at boot and can fan out dozens
-// of reads in one pass — at River's default priority that fan-out queued
-// ahead of a live read arriving moments later, holding it behind up to the
-// whole boot-time backlog on a pool sized for on-demand traffic. Lowest
-// priority means a live read waiting behind the fan-out is fetched first the
-// instant a worker frees, and a housekeeping read that loses that race is not
-// lost: sweepWorkspace already tolerates exactly this ("a pass that stops
-// early simply leaves the rest due for tomorrow").
+// carries: River's lowest tier — its documented range is 1 (highest) to 4
+// (lowest), with no named constant for either end but PriorityDefault.
+// capture_auto_enrich_sweep and domain triage's own periodic pass both run
+// at boot and can fan out dozens of reads in one pass — at River's default
+// priority that fan-out queued ahead of a live read arriving moments later,
+// holding it behind up to the whole boot-time backlog on a pool sized for
+// on-demand traffic. Lowest priority means a live read waiting behind the
+// fan-out is fetched first the instant a worker frees.
+//
+// This is a real, accepted starvation risk, not a self-healing one: River
+// itself documents that sustained higher-priority traffic can leave a
+// lower-priority job unfetched indefinitely, and nothing here bounds that —
+// sweepWorkspace's own daily-cap tolerance ("a pass that stops early simply
+// leaves the rest due for tomorrow") covers an org never yet QUEUED, not a
+// job already sitting in river_job at this priority. What actually bounds
+// the case that matters — a live caller waiting on the SAME organization a
+// sweep already queued — is promoteQueuedSiteReadPriority, not this comment.
 const DeepReadPriorityHousekeeping = 4
 
 // siteDeepReadInsertOpts routes the job to its own queue, deduplicates by
@@ -108,6 +117,42 @@ func siteDeepReadInsertOpts(priority int) *river.InsertOpts {
 		MaxAttempts: sweptJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true},
 	}
+}
+
+// promoteQueuedSiteReadPriority raises an already-queued read's priority to
+// DeepReadPriorityLive when a human or agent action JOINS it rather than
+// starting it.
+//
+// The gap this closes: createOrJoinSiteRead's join branch (people/siteread.go)
+// never calls the enqueue callback — the job those args would produce already
+// exists, and River's own ByArgs uniqueness would silently drop a re-insert
+// anyway. So a live request arriving for the same organization a boot-time
+// sweep already queued (both derive the identical https://<domain> seed URL)
+// joined a HOUSEKEEPING-priority job with no code path that ever touched its
+// priority again — the exact starvation this file exists to prevent, just
+// one step later than the fresh-insert case siteDeepReadInsertOpts covers.
+//
+// River exposes no client method to change a queued job's priority (only
+// JobUpdateParams.Output), so this reaches river_job directly — the same
+// columns this package's own tests already read off it, now written rather
+// than read. Best effort: a promotion that cannot land leaves the read to run
+// at its original priority rather than failing the request that only wanted
+// to know a read was already in flight.
+func promoteQueuedSiteReadPriority(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, readID ids.UUID) {
+	if pool == nil {
+		return
+	}
+	// river_job belongs to platform/jobs (tableownership_test.go); this
+	// package asks rather than writes it directly.
+	if _, err := jobs.PromotePriority(ctx, pool, SiteDeepReadArgs{}.Kind(),
+		"site_read_id", readID.String(), DeepReadPriorityLive); err != nil {
+		log.WarnContext(ctx, "deep read: could not promote a joined read's priority",
+			"site_read_id", readID.String(), "err", err)
+	}
+	// A false, no-error result is not logged: the joined read may already be
+	// live-priority (two live callers racing), already claimed by a worker,
+	// or finished between the join and this call — none of those are a
+	// problem this request needs to know about.
 }
 
 // siteDeepReadWorker runs one queued deep read: claim the dossier, crawl,

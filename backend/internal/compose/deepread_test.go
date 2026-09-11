@@ -5,12 +5,11 @@ package compose
 
 import "testing"
 
-// TestSiteDeepReadInsertOptsRoutesQueueAndCarriesTheGivenPriority holds the
-// one thing every one of the four site_deep_read call sites depends on: the
-// job always lands on deepReadQueue, deduplicates by args, and carries
-// whichever priority the caller declared for itself — the primitive the fix
-// for margince#5122 (a boot-time sweep's fan-out queuing ahead of a live
-// read) rests on.
+// TestSiteDeepReadInsertOptsRoutesQueueAndCarriesTheGivenPriority holds what
+// every site_deep_read caller depends on: the job always lands on
+// deepReadQueue, deduplicates by args, and carries whichever priority the
+// caller declared for itself — and that DeepReadPriorityLive is fetched
+// before DeepReadPriorityHousekeeping, not the other way around.
 func TestSiteDeepReadInsertOptsRoutesQueueAndCarriesTheGivenPriority(t *testing.T) {
 	for _, priority := range []int{DeepReadPriorityLive, DeepReadPriorityHousekeeping} {
 		opts := siteDeepReadInsertOpts(priority)
