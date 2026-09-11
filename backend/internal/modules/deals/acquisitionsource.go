@@ -48,6 +48,19 @@ const acquisitionVocabularyObject = "custom_field"
 // update paths both map it to the same field error.
 const dealAcquisitionSourceConstraint = "deal_acquisition_source_fkey"
 
+// The catalog's own column and field names: the wire field a refusal names,
+// and the two columns a create and an edit write.
+const (
+	acquisitionSourceField = "acquisition_source"
+	sourceLabelColumn      = "label"
+	sourceKeyColumn        = "key"
+	// The refusal CODE for a missing value. Deliberately not
+	// criterionRequiredColumn, which happens to be the same word while naming
+	// a stage-criterion COLUMN — one is what a client reads off a 422, the
+	// other is a place in a table.
+	codeRequired = "required"
+)
+
 // acquisitionSourceColumns is the catalog's wire projection.
 const acquisitionSourceColumns = `id, key, label, sort_order, active, system, version, created_at, updated_at`
 
@@ -61,7 +74,7 @@ func (e *UnknownAcquisitionSourceError) Error() string {
 // FieldFault names the caller's own field, so the fix is to correct the
 // source rather than to hunt for a missing record.
 func (e *UnknownAcquisitionSourceError) FieldFault() (field, code, message string) {
-	return "acquisition_source", "unknown_acquisition_source", e.Error()
+	return acquisitionSourceField, "unknown_acquisition_source", e.Error()
 }
 
 // RetiredAcquisitionSourceError refuses a retired key for a NEW assignment.
@@ -73,8 +86,10 @@ func (e *RetiredAcquisitionSourceError) Error() string {
 	return "acquisition source " + e.Key + " is retired and cannot be newly assigned"
 }
 
+// FieldFault names the source field, so the caller corrects the value rather
+// than hunting for a missing record.
 func (e *RetiredAcquisitionSourceError) FieldFault() (field, code, message string) {
-	return "acquisition_source", "acquisition_source_retired", e.Error()
+	return acquisitionSourceField, "acquisition_source_retired", e.Error()
 }
 
 // CreateAcquisitionSourceInput adds one channel to the catalog.
@@ -142,7 +157,8 @@ func (s *Store) CreateAcquisitionSource(
 	label := strings.TrimSpace(in.Label)
 	if label == "" {
 		return crmcontracts.AcquisitionSource{}, &values.ParseError{
-			Field: "label", Code: "required", Message: "label is required"}
+			Field: sourceLabelColumn, Code: codeRequired, Message: "label is required",
+		}
 	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
@@ -150,7 +166,10 @@ func (s *Store) CreateAcquisitionSource(
 	}
 	if key == "" || key != strings.ToLower(key) {
 		return crmcontracts.AcquisitionSource{}, &values.ParseError{
-			Field: "key", Code: "invalid_key", Message: "key must be a non-empty lowercase value"}
+			Field:   sourceKeyColumn,
+			Code:    "invalid_key",
+			Message: "key must be a non-empty lowercase value",
+		}
 	}
 	var out crmcontracts.AcquisitionSource
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
@@ -165,7 +184,7 @@ func (s *Store) CreateAcquisitionSource(
 			return fmt.Errorf("insert acquisition source: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "deal_acquisition_source", id, nil,
-			map[string]any{"key": key, "label": label}); err != nil {
+			map[string]any{sourceKeyColumn: key, sourceLabelColumn: label}); err != nil {
 			return err
 		}
 		out, err = readAcquisitionSource(ctx, tx, id)
@@ -186,7 +205,8 @@ func (s *Store) UpdateAcquisitionSource(
 	}
 	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
 		return crmcontracts.AcquisitionSource{}, &values.ParseError{
-			Field: "label", Code: "required", Message: "label cannot be blank"}
+			Field: sourceLabelColumn, Code: codeRequired, Message: "label cannot be blank",
+		}
 	}
 	var out crmcontracts.AcquisitionSource
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
@@ -196,7 +216,7 @@ func (s *Store) UpdateAcquisitionSource(
 		}
 		patch := storekit.NewPatch()
 		if in.Label != nil {
-			patch.Set("label", before.Label, strings.TrimSpace(*in.Label))
+			patch.Set(sourceLabelColumn, before.Label, strings.TrimSpace(*in.Label))
 		}
 		if in.SortOrder != nil {
 			patch.Set("sort_order", before.SortOrder, *in.SortOrder)

@@ -1,3 +1,5 @@
+SET LOCAL lock_timeout = '3s';
+
 DROP INDEX IF EXISTS idx_deal_search;
 ALTER TABLE deal DROP COLUMN IF EXISTS search_tsv;
 ALTER TABLE deal ADD COLUMN search_tsv tsvector

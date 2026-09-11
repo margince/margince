@@ -313,27 +313,7 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		// quietly joining whichever one is asked for.
 		where = append(where, storekit.SQLf("forecast_category = $%d", arg(*in.ForecastCategory)))
 	}
-	for _, f := range []struct {
-		column string
-		value  *string
-	}{
-		{"commercial_motion", in.CommercialMotion},
-		{"priority", in.Priority},
-		{"acquisition_source", in.AcquisitionSource},
-	} {
-		if f.value == nil {
-			continue
-		}
-		// `unset` asks for the deals that carry no value at all. Spelled as a
-		// sentinel rather than an empty parameter because an empty string is
-		// what a cleared form field sends, and "show me everything" is what
-		// that caller meant.
-		if *f.value == filterUnset {
-			where = append(where, storekit.SQLf("%s IS NULL", f.column))
-			continue
-		}
-		where = append(where, storekit.SQLf("%s = $%d", f.column, arg(*f.value)))
-	}
+	where = appendCommercialFilters(where, in, arg)
 	if in.Stalled != nil {
 		if *in.Stalled {
 			where = append(where, StalledSQL(""))

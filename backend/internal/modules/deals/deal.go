@@ -131,10 +131,10 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		p.Set("description", current.Description, *in.Description)
 	}
 	if in.CommercialMotion != nil {
-		p.Set("commercial_motion", motionOf(current), *in.CommercialMotion)
+		p.Set(filterCommercialMotion, motionOf(current), *in.CommercialMotion)
 	}
 	if in.Priority != nil {
-		p.Set("priority", priorityOf(current), *in.Priority)
+		p.Set(filterPriority, priorityOf(current), *in.Priority)
 	}
 	if in.AcquisitionSource != nil {
 		// Checked against the catalog HERE rather than at the handler, because
@@ -144,7 +144,7 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		if err := ensureAssignableAcquisitionSource(ctx, tx, *in.AcquisitionSource, current.AcquisitionSource); err != nil {
 			return nil, err
 		}
-		p.Set("acquisition_source", current.AcquisitionSource, *in.AcquisitionSource)
+		p.Set(filterAcquisitionSource, current.AcquisitionSource, *in.AcquisitionSource)
 	}
 	if in.ExpectedClose != nil {
 		// INV-CLOSE-PAST (formulas §11): an open deal never claims a past
@@ -478,24 +478,4 @@ func (e *TerminalStageOnCreateError) Error() string {
 // FieldFault refuses creating a deal directly into a won/lost stage.
 func (e *TerminalStageOnCreateError) FieldFault() (field, code, message string) {
 	return "stage_id", "terminal_stage_on_create", e.Error()
-}
-
-// motionOf and priorityOf read the deal's current commercial enums as the
-// plain strings a patch's before-image compares. The contract spells each as
-// its own string type, so the conversion is needed at every call site; doing
-// it here keeps the patch readable and the nil case in one place.
-func motionOf(d crmcontracts.Deal) *string {
-	if d.CommercialMotion == nil {
-		return nil
-	}
-	s := string(*d.CommercialMotion)
-	return &s
-}
-
-func priorityOf(d crmcontracts.Deal) *string {
-	if d.Priority == nil {
-		return nil
-	}
-	s := string(*d.Priority)
-	return &s
 }

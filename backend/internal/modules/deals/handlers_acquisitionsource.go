@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// ListAcquisitionSources answers the whole catalog, retired entries included.
 func (h Handlers) ListAcquisitionSources(w http.ResponseWriter, r *http.Request) {
 	out, err := h.store.ListAcquisitionSources(r.Context())
 	if err != nil {
@@ -20,6 +21,7 @@ func (h Handlers) ListAcquisitionSources(w http.ResponseWriter, r *http.Request)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AcquisitionSourceListResponse{Data: out})
 }
 
+// CreateAcquisitionSource adds a business channel to the catalog.
 func (h Handlers) CreateAcquisitionSource(
 	w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateAcquisitionSourceParams,
 ) {
@@ -43,6 +45,8 @@ func (h Handlers) CreateAcquisitionSource(
 	httperr.WriteJSON(w, http.StatusCreated, out)
 }
 
+// UpdateAcquisitionSource relabels, reorders or retires one. There is no
+// delete: a key a deal carries has to stay resolvable.
 func (h Handlers) UpdateAcquisitionSource(
 	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UpdateAcquisitionSourceParams,
 ) {

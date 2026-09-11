@@ -39,9 +39,9 @@ func clearableDealColumns(current crmcontracts.Deal) map[string]storekit.Clearab
 		"company_id":          {Column: "company_id", Current: current.CompanyId},
 		"project_id":          {Column: "project_id", Current: current.ProjectId},
 		"description":         {Column: "description", Current: current.Description},
-		"commercial_motion":   {Column: "commercial_motion", Current: motionOf(current)},
-		"priority":            {Column: "priority", Current: priorityOf(current)},
-		"acquisition_source":  {Column: "acquisition_source", Current: current.AcquisitionSource},
+		"commercial_motion":   {Column: filterCommercialMotion, Current: motionOf(current)},
+		"priority":            {Column: filterPriority, Current: priorityOf(current)},
+		"acquisition_source":  {Column: filterAcquisitionSource, Current: current.AcquisitionSource},
 	}
 }
 
