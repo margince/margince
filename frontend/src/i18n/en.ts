@@ -2377,6 +2377,13 @@ export const en = {
   "lead.signal.ask.web_traffic": "Website traffic?",
   "lead.signal.ask.employees": "Company size?",
   "lead.signal.ask.budget_hint": "Budget?",
+  // The breakdown's own spelling of the three kinds. NOT lead.signal.*,
+  // which is the entry form's: that picker asks a rep how THEY know it
+  // ("My assessment"), and the breakdown tells a reader whose judgement a
+  // factor was, which may be somebody else's.
+  "lead.factorKind.fact": "Verified",
+  "lead.factorKind.assumption": "Estimated",
+  "lead.factorKind.judgement": "Assessment",
   "lead.signal.fact": "Verified",
   "lead.signal.assumption": "Estimated",
   "lead.signal.judgement": "My assessment",

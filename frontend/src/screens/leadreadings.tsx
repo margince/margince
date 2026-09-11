@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
@@ -8,7 +9,9 @@ import { ReadingsGrid } from "../design-system/readingsgrid";
 import { formatDateTime, formatDecimal, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import { EntityRef } from "./entityref";
 import { leadScoreKey } from "./leadkeys";
 import { leadStatusLabel, scoreFactorLabel } from "./leadpresentation";
 import { firstResponseClock, terminalBadge } from "./leadstanding";
@@ -25,6 +28,41 @@ import { firstResponseClock, terminalBadge } from "./leadstanding";
 // to load one.
 
 type Lead = components["schemas"]["Lead"];
+type ScoreFactor = components["schemas"]["LeadScoreFactor"];
+
+// WHOSE judgement a factor is, printed under the points it contributed.
+//
+// The `manual:` prefix on the term already says a human supplied it, and that
+// is not enough to act on: a reader deciding whether to trust the number needs
+// which human, and how certain they said they were. A verified figure and a
+// colleague's estimate are the same points and different evidence.
+//
+// A machine factor shows none of this and does not get an empty line instead.
+// The three fields are OMITTED on the wire for an auto-captured signal rather
+// than sent null, so `signal_kind` is what says this row has an author at all;
+// a blank qualifier under a machine factor would read as an author nobody
+// named.
+//
+// `reason` is the rep's own prose. It goes in as a value and React escapes it,
+// which is the whole of what it needs — it is never markup here and must never
+// be given a path that would make it so.
+function whoseJudgement(factor: ScoreFactor, t: Translator): ReactNode {
+  if (!factor.signal_kind) {
+    return undefined;
+  }
+  return (
+    <>
+      {t(`lead.factorKind.${factor.signal_kind}` as MessageKey)}
+      {factor.set_by && (
+        <>
+          {" · "}
+          <EntityRef kind="user" id={factor.set_by} asText />
+        </>
+      )}
+      {factor.reason && <> — {factor.reason}</>}
+    </>
+  );
+}
 
 export function LeadReadings({ lead }: Readonly<{ lead: Lead }>) {
   const t = useT();
@@ -106,6 +144,7 @@ function ScoreCard({
         key: factor.factor,
         term: scoreFactorLabel(factor.factor, t),
         value: formatDecimal(factor.points, locale, 1),
+        note: whoseJudgement(factor, t),
       }))}
     />
   ) : explain.data?.explained || lead.score === 0 ? (

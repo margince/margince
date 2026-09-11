@@ -251,6 +251,18 @@ func wireScoreEntry(row scoreHistoryRow) crmcontracts.LeadScoreEntry {
 			}
 			wire.SourceActivityIds = &sources
 		}
+		// The human behind a manual factor. Carried straight through: a machine
+		// factor holds none of these and sends none, which is what the
+		// contract's "omitted, not null" note is about.
+		if f.SetBy != nil {
+			setBy := openapitypes.UUID(*f.SetBy)
+			wire.SetBy = &setBy
+		}
+		if f.SignalKind != "" {
+			kind := crmcontracts.LeadManualSignalKind(f.SignalKind)
+			wire.SignalKind = &kind
+		}
+		wire.Reason = f.Reason
 		factors = append(factors, wire)
 	}
 	entry := crmcontracts.LeadScoreEntry{
