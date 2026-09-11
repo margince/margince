@@ -505,3 +505,96 @@ describe("an account whose lifecycle and relationship agree", () => {
     expect(await screen.findByText(en["org.relType.customer"])).toBeTruthy();
   });
 });
+
+// The header's two groups answer one question between them — which verbs are
+// worth a place on the page and which are worth a line in a list — and the
+// answer is legible only if each group keeps its own shape. A menu row that
+// grows a glyph puts its words on a second left edge; a header button that
+// loses its glyph becomes a link among three buttons. Both had happened here.
+describe("the shape of the header's verbs", () => {
+  // The order every record type carries: the four verbs common to all of them
+  // first, then what is particular to an account, then the one verb a reader
+  // cannot walk back. A menu whose rows move between record types is a menu
+  // read from the top every time instead of aimed at.
+  it("lists the menu's verbs in the order every record carries them", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    const user = userEvent.setup();
+    renderInApp(
+      <CompanyActionBadges
+        org={ORG}
+        onOpenHistory={() => undefined}
+        onSetUpPartner={() => undefined}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    // Waited for by its own handle first: the panel mounts its children on the
+    // open, so reading the whole list in the tick the click returned in would
+    // catch whichever rows had committed by then.
+    await screen.findByTestId("archive-record");
+    const panel = document.querySelector(".overflow-menu-items");
+    if (!panel) {
+      throw new Error("the menu drew no panel");
+    }
+    expect(
+      [...panel.querySelectorAll("button")].map((row) => row.textContent),
+    ).toEqual([
+      en["record.edit"],
+      en["merge.org"],
+      en["record.share"],
+      en["record.fullHistory"],
+      en["org.partnerSetUp"],
+      en["record.archive"],
+    ]);
+  });
+
+  // Words, and only words. A row's glyph buys nothing a whole line of text
+  // does not already say, and one glyph among eight rows indents that row's
+  // words past every other row's — which is the ragged column `atoms.css`
+  // reserves an empty icon slot to repair when a caller does it anyway.
+  it("draws no glyph on any row of the menu", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    const user = userEvent.setup();
+    renderInApp(
+      <CompanyActionBadges
+        org={ORG}
+        onOpenHistory={() => undefined}
+        onSetUpPartner={() => undefined}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await screen.findByTestId("archive-record");
+    const panel = document.querySelector(".overflow-menu-items");
+    expect(panel?.querySelector("svg")).toBeNull();
+  });
+
+  // Outside the menu the verbs are few enough to carry a glyph, and a header
+  // strip of label-only buttons reads as a list of links. The glyph is an
+  // addition, never a replacement: the accessible name is still the verb, so
+  // nothing about how this button is found has moved.
+  it("leads Log activity and Add task with a glyph, keeping their words", async () => {
+    stubGrants({ activity: ["create"] });
+    renderInApp(
+      <CompanyPrimaryActions
+        org={ORG}
+        composerOpen={false}
+        onComposerOpen={() => undefined}
+      />,
+    );
+
+    for (const name of [en["log.title"], en["log.addTask"]]) {
+      const verb = await screen.findByRole("button", { name });
+      expect(verb.textContent).toContain(name);
+      // aria-hidden, so the glyph adds nothing to the name the row is found
+      // by — which is what the findByRole above has already proved.
+      expect(verb.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
+        "true",
+      );
+    }
+  });
+});

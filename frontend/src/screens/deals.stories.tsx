@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { DealScreen, DealsScreen, FxLine } from "./deals";
 import {
@@ -190,6 +191,32 @@ export const PendingApprovals: Story = {
 export const WithheldReferences: Story = {
   render: () => {
     installDealStub([], withheldDeal);
+    return (
+      <StoryProviders>
+        <DealScreen id="d1" />
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * The header's overflow, open.
+ *
+ * The head carries identity and ONE verb, the mail; edit, share, reopen and
+ * archive are worded rows in this list, because each is a verb whose
+ * consequence a reader has to read before pressing and a row is where a verb
+ * can say what it does. No glyphs in it: a column of icons beside four labels
+ * is decoration to scan past.
+ */
+export const HeaderMenu: Story = {
+  name: "Header overflow, open",
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole("button", { name: "More actions" }),
+    );
+  },
+  render: () => {
+    installDealStub([offer]);
     return (
       <StoryProviders>
         <DealScreen id="d1" />

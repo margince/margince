@@ -105,7 +105,14 @@ function Header({
   record = org,
 }: Readonly<{ view?: View; loading?: boolean; record?: Organization }>) {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    // `activity: create` alongside the record grants: Log activity and Add
+    // task read it, and without it every story here drew the two of them
+    // dimmed under a refusal caption — which is not the state the header is
+    // normally in, and not the one worth documenting by default.
+    "GET /me": meRoute({
+      organization: ["read", "update"],
+      activity: ["create"],
+    }),
     "GET /users": () => jsonResponse({ data: roster, page }),
     "GET /people/p-1": () =>
       jsonResponse({ id: "p-1", full_name: "Dana Buyer" }),
@@ -179,6 +186,23 @@ export const CustomerAndPartner: Story = {
       record={{ ...org, relationship_types: ["customer", "partner"] }}
     />
   ),
+};
+
+// The menu open on a LIVE account: the whole secondary run in the order every
+// record type carries it — Edit, Merge, Share, Full history, then what is
+// particular to an account (Set up partner here, since this fixture holds no
+// partner relationship), with Archive last behind the panel's own seam. The
+// rows are WORDS, no glyph among them, which is what keeps them one column a
+// reader can run down; the glyphs belong to the two header verbs outside the
+// menu, where there are three of them rather than eight.
+export const MenuOpen: Story = {
+  render: () => <Header view={withWayIn} />,
+  play: async () => {
+    // The panel portals to document.body, so it is reached through `screen`.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+  },
 };
 
 // An archived account. Its verbs stay in the menu, refused, over the one

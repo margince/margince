@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
 import type { EntityKind } from "../app/entity";
@@ -460,6 +460,7 @@ export function LogActivityAction({
   askedKind,
   openOnMount,
   triggerLabel,
+  triggerIcon,
   disabled,
   disabledReasonId,
   onClose,
@@ -478,6 +479,13 @@ export function LogActivityAction({
   // own verb; two buttons both reading "Log activity" is a toolbar that has
   // stopped telling the reader anything.
   triggerLabel?: MessageKey;
+  // The glyph the trigger leads with, beside the words rather than instead of
+  // them — a header strip of label-only buttons reads as a list, and the verb
+  // a reader is scanning for is found by its shape before it is read. Optional
+  // because a caller that only wants the form (`openOnMount`) draws no trigger
+  // at all, and a caller with no glyph for its verb must not be made to invent
+  // one. `aria-hidden` at the call site: the words are the name.
+  triggerIcon?: ReactNode;
   // Blocks the press while carrying no explanation — for a caller whose grant
   // has not resolved yet. Claiming a refusal the server has not decided is
   // worse than a control that is briefly quiet; separate from
@@ -510,6 +518,7 @@ export function LogActivityAction({
           reasonId={disabledReasonId}
           onClick={() => setOpen(true)}
         >
+          {triggerIcon}
           {t(triggerLabel ?? "log.title")}
         </Button>
       )}

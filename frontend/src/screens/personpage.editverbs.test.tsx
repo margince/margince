@@ -1,14 +1,16 @@
 /** @vitest-environment jsdom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { mount, view } from "./personpage.testkit";
+import { en } from "../i18n/en";
+import { mount, openRecordMenu, view } from "./personpage.testkit";
 import { jsonResponse } from "./story-utils";
 
 // The header's edit/merge/archive verbs, restored to the record page every
-// contact actually opens to. Its own file, sharing personpage.testkit.tsx's
-// fixture with personpage.test.tsx rather than duplicating it.
+// contact actually opens to — now rows of its overflow menu rather than
+// buttons in the open. Its own file, sharing personpage.testkit.tsx's fixture
+// and menu opener with personpage.test.tsx rather than duplicating them.
 
 type Person360 = components["schemas"]["Person360"];
 
@@ -28,6 +30,9 @@ describe("a live contact that is not the viewer's to change refuses its core wri
     mount("overview", notMine);
 
     await screen.findByText(sentence);
+    // Refused, not withdrawn: the rows are there to be read and say why they
+    // will not press.
+    await openRecordMenu();
     for (const testId of ["edit-record", "merge-record", "archive-record"]) {
       const verb = await screen.findByTestId(testId);
       expect(verb.hasAttribute("disabled")).toBe(true);
@@ -71,10 +76,10 @@ describe("the header's core record verbs — edit, merge, archive", () => {
         ),
     });
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
     const subtitle = () => document.querySelector(".record-sub");
     await waitFor(() => expect(subtitle()?.textContent).toBe("Old title"));
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await openRecordMenu();
+    await userEvent.click(await screen.findByTestId("edit-record"));
     const title = await screen.findByLabelText("Title");
     await userEvent.clear(title);
     await userEvent.type(title, "New title");
@@ -97,10 +102,8 @@ describe("the header's core record verbs — edit, merge, archive", () => {
       },
     });
 
-    await waitFor(() =>
-      expect(screen.getByTestId("archive-record")).toBeTruthy(),
-    );
-    await userEvent.click(screen.getByTestId("archive-record"));
+    await openRecordMenu();
+    await userEvent.click(await screen.findByTestId("archive-record"));
     await userEvent.click(await screen.findByTestId("archive-confirm"));
 
     await waitFor(() => expect(archived).toBe(true));
@@ -111,11 +114,76 @@ describe("the header's core record verbs — edit, merge, archive", () => {
 
     // Reachability only — MergeAction's own search/confirm flow is exercised
     // fully in contacts.test.tsx, against the identical shared component.
-    await waitFor(() =>
-      expect(screen.getByTestId("merge-record")).toBeTruthy(),
-    );
-    expect(screen.getByTestId("merge-record").hasAttribute("disabled")).toBe(
-      false,
-    );
+    await openRecordMenu();
+    expect(
+      (await screen.findByTestId("merge-record")).hasAttribute("disabled"),
+    ).toBe(false);
+  });
+});
+
+// The header's action row, found through the menu that sits in it rather than
+// by a class the test spells for itself.
+async function headerActions(): Promise<HTMLElement> {
+  const trigger = await screen.findByRole("button", {
+    name: en["record.moreActions"],
+  });
+  const row = trigger.closest(".record-actions");
+  if (!(row instanceof HTMLElement)) {
+    throw new Error("the header's menu does not sit in an action row");
+  }
+  return row;
+}
+
+// The panel the menu's own `aria-controls` names — the same element a screen
+// reader is sent to, so a row drawn anywhere else is not in the menu.
+async function menuPanel(): Promise<HTMLElement> {
+  const trigger = await screen.findByRole("button", {
+    name: en["record.moreActions"],
+  });
+  await userEvent.click(trigger);
+  const panel = document.getElementById(
+    trigger.getAttribute("aria-controls") ?? "",
+  );
+  if (!panel) {
+    throw new Error("the menu names no panel through aria-controls");
+  }
+  return panel;
+}
+
+describe("every secondary verb is a row of the header's one menu", () => {
+  // In the order a reader meets them: the record's own writes, then the
+  // quieter doors, then the destructive one last.
+  const ROWS = [
+    en["record.edit"],
+    en["merge.contact"],
+    en["record.share"],
+    en["record.fullHistory"],
+    en["person.action.research"],
+    en["record.archive"],
+  ];
+
+  it("draws them inside the panel, in order, worded and with no glyph", async () => {
+    mount("overview");
+
+    const panel = await menuPanel();
+    const rows = await within(panel).findAllByRole("button");
+    expect(rows.map((row) => row.textContent)).toEqual(ROWS);
+    // A list of named actions with one picture in it is a list with one row
+    // the reader has to decode.
+    expect(panel.querySelector("svg")).toBeNull();
+  });
+
+  it("leaves none of them in the open, and keeps the daily verbs there", async () => {
+    mount("overview");
+
+    const actions = await headerActions();
+    for (const row of ROWS) {
+      expect(within(actions).queryByRole("button", { name: row })).toBeNull();
+    }
+    // The other direction: a verb a reader came to do must not cost them an
+    // opening press.
+    for (const daily of [en["log.title"], en["person.action.addTask"]]) {
+      expect(within(actions).getByRole("button", { name: daily })).toBeTruthy();
+    }
   });
 });

@@ -7,7 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -1764,14 +1764,16 @@ describe("DealsScreen filters", () => {
 });
 
 /**
- * Open the header's overflow, which is where archiving, sharing and reopening
- * live: verbs whose consequence a reader has to read before pressing get a
- * whole line rather than a place in the verb row. Edit stays in the row.
+ * The header's overflow, where every verb but the mail lives: edit, share,
+ * reopen and archive each get a whole line rather than a place in a row, so
+ * reaching any of them is two presses — the menu, then the row.
  */
-async function openHeaderMenu(): Promise<void> {
-  await userEvent.click(
-    await screen.findByRole("button", { name: "More actions" }),
-  );
+async function openHeaderMenu(user: UserEvent | typeof userEvent = userEvent) {
+  await user.click(await screen.findByRole("button", { name: "More actions" }));
+}
+async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
+  await openHeaderMenu(user);
+  await user.click(await screen.findByTestId("edit-record"));
 }
 
 describe("DealScreen — edit, archive, FX line (A3)", () => {
@@ -1788,7 +1790,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
       }),
     );
     render(<DealScreen id="x" />);
-    await userEvent.click(await screen.findByTestId("edit-record"));
+    await openEditForm();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(patches.length).toBe(1));
     expect(patches[0].ifMatch).toBe("4");
@@ -1852,7 +1854,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     );
 
     render(<DealScreen id="x" />);
-    await user.click(await screen.findByTestId("edit-record"));
+    await openEditForm(user);
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patches.length).toBe(1));
@@ -1886,7 +1888,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     );
 
     render(<DealScreen id="x" />);
-    await user.click(await screen.findByTestId("edit-record"));
+    await openEditForm(user);
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patches.length).toBe(1));
@@ -2244,14 +2246,6 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
       "You cannot change this deal. Ask its owner to share it with you, or your administrator for the right to edit it.";
     expect(await screen.findByText(sentence)).toBeTruthy();
 
-    // Edit is refused in place, and the id it describes itself by resolves to
-    // the sentence in the band from the FIRST render — a reason minted inside
-    // the menu would name no element until the menu was opened.
-    const edit = await screen.findByTestId("edit-record");
-    expect(edit.hasAttribute("disabled")).toBe(true);
-    const describedBy = edit.getAttribute("aria-describedby") ?? "";
-    expect(document.getElementById(describedBy)?.textContent).toBe(sentence);
-
     // The offer is hung off the deal through the deal's own write gate, so it
     // is refused by the same fact — and points at the same sentence.
     const newOffer = await screen.findByRole("button", { name: "New offer" });
@@ -2261,8 +2255,11 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
         ?.textContent,
     ).toBe(sentence);
 
+    // Every verb in the menu describes itself by an id minted in the page's
+    // band on the FIRST render — one minted inside the menu would name no
+    // element until the menu had been opened.
     await openHeaderMenu();
-    for (const testId of ["archive-record", "share-record"]) {
+    for (const testId of ["edit-record", "archive-record", "share-record"]) {
       const control = await screen.findByTestId(testId);
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(
@@ -2282,6 +2279,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     render(<DealScreen id="x" />);
 
     expect(await screen.findByText(/You cannot change this deal/)).toBeTruthy();
+    await openHeaderMenu();
     const edit = await screen.findByTestId("edit-record");
     expect(edit.hasAttribute("disabled")).toBe(true);
   });
@@ -2345,8 +2343,8 @@ describe("DealScreen — overlay mode write affordances", () => {
     const d = deal({ id: "x", version: 3 });
     vi.stubGlobal("fetch", overlayBackend(d));
     render(<DealScreen id="x" />);
-    expect(await screen.findByTestId("edit-record")).toBeTruthy();
     await openHeaderMenu();
+    expect(await screen.findByTestId("edit-record")).toBeTruthy();
     expect(screen.getByTestId("archive-record")).toBeTruthy();
     // The mirror owns the deal's mail, so the header offers no Email verb.
     expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
@@ -2360,7 +2358,7 @@ describe("DealScreen — overlay mode write affordances", () => {
       overlayBackend(d, { onPatch: (body) => patches.push(body) }),
     );
     render(<DealScreen id="x" />);
-    await userEvent.click(await screen.findByTestId("edit-record"));
+    await openEditForm();
     const nameInput = screen.getByLabelText("Deal name *");
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, "Fleet retrofit — expanded scope");
@@ -2375,7 +2373,7 @@ describe("DealScreen — overlay mode write affordances", () => {
     const d = deal({ id: "x" });
     vi.stubGlobal("fetch", overlayBackend(d));
     render(<DealScreen id="x" />);
-    await userEvent.click(await screen.findByTestId("edit-record"));
+    await openEditForm();
     expect(
       screen.getByText(/Only the fields HubSpot accepts are written back/),
     ).toBeTruthy();
@@ -2385,7 +2383,8 @@ describe("DealScreen — overlay mode write affordances", () => {
     const d = deal({ id: "x", status: "won", stage_id: "s3" });
     vi.stubGlobal("fetch", overlayBackend(d));
     render(<DealScreen id="x" />);
-    await screen.findByTestId("edit-record");
+    await openHeaderMenu();
+    await screen.findByTestId("edit-record"); // the menu's items are mounted
     expect(screen.queryByTestId("reopen-open")).toBeNull();
     expect(screen.queryByTestId("share-record")).toBeNull();
   });
@@ -2414,7 +2413,8 @@ describe("DealScreen reopen", () => {
     const d = deal({ id: "y", status: "open" });
     vi.stubGlobal("fetch", stubBackend([d], { single: d }));
     render(<DealScreen id="y" />);
-    await screen.findByTestId("edit-record"); // 360 rendered
+    await openHeaderMenu();
+    await screen.findByTestId("edit-record"); // the menu's items are mounted
     expect(screen.queryByTestId("reopen-open")).toBeNull();
   });
 });

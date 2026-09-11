@@ -347,10 +347,10 @@ function useProjectVerbRefusal(project: Project): string | undefined {
 }
 
 // refusedReasonId is the id of the sentence the BAND renders, passed in rather
-// than minted here. The verbs describe themselves by pointing at that one
-// sentence: a second copy inside the OverflowMenu would not exist until the
-// menu was first opened, so the header's Edit control would spend its first
-// render describing itself by an id naming no element at all.
+// than minted here: every verb but Email lives inside the OverflowMenu, and a
+// sentence minted in that panel would not exist until the menu was first
+// opened — so until somebody pressed the trigger, each refused item would
+// describe itself by an id naming no element at all.
 function ProjectActions({
   project,
   refusedReasonId,
@@ -361,18 +361,14 @@ function ProjectActions({
   const overlay = useSorMode() === "overlay";
   return (
     <>
-      {/* Writing from the record, on the record page — the verb every other
-          record already carries, and the one this page did not. A project's
-          mail is a NEW conversation with somebody on the account behind it: the
-          composer offers that roster in To and files the send under this
-          project, which is the filing a message written from here can only
-          mean. Off in overlay for the reason the other verbs are: a mirrored
-          workspace has no send of its own.
-
-          No `recordAddress`: a project is not a person and has no address of its
-          own to open with. A deal offers its champion's; here the reader picks
-          from the account's people, which is an honest ask rather than a guess
-          at which of them a project-wide message is to. */}
+      {/* A project's mail is a NEW conversation with somebody on the account
+          behind it: the composer offers that roster in To and files the send
+          under this project, which is the filing a message written from here
+          can only mean. Off in overlay for the reason the other verbs are: a
+          mirrored workspace has no send of its own. No `recordAddress` — a
+          project is not a person and has no address of its own to open with,
+          so the reader picks from the account's people rather than the page
+          guessing which of them a project-wide message is to. */}
       {!overlay && (
         <RecordEmailVerb
           entityType="project"
@@ -380,34 +376,49 @@ function ProjectActions({
           disabledReasonId={refusedReasonId}
         />
       )}
-      <EditAction<Project>
-        disabledReasonId={refusedReasonId}
-        label={t("project.edit")}
-        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-        fields={projectFields(t, {
-          companies,
-          me: me.data?.user.id ?? "",
-          currentOwner: project.owner_id ?? null,
-          mode: "edit",
-        })}
-        record={projectEditRecord(project)}
-        update={async (values, _rows, opened) => {
-          const { data, error } = await api.PATCH("/projects/{id}", {
-            params: {
-              path: { id: project.id },
-              ...ifMatch(requireVersion(opened?.version)),
-            },
-            body: mapProjectUpdate(values),
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return data;
-        }}
-        invalidate="projects"
-        recordKey="project"
-      />
       <OverflowMenu label={t("record.moreActions")}>
+        {/* Worded — a bare pencil among sentences names nothing to a reader. */}
+        <EditAction<Project>
+          labelled
+          disabledReasonId={refusedReasonId}
+          label={t("project.edit")}
+          savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
+          fields={projectFields(t, {
+            companies,
+            me: me.data?.user.id ?? "",
+            currentOwner: project.owner_id ?? null,
+            mode: "edit",
+          })}
+          record={projectEditRecord(project)}
+          update={async (values, _rows, opened) => {
+            const { data, error } = await api.PATCH("/projects/{id}", {
+              params: {
+                path: { id: project.id },
+                ...ifMatch(requireVersion(opened?.version)),
+              },
+              body: mapProjectUpdate(values),
+            });
+            if (error) {
+              throwProblem(error);
+            }
+            return data;
+          }}
+          invalidate="projects"
+          recordKey="project"
+        />
+        {!overlay && (
+          <ShareAction
+            recordType="project"
+            recordId={project.id}
+            disabledReasonId={refusedReasonId}
+          />
+        )}
+        <AssignProjectOwnerAction
+          project={project}
+          disabledReasonId={refusedReasonId}
+        />
+        {/* Last, and set apart by the panel's own seam (atoms.css): the one
+            verb a reader cannot walk back does not sit in the routine run. */}
         <ArchiveAction
           disabledReasonId={refusedReasonId}
           label={t("project.archive")}
@@ -431,17 +442,6 @@ function ProjectActions({
           recordKey="project"
           onArchived={() => navigate({ screen: "projects" })}
         />
-        <AssignProjectOwnerAction
-          project={project}
-          disabledReasonId={refusedReasonId}
-        />
-        {!overlay && (
-          <ShareAction
-            recordType="project"
-            recordId={project.id}
-            disabledReasonId={refusedReasonId}
-          />
-        )}
       </OverflowMenu>
     </>
   );
