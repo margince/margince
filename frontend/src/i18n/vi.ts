@@ -3529,6 +3529,13 @@ export const vi = {
   "compose.consentBlockedTitle": "Bị chặn gửi — chưa có chấp thuận",
   "compose.consentBlocked":
     "Một người nhận chưa chấp thuận cho mục đích này, nên lượt gửi bị chặn (mặc định từ chối).",
+  "compose.reviewReference": "Phần xem xét",
+  "compose.reviewRequest": "Chuyển cho bên có thẩm quyền quyết định",
+  "compose.reviewRequesting": "Đang hỏi…",
+  "compose.reviewRequested":
+    "Đã chuyển. Bên có thẩm quyền sẽ quyết định; thư vẫn ở đây cho đến lúc đó.",
+  "compose.reviewRequestFailed":
+    "Không gửi được yêu cầu. Hãy thử lại hoặc mở phần xem xét ở trên.",
   "compose.consentGoto": "Xem lại chấp thuận",
   "compose.draftUnavailable":
     "Không dùng được phần soạn nháp bằng AI (chưa cấu hình mô hình). Bạn vẫn tự viết email được.",
