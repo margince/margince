@@ -13,7 +13,6 @@ package briefs
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -41,9 +40,9 @@ func LocalDayAt(ctx context.Context, tx pgx.Tx, now time.Time) (day time.Time, l
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
-	loc, err := time.LoadLocation(zone)
+	loc, err := storekit.LoadZone(zone)
 	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("brief: the installation timezone %q does not resolve: %w", zone, err)
+		return time.Time{}, time.Time{}, err
 	}
 	return storekit.WorkspaceDay(now, loc), now.In(loc), nil
 }

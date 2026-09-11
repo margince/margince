@@ -21,12 +21,12 @@ package briefs
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -61,9 +61,9 @@ func briefLineage(
 	if err != nil {
 		return nil, err
 	}
-	loc, err := time.LoadLocation(zone)
+	loc, err := storekit.LoadZone(zone)
 	if err != nil {
-		return nil, fmt.Errorf("brief: the installation timezone %q does not resolve: %w", zone, err)
+		return nil, err
 	}
 
 	// The most recent mark per deal, whatever it is — then lineage only when
@@ -112,9 +112,8 @@ func briefLineage(
 		if err := rows.Scan(&dealID, &dismissedAt, &returnedWith); err != nil {
 			return nil, err
 		}
-		local := dismissedAt.In(loc)
 		out[dealID] = dealLineage{
-			dismissedOn:  time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC),
+			dismissedOn:  storekit.WorkspaceDay(dismissedAt, loc),
 			returnedWith: returnedWith,
 		}
 	}
