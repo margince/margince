@@ -1272,7 +1272,10 @@ function useChronologySlots({
   // An evidence mark asks "where did this value come from" — the answer is
   // the record's change history, so the mark turns the timeline to Changes
   // rather than opening a screen of its own.
-  const showChanges = () => setFilter("changes");
+  // Through the same opener a pill press goes through: a cut opened from the
+  // side of the page and one opened from the pills is the same act, and a
+  // second way in is a second set of rules about what opening a cut does.
+  const showChanges = () => openCut("changes");
 
   if (!active) {
     return {
