@@ -487,6 +487,16 @@ export const SETTINGS_PAGES = [
     changes: acts(writes("custom_field")),
   },
   {
+    id: "recordroles",
+    // Same `custom_field` authority as the vocabularies above: everyone reads,
+    // admin/ops write. No destroys — a role is retired through its switch,
+    // because an assignment that carried it must stay resolvable.
+    group: "sales",
+    scope: "workspace",
+    requires: reads("custom_field"),
+    changes: acts(writes("custom_field")),
+  },
+  {
     id: "fields",
     group: "sales",
     scope: "workspace",

@@ -122,6 +122,7 @@ import { PasswordSettingRow } from "./passwordcard";
 import { ConsentPurposesCard, PrivacyInboxCard } from "./privacy";
 import { ProductsAdmin } from "./products";
 import { FxRatesCard, ModelCostsCard } from "./rates";
+import { RecordRolesCard } from "./recordroles";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
 import { StageExitCriteria } from "./settings.exitcriteria";
@@ -259,6 +260,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
       );
     case "acquisition":
       return <AcquisitionSourcesCard />;
+    case "recordroles":
+      return <RecordRolesCard />;
     case "fields":
       return <CustomFieldsAdmin />;
     case "tags":

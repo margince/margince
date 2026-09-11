@@ -160,6 +160,8 @@ tags:
       built only from what was filed, or a refusal that says which of the two it is.
   - name: Overlay
     description: The HubSpot mirror overlay — incumbent connection, mirror sync health, budget, and the read→overlay flip.
+  - name: Assignments
+    description: Who is responsible for a record — administered roles, and the people or teams holding them. Responsibility, never access.
 
 # =============================================================================
 paths:
@@ -8386,6 +8388,173 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /record-roles:
+    get:
+      tags: [Assignments]
+      operationId: listRecordRoles
+      summary: List responsibility roles, active and retired, in display order.
+      description: |
+        The administered vocabulary of responsibilities a person or team can hold on a
+        company, deal or project. A role names what someone is accountable for and grants
+        no access: visibility stays with ownership and record grants. Retired roles are
+        returned so an assignment still carrying one renders its label.
+      responses:
+        '200':
+          description: The role list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordRoleListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Assignments]
+      operationId: createRecordRole
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Add a responsibility role.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRecordRoleRequest' }
+      responses:
+        '201':
+          description: Created role.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordRole' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /record-roles/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Assignments]
+      operationId: updateRecordRole
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Relabel, reorder, re-scope or retire a responsibility role.
+      description: |
+        Retirement is `active: false`, and there is no delete: a role an assignment has
+        ever carried must stay resolvable. Narrowing which record types or assignee kinds
+        the role applies to is refused while a live assignment depends on what would be
+        removed, so a running assignment can never be silently invalidated.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRecordRoleRequest' }
+      responses:
+        '200':
+          description: Updated role.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordRole' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /records/{record_type}/{record_id}/assignments:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/AssignmentRecordType' }
+      - name: record_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Assignments]
+      operationId: listRecordAssignments
+      summary: Who is responsible for this record, by role.
+      description: |
+        Answers with the live assignments on one company, deal or project, ordered by role
+        then subject name. Requires ordinary read access to the record itself; the answer
+        is 404 for a record this caller cannot see, so the list never reveals a record's
+        existence.
+      responses:
+        '200':
+          description: The record's assignments.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordAssignmentListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Assignments]
+      operationId: createRecordAssignment
+      x-agent-access: human-only
+      summary: Make a person or team responsible for this record.
+      description: |
+        Requires write access to the record itself, which is what makes this safe to
+        expose beside it. The assignment grants the subject no access of its own.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRecordAssignmentRequest' }
+      responses:
+        '201':
+          description: Created assignment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordAssignment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /assignments/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Assignments]
+      operationId: updateRecordAssignment
+      x-agent-access: human-only
+      summary: Hand a responsibility to someone else, or change its role.
+      description: |
+        Atomic reassignment in place. The record the assignment hangs on never changes;
+        authority is the write access on that record, resolved from the stored row.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRecordAssignmentRequest' }
+      responses:
+        '200':
+          description: Updated assignment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordAssignment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Assignments]
+      operationId: archiveRecordAssignment
+      x-agent-access: human-only
+      summary: End a responsibility, keeping it in history.
+      description: |
+        Archives the assignment rather than deleting it, so who was responsible when
+        stays answerable. The live-uniqueness rule frees the role for a successor.
+      responses:
+        '204': { description: Archived. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
 
   /lead-disqualify-reasons:
     get:
@@ -34611,6 +34780,163 @@ components:
         label: { type: string, minLength: 1, maxLength: 120 }
         sort_order: { type: integer }
         active: { type: boolean }
+
+    RecordRole:
+      type: object
+      description: >-
+        One administered responsibility a person or team can hold on a record. The role
+        says WHAT someone is responsible for; it grants no access of its own.
+      required: [id, key, label, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        key:
+          type: string
+          description: >-
+            The stable identifier. Lowercase, never changes once created — relabelling
+            edits `label`, so a report keyed on the role survives the rename.
+        label: { type: string, description: What readers see. }
+        record_types:
+          type: array
+          minItems: 1
+          description: Which record kinds this role may be held on.
+          items: { $ref: '#/components/schemas/AssignmentRecordType' }
+        assignee_kinds:
+          type: array
+          minItems: 1
+          description: Whether a user, a team, or either may hold this role.
+          items: { $ref: '#/components/schemas/AssignmentSubjectKind' }
+        sort_order: { type: integer, description: Display order in pickers and settings. }
+        active:
+          type: boolean
+          description: >-
+            False is retired: existing assignments keep rendering their label, but the
+            role is refused for a new assignment.
+        system:
+          type: boolean
+          readOnly: true
+          description: Seeded with the installation. Fully editable; it simply cannot be removed.
+        version: { type: integer, format: int64, readOnly: true }
+        created_at: { type: string, format: date-time, readOnly: true }
+        updated_at: { type: string, format: date-time, readOnly: true }
+
+    AssignmentRecordType:
+      type: string
+      enum: [company, deal, project]
+      description: The kind of record an assignment hangs on.
+
+    AssignmentSubjectKind:
+      type: string
+      enum: [user, team]
+      description: Whether the responsible party is one person or a whole team.
+
+    RecordRoleListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/RecordRole' } }
+
+    CreateRecordRoleRequest:
+      type: object
+      required: [label, record_types, assignee_kinds]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{0,63}$'
+          description: Derived from the label when omitted.
+        label: { type: string, minLength: 1, maxLength: 120 }
+        record_types:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/AssignmentRecordType' }
+        assignee_kinds:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/AssignmentSubjectKind' }
+        sort_order: { type: integer }
+
+    UpdateRecordRoleRequest:
+      type: object
+      description: >-
+        Every field optional; an omitted one is left alone. Narrowing `record_types` or
+        `assignee_kinds` is refused while a live assignment depends on what would be
+        removed — retire the role and add its replacement instead.
+      properties:
+        label: { type: string, minLength: 1, maxLength: 120 }
+        record_types:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/AssignmentRecordType' }
+        assignee_kinds:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/AssignmentSubjectKind' }
+        sort_order: { type: integer }
+        active: { type: boolean }
+
+    RecordAssignment:
+      type: object
+      description: >-
+        One responsibility held on one record. It records WHO is responsible, never who
+        may see the record: visibility stays with ownership and record grants, and adding
+        an assignment changes nobody's access.
+      required:
+        [id, record_type, record_id, subject_kind, subject_id, subject_name,
+         subject_inactive, role_id, role_key, role_label, role_active, version,
+         created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        record_type: { $ref: '#/components/schemas/AssignmentRecordType' }
+        record_id: { type: string, format: uuid }
+        subject_kind: { $ref: '#/components/schemas/AssignmentSubjectKind' }
+        subject_id:
+          type: string
+          format: uuid
+          description: The assigned user or team, per `subject_kind`.
+        subject_name:
+          type: string
+          readOnly: true
+          description: Resolved server-side so the row renders without a second lookup.
+        subject_inactive:
+          type: boolean
+          readOnly: true
+          description: >-
+            True when the assigned user is deactivated. The assignment stays and keeps
+            its label, so history stays readable; it simply reads as needing a successor.
+        role_id: { type: string, format: uuid }
+        role_key: { type: string, readOnly: true }
+        role_label: { type: string, readOnly: true }
+        role_active:
+          type: boolean
+          readOnly: true
+          description: False when the role has since been retired. The assignment remains valid.
+        source: { type: string, readOnly: true, description: What wrote this assignment. }
+        version: { type: integer, format: int64, readOnly: true }
+        created_at: { type: string, format: date-time, readOnly: true }
+        updated_at: { type: string, format: date-time, readOnly: true }
+
+    RecordAssignmentListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/RecordAssignment' } }
+
+    CreateRecordAssignmentRequest:
+      type: object
+      required: [subject_kind, subject_id, role_id]
+      properties:
+        subject_kind: { $ref: '#/components/schemas/AssignmentSubjectKind' }
+        subject_id: { type: string, format: uuid }
+        role_id: { type: string, format: uuid }
+
+    UpdateRecordAssignmentRequest:
+      type: object
+      description: >-
+        Reassign in place: the record never moves, so only the responsible party and the
+        role may change. Omitted fields are left alone.
+      properties:
+        subject_kind: { $ref: '#/components/schemas/AssignmentSubjectKind' }
+        subject_id: { type: string, format: uuid }
+        role_id: { type: string, format: uuid }
 
     LeadSource:
       type: object

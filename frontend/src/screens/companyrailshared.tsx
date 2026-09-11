@@ -119,3 +119,12 @@ export function contactRole(
     />
   );
 }
+
+// How many rows a rail card shows before pointing at the tab. The rail is a
+// glance, and a twenty-row card beside the work column is a second page, not
+// an anchor — the "All N" header verb is the way to the rest.
+//
+// Here rather than in either rail half: the deals card and the people card
+// both cut their list by it, and two copies would let one card quietly start
+// showing four.
+export const RAIL_ROW_LIMIT = 3;

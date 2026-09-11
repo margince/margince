@@ -95,6 +95,15 @@ var rowScopedResponses = map[string]expectedTarget{
 	// module; compose borrows that rule rather than keeping a second copy.
 	"Approval":    {moduleProbe: "approval", pathParam: "id"},
 	"RecordGrant": {tableField: "record_type", idPath: "record_id"},
+	// An assignment has no owner column: its visibility IS the record it hangs
+	// on, and the body names that record polymorphically exactly as a grant
+	// does. Probed rather than waved through for lacking an owner, because a
+	// replay hands back who is responsible for a record — which is something
+	// to say only to a caller who may still open it.
+	"RecordAssignment": {
+		objectNote: "authority is the parent record's own — auth.Require plus auth.HoldWritableLive on company/deal/project",
+		tableField: "record_type", idPath: "record_id",
+	},
 	// Projections that name their parent nowhere in the body — the route
 	// parameter is the only handle on the record whose scope governs them.
 	// A body with no reference of its own is the easiest kind to wave through

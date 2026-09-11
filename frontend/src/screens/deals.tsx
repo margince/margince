@@ -162,6 +162,7 @@ import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordEmailVerb } from "./recordemail";
 import { tagsColumn } from "./recordlist";
+import { RecordTeam } from "./recordteam";
 import { invalidateRecord } from "./recordwritekeys";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
@@ -4368,6 +4369,7 @@ function DealContext({
     <>
       {/* Before the seats: what the deal IS commercially, then who is on it. */}
       <DealCommercial deal={deal} sources={acquisitionSources} />
+      <RecordTeam recordType="deal" recordId={deal.id} />
       <DealSeats
         coverage={coverage.coverage}
         withheld={coverage.withheld}

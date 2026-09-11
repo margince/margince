@@ -243,7 +243,18 @@ func (s *Store) UpdateAcquisitionSource(
 		if in.IfVersion != nil && *in.IfVersion != before.Version {
 			return apperrors.ErrConflict
 		}
-		if err := patch.ApplyWithVersion(ctx, tx, "deal_acquisition_source", id, before.Version); err != nil {
+		// ApplyLocked under a NoArchiveColumn lock, NOT ApplyWithVersion:
+		// ApplyWithVersion always narrows with `archived_at IS NULL`, and this
+		// table has no such column — retirement here is `active = false`, so
+		// that clause refused every update with an undefined-column error.
+		// readAcquisitionSourceForUpdate already took FOR UPDATE on this row,
+		// so the lock is the whole of the serialization, and the If-Match
+		// compare above is the staleness answer.
+		lock, err := storekit.LockRow(ctx, tx, "deal_acquisition_source", id, storekit.NoArchiveColumn)
+		if err != nil {
+			return err
+		}
+		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "deal_acquisition_source", id,

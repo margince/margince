@@ -122,7 +122,6 @@
 682 frontend/src/screens/contactcards.tsx
 682 frontend/src/format/format.ts
 682 frontend/src/screens/companyraildetails.tsx
-697 frontend/src/screens/companyrail.tsx
 702 frontend/src/screens/settingsnav.tsx
 737 frontend/src/screens/companytoday.tsx
 737 frontend/src/screens/installation-settings.tsx

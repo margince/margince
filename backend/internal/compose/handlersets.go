@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -56,48 +57,49 @@ import (
 // Aliases give the embedded handler sets distinct field names; each
 // alias carries its module's full method set.
 type (
-	authHandlers            = identity.Handlers
-	channelHandlers         = capture.ChannelHandlers
-	traceHandlers           = capture.TraceHandlers
-	pipelineTraceHandlers   = pipelinetrace.Handlers
-	contactsHandlers        = contacts.Handlers
-	dealsHandlers           = deals.Handlers
-	projectsHandlers        = projects.Handlers
-	contractsHandlers       = contracts.Handlers
-	dealroomsHandlers       = dealrooms.Handlers
-	commissionsHandlers     = commissions.Handlers
-	activitiesHandlers      = activities.Handlers
-	approvalsHandlers       = approvals.Handlers
-	searchHandlers          = search.Handlers
-	consentHandlers         = consent.Handlers
-	collectionsHandlers     = collections.Handlers
-	signalsHandlers         = signals.Handlers
-	privacyHandlers         = privacy.Handlers
-	automationHandlers      = automation.Handlers
-	voiceHandlers           = ai.Handlers
-	customfieldsHandlers    = customfields.Handlers
-	overlayHandlers         = overlay.Handlers
-	webhooksHandlers        = webhooks.Handlers
-	company360Handlers      = company360.Handlers
+	authHandlers           = identity.Handlers
+	channelHandlers        = capture.ChannelHandlers
+	traceHandlers          = capture.TraceHandlers
+	pipelineTraceHandlers  = pipelinetrace.Handlers
+	contactsHandlers         = contacts.Handlers
+	dealsHandlers          = deals.Handlers
+	projectsHandlers       = projects.Handlers
+	contractsHandlers      = contracts.Handlers
+	dealroomsHandlers      = dealrooms.Handlers
+	commissionsHandlers    = commissions.Handlers
+	activitiesHandlers     = activities.Handlers
+	approvalsHandlers      = approvals.Handlers
+	searchHandlers         = search.Handlers
+	consentHandlers        = consent.Handlers
+	collectionsHandlers    = collections.Handlers
+	signalsHandlers        = signals.Handlers
+	privacyHandlers        = privacy.Handlers
+	automationHandlers     = automation.Handlers
+	voiceHandlers          = ai.Handlers
+	customfieldsHandlers   = customfields.Handlers
+	overlayHandlers        = overlay.Handlers
+	webhooksHandlers       = webhooks.Handlers
+	company360Handlers     = company360.Handlers
 	contact360Handlers      = contact360.Handlers
-	project360Handlers      = project360.Handlers
+	project360Handlers     = project360.Handlers
 	contactBriefHandlers    = contactbrief.Handlers
 	contactResearchHandlers = contactresearch.Handlers
-	meetingBriefHandlers    = meetingbrief.Handlers
-	dealStatusHandlers      = dealstatus.Handlers
-	companyBriefHandlers    = companybrief.Handlers
-	companyDossierHandlers  = companydossier.Handlers
-	companyScanHandlers     = companyscan.Handlers
-	accountDraftHandlers    = accountdraft.Handlers
+	meetingBriefHandlers   = meetingbrief.Handlers
+	dealStatusHandlers     = dealstatus.Handlers
+	companyBriefHandlers   = companybrief.Handlers
+	companyDossierHandlers = companydossier.Handlers
+	companyScanHandlers    = companyscan.Handlers
+	accountDraftHandlers   = accountdraft.Handlers
 	contactDraftHandlers    = contactdraft.Handlers
-	leadDraftHandlers       = leaddraft.Handlers
-	financeHandlers         = finance.Handlers
-	aiActivityHandlers      = aiactivity.Handlers
-	noticesHandlers         = notices.Handlers
-	weeklyPlanHandlers      = weeklyplan.Handlers
-	forecastHandlers        = forecasting.Handlers
-	assuranceHandlers       = assurance.Handlers
-	introductionHandlers    = introductions.Handlers
+	leadDraftHandlers      = leaddraft.Handlers
+	financeHandlers        = finance.Handlers
+	aiActivityHandlers     = aiactivity.Handlers
+	noticesHandlers        = notices.Handlers
+	weeklyPlanHandlers     = weeklyplan.Handlers
+	forecastHandlers       = forecasting.Handlers
+	assuranceHandlers      = assurance.Handlers
+	introductionHandlers   = introductions.Handlers
+	assignmentHandlers     = assignments.Handlers
 )
 
 // wireContact360 binds the contact record page — the company page's

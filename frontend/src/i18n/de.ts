@@ -2516,6 +2516,31 @@ export const de = {
   "deal.priorityMedium": "Mittel",
   "deal.priorityLow": "Niedrig",
   "deal.acquisitionSource": "Akquisequelle",
+  "assignments.title": "Verantwortlich",
+  "assignments.noAccessNote":
+    "Hält fest, wer zuständig ist. Es gewährt keinen Zugriff auf diesen Datensatz.",
+  "assignments.empty": "Noch niemand zugewiesen",
+  "assignments.emptyDetail":
+    "Weisen Sie eine Kollegin oder ein Team zu, um festzuhalten, wer für diese Arbeit zuständig ist.",
+  "assignments.roleRetired": "(stillgelegte Rolle)",
+  "assignments.teamSuffix": "(Team)",
+  "assignments.subjectInactive": "(inaktiv)",
+  "recordRoles.title": "Verantwortungsrollen",
+  "recordRoles.sub":
+    "Wof\u00fcr jemand oder ein Team bei einem Unternehmen, Deal oder Projekt zust\u00e4ndig sein kann. Eine Rolle gew\u00e4hrt keinen Zugriff auf den Datensatz.",
+  "recordRoles.listLabel": "Rollen",
+  "recordRoles.loading": "Rollen werden geladen",
+  "recordRoles.readOnly":
+    "Nur Administratoren k\u00f6nnen diese Rollen \u00e4ndern.",
+  "recordRoles.builtIn": "Vorinstalliert",
+  "recordRoles.addOpen": "Rolle hinzuf\u00fcgen",
+  "recordRoles.addTitle": "Verantwortungsrolle hinzuf\u00fcgen",
+  "recordRoles.addLabel": "Name",
+  "recordRoles.addHint":
+    "Wof\u00fcr die zust\u00e4ndige Seite verantwortlich ist, in verst\u00e4ndlichen Worten.",
+  "recordRoles.addConfirm": "Rolle hinzuf\u00fcgen",
+  "recordRoles.labelFor": "Name f\u00fcr {key}",
+  "recordRoles.activeFor": "{label} kann neu zugewiesen werden",
   "deal.acquisitionUnset": "Nicht gesetzt",
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",
@@ -6516,6 +6541,8 @@ export const de = {
     "Die Phasen, die ein Deal durchl\u00e4uft \u2014 f\u00fcr das ganze Unternehmen.",
   "settings.page.acquisition.sub":
     "Die Geschäftskanäle, denen ein Deal zugeordnet werden kann.",
+  "settings.page.recordroles.sub":
+    "Wof\u00fcr jemand oder ein Team bei einem Datensatz zust\u00e4ndig sein kann. Es gew\u00e4hrt keinen Zugriff.",
   "settings.page.leads.sub":
     "Die Worte, mit denen dieses Unternehmen beschreibt, woher ein Lead kam.",
   "settings.page.fields.sub":
@@ -6574,6 +6601,7 @@ export const de = {
   "settings.tab.stageautomation": "Phasen-Automatik",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.acquisition": "Akquisequellen",
+  "settings.tab.recordroles": "Verantwortungsrollen",
   "settings.tab.leads": "Lead-Bearbeitung",
   "settings.tab.fields": "Felder",
   "settings.tab.tags": "Tags",

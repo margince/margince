@@ -259,6 +259,14 @@ func (stubs) RejectApproval(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "RejectApproval")
 }
 
+func (stubs) ArchiveRecordAssignment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ArchiveRecordAssignment")
+}
+
+func (stubs) UpdateRecordAssignment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateRecordAssignmentParams) {
+	httperr.NotImplemented(w, r, "UpdateRecordAssignment")
+}
+
 func (stubs) GetAssistantProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAssistantProfile")
 }
@@ -2047,6 +2055,18 @@ func (stubs) RevokeRecordGrant(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "RevokeRecordGrant")
 }
 
+func (stubs) ListRecordRoles(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListRecordRoles")
+}
+
+func (stubs) CreateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateRecordRoleParams) {
+	httperr.NotImplemented(w, r, "CreateRecordRole")
+}
+
+func (stubs) UpdateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateRecordRoleParams) {
+	httperr.NotImplemented(w, r, "UpdateRecordRole")
+}
+
 func (stubs) GetRecordTags(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetRecordTags")
 }
@@ -2065,6 +2085,14 @@ func (stubs) RestoreRecordChange(w nethttp.ResponseWriter, r *nethttp.Request, e
 
 func (stubs) ClaimRecord(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id, params crmcontracts.ClaimRecordParams) {
 	httperr.NotImplemented(w, r, "ClaimRecord")
+}
+
+func (stubs) ListRecordAssignments(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.AssignmentRecordType, recordId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "ListRecordAssignments")
+}
+
+func (stubs) CreateRecordAssignment(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.AssignmentRecordType, recordId openapi_types.UUID, params crmcontracts.CreateRecordAssignmentParams) {
+	httperr.NotImplemented(w, r, "CreateRecordAssignment")
 }
 
 func (stubs) ListRelationships(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListRelationshipsParams) {
