@@ -324,11 +324,14 @@ func (w *scheduledSendWorker) fireAs(ctx context.Context, sched schedulerOf) (co
 			actor.OnBehalfOf = sched.AgentOnBehalfOf
 		}
 		if actor.ID == "" {
-			// Scheduled before 0260, so the row never recorded which agent it
-			// was and cannot be given one now. The derived id is what those
-			// rows have always fired under; keeping it confines the invented
-			// identity to them rather than putting a blank actor in the audit.
-			actor.ID = "agent:" + userID.String()
+			// scheduled_send_agent_provenance_shape requires an agent row to
+			// name its actor, so this is a row the database says cannot exist.
+			// It refuses rather than deriving `agent:<human-uuid>`, which is
+			// what stood here: that id names an actor that never existed and
+			// collapses every agent acting for one person into one identity,
+			// and a message firing under it is worse than a message held.
+			return nil, "", fmt.Errorf(
+				"comms_scheduled_send: an agent-kind scheduled send for %s names no agent", userID)
 		}
 	}
 	fireCtx := principal.WithActor(ctx, actor)
