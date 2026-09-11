@@ -464,3 +464,17 @@
    leave this reader with three cards drawn exactly on top of each other and no
    way to see that anything is behind the live one — which is removing
    information in the name of removing movement. */
+
+/* A LIST OF DENSE ROWS reads as a list, so the rows sit a rung closer than the
+   full cards do: at the cards' interval, a one-line row has more air around it
+   than content in it, and the column stops reading as one thing. */
+.ddeck-list:has(.dcard[data-density="compact"]) {
+  gap: var(--space-2);
+}
+
+/* The way to the rest of the queue, under the rows it cut. Its own row rather
+   than a footer band, because the deck has no band — and the interval is the
+   list's own, so the link reads as the last thing in the column. */
+.ddeck-list-rest {
+  margin-top: var(--space-3);
+}

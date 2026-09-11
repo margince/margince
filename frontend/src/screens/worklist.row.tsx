@@ -55,6 +55,7 @@ import {
   type WorklistItem,
   worklistKey,
 } from "./worklist.queries";
+import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import { syncHealthDetail } from "./worklist.synchealth";
 import { VerdictLine } from "./worklist.verdict";
@@ -77,9 +78,36 @@ function namedMembers(item: WorklistItem): string[] {
   return [...new Set(item.batch?.sample ?? [])];
 }
 
+/**
+ * How much of the row is drawn, and what each density owes.
+ *
+ * A DISCRIMINATED PAIR rather than one optional `position`, because the rank is
+ * required by the default density and refused by the compact one — a plain
+ * optional would let a Worklist caller forget it and lose the digit silently,
+ * which is the shape of failure a gate cannot see. This one the compiler sees.
+ */
+type RowDensity =
+  | Readonly<{
+      density?: undefined;
+      /** Where this row sits in the day's order, drawn as the rank. */
+      position: number;
+    }>
+  | Readonly<{
+      /**
+       * ONE LINE per row: no rank, the title carrying the link, the captions
+       * beside it, and everything else one press away
+       * (worklist.row.compact.tsx). For a surface that OPENS with a prefix of
+       * the queue and goes on to something else.
+       */
+      density: "compact";
+      /** Refused: the rank is a column this density does not draw. */
+      position?: undefined;
+    }>;
+
 export function WorklistRow({
   item,
   position,
+  density,
   owner,
   selected,
   onSelect,
@@ -87,7 +115,6 @@ export function WorklistRow({
   onOpenEmail,
 }: Readonly<{
   item: WorklistItem;
-  position: number;
   // Whose queue this row is on, empty for the reader's own. It names the
   // contact a reassignment moves work AWAY from, which on the reader's own
   // queue is the reader — ReassignControl resolves that rather than this
@@ -113,7 +140,8 @@ export function WorklistRow({
   // message and refuses to open it teaches them the product does not work.
   // Optional only for a caller that draws no waiting row at all.
   onOpenEmail?: (activityId: string) => void;
-}>) {
+}> &
+  RowDensity) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
@@ -143,6 +171,12 @@ export function WorklistRow({
   const reasons = phrasedReasons(item, when !== null)
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null);
+  // WHERE THE FOLD FALLS, decided once for both densities. Sliced here rather
+  // than inside each one, because two copies of `slice(0, N)` are two answers
+  // to how many reasons a row says outright, and they drift the first time the
+  // ceiling moves.
+  const said = reasons.slice(0, REASONS_BEFORE_THE_FOLD);
+  const folded = reasons.slice(REASONS_BEFORE_THE_FOLD);
   const above = comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
   // How this row NAMES ITSELF: the canonical email row when there is a message
@@ -164,23 +198,55 @@ export function WorklistRow({
   // holds the disposition write for the verbs and the swipe.
   const brief = useBriefAnswer(item);
   const answer = rowAnswer(item, brief);
+  // THE ITEM, READ ONCE. Both columns print these and neither derives anything
+  // of its own, so the densities cannot come to disagree about a title, a
+  // clock or a reason.
+  const readings: RowReadings = {
+    item,
+    title,
+    href,
+    when,
+    facts,
+    said,
+    folded,
+    above,
+    consequence,
+    detail,
+    sample,
+    zone,
+  };
   return (
     <PanelRow
-      className={
-        selected ? "worklist-row worklist-row-selected" : "worklist-row"
-      }
+      // A CLASS and not a data attribute: `PanelRow` takes a className and
+      // forwards nothing else, and reaching into that primitive to pass one
+      // attribute through would make a screen the second author of the house
+      // row.
+      className={[
+        "worklist-row",
+        selected ? "worklist-row-selected" : "",
+        density === "compact" ? "worklist-row-compact" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       {/* Below the fold the row itself answers the set-aside judgements, whose
           verbs do not fit beside the work at 390px. It wraps the row rather
           than the verbs because the row is what a thumb lands on; above the
           fold it draws its children and nothing else. */}
       <PutDownByThumb item={item}>
-        <Rank
-          position={position}
-          title={title}
-          selected={selected}
-          onSelect={onSelect}
-        />
+        {/* THE RANK IS WHAT THE DENSITY GIVES UP FIRST. It is a claim about
+            order, and at one line per row the ordered list already carries
+            that claim — so a digit per row spends a column saying again what
+            the page says once. `position` is refused in compact rather than
+            ignored: see RowDensity. */}
+        {position !== undefined && (
+          <Rank
+            position={position}
+            title={title}
+            selected={selected}
+            onSelect={onSelect}
+          />
+        )}
         {/* WHAT KIND of work, in its own column at a width that has one, so a
             reader running down the queue reads the kinds as a list without
             reading a title first — and in the warn tone on the rows the day
@@ -210,65 +276,17 @@ export function WorklistRow({
               put on it — and an empty line still collects the text column's
               interval, which is a stranded gap between the message and the
               facts under it on every waiting row. */}
-          {(!emailOpener || badged) && (
-            <p className="t-body worklist-row-title">
-              {emailOpener ? null : href ? (
-                <a className="entity-link" href={href}>
-                  {title}
-                </a>
-              ) : (
-                title
-              )}
-              {item.overdue && (
-                <Badge tone="danger">{t("worklist.overdue")}</Badge>
-              )}
-              {/* A state of the meeting, not a reason among reasons: a rep
-                scanning for the one to open before it starts has to see it
-                without reading the line under the title. Warn rather than
-                danger — an unprepared meeting is work to do, not a deadline
-                already missed. */}
-              {isUnprepared(item) && (
-                <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
-              )}
-            </p>
+          {density === "compact" ? (
+            // ONE LINE, off the same readings the default column prints. The
+            // name is withheld where the message above already carries it.
+            <CompactRowLine readings={readings} named={!emailOpener} />
+          ) : (
+            <RowText
+              readings={readings}
+              emailOpener={emailOpener}
+              badged={badged}
+            />
           )}
-          {/* The supporting line, from every source that sends PROSE.
-
-            It was drawn for `notice` alone, because three sources used this
-            field as a typed channel — two wrote a bare day count, one wrote the
-            marker words the queue groups by — and drawing it would have printed
-            "90" under one title and "machine_sender" under another. Those three
-            send their values typed now, so the twelve sources that were already
-            writing sentences get to say them: which mailbox stopped, why a
-            message bounced, why a send was held, what an AI task was about,
-            which rule failed and how. That is the decisive line on most of these
-            rows, and a reader was reading around it.
-
-            `sync_health` sends its facts in the producer's own vocabulary —
-            `shed`, `rate_limited`, `deals, contacts` — so its line is WRITTEN
-            from that pair rather than drawn, by worklist.synchealth.ts. A value
-            that build does not recognise draws nothing, which is what this row
-            did for every sync value before. */}
-          {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
-          {sample.length > 0 && (
-            // A group nobody can see into is a group nobody trusts, and an
-            // untrusted group is worse than the pile it replaced.
-            <p className="t-caption worklist-row-sample">
-              {sample.join(" · ")}
-            </p>
-          )}
-          {/* How the deal is standing, above the captions rather than among
-              them. It is a READING and they are facts, and a reader who cannot
-              tell those apart cannot tell what to trust — worklist.verdict.tsx
-              states why the label says which. */}
-          <VerdictLine verdict={item.verdict} zone={zone} />
-          <RowCaptions
-            when={when}
-            facts={facts}
-            reasons={reasons}
-            consequence={consequence}
-            above={above}
-          />
         </div>
         {/* EVERY VERB ON ONE RIGHT-ALIGNED LINE, the lane's answer LAST. Under
             the work where the card has no column to spare for it, beside the
@@ -278,6 +296,7 @@ export function WorklistRow({
         <RowActs
           item={item}
           href={href}
+          density={density}
           owner={owner}
           primary={answer.primary}
           equals={answer.equals}
@@ -290,6 +309,104 @@ export function WorklistRow({
         {answer.below}
       </PutDownByThumb>
     </PanelRow>
+  );
+}
+
+/**
+ * The row's text column at the DEFAULT density: the name, the prose under it,
+ * and the captions under that.
+ *
+ * Its own component because the row draws one of two columns now and the
+ * readings are the same either way — `WorklistRow` reads the item once and
+ * hands the answers to whichever column the surface asked for. It stays in
+ * this file rather than beside the compact line: this is the row's own
+ * anatomy, and that line is the variant of it.
+ */
+function RowText({
+  readings,
+  emailOpener,
+  badged,
+}: Readonly<{
+  readings: RowReadings;
+  /** Opens a waiting message. Its PRESENCE is what names the row. */
+  emailOpener: ((activityId: string) => void) | undefined;
+  /** Whether the day put a state on this row — overdue, or nothing prepared. */
+  badged: boolean;
+}>) {
+  const {
+    item,
+    title,
+    href,
+    when,
+    facts,
+    said,
+    folded,
+    above,
+    consequence,
+    detail,
+    sample,
+    zone,
+  } = readings;
+  const t = useT();
+  return (
+    <>
+      {(!emailOpener || badged) && (
+        <p className="t-body worklist-row-title">
+          {emailOpener ? null : href ? (
+            <a className="entity-link" href={href}>
+              {title}
+            </a>
+          ) : (
+            title
+          )}
+          {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
+          {/* A state of the meeting, not a reason among reasons: a rep
+              scanning for the one to open before it starts has to see it
+              without reading the line under the title. Warn rather than
+              danger — an unprepared meeting is work to do, not a deadline
+              already missed. */}
+          {isUnprepared(item) && (
+            <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+          )}
+        </p>
+      )}
+      {/* The supporting line, from every source that sends PROSE.
+
+          It was drawn for `notice` alone, because three sources used this
+          field as a typed channel — two wrote a bare day count, one wrote the
+          marker words the queue groups by — and drawing it would have printed
+          "90" under one title and "machine_sender" under another. Those three
+          send their values typed now, so the twelve sources that were already
+          writing sentences get to say them: which mailbox stopped, why a
+          message bounced, why a send was held, what an AI task was about,
+          which rule failed and how. That is the decisive line on most of these
+          rows, and a reader was reading around it.
+
+          `sync_health` sends its facts in the producer's own vocabulary —
+          `shed`, `rate_limited`, `deals, contacts` — so its line is WRITTEN
+          from that pair rather than drawn, by worklist.synchealth.ts. A value
+          that build does not recognise draws nothing, which is what this row
+          did for every sync value before. */}
+      {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
+      {sample.length > 0 && (
+        // A group nobody can see into is a group nobody trusts, and an
+        // untrusted group is worse than the pile it replaced.
+        <p className="t-caption worklist-row-sample">{sample.join(" · ")}</p>
+      )}
+      {/* How the deal is standing, above the captions rather than among
+            them. It is a READING and they are facts, and a reader who cannot
+            tell those apart cannot tell what to trust — worklist.verdict.tsx
+            states why the label says which. */}
+      <VerdictLine verdict={item.verdict} zone={zone} />
+      <RowCaptions
+        when={when}
+        facts={facts}
+        said={said}
+        folded={folded}
+        consequence={consequence}
+        above={above}
+      />
+    </>
   );
 }
 
@@ -553,13 +670,16 @@ const REASONS_BEFORE_THE_FOLD = 3;
  * the fold holds.
  */
 function RowWhyHere({
-  reasons,
+  said,
+  folded,
   above,
-}: Readonly<{ reasons: readonly string[]; above: string | null }>) {
+}: Readonly<{
+  said: readonly string[];
+  folded: readonly string[];
+  above: string | null;
+}>) {
   const t = useT();
   const { locale } = useLocale();
-  const said = reasons.slice(0, REASONS_BEFORE_THE_FOLD);
-  const folded = reasons.slice(REASONS_BEFORE_THE_FOLD);
   const behind = folded.length + (above ? 1 : 0);
   if (behind === 0) {
     return said.length === 0 ? null : (
@@ -624,13 +744,15 @@ function RowWhyHere({
 function RowCaptions({
   when,
   facts,
-  reasons,
+  said,
+  folded,
   consequence,
   above,
 }: Readonly<{
   when: string | null;
   facts: string | null;
-  reasons: readonly string[];
+  said: readonly string[];
+  folded: readonly string[];
   consequence: string | null;
   above: string | null;
 }>) {
@@ -642,7 +764,7 @@ function RowCaptions({
       <div className="worklist-row-facts-line">
         {when && <p className="t-caption worklist-row-when">{when}</p>}
         {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
-        <RowWhyHere reasons={reasons} above={above} />
+        <RowWhyHere said={said} folded={folded} above={above} />
       </div>
       {/* What it costs to do nothing. The question a queue exists to answer,
           and the one the lane feed had no field for. */}

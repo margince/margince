@@ -177,7 +177,7 @@ export function writeRoutes(calls: readonly Call[]): string[] {
 
 /** Brief's two work sections, in the order the document holds them. */
 export function workOrder(): string[] {
-  return [...document.querySelectorAll("#brief-decisions, #brief-feed")].map(
+  return [...document.querySelectorAll("#brief-decisions, #brief-today")].map(
     (section) => section.id,
   );
 }

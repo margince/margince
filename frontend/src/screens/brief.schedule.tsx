@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Badge } from "../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -19,9 +19,49 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 //
 // NEITHER SORTS. The order is the server's, the same order the queue prints,
 // so the rail and the work column cannot disagree about what comes first.
+//
+// A PANEL WITH NOTHING IN IT DOES NOT EARN ITS BOX. Either of these on a clear
+// day used to draw a header band, a hairline and one grey sentence — two boxes
+// of chrome around eleven words, which cost the populated panels beside them
+// the reader's eye. Empty, the panel renders nothing and the rail's own
+// `RailQuiet` prints the one line that says so (screens/brief.rail.tsx). A read
+// still in flight or a read that failed still draws in full: those are facts
+// about the request, and collapsing them would tell a reader their day was
+// clear on the strength of an answer nobody received.
 
 const MEETING = "meeting";
 const TASK = "task";
+
+/**
+ * Whether the day's schedule has nothing to draw.
+ *
+ * Exported because two surfaces turn on this one answer — the panel, which
+ * draws nothing, and the rail's quiet panel, which prints the line standing in
+ * for it. Spelled twice they would eventually disagree, and a reader would meet
+ * an empty panel and the line announcing its absence on the same rail.
+ */
+export function scheduleIsEmpty(
+  day: Worklist | undefined,
+  state: SectionState,
+): boolean {
+  return answered(state) && rowsFrom(day, MEETING).length === 0;
+}
+
+/** Whether this rep has no task due today. Same contract as above. */
+export function tasksIsEmpty(
+  day: Worklist | undefined,
+  state: SectionState,
+): boolean {
+  return answered(state) && rowsFrom(day, TASK).length === 0;
+}
+
+/**
+ * Whether the read has ANSWERED, which is what makes an absence of rows mean
+ * there are none. Every other state is a fact about the request.
+ */
+function answered(state: SectionState): boolean {
+  return state === "ready" || state === "empty";
+}
 
 /**
  * The day's schedule, in the order the server ranked it.
@@ -37,6 +77,9 @@ export function SchedulePanel({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
+  if (scheduleIsEmpty(day, state)) {
+    return null;
+  }
   const meetings = rowsFrom(day, MEETING);
   return (
     <section id="brief-schedule">
@@ -47,8 +90,10 @@ export function SchedulePanel({
             panel in the rail. `SurfaceState` draws its sentence either way. */}
         <SurfaceState
           loadingLabel={t("brief.panel.schedule")}
-          state={state === "ready" && meetings.length === 0 ? "empty" : state}
-          emptyLabel={t("brief.schedule.clear")}
+          state={state}
+          // The words the rail prints for this absence, so the panel and the
+          // quiet line cannot report one morning in two vocabularies.
+          emptyLabel={t("brief.rail.quietSchedule")}
         >
           {meetings.map((item) => (
             <PanelRow key={item.id} className="rail-schedule-row">
@@ -70,26 +115,30 @@ export function SchedulePanel({
 }
 
 /**
- * What this rep owes: their open tasks, and an honest word about promises.
+ * What this rep owes today: the tasks due on them.
  *
- * The commitments lane is not wired, so a promise made in a conversation
- * reaches nothing. The panel says so rather than listing tasks under a heading
- * that claims both — a rep who reads "Promises & tasks" and sees only tasks
- * would take the absence of a promise for its absence in the world.
+ * TASKS ONLY, AND THE TITLE SAYS SO. It read "Promises & tasks" over a
+ * disclaimer explaining that a promise made in conversation reaches nothing —
+ * a heading that named a thing the product does not have, and a standing line
+ * of apology in the narrowest column on the page. The panel now claims exactly
+ * what it lists, which is what the disclaimer existed to walk back.
  */
 export function PromisesPanel({
   day,
   state,
 }: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
   const t = useT();
+  if (tasksIsEmpty(day, state)) {
+    return null;
+  }
   const tasks = rowsFrom(day, TASK);
   return (
-    <section id="brief-promises">
-      <Panel title={t("brief.panel.promises")} className="rail-panel">
+    <section id="brief-tasks">
+      <Panel title={t("brief.panel.tasks")} className="rail-panel">
         <SurfaceState
-          loadingLabel={t("brief.panel.promises")}
-          state={state === "ready" && tasks.length === 0 ? "empty" : state}
-          emptyLabel={t("brief.promises.clear")}
+          loadingLabel={t("brief.panel.tasks")}
+          state={state}
+          emptyLabel={t("brief.rail.quietTasks")}
         >
           {tasks.map((item) => (
             <PanelRow key={item.id} className="rail-promise-row">
@@ -97,15 +146,6 @@ export function PromisesPanel({
             </PanelRow>
           ))}
         </SurfaceState>
-        {/* Under the list on every reading, including the empty one. It is the
-            state of the PRODUCT rather than of this morning, and a reader who
-            saw it only on a busy day would read an empty panel as "no promises
-            outstanding" — which is exactly the claim nothing here can make. */}
-        <PanelBody>
-          <p className="t-caption rail-promise-note">
-            {t("brief.promises.untracked")}
-          </p>
-        </PanelBody>
       </Panel>
     </section>
   );

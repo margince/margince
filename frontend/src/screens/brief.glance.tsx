@@ -1,38 +1,46 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Eyebrow } from "../design-system/eyebrow";
-import { formatDayLong, formatTimeOfDay, hourInZone } from "../format/format";
+import type { ReactNode } from "react";
+import { hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { WeeklyReview } from "./brief.queries";
-import { briefSentence } from "./brief.sentence";
+import {
+  type BriefSentence,
+  briefSentence,
+  sentenceParts,
+} from "./brief.sentence";
 import type { BriefView } from "./brief.view";
 import { weekSentence } from "./brief.weeksentence";
 import type { Worklist } from "./worklist.queries";
 
-// The first thing a reader sees each morning: who they are, what hour it is for
-// them, and the day stated in sentences. The readings strip directly below says
-// the same numbers; this block exists to say what they MEAN, which a row of
+// The first thing a reader sees each morning: who they are, and the day stated
+// in one sentence. The readings strip directly below says the numbers; this
+// block exists to say what to DO about the first of them, which a row of
 // figures cannot.
+//
+// TWO LINES AND NOTHING ELSE. What stood here before — an uppercase eyebrow
+// naming the view, a clock reporting the minute the queue was read, and the
+// date under the greeting — were three lines a reader already knew. The view is
+// the dial's own state, drawn beside this block; the date is the shell's; and
+// an as-of that ticked every sixty seconds re-rendered the page's opening for a
+// digit nobody was reading. Both views are now greeting plus sentence, which is
+// also why neither wears a label: two views drawn alike need no kicker to tell
+// them apart, and one of them wearing one would be the odd page.
 //
 // Presentational and total: every figure arrives as a prop and every prop is
 // nullable, because "we could not read this" and "there is none of it" are
-// different sentences and neither may be printed as a zero. A reading that is
-// missing contributes NO line at all — an absent line is honest, an invented
-// zero is not.
+// different sentences and neither may be printed as a zero.
 //
 // `now` is a prop rather than a call to the clock inside the render. The
-// greeting is the one thing on Brief that changes with the hour, so a test that
+// greeting is the one thing here that changes with the hour, so a test that
 // cannot choose the hour cannot test it, and a real clock would make the same
 // test pass at 09:00 and fail at 21:00.
-//
-// Each line reads NUMERAL then sentence, and the numeral is the control. That
-// order is also why the sentences are stored per-count (`.one`/`.other`) rather
-// than assembled from words: a translator gets a whole clause to agree with the
-// numeral in front of it, which is the difference between a sentence and a
-// concatenation.
+
+/** Where the day's own order is drawn, for the sentence's tail to reach. */
+const TODAY_SECTION = "brief-today";
 
 // Four greetings, and the boundaries are the reader's day rather than the
 // clock's quarters: work starts before noon, the afternoon runs to the end of
@@ -76,36 +84,95 @@ export type GlanceFacts = Readonly<{
    *  has been written yet; undefined while the read is in flight or after it
    *  failed — a quiet week and an unread one are different sentences. */
   week: WeeklyReview | null | undefined;
-  /** Which Brief this is. The eyebrow names it, and each view composes its own
-   *  sentence: the morning's from the ranked queue, the weekly's from the
-   *  counts the week was frozen with. Neither can describe the other. */
+  /** Which Brief this is. Each view composes its own sentence: the morning's
+   *  from the ranked queue, the weekly's from the counts the week was frozen
+   *  with. Neither can describe the other. */
   view: BriefView;
 }>;
 
 export type GlanceProps = GlanceFacts;
 
-// The eyebrow names the view and, for the morning, the moment the queue below
-// was read. The as-of is the morning's alone: the weekly's numbers were frozen
-// when the week closed, and a time-of-day against them would date the reading
-// rather than the week. A morning whose queue has not arrived yet says the
-// scope by itself instead of naming a moment it does not know.
-function eyebrowText(
-  view: BriefView,
-  day: Worklist | undefined,
-  t: Translator,
-  locale: Locale,
-): string {
-  if (view === "weekly") {
-    return t("brief.eyebrow.weekly");
+/**
+ * Scroll the day's own order under the reader's eye.
+ *
+ * A BUTTON rather than an anchor, and the reason is the address bar: every
+ * `href` in this product is a route (`#/worklist`), so a fragment link would
+ * replace the route with `#brief-today` and send the reader off the page the
+ * tail of the sentence is pointing AT.
+ */
+function showToday(): void {
+  // jsdom has no scrollIntoView; the browser always does.
+  document.getElementById(TODAY_SECTION)?.scrollIntoView?.({ block: "start" });
+}
+
+/**
+ * The day in one sentence, with the two clauses a reader can act on made
+ * reachable: the lead opens its own record, and the tail reaches today's order.
+ *
+ * The template is translated with its holes INTACT and cut apart here, because
+ * a string with the holes already filled has nowhere to put a link and a
+ * sentence assembled from clauses would produce German in English word order.
+ */
+function GlanceSentence({ sentence }: Readonly<{ sentence: BriefSentence }>) {
+  const t = useT();
+  const parts = sentenceParts(t(sentence.key));
+  return (
+    <p className="glance-sentence" data-testid="glance-sentence">
+      {/* A template's own words go in as STRINGS rather than wrapped in spans:
+          only the filled holes are elements, and a hole's name is its identity
+          — `lead`, `consequence`, `rest` appear once each. */}
+      {parts.map((part) =>
+        part.kind === "text" ? part.text : filled(part.name, sentence, t),
+      )}
+    </p>
+  );
+}
+
+/**
+ * What goes in one hole of the sentence.
+ *
+ * A hole with no value renders its own name back, which is exactly what
+ * `translate` does with one: a sentence missing a clause reads as an obvious
+ * defect on the page rather than as a sentence that quietly lost a word.
+ */
+function filled(
+  name: string,
+  sentence: BriefSentence,
+  t: (key: MessageKey, values?: Record<string, string>) => string,
+): ReactNode {
+  const value = sentence.values[name];
+  if (value === undefined) {
+    return `{${name}}`;
   }
-  const scope = t("brief.eyebrow");
-  if (day === undefined) {
-    return scope;
+  if (name === "lead" && sentence.leadHref !== undefined) {
+    return (
+      <a key={name} className="entity-link" href={sentence.leadHref}>
+        {value}
+      </a>
+    );
   }
-  return t("brief.eyebrow.asOf", {
-    scope,
-    at: formatTimeOfDay(day.as_of, locale, viewerZone()),
-  });
+  if (name === "rest") {
+    // The WHOLE clause is the control, not the numeral inside it: "4" alone is
+    // a two-character press target and reads as a figure rather than as a way
+    // anywhere.
+    //
+    // `glance-rest` is what puts it back INTO the sentence: `.link-button` is
+    // an inline-flex box with side padding, which is right for a verb standing
+    // on its own and wrong for a clause mid-sentence — it printed a space
+    // before the full stop that follows it, and its box raised the line the
+    // clamp then reserved two of.
+    return (
+      <button
+        key={name}
+        type="button"
+        className="link-button glance-rest"
+        onClick={showToday}
+      >
+        {t("brief.sentence.rest", { count: value })}
+      </button>
+    );
+  }
+  return value;
 }
 
 export function BriefGlance({ firstName, now, day, week, view }: GlanceProps) {
@@ -117,47 +184,29 @@ export function BriefGlance({ firstName, now, day, week, view }: GlanceProps) {
     ? t(greetingKey(hour), { name: firstName })
     : t(anonGreetingKey(hour));
 
-  const { locale } = useLocale();
-  // THE DAY IN ONE SENTENCE, from the rows the page is already showing. The
-  // lines below say the same facts as separate counts; this says what to do
-  // about the first one, which a column of figures cannot.
   // EACH VIEW COMPOSES ITS OWN. The morning's comes from the ranked queue,
   // which is what waits TODAY; over the weekly it would be describing this
   // morning under a heading about the week that closed. The weekly's comes from
   // the frozen counts, which is what the week is now a record of.
+  const { locale } = useLocale();
   const sentence =
     view === "morning" ? briefSentence(day, t, locale) : weekSentence(week, t);
 
   return (
     <header className="glance arrive" data-testid="brief-glance">
-      {/* Scope and date, above the greeting. A span rather than a heading: the
-          page has ONE h1 and this is its label, not a level of its own. */}
-      <Eyebrow className="glance-eyebrow">
-        {eyebrowText(view, day, t, locale)}
-      </Eyebrow>
       <h1 className="glance-greeting t-display">{greeting}</h1>
-      {/* The day, under the greeting and before the sentence about it — the
-          morning's only. The weekly is about a week that closed, and today's
-          date over it would date the reading rather than the week. */}
-      {view === "morning" && (
-        <p className="glance-date t-sub">
-          {formatDayLong(now.toISOString(), locale, viewerZone())}
-        </p>
-      )}
       {sentence ? (
-        <p className="glance-sentence" data-testid="glance-sentence">
-          {t(sentence.key, sentence.values)}
-        </p>
+        <GlanceSentence sentence={sentence} />
       ) : (
         // Neither view could compose a sentence: the queue or the week has not
         // arrived, or the read failed. The fallback names the view rather than
         // describing it, because there is nothing yet to describe — and the
         // morning's "this is your day" read as the wrong week entirely beneath
-        // "YOUR WEEK". Each view says its own.
+        // a weekly. Each view says its own.
         //
-        // ONE FACE either way. It is the same slot the morning's composed
-        // sentence fills, and drawn as a caption it read as a footnote where
-        // the composed one read as the page's opening.
+        // ONE FACE either way. It is the same slot the composed sentence fills,
+        // and drawn as a caption it read as a footnote where the composed one
+        // read as the page's opening.
         <p className="glance-sentence">
           {t(
             view === "weekly"

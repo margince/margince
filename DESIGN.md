@@ -821,11 +821,12 @@ inventory. The structure above holds; these are the facts it now carries.
   and the next task. A lead carries no agent suggestions; the "Ready to
   qualify" row on this page is a proposal, derived from the same evidence the
   qualify dialog derives its reason from.
-- **The Brief draws five fixed readings**: Customer waiting, Meetings ahead,
-  Promises due, Lead response, Quota pace. Two of them say what they cannot
-  answer ("promises are not tracked yet", "no target is set") rather than
-  showing a zero, and the floor line under the row says when a source was read
-  to its limit. The old four cards are gone.
+- **The Brief draws five fixed readings**: Urgent, Meetings today, Leads owed
+  a reply, Pipeline · Q3, Decisions waiting. One dense row — label, figure,
+  basis fragment — where the whole cell is the door into the lane its figure
+  counted, figures are in neutral ink unless the reading counts something
+  breaching, and a source read to its limit marks its figures `8+` rather than
+  adding a sentence under the row.
 - **Tags** are a panel on company, contact and deal (four visible, "+N more",
   a split pill that opens the tag or its menu, "Add tag" opens a picker that
   cannot create a word), a Tags column on the contacts, companies and deals

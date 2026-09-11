@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
+import { useTooltip } from "../design-system/tooltip";
 import { middayInstant } from "../format/calendarday";
 import {
   formatDateAbbrev,
   formatDateTime,
   formatMoneyCompact,
-  formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
+import { quarterLabel } from "../format/quarter";
 import { viewerZone } from "../format/timezone";
 import {
   type Locale,
@@ -24,32 +25,19 @@ import {
 import { openAnalyticsSection } from "./analytics.address";
 import { useAnalyticsContext } from "./analytics.context";
 import { useForecastReadings } from "./forecast.queries";
-import { WORKLIST_FILTER_PARAM } from "./worklist";
 import { isUnprepared } from "./worklist.copy";
+import { worklistLaneHref } from "./worklist.header";
 import type {
   Worklist,
   WorklistFilter,
   WorklistItem,
 } from "./worklist.queries";
 
-// The day's readings, on one plate.
+// The day's readings, on one dense plate.
 //
-// FIVE slots, and every one of them answerable — which is what changed. Two of
-// the five were placeholders drawing an em dash: promises, because the
-// commitments lane is unwired, and quota pace, because targets were retired from
-// the product by founder decision. A row where two slots say "not tracked" is
-// not a comparison a reader can make; it is three figures and two apologies, and
-// the apologies were permanent.
-//
-// The rule that kept them was that a strip is read ACROSS, so a shrinking row
-// could let a reader take a missing question for an answered one. That rule
-// holds for a question the product intends to answer LATER. It does not hold for
-// one the product decided not to ask: a slot that will never fill is not a
-// pending answer, and drawing it forever teaches a reader to skip the row.
-//
-// So the count is the same and the content is not. The plate asks: what is
-// urgent, what needs preparing, which leads are owed an answer, where the
-// pipeline stands, and what is waiting on a decision.
+// FIVE slots, and every one of them answerable. The plate asks: what is urgent,
+// what is on today's calendar, which leads are owed a reply, where the pipeline
+// stands this quarter, and what is waiting on a decision.
 //
 // FOUR OF THE FIVE come from the ONE worklist answer the queue below is drawn
 // from, so no second read can put a different number beside the same rows. The
@@ -57,74 +45,154 @@ import type {
 // query key Analytics uses — one answer to "what is the pipeline worth",
 // wherever it is asked.
 //
-// The floor caveat is the plate's own, through `StatStrip`'s `floor` slot — the
-// row is read across as one statement, so a caveat belonging to one figure would
-// invite the reading where the others are exact.
+// THE WHOLE CELL IS THE DOOR. It used to be a word: every slot drew an
+// "Open →" line in its foot, which is a decorative row on a plate whose whole
+// argument is that five readings are taken in at one glance — and five doors
+// all reading "Open" were five identical rows in a screen reader's list. The
+// cell is now the control, so what a reader presses is the reading they are
+// looking at and what a screen reader announces is that reading's own words.
+//
+// A BOUNDED READ IS A `+`, NOT A SENTENCE. The row used to carry a line saying
+// a source had been read to its limit, so every figure above it was a floor.
+// The fact belongs ON the figures: `8+` says it where the number is, and the
+// cell's hover line says why. `WorklistReadings.more_available` is ONE flag for
+// the whole readings block by contract — "set once for the strip rather than
+// per reading" — so it marks every figure it covers rather than being
+// attributed to whichever slot a reader happens to suspect.
 
 const MEETINGS = "meetings";
 const LEADS = "leads";
 
-// Open the worklist on the lane a reading counted.
-//
-// Each figure in this strip IS one of the queue's filter pills counted, so the
-// reading's door is that lane. It goes in the QUERY rather than the path because
-// `#/worklist/<owner>` is already an address the team board navigates to, and
-// `routeIdentity` ignores the query half — so this narrows the view without
-// remounting the screen, and leaves an address somebody can paste.
-function openLane(filter: WorklistFilter): void {
-  navigate({ screen: "worklist" }, new Map([[WORKLIST_FILTER_PARAM, filter]]));
+/**
+ * One reading: what it is, the figure, and what the figure rests on.
+ *
+ * `warn` is deliberately narrow. Neutral ink is the default for every figure on
+ * the plate, because a row where four numbers are coloured is a traffic light
+ * rather than a comparison. It is spent only where the reading counts something
+ * that is BREACHING — somebody waiting, a promise going, a meeting starting
+ * with nothing prepared — and never on a figure that is merely large.
+ */
+type Reading = Readonly<{
+  label: string;
+  /** The figure itself, so the slot can tell a floor of none from a floor. */
+  count: number;
+  basis: ReactNode;
+  warn?: boolean;
+  /** The source behind the figure was read to its bound: it is a floor. */
+  floor?: boolean;
+  /** The lane this reading counted, which is where its cell leads. */
+  lane: WorklistFilter;
+}>;
+
+/**
+ * A reading whose whole cell is a link into the lane it counted.
+ *
+ * The lane goes in the QUERY rather than the path because `#/worklist/<owner>`
+ * is already an address the team board navigates to, and `routeIdentity`
+ * ignores the query half — so this narrows the view without remounting the
+ * screen, and leaves an address somebody can paste.
+ */
+function LaneReading({ label, count, basis, warn, floor, lane }: Reading) {
+  const t = useT();
+  const { locale } = useLocale();
+  // A FLOOR OF NONE IS NOT A FLOOR. `0+` says "at least nothing", which is
+  // true of every number there has ever been — so the mark goes on a figure
+  // that counts something and nowhere else. A bounded read that found none of
+  // a kind is a reading of zero, and the `+` was noise on it.
+  const marked = floor === true && count > 0;
+  // The tip rides the CELL, which is already the press target: a dense slot has
+  // no room for a second anchor, and a mark on the figure that explains itself
+  // only to a pointer resting on three characters is a mark most readers never
+  // read. Wired only where the figure is a floor — an `aria-describedby`
+  // pointing at a tip nobody renders is a dangling reference.
+  const floorTip = useTooltip<HTMLAnchorElement>(t("brief.readings.floorTip"));
+
+  const figure = formatNumber(count, locale);
+  const card = (
+    <StatCard
+      label={label}
+      value={marked ? `${figure}+` : figure}
+      tone={warn ? "warn" : undefined}
+      detail={basis}
+      // The whole plate is read as ONE glance, so every slot on it keeps the
+      // same air. At the tile's default floor the day's own work started below
+      // the fold on a laptop.
+      density="compact"
+    />
+  );
+  const href = worklistLaneHref(lane);
+  return marked ? (
+    <a href={href} ref={floorTip.ref} {...floorTip.trigger}>
+      {card}
+      {floorTip.tip}
+    </a>
+  ) : (
+    <a href={href}>{card}</a>
+  );
 }
 
 export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const readings = day.readings;
   const meetings = meetingsReading(day);
   const soonest = soonestLeadDeadline(day);
+  // ONE flag for the four figures read off this answer, which is what the
+  // contract says it is. Splitting it per slot would attribute a bound to
+  // whichever reading looked likeliest, over populations that differ.
+  const floor = readings.more_available;
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
-      <StatStrip
-        testId="brief-readings"
-        floor={
-          readings.more_available ? t("brief.readings.truncated") : undefined
-        }
-      >
-        <StatCard
+      <StatStrip testId="brief-readings">
+        <LaneReading
           label={t("brief.readings.urgent")}
-          value={formatNumber(day.summary.urgent, locale)}
-          tone={day.summary.urgent > 0 ? "warn" : undefined}
           // The SUMMARY's own count, not one lane's. `urgent` is every row at
           // the top two levels — somebody waiting or a promise breaking — and
-          // the morning's first question is how many of those there are, not
-          // how many came from one producer.
-          //
-          // The basis line says what the figure was taken over, on every day. A
-          // zero already reads as "none"; a line under it repeating that says
-          // the same thing twice and drops the one fact it could add.
-          detail={t("brief.readings.urgentBasis")}
-          onOpen={() => openLane("all")}
+          // the morning's first question is how many of those there are.
+          count={day.summary.urgent}
+          warn={day.summary.urgent > 0}
+          floor={floor}
+          // The basis says what the figure was taken over, on every day. A zero
+          // already reads as "none"; a line repeating that says the same thing
+          // twice and drops the one fact it could add.
+          basis={t("brief.readings.urgentBasis")}
+          lane="all"
         />
-        <MeetingsStat
-          meetings={meetings.meetings}
-          unready={meetings.unready}
-          locale={locale}
-          t={t}
-          onOpen={() => openLane("meetings")}
+        <LaneReading
+          label={t("brief.readings.meetings")}
+          count={meetings.meetings}
+          // Readiness is the breach here: a meeting starting with nothing
+          // prepared is the one fact on this slot a reader must act on before
+          // it begins. The count of meetings itself is neither good nor bad.
+          warn={meetings.unready !== null && meetings.unready > 0}
+          floor={floor}
+          basis={meetingsDetail(meetings, locale, t, plural)}
+          lane="meetings"
         />
-        <LeadsStat
-          leads={readings.prospecting}
-          soonest={soonest}
-          locale={locale}
-          t={t}
-          onOpen={() => openLane("leads")}
+        <LaneReading
+          label={t("brief.readings.leads")}
+          count={readings.prospecting}
+          floor={floor}
+          // The deadline is the fact that changes what a reader does before
+          // lunch, and NULL rather than a guess where the page cannot honestly
+          // compute one.
+          basis={
+            soonest === null
+              ? t("brief.readings.leadsBasis")
+              : t("brief.readings.leadsDue", {
+                  value: formatDateTime(soonest, locale, viewerZone()),
+                })
+          }
+          lane="leads"
         />
         <PipelineOutlook />
-        <StatCard
+        <LaneReading
           label={t("brief.readings.decisions")}
-          value={formatNumber(readings.review, locale)}
-          tone={readings.review > 0 ? "warn" : undefined}
-          detail={t("brief.readings.decisionsBasis")}
-          onOpen={() => openLane("decisions")}
+          count={readings.review}
+          floor={floor}
+          basis={t("brief.readings.decisionsBasis")}
+          lane="decisions"
         />
       </StatStrip>
     </section>
@@ -137,40 +205,13 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
 // starts, so a day with meetings and nothing unprepared says "all prepared"
 // rather than leaving the line blank: the absence of a warning has to be
 // readable as an answer, not as a gap.
-function MeetingsStat({
-  meetings,
-  unready,
-  locale,
-  t,
-  onOpen,
-}: Readonly<{
-  onOpen: () => void;
-  meetings: number;
-  // Null when the page carries fewer meetings than it counted, so no honest
-  // readiness figure exists — NOT the same as zero unprepared.
-  unready: number | null;
-  locale: Locale;
-  t: Translator;
-}>) {
-  const plural = usePlural();
-  return (
-    <StatCard
-      label={t("brief.readings.meetings")}
-      value={formatNumber(meetings, locale)}
-      tone={unready !== null && unready > 0 ? "warn" : undefined}
-      detail={meetingsDetail(meetings, unready, locale, t, plural)}
-      onOpen={onOpen}
-    />
-  );
-}
-
 function meetingsDetail(
-  meetings: number,
-  unready: number | null,
+  reading: MeetingsReading,
   locale: Locale,
   t: Translator,
   plural: ReturnType<typeof usePlural>,
 ): string {
+  const { meetings, unready } = reading;
   if (unready === null) {
     return t("brief.readings.prepUnknown");
   }
@@ -184,45 +225,6 @@ function meetingsDetail(
   return meetings === 0
     ? t("brief.readings.meetingsBasis")
     : t("brief.readings.prepared");
-}
-
-// How much new business is owed a first answer, and when the nearest one is due.
-//
-// The deadline is the fact that changes what a reader does before lunch, so it
-// takes the same shape readiness takes on the meetings slot beside it: a second
-// fact in the detail line, and NULL rather than a guess where the page cannot
-// honestly compute one.
-function LeadsStat({
-  leads,
-  soonest,
-  locale,
-  t,
-  onOpen,
-}: Readonly<{
-  onOpen: () => void;
-  leads: number;
-  // Null when no honest nearest deadline exists — either nothing on the page
-  // names one, or the leads read was cut short and an unshown lead could be
-  // sooner than every one the reader can see.
-  soonest: string | null;
-  locale: Locale;
-  t: Translator;
-}>) {
-  return (
-    <StatCard
-      label={t("brief.readings.leads")}
-      value={formatNumber(leads, locale)}
-      tone={leads > 0 ? "warn" : undefined}
-      detail={
-        soonest === null
-          ? t("brief.readings.leadsBasis")
-          : t("brief.readings.leadsDue", {
-              value: formatDateTime(soonest, locale, viewerZone()),
-            })
-      }
-      onOpen={onOpen}
-    />
-  );
 }
 
 // The nearest deadline among the lead rows the page is SHOWING, or none.
@@ -274,12 +276,12 @@ function replyDueAt(item: WorklistItem): string | undefined {
   return undefined;
 }
 
-// The count slots call `StatCard` straight rather than through a shared tile
-// helper. `worklist.readings.tsx` has a `CountStat` of its own, and lifting it
-// was considered: it takes a fixed detail string, while these need a detail that
-// changes with the figure and a tone that follows it. A helper carrying both
-// would be `StatCard` with its own props spelled twice — a rename, not a shared
-// answer. The primitive they genuinely share is `StatCard`, and both use it.
+type MeetingsReading = Readonly<{
+  meetings: number;
+  // Null when the page carries fewer meetings than it counted, so no honest
+  // readiness figure exists — NOT the same as zero unprepared.
+  unready: number | null;
+}>;
 
 // The meetings reading: how many stand behind the day, and how many of those
 // nothing is prepared for — or that the second question could not be answered.
@@ -292,12 +294,7 @@ function replyDueAt(item: WorklistItem): string | undefined {
 // meetings are ready when nothing checked them.
 //
 // So readiness is claimed ONLY when the page carries every meeting it counted.
-// Short of that the slot says the page could not check them all, which is the
-// same honesty the strip's untracked slots keep.
-function meetingsReading(day: Worklist): {
-  meetings: number;
-  unready: number | null;
-} {
+function meetingsReading(day: Worklist): MeetingsReading {
   const entry = day.counts.find((count) => count.category === MEETINGS);
   // No entry at all means no meeting was read: a day of zero meetings, carried
   // whole. Treating that as unanswerable told a rep the page could not check
@@ -312,19 +309,19 @@ function meetingsReading(day: Worklist): {
   };
 }
 
-// Where the pipeline stands: what is open, and what it is worth weighted.
+// Where the pipeline stands this quarter: what is open, and what it is worth
+// weighted.
 //
-// TWO FIGURES, NEITHER OF THEM A TARGET. The slot this replaces said "Quota
-// pace — no target is set", which was a permanent apology for a question the
-// product decided not to ask. What a rep can actually be told is what the
-// pipeline holds, and the honest version of that is both numbers: `open` is the
-// face value of every open deal, `weighted` applies each deal's own probability.
-// One without the other invites the reader to treat a face value as a forecast.
+// TWO FIGURES, NEITHER OF THEM A TARGET. The card NEVER says on track,
+// attainment, or gap. There is no authoritative target in this product to
+// compare against — the quota table was dropped by founder decision — so any
+// such word would be inventing the thing that was removed.
 //
-// The card NEVER says on track, attainment, or gap. There is no authoritative
-// target in this product to compare against — the quota table was dropped by
-// founder decision — so any such word would be inventing the thing that was
-// removed.
+// THE PERIOD IS IN THE TITLE, NOT THE BASIS. The headline reads one quarter's
+// open pipeline, and a reader who cannot see which quarter cannot reconcile it
+// against the currency totals beside it. `Q3` is all a title has room for, so
+// the full range — and, where the reading is the whole organization's rather
+// than this reader's, whose pipeline it is — goes on the cell's hover line.
 //
 // READ THROUGH THE SAME KEY ANALYTICS USES. Two surfaces asking what the
 // pipeline is worth must not get two answers, so this calls the shared hook
@@ -334,100 +331,100 @@ function PipelineOutlook() {
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   // The reader's OWN pipeline, under the scope the SERVER names for them.
-  //
-  // `/analytics/context` answers `default_scope`, which is what Analytics starts
-  // from too: a rep's own records, a manager's managed teams, the workspace for
-  // a reader whose lens reaches it. Asking for it here is what makes the shared
-  // key true rather than merely claimed — an earlier version spelled the
-  // omission as a client-built `managed_teams` scope, which keyed as
-  // "managed_teams" while Analytics keyed the same rep's read as "owner:<id>",
-  // so the two surfaces held two cache entries for one identical request.
-  //
-  // It also stops the client constructing a scope it has no standing to name.
-  // `managed_teams` is documented as a server ANSWER, never a request, and
-  // building one meant filling its required `label` with an empty string —
-  // a placeholder where the code had nothing true to put.
+  // `/analytics/context` answers `default_scope`, which is what Analytics
+  // starts from too — asking for it here is what makes the shared query key
+  // true rather than merely claimed, and it stops the client constructing a
+  // scope it has no standing to name.
   const context = useAnalyticsContext();
   const readings = useForecastReadings(context.data?.default_scope);
+  const data = readings.data;
+  // The RECORD's zone, and midday rather than midnight. These are date-only
+  // wire values: there is no instant in "2026-07-01" to localize, and read in
+  // the viewer's clock west of UTC they print the day before — a quarter
+  // labelled 30 Jun – 29 Sept. The period is a property of the installation's
+  // calendar, the same for every colleague reading it.
+  const range =
+    data === undefined
+      ? ""
+      : `${formatDateAbbrev(middayInstant(data.period_start, recordZone), locale, recordZone)} – ${formatDateAbbrev(middayInstant(data.period_end, recordZone), locale, recordZone)}`;
+  const tip = useTooltip<HTMLButtonElement>(
+    data?.scope_kind === "workspace"
+      ? t("brief.readings.pipelineTipWorkspace", { period: range })
+      : range,
+  );
 
   if (readings.isPending) {
-    // KEEPS THE ROW'S SHAPE: a detail line, like every slot beside it. A card
-    // one line shorter reflows the whole strip when the read lands, which is the
+    // KEEPS THE ROW'S SHAPE: a basis line, like every slot beside it. A card one
+    // line shorter reflows the whole strip when the read lands, which is the
     // opposite of the property this plate's fixed slot count defends.
     return (
       <StatCard
-        label={t("brief.readings.pipeline")}
+        label={t("brief.readings.pipelinePlain")}
         value={t("brief.readings.pipelinePending")}
         detail={t("brief.readings.pipelineReading")}
+        density="compact"
       />
     );
   }
   // The currency is what makes the money sayable, so its absence is read as an
-  // unanswered question rather than as a figure.
-  //
-  // `base_currency` IS required of this response, and that is exactly why the
-  // check is here: a 200 whose shape is not the one the contract promises is
-  // another absent read, and reaching into it for the currency threw — taking
-  // the whole of `#/brief` down to the app's error boundary, where a reader sees
-  // no strip, no feed and no rail rather than one em dash. A server too old to
-  // send it, a projection that lost it, or a proxy answering the route with
-  // something else all arrive this way.
-  if (readings.isError || !readings.data?.base_currency) {
+  // unanswered question rather than as a figure. `base_currency` IS required of
+  // this response, and that is exactly why the check is here: a 200 whose shape
+  // is not the one the contract promises is another absent read, and reaching
+  // into it for the currency threw — taking the whole of `#/brief` down to the
+  // app's error boundary, where a reader sees no strip, no feed and no rail.
+  if (readings.isError || !data?.base_currency) {
     // A read that did not land is not a pipeline of nothing, and the slot says
     // so in words: a glyph in one slot of a row read across as one statement
     // reads as a figure the plate failed to draw rather than as one nobody has.
     return (
       <StatCard
-        label={t("brief.readings.pipeline")}
+        label={t("brief.readings.pipelinePlain")}
         value={t("brief.readings.pipelineNoRead")}
         detail={t("brief.readings.pipelineUnread")}
+        density="compact"
       />
     );
   }
-  const data = readings.data;
+  const quarter = quarterLabel(data.period_start);
   return (
-    <StatCard
-      label={
-        data.scope_kind === "workspace"
-          ? t("brief.readings.pipelineWorkspace")
-          : t("brief.readings.pipeline")
-      }
-      // formatMoneyCompact, not the full amount: its own doc says a strip slot
-      // has about 110px and a full euro figure wraps mid-number or clips. Every
-      // other money StatCard in the tree uses it.
-      value={formatMoneyCompact(data.open_minor, data.base_currency, locale)}
-      // The weighted figure and the completeness in one line, because they are
-      // read together: a weighted number over a partly priced population is a
-      // floor, and a reader who cannot see the second cannot judge the first.
-      // The PERIOD first, because the money means nothing without it. The
-      // headline reads a quarter's open pipeline, and a reader who cannot see
-      // which quarter cannot reconcile it against the currency totals beside
-      // it — one is a window, the other is everything open.
-      //
-      // The RECORD's zone, and midday rather than midnight. These are date-only
-      // wire values: there is no instant in "2026-07-01" to localize, and read
-      // in the viewer's clock west of UTC they print the day before — a quarter
-      // labelled 30 Jun – 29 Sept. The period is a property of the
-      // installation's calendar, the same for every colleague reading it.
-      // The forecast section, which is where this figure is read from: the
-      // same query key, under the same scope the server named for this reader.
-      // Not the deals list — the reading is a period's weighted outlook, and a
-      // list of open deals is a different question that happens to share a sum.
-      onOpen={() => openAnalyticsSection("forecast")}
-      detail={t("brief.readings.pipelineBasis", {
-        period: `${formatDateAbbrev(
-          middayInstant(data.period_start, recordZone),
-          locale,
-          recordZone,
-        )} – ${formatDateAbbrev(middayInstant(data.period_end, recordZone), locale, recordZone)}`,
-        weighted: formatMoneyOrAbsent(
-          data.weighted_minor,
-          data.base_currency,
-          locale,
-        ),
-        priced: formatNumber(data.priced_count, locale),
-        eligible: formatNumber(data.eligible_count, locale),
-      })}
-    />
+    // The forecast section, which is where this figure is read from: the same
+    // query key, under the same scope the server named for this reader. Not the
+    // deals list — the reading is a period's weighted outlook, and a list of
+    // open deals is a different question that happens to share a sum.
+    //
+    // A button rather than a link, because `openAnalyticsSection` is the ONE
+    // spelling of that move: the tab strip and a reading's door are the same
+    // navigation, and a second address built here could disagree with it.
+    <button
+      type="button"
+      onClick={() => openAnalyticsSection("forecast")}
+      ref={tip.ref}
+      {...tip.trigger}
+    >
+      <StatCard
+        label={
+          quarter === null
+            ? t("brief.readings.pipelinePlain")
+            : t("brief.readings.pipeline", { quarter })
+        }
+        // formatMoneyCompact, not the full amount: its own doc says a strip slot
+        // has about 110px and a full euro figure wraps mid-number or clips.
+        density="compact"
+        value={formatMoneyCompact(data.open_minor, data.base_currency, locale)}
+        // The weighted figure and how much of the population carries a price,
+        // because they are read together: a weighted number over a partly
+        // priced population is a floor, and a reader who cannot see the second
+        // cannot judge the first.
+        detail={t("brief.readings.pipelineBasis", {
+          weighted: formatMoneyCompact(
+            data.weighted_minor,
+            data.base_currency,
+            locale,
+          ),
+          priced: formatNumber(data.priced_count, locale),
+        })}
+      />
+      {tip.tip}
+    </button>
   );
 }

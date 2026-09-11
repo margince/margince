@@ -2,31 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { components } from "../api/schema";
-import { deckItems } from "./brief";
-import { DecisionsSection } from "./brief.decisions";
-import { BriefFeed } from "./brief.feed";
 import {
-  bundle,
-  deals,
   digest,
-  leadRow,
-  meetingRow,
   NOT_FOUND,
-  overnightRow,
   pipelineRows,
   readingsDay,
   report,
-  singles,
   team,
   teamWeek,
-  type Worklist,
 } from "./brief.fixtures";
 import { BriefGlance } from "./brief.glance";
 import { PlanSection } from "./brief.plan";
-import { OvernightPanel, PositionPanel, WatchPanel } from "./brief.rail";
 import { BriefReadingsStrip } from "./brief.readings";
-import { PromisesPanel, SchedulePanel } from "./brief.schedule";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
 import {
   installFetchStub,
@@ -38,12 +25,16 @@ import {
 
 // Brief, one part at a time.
 //
-// `brief.stories.tsx` documents the whole morning; this file documents the pieces
-// it is assembled from, because each of them has states the assembled page can
-// only show one of at a time — a briefing whose readings have not all answered,
-// a rail panel whose connector is unhealthy, a ranked queue with no run behind
-// it. Same fixtures as the page (`brief.fixtures.ts`), so a part cannot drift
-// from the page it is part of.
+// `brief.stories.tsx` documents the whole morning; this file documents the
+// pieces of it that have no file of their own, because each has states the
+// assembled page can only show one of at a time — a briefing whose day has not
+// answered, a readings row whose source stopped short, a week nobody has
+// planned. Same fixtures as the page (`brief.fixtures.ts`), so a part cannot
+// drift from the page it is part of.
+//
+// The feed, the decisions deck and the rail's panels are NOT here: each now
+// ships its own co-located story file, and a second frame for the same
+// component in this one is a second answer to how that component draws.
 //
 // Read every frame in BOTH themes with the toolbar's Theme control. Nothing here
 // is theme-aware in its own right, which is exactly why it needs looking at:
@@ -187,11 +178,16 @@ const GLANCE_WEEK = {
   },
 } as unknown as Parameters<typeof BriefGlance>[0]["week"];
 
-// The header the Brief opens with: eyebrow, greeting, and ONE composed sentence
-// about the day — not a column of counts. Each fact the old briefing lines
-// stated has a better home on the page now: the decisions deck draws its own
-// cards, the readings strip carries the figures, and the rail's Overnight and
-// Watch panels list what the night found.
+// The header the Brief opens with: a greeting and ONE composed sentence about
+// the day — two lines, and nothing between or above them. The uppercase eyebrow
+// naming the view, the clock reporting the minute the queue was read, and the
+// date under the greeting were three lines a reader already knew.
+//
+// The sentence is the part to read closely: the LEAD is a link into the row it
+// names, and the tail — "Then N more" — reaches the day's own order further
+// down the page, so the words a reader acts on are the words they can press.
+// The tail is a button rather than an anchor because every href in this product
+// is a route, and a fragment link would replace it.
 export const Glance: Story = {
   render: part(
     <BriefGlance
@@ -219,9 +215,11 @@ export const GlanceUnnamed: Story = {
   ),
 };
 
-// The weekly says its own thing under its own heading, composed from the counts
-// the week was frozen with rather than from the ranked queue — which describes
-// THIS morning and would read as the wrong week entirely.
+// The weekly says its own thing, composed from the counts the week was frozen
+// with rather than from the ranked queue — which describes THIS morning and
+// would read as the wrong week entirely. It draws the SAME two lines the
+// morning does: two views drawn alike need no kicker to tell them apart, and
+// one of them wearing one would be the odd page.
 export const GlanceWeekly: Story = {
   render: part(
     <BriefGlance
@@ -234,9 +232,11 @@ export const GlanceWeekly: Story = {
   ),
 };
 
-// A week nobody has written yet. The heading names the view and says nothing
-// about it, because there is nothing yet to say — never a quiet-week claim,
-// which would tell a rep their week was calm on no evidence.
+// A week nobody has written yet. The standing line says nothing about it,
+// because there is nothing yet to say — never a quiet-week claim, which would
+// tell a rep their week was calm on no evidence. It is drawn at the composed
+// sentence's own face, not as a caption: in the slot the page opens with, a
+// caption reads as a footnote.
 export const GlanceWeeklyUnread: Story = {
   render: part(
     <BriefGlance
@@ -251,253 +251,72 @@ export const GlanceWeeklyUnread: Story = {
 
 // ── The readings strip ──────────────────────────────────────────────────────
 
-// Five slots, and every one of them answerable — which is the change. Two of
-// them used to draw an em dash forever: promises, because the commitments lane
-// is unwired, and quota pace, because targets were retired from the product. A
-// slot that will never fill is not a pending answer.
+// ONE DENSE ROW: label, figure, basis line, and the whole cell is the door into
+// the lane its figure counted. Each slot used to carry an "Open →" line in its
+// foot — a decorative row on a plate whose argument is that five readings are
+// taken in at one glance, and five doors all reading "Open" were five identical
+// rows in a screen reader's list.
+//
+// Hover a cell to see it: the press target is the pane, its ground and hairline
+// both answer, and the figure is in NEUTRAL ink unless the reading counts
+// something breaching — four coloured numbers in a row are a traffic light
+// rather than a comparison. A door here looks like a card that happens to open
+// something: no green, no underline. It shipped as five hyperlinks, because
+// base.css's prose-link rule and the plate's slot reset scored the same.
 export const Readings: Story = {
   render: part(<BriefReadingsStrip day={readingsDay()} />),
 };
 
-// A source ended short of its list, so every figure is a floor. The caveat sits
-// under the whole strip rather than on one slot: a caveat on one figure invites
-// the reading where the other four are exact.
+// A source ended short of its list, so every figure drawn from it is a floor.
+// It is a `+` ON the figures — `8+` — rather than the sentence that used to
+// stand under the row, and the cell's own hover line says why. Every figure the
+// flag covers wears the mark, which is the contract's own claim: it is set once
+// for the readings block, over four populations, so marking one slot would
+// invite the reading where the other three are exact. The pipeline slot is a
+// read of its own and stays unmarked.
+//
+// The MEETINGS slot is the case to look at: this day has none, and a zero draws
+// a plain `0`. "0+" says "at least nothing", which is true of every number
+// there has ever been — so the mark goes on a figure that counts something and
+// nowhere else.
 export const ReadingsCapped: Story = {
   render: part(
     <BriefReadingsStrip
-      day={readingsDay({ buyer_replies: 100, more_available: true })}
+      day={readingsDay(
+        { buyer_replies: 100, prospecting: 8, more_available: true },
+        [],
+        [],
+        { urgent: 12 },
+      )}
+    />,
+  ),
+};
+
+// The same plate at a phone's width, where it is one full-width ROW per
+// reading: label and basis leading, figure trailing, one hairline between, and
+// no boxes at all. Two-up it was five 190px cards and 600px of readings before
+// a reader reached the day's own work. The shape belongs to `StatStrip` and
+// keys off the slots declaring `density="compact"`, so no other strip in the
+// product folds this way — `Design System/StatStrip` has both side by side.
+export const ReadingsOnAPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  render: part(
+    <BriefReadingsStrip
+      day={readingsDay({ prospecting: 8, more_available: true }, [], [], {
+        urgent: 12,
+      })}
     />,
   ),
 };
 
 // A quiet morning. The strip does not get shorter on a day with less in it,
 // because a reader comparing it with yesterday's would take the missing slot for
-// an answered question — the zeros are the answer.
+// an answered question — the zeros are the answer, and a zero gets no special
+// treatment beyond the compact cell it sits in.
 export const ReadingsQuiet: Story = {
   render: part(
     <BriefReadingsStrip
       day={readingsDay({ buyer_replies: 0, prospecting: 0 }, [])}
-    />,
-  ),
-};
-
-// ── The work column ─────────────────────────────────────────────────────────
-
-// The deck with its own heading on the toggle's row, which is what the section
-// adds to `DecisionDeck`: the title, the four chips a card carries, and the one
-// act that sends the tray.
-export const Decisions: Story = {
-  render: part(
-    <DecisionsSection
-      items={deckItems([...singles, ...bundle])}
-      nowMs={NOW}
-      state="ready"
-      onAlreadyDecided={() => undefined}
-    />,
-    { ...RAIL_ROUTES, "GET /approvals": () => jsonResponse({ data: [] }) },
-  ),
-};
-
-// A failed read of the queue. The deck says so where the cards would be, rather
-// than the column going blank — the ranked queue beside it is healthy.
-export const DecisionsRefused: Story = {
-  render: part(
-    <DecisionsSection
-      items={[]}
-      nowMs={NOW}
-      state="failed"
-      onAlreadyDecided={() => undefined}
-    />,
-  ),
-};
-
-// One day, ranked by the server, with four sections in the order it chose.
-//
-// Deliberately NOT in section order — a "move revenue" row sits above a "build
-// pipeline" one and below a "respond now" one, which is what the real ranking
-// produces and what makes the run-length labelling meaningful. A story whose
-// rows happened to be section-sorted would draw the same page a grouping client
-// draws and prove nothing.
-const feedDay: Worklist = {
-  as_of: "2026-09-03T06:42:00Z",
-  scope: "mine",
-  scope_options: ["mine"],
-  summary: { urgent: 1, due: 2, lower_priority: 1, total: 4 },
-  sources_unavailable: [],
-  reach: [],
-  counts: [],
-  readings: {
-    revenue_at_risk_minor: null,
-    buyer_replies: 1,
-    prospecting: 1,
-    review: 0,
-    more_available: false,
-  },
-  queue: [
-    sectioned(leadRow("lead-1"), "respond_now"),
-    sectioned(meetingRow("meet-1", false), "prepare_conversations"),
-    sectioned(overnightRow("deal-1", "d-1"), "move_revenue"),
-    sectioned(leadRow("lead-2", "2026-09-04T09:00:00Z"), "build_pipeline"),
-  ],
-};
-
-// Two rows of one section, adjacent. The second must draw no label.
-const repeatedSectionDay: Worklist = {
-  ...feedDay,
-  queue: [
-    sectioned(overnightRow("deal-1", "d-1"), "move_revenue"),
-    sectioned(overnightRow("deal-2", "d-2"), "move_revenue"),
-    sectioned(leadRow("lead-1"), "respond_now"),
-  ],
-};
-
-type FeedItem = components["schemas"]["WorklistItem"];
-
-/** One row, labelled with the section the server put it in. */
-function sectioned(
-  item: FeedItem,
-  section: NonNullable<FeedItem["brief_section"]>,
-): FeedItem {
-  return { ...item, brief_section: section };
-}
-
-// The morning as ONE feed, in the server's order, with the section label drawn
-// where it changes. Four rows and four sections, so the run-length labelling is
-// visible: a label appears once and the next row under it says nothing again.
-export const Feed: Story = {
-  render: part(<BriefFeed day={feedDay} state="ready" />, RAIL_ROUTES),
-};
-
-// Two rows of one section in a row. The second draws no label, which is the
-// whole of what "a label, not a grouping" looks like on screen.
-export const FeedRepeatedSection: Story = {
-  render: part(
-    <BriefFeed day={repeatedSectionDay} state="ready" />,
-    RAIL_ROUTES,
-  ),
-};
-
-// A read that landed on nothing. "Nothing is waiting" is only ever said about a
-// read that ANSWERED — the failed case below draws something else entirely.
-export const FeedClear: Story = {
-  render: part(
-    <BriefFeed day={{ ...feedDay, queue: [] }} state="ready" />,
-    RAIL_ROUTES,
-  ),
-};
-
-// The read behind the feed failed. The panel says so where the rows would be,
-// rather than drawing the empty plate a clear morning shows — the two are
-// different facts and a page that drew them alike would send a rep away
-// believing their morning was clear.
-export const FeedRefused: Story = {
-  render: part(<BriefFeed day={undefined} state="failed" />, RAIL_ROUTES),
-};
-
-// ── The context rail ────────────────────────────────────────────────────────
-
-// What the night shift did: the capture counts, the duplicates that need a look,
-// and what moved on the projects.
-export const Overnight: Story = {
-  render: part(<OvernightPanel />),
-};
-
-// The installation's first morning: the digest 404s because no run has been made
-// yet, and the panel says that rather than drawing zeroes.
-export const OvernightAbsent: Story = {
-  render: part(<OvernightPanel />, {
-    ...RAIL_ROUTES,
-    "GET /digest": () => jsonResponse(NOT_FOUND, 404),
-  }),
-};
-
-// The open pipeline, one line per currency. Never summed: adding native minor
-// units across currencies produces a number that is not money.
-export const Position: Story = {
-  render: part(<PositionPanel />),
-};
-
-// Open deals that have gone quiet, named through the same company resolution the
-// pipeline board uses. Staleness is stated in WORDS — the badge — and the card
-// carries no edge stripe saying the same thing a second time.
-export const Watch: Story = {
-  render: part(
-    <WatchPanel
-      deals={deals.filter((deal) => deal.stalled)}
-      more={false}
-      state="ready"
-    />,
-  ),
-};
-
-// The deals read stopped at one page. What is on the panel is some of the quiet
-// deals and not all of them, so it says so under the rows — "nothing has gone
-// quiet" is a claim this read cannot make.
-export const WatchPartial: Story = {
-  render: part(
-    <WatchPanel
-      deals={deals.filter((deal) => deal.stalled)}
-      more
-      state="ready"
-    />,
-  ),
-};
-
-// Nothing has gone quiet, which is news worth drawing rather than an empty rail.
-export const WatchClear: Story = {
-  render: part(<WatchPanel deals={[]} more={false} state="ready" />),
-};
-
-// The deals read failed. "Nothing has gone quiet" is a claim about the deals, so
-// it may only be made once they have been read — a failure that reached that
-// sentence told a reader their pipeline was healthy on the strength of a request
-// that never answered.
-export const WatchRefused: Story = {
-  render: part(<WatchPanel deals={[]} more={false} state="failed" />),
-};
-
-// ── The day's schedule and what it owes ─────────────────────────────────────
-
-// A meeting the queue carries, at the hour it starts. The time is `due_at`:
-// `occurred_at` is when something HAPPENED, which a meeting still ahead of the
-// reader has no answer for, and a schedule with no times in it is a duplicate
-// of the meetings count in the strip above.
-export const Schedule: Story = {
-  render: part(
-    <SchedulePanel
-      day={readingsDay({}, [meetingRow("m1", false), meetingRow("m2", true)])}
-      state="ready"
-    />,
-  ),
-};
-
-// The server sent a meeting with no start. It is drawn without a time rather
-// than with an invented one — a wrong hour would send a rep somewhere nobody
-// booked them for.
-export const ScheduleUndated: Story = {
-  render: part(
-    <SchedulePanel
-      day={readingsDay({}, [{ ...meetingRow("m1", true), due_at: undefined }])}
-      state="ready"
-    />,
-  ),
-};
-
-// A day with nothing booked, which is a fact worth saying rather than an empty
-// panel that reads as a read that never landed.
-export const ScheduleClear: Story = {
-  render: part(<SchedulePanel day={readingsDay({}, [])} state="ready" />),
-};
-
-// The tasks this rep owes, under a heading that names two things. The line
-// beneath it stands on every reading, including the empty one: promises made in
-// conversation reach nothing, and an empty panel would otherwise claim none are
-// outstanding.
-export const Promises: Story = {
-  render: part(
-    <PromisesPanel
-      day={readingsDay({}, [meetingRow("m1", true)])}
-      state="ready"
     />,
   ),
 };

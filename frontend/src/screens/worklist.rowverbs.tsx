@@ -49,6 +49,7 @@ import { usePinRow, type WorklistItem } from "./worklist.queries";
 export function RowActs({
   item,
   href,
+  density,
   owner,
   primary,
   equals,
@@ -56,6 +57,13 @@ export function RowActs({
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
+  /**
+   * `compact` withholds the verb that only REACHES the record, because at that
+   * density the row's title carries the link itself — two controls on one line
+   * opening the same page ask the reader to choose between the same thing
+   * twice. Everything that ACTS is drawn at both densities.
+   */
+  density?: "compact";
   /** Whose queue this row is on — `ReassignControl` resolves an empty one. */
   owner: string;
   /** The lane's one call to action, drawn last and nearest the reader's thumb. */
@@ -75,7 +83,12 @@ export function RowActs({
       {item.batch && onReview ? (
         <BatchVerb onReview={onReview} />
       ) : (
-        <RowVerbs item={item} href={href} move={moveHref(item)} />
+        <RowVerbs
+          item={item}
+          href={href}
+          density={density}
+          move={moveHref(item)}
+        />
       )}
       {/* The reader's own override, on every row that can carry one. It is not
           a disposition — those put a row DOWN and this lifts one up — so it
@@ -142,10 +155,12 @@ function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
 function RowVerbs({
   item,
   href,
+  density,
   move,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
+  density?: "compact";
   move: string | undefined;
 }>) {
   const t = useT();
@@ -171,6 +186,18 @@ function RowVerbs({
     // "Open" over one route. Which word survives is the first the SERVER sent,
     // in the order it ranked them.
     if (drawn.has(destination)) {
+      return [];
+    }
+    // THE TITLE IS THE LINK at list density, so the verb that merely opens the
+    // record is the same press twice on one line. Keyed on the DESTINATION and
+    // not on the word: the dedupe above keeps whichever verb the server ranked
+    // first, so this row's way to its own record arrives as "Open" on one lane
+    // and as "Complete" or "Snooze" on another — a check against the word
+    // would withhold one and leave the others.
+    //
+    // `move` is untouched: it opens the composer, which is a different
+    // destination and the most-pressed control on a waiting row.
+    if (density === "compact" && destination === href) {
       return [];
     }
     drawn.add(destination);

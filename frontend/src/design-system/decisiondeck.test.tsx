@@ -627,6 +627,139 @@ describe("DecisionDeck — the head", () => {
   });
 });
 
+// A surface that owns the chrome: the toggle goes where that surface keeps its
+// controls, and the deck claims no region of its own. What is held here is that
+// the deck gives up its `<section>` and its name — two names for one zone put it
+// in a screen reader's landmark list twice.
+describe("DecisionDeck — framed by its surface", () => {
+  it("hands the toggle and the content to the frame", () => {
+    render(
+      deck({
+        frame: ({ toggle, content }) => (
+          <div data-testid="surface">
+            <header data-testid="band">{toggle}</header>
+            {content}
+          </div>
+        ),
+      }),
+    );
+
+    const band = screen.getByTestId("band");
+    expect(band.contains(screen.getByRole("button", { name: "Deck" }))).toBe(
+      true,
+    );
+    // The queue is in the content half, not in the band.
+    expect(band.querySelector(".ddeck-list")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Accept" })).toHaveLength(3);
+  });
+
+  it("claims no region of its own once a surface names one", () => {
+    render(
+      deck({
+        frame: ({ content }) => (
+          <section aria-label="Named once">{content}</section>
+        ),
+      }),
+    );
+
+    expect(
+      screen.queryByRole("group", { name: "Decisions waiting on you" }),
+    ).not.toBeInTheDocument();
+  });
+
+  // The frame is handed `null` where the toggle would be a control with nothing
+  // behind it, so a surface cannot draw one over a cleared plate by accident.
+  it("hands the frame no toggle once nothing is waiting", () => {
+    render(
+      deck({
+        items: [],
+        frame: ({ toggle, content }) => (
+          <div>
+            <header data-testid="band">{toggle}</header>
+            {content}
+          </div>
+        ),
+      }),
+    );
+
+    expect(screen.getByTestId("band")).toBeEmptyDOMElement();
+  });
+});
+
+// A capped list: three questions a reader can answer on the way past, and the
+// rest where every one of them is.
+describe("DecisionDeck — a list the surface caps", () => {
+  function rows(): HTMLElement[] {
+    return [...document.querySelectorAll<HTMLElement>(".ddeck-list > li")];
+  }
+
+  async function showList(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "List" }));
+  }
+
+  it("draws the cap and says how many it left out", async () => {
+    const user = userEvent.setup();
+    render(
+      deck({
+        listCap: 2,
+        listRest: (hidden) => <p>{`${hidden} more on the worklist`}</p>,
+      }),
+    );
+    await showList(user);
+
+    expect(rows()).toHaveLength(2);
+    expect(screen.getByText("1 more on the worklist")).toBeInTheDocument();
+  });
+
+  it("says nothing about a remainder when the cap does not bite", async () => {
+    const user = userEvent.setup();
+    render(
+      deck({
+        listCap: 9,
+        listRest: (hidden) => <p>{`${hidden} more on the worklist`}</p>,
+      }),
+    );
+    await showList(user);
+
+    expect(rows()).toHaveLength(3);
+    expect(screen.queryByText(/more on the worklist/)).not.toBeInTheDocument();
+  });
+
+  // The cap is the LIST's. A stack already hides what is behind the live card,
+  // and capping it would leave the count claiming cards the pile does not hold.
+  it("never reaches the deck's own count of what is behind", async () => {
+    const user = userEvent.setup();
+    render(deck({ listCap: 1 }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
+
+    expect(screen.getByText("2 more behind")).toBeInTheDocument();
+  });
+
+  // The words are the switch: a surface that named the row's control and its
+  // menu asked for the dense line, and one that did not keeps the full row.
+  it("draws dense lines only where the surface named their controls", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(deck());
+    await showList(user);
+    expect(document.querySelector("[data-density='compact']")).toBeNull();
+    unmount();
+
+    render(
+      deck({
+        labels: {
+          ...LABELS,
+          compactRow: { detail: "What is proposed", more: "Other answers" },
+        },
+      }),
+    );
+    await showList(user);
+
+    expect(document.querySelectorAll("[data-density='compact']")).toHaveLength(
+      3,
+    );
+  });
+});
+
 describe("DecisionDeck — a verdict that sends nothing", () => {
   // "Later" is answered by the deck itself: the caller sends nothing for it, the
   // item stays pending on the server, and it therefore never leaves `items`. Left

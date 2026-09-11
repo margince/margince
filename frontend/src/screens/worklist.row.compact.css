@@ -1,0 +1,209 @@
+/* The row at list density: ONE LINE.
+ *
+ * Everything here is about that one claim. The grid loses its rank column, the
+ * columns centre on the line instead of hanging from its top, and the text
+ * column stops being a stack of captions and becomes a single row of them.
+ *
+ * NO FIXED HEIGHT. The target is 56px at desktop and the content is what sets
+ * it — a row pinned to a number would either clip the one locale whose words
+ * are longer or stand taller than its content everywhere else. What the sheet
+ * declares is the inset and the fact that nothing inside wraps; the height
+ * follows.
+ */
+
+/* SPECIFICITY IS LOAD-BEARING IN THIS BLOCK, and the compound selectors are
+   not decoration. `worklist.row.css` declares the row's own grid on
+   `.worklist-row` and its wide arrangement on `.worklist-row > …`, and that
+   sheet is imported AFTER this one — so a single-class rule here ties with it
+   and loses on order. Two of those rules are actively wrong at this density:
+   the base grid keeps a rank column, and the wide arrangement puts the verbs in
+   column 4 of a grid that has three, which drops them into an implicit track
+   and leaves the work a sliver. Each rule below therefore carries one class
+   more than the rule it has to beat.
+
+   Three columns, not four: the kind, the work, the verbs. The rank is what the
+   density gives up first — it is a claim about ORDER, and the order is already
+   the list element's, so a digit per row spends a column on something the page
+   says once.
+
+   THE KIND TAKES ITS CONTENT'S WIDTH, not the fixed column the default row
+   gives it. That column is 7.5rem so the titles beside it start at one x
+   whatever the kind says, which is what lets the eye read the kinds alone and
+   then the titles alone — worth a column of air on a page of tall rows, and not
+   worth it here: at one line per row it left a 70px gap between a 60px chip and
+   the name it labels, and the name is what a reader is scanning for. The kinds
+   still read as a column because they all start on the leading edge; what is
+   given up is a shared left edge for the TITLES, and only on a day whose rows
+   are of several kinds, because each row is its own grid and no track can
+   measure across them without the list becoming one.
+
+   The row's gaps are NOT touched. Below 720px `worklist.row.css` re-arranges
+   this same row as a wrapping flex box — the kind on the first line, the work
+   on the next, the verbs on the one after — and every declaration here about
+   columns goes inert with it, which is exactly right: one line is a desktop
+   claim, and a phone has no width to make it on. The row-gap the base sets is
+   what separates those lines. */
+.panel-row.worklist-row-compact {
+  align-items: center;
+  /* One step tighter than the row's own --space-4: the chip and the name it
+     labels are ONE reading at this density, and the default interval read as
+     two columns of a grid that is no longer there. */
+  column-gap: var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding-block: var(--space-3);
+}
+
+/* The verbs stay ON the line, in the third column.
+   `auto` rather than `min-content` above: at min-content the grid folds them
+   onto as many lines as it takes to make the column narrow, and at auto they
+   take the width they want while the work column — `minmax(0, 1fr)` — absorbs
+   whatever is left. Neither can overflow the row, because the work column's
+   floor is zero and the line inside it truncates. */
+.worklist-row.worklist-row-compact > .worklist-row-acts {
+  grid-column: 3;
+}
+
+/* Anything the row carries AFTER its verbs — a duplicate pair drawn inside it —
+   still takes the full width under the line. It is a block with two records in
+   it, so it was never going to be one line's worth, and the row it hangs under
+   stays one line. */
+.worklist-row.worklist-row-compact > :nth-child(n + 4) {
+  grid-column: 1 / -1;
+}
+
+/* The work itself: the name, then what the line can say about it, then the one
+   press that holds the rest. */
+.worklist-row-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* THE NAME KEEPS ITS WIDTH; the fragment beside it is what gives way.
+   `.worklist-row-title` is a wrapping flex container at the default density
+   (worklist.row.css) — the name over its badges — and on one line that has to
+   be one line, or the badges stack under a name that has already been clipped.
+
+   It shrinks only as a last resort, and it is the fragment's zero flex-basis
+   below that makes that hold: a basis of `auto` on an unbounded string puts the
+   line into negative free space at every width, and flex then shrinks BOTH
+   items to their zero floor — which is the defect this replaced, a row drawn as
+   a 6px sliver of title beside a full-width count. */
+.worklist-row-line > .worklist-row-title {
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* The name itself, where it is a link: the ellipsis belongs to the string and
+   not to the box around it, so it has to be on the element holding the text. */
+.worklist-row-line > .worklist-row-title > a {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* WHEN, WHAT IT IS WORTH, WHY and WHAT IT COSTS, as one dot-separated
+   fragment — the same register the default row draws them in, on one line
+   instead of three. The TYPE is `.t-caption` on the element itself, because
+   quiet ink at the meta size IS that utility and a rule saying it again here
+   would stop moving when the utility does; what this declares is only what
+   belongs to the line: how it shares the width, and that it clips. */
+.worklist-row-inline {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The count, as quiet as the fragments it continues: the house's own "+N more"
+   shape (`.rowtags-rest`, the tags strip) — words in the line with no chrome of
+   their own, because it is the way to the rest of the row and decides nothing.
+   `Popover` draws that shape for a trigger with no `variant`, and the size
+   arrives as `.t-caption` on the element.
+
+   The ink is spelled here for the reason `.rowtags-rest` spells it: a chromeless
+   button's colour is `inherit`, and `.popover-trigger:not(.btn)` says so at a
+   specificity `.t-caption` cannot reach — so the pairing needs a selector of
+   equal weight rather than a later one, which cascade order would decide. */
+.popover-trigger.worklist-row-why {
+  flex: none;
+  color: var(--textMeta);
+  white-space: nowrap;
+}
+
+/* THE NARROW ARRANGEMENT, two lines.
+ *
+ * Below 720px `worklist.row.css` re-arranges this same row as a wrapping flex
+ * box and gives the work AND the verbs a full line each — three lines, and the
+ * third held one 44px glyph with sixty pixels of nothing beside it. Two lines
+ * is the honest shape at this density: what the row IS on the first, what it
+ * SAYS on the second.
+ *
+ * Named without a child combinator, for the reason that sheet gives: below this
+ * width the thumb gesture's own box stands between the row and its children on
+ * every row that carries a judgement, so a `>` would reach the rows without one
+ * and miss the rows with. One class more than the rule it overrides, because
+ * that sheet is imported after this one.
+ *
+ * `order` rather than a grid: a grid on the row cannot reach through the
+ * gesture's box, which is the defect that made the default sheet flex here. The
+ * DOM keeps the reading order — kind, work, verbs — so a screen reader and the
+ * tab ring still meet the name before the pin; what moves is where the pin is
+ * DRAWN, into the free space on the kind's own line.
+ */
+@media (max-width: 720px) {
+  .worklist-row-compact .worklist-row-kind {
+    flex: 0 1 auto;
+    order: 0;
+  }
+
+  /* The trailing edge of the kind's line. `margin-inline-start: auto` is what
+     puts it there and keeps it there, which `justify-content` on the row could
+     not do without moving the kind with it. */
+  .worklist-row-compact .worklist-row-acts {
+    flex: 0 0 auto;
+    order: 1;
+    margin-inline-start: auto;
+  }
+
+  .worklist-row-compact .worklist-row-text {
+    flex: 1 1 100%;
+    order: 2;
+  }
+
+  /* The inset and the gap come down with the line count: two lines wearing
+     three lines' air is what the arrangement above was fixing. The gap is the
+     tightest rung because these two lines are ONE reading — what the row is,
+     then what it says — rather than two blocks that need telling apart. */
+  .panel-row.worklist-row-compact {
+    padding-block: var(--space-2);
+    row-gap: var(--space-1);
+  }
+
+  /* THE COUNT KEEPS ITS OWN HEIGHT, and it is the rank's exemption applied to
+     the control that inherited the rank's job. `worklist.row.css` puts a 44px
+     coarse-pointer floor under every pressable thing in a row — deliberately
+     every one, so a row that grows another verb is covered — and exempts the
+     rank alone, on the reasoning that it is "a marker that happens to be
+     pressable", files nothing, and at 44px "set the height of the row's FIRST
+     LINE... A hit area is worth widening a control for; it is not worth moving
+     the row's own baseline."
+     This count is that same category: it reveals the rest of the row and
+     writes nothing, and at 44px it set the height of the work's line — half
+     the row's height spent on a control nobody has to hit accurately, beside
+     a pin that does write and keeps its floor. */
+  /* The selector carries an ELEMENT as well as three classes, because the rule
+     it overrides carries three classes of its own
+     (`.worklist-row button:not(.worklist-rank-select)`) and is imported later:
+     at equal class counts the element is what decides it, rather than sheet
+     order deciding for us. */
+  .worklist-row.worklist-row-compact button.worklist-row-why {
+    min-block-size: auto;
+  }
+}

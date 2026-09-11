@@ -1814,6 +1814,25 @@
   min-block-size: 138px;
 }
 
+/* A DENSITY, NOT A SIZE, and the difference is the whole licence for this rule.
+   Every declaration here is an INTERVAL — the tile's padding, the air between
+   its three lines, and the floor under the shortest one. Not one of them
+   touches the type: the figure keeps `.stat-card-value`'s face and clamp, the
+   label its meta size, the basis its `.t-caption`, so a compact reading is the
+   same reading as the one beside it in a roomier row. A density that reached
+   the scale would be the `hero` variant coming back under a new name, which is
+   how one card came to draw three ways.
+
+   For a row read as ONE glance: the Brief's morning plate takes in five
+   readings together, and at the default floor the day's own work started below
+   the fold. 98px is the three lines at their own sizes plus this padding, which
+   is what the content actually needs — the default's 138px is air. */
+.stat-card-compact {
+  padding: var(--space-3);
+  gap: var(--space-1);
+  min-block-size: 98px;
+}
+
 /* Nothing left to declare between two adjacent StatCards. A free-standing card
    already carries a border on all four sides, so a divider spelled here as a
    `border-left` on the second and later siblings only restated it — while

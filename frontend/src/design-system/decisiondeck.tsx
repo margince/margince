@@ -11,20 +11,20 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  Button,
-  Disclosure,
-  EmptyState,
-  SectionHeader,
-  SegmentedControl,
-} from "./atoms";
-import {
-  type DecisionApproval,
-  DecisionCard,
-  type DecisionCardLabels,
-  type DecisionDisplay,
-  decisionLapsed,
+import { Button, EmptyState, SectionHeader, SegmentedControl } from "./atoms";
+import type {
+  DecisionApproval,
+  DecisionCardLabels,
+  DecisionCompactWords,
+  DecisionDisplay,
 } from "./decisioncard";
+import { DeckItemCard } from "./decisiondeck.item";
+import {
+  type DecisionSharedFacts,
+  dragVerdict,
+  itemLapsed,
+  keyVerdict,
+} from "./decisiondeck.verdicts";
 import { usePrefersReducedMotion } from "./motion";
 import {
   type SectionDetail,
@@ -59,6 +59,16 @@ import "./decisiondeck.css";
 
 /** What a contact can say about one staged proposal. */
 export type DeckVerdict = "accept" | "edit" | "reject" | "skip";
+
+// The input vocabulary and the bundle readings live beside the deck rather than
+// in it (decisiondeck.verdicts.ts), and are reached THROUGH it: a caller talking
+// to the deck should not have to know which of its files answered.
+export {
+  type DecisionSharedFacts,
+  dragVerdict,
+  keyVerdict,
+  sharedFacts,
+} from "./decisiondeck.verdicts";
 
 /**
  * One thing to decide: a proposal staged on its own, or one act's bundle, which
@@ -145,133 +155,23 @@ export type DecisionDeckLabels = Readonly<{
   /** A bundle, as one decision with N members behind it. */
   bundleSummary: (members: number) => string;
   bundleMembers: (members: number) => string;
+  /**
+   * The two words that turn the LIST form's rows dense, and the switch that
+   * turns it on: a surface that has them gets one line per decision with the
+   * proposal behind a popover, and one that has not keeps the full row.
+   *
+   * Words rather than a flag for the reason `DecisionCompactWords` states: the
+   * dense line hides the proposal behind one control and folds two verdicts
+   * into another, and neither is reachable unnamed.
+   */
+  compactRow?: DecisionCompactWords;
 }>;
-
-/** How far a drag must travel before it is a verdict rather than a nudge. */
-const DRAG_THRESHOLD_PX = 72;
 
 /** How much the live card leans as it is dragged: one degree per this many px. */
 const DRAG_ROTATION_DIVISOR = 22;
 
 /** How many card edges peek out behind the live one. */
 const PEEK_DEPTH = 2;
-
-/**
- * The verdict a finished drag means, or null for one that did not travel far
- * enough and springs back. The DOMINANT axis decides, so a diagonal drag is
- * whichever direction it mostly went rather than two verdicts at once.
- */
-export function dragVerdict(dx: number, dy: number): DeckVerdict | null {
-  const horizontal = Math.abs(dx) >= Math.abs(dy);
-  const travel = horizontal ? Math.abs(dx) : Math.abs(dy);
-  if (travel < DRAG_THRESHOLD_PX) {
-    return null;
-  }
-  if (horizontal) {
-    return dx > 0 ? "accept" : "reject";
-  }
-  return dy < 0 ? "edit" : "skip";
-}
-
-/**
- * The verdict a key means, or null for a key this deck does not claim. Exported
- * so the keyboard and the pointer are provably the same vocabulary rather than
- * two lists that happen to agree today.
- */
-export function keyVerdict(key: string): DeckVerdict | null {
-  if (key === "ArrowRight") {
-    return "accept";
-  }
-  if (key === "ArrowLeft") {
-    return "reject";
-  }
-  if (key === "ArrowUp") {
-    return "edit";
-  }
-  return key === "ArrowDown" ? "skip" : null;
-}
-
-/**
- * The approval a card draws for one item.
- *
- * A bundle shows the first member that has NOT lapsed, and that choice is what
- * keeps the card's reading and the deck's Accept guard from contradicting each
- * other: the API decides every still-pending member in one call, so a bundle
- * whose oldest member ran out of time is still answerable, and a card drawing
- * that member would say "expired" over a decision the reader may still make.
- * With every member lapsed there is nothing to choose, and the first one is as
- * honest as any other.
- */
-function representative(item: DecisionDeckItem, now: number): DecisionApproval {
-  if (item.kind === "single") {
-    return item.approval;
-  }
-  return (
-    item.members.find((member) => !decisionLapsed(member, now)) ??
-    item.members[0]
-  );
-}
-
-/** Whether there is anything left on this item to accept. */
-function itemLapsed(item: DecisionDeckItem, now: number): boolean {
-  return decisionLapsed(representative(item, now), now);
-}
-
-/**
- * The facts a card may state about the WHOLE item — never the representative's
- * alone.
- *
- * Drawing a bundle from one member is right for what the card DECIDES and wrong
- * for what it CLAIMS. A ten-recipient send staged by two agents at two
- * confidences read as one agent at one confidence, and the reader answered all
- * ten on that reading. So a fact its members do not share is absent here rather
- * than sampled from one of them: an omitted chip is honest, a wrong one is not.
- *
- * Absent is also what a fact nobody recorded looks like, and that collapse is
- * deliberate — both mean "this card cannot say", which is the whole of what a
- * chip could truthfully report either way.
- */
-export type DecisionSharedFacts = Readonly<{
-  kind?: string;
-  proposedBy?: string;
-  confidence?: number;
-}>;
-
-/**
- * What every member of an item agrees on. A single agrees with itself, so it
- * carries its own facts whole.
- *
- * The chips are built from THIS rather than from the drawn approval, which is
- * what keeps the rule from being one a caller has to remember: a fact the
- * members disagree on is not merely discouraged as a chip, it is not there to
- * draw one from.
- */
-export function sharedFacts(item: DecisionDeckItem): DecisionSharedFacts {
-  const members = item.kind === "single" ? [item.approval] : item.members;
-  return {
-    kind: agreed(members, (member) => member.kind),
-    proposedBy: agreed(members, (member) => member.proposed_by),
-    confidence: agreed(members, (member) => member.confidence),
-  };
-}
-
-/**
- * One fact across the members, or undefined where any two disagree.
- *
- * A member that never carried the fact needs no arm of its own: it reads as
- * absent, a set holding one absence and one value does not agree, and a set of
- * absences agrees on nothing a chip could print.
- */
-function agreed<T>(
-  members: readonly DecisionApproval[],
-  read: (member: DecisionApproval) => T | null | undefined,
-): T | undefined {
-  const values = members.map(read);
-  const first = values[0];
-  return first != null && values.every((value) => value === first)
-    ? first
-    : undefined;
-}
 
 // What the deck's body is in, given what the caller knows and what the deck can
 // see. A caller's non-ready state wins — a failed read is a fact the deck has no
@@ -390,6 +290,48 @@ export type DecisionDeckProps = Readonly<{
     approval: DecisionApproval,
     shared: DecisionSharedFacts,
   ) => DecisionDeckChips;
+  /**
+   * Lets the SURFACE draw the deck's chrome: it is handed the view toggle and
+   * the deck's whole content, and decides where each goes.
+   *
+   * For a deck that lives inside a `Panel`, where the toggle belongs in the
+   * header band beside the panel's title — one band, one interval, the same
+   * shape as every other zone on the page. Without this the deck draws its own
+   * heading row, and a panel around it would then carry two headings: the
+   * panel's title and a second one inside its body.
+   *
+   * It does NOT lift the deck's state. The toggle is the deck's own control,
+   * already wired; the frame only says where it stands.
+   */
+  frame?: (parts: DeckFrame) => ReactNode;
+  /**
+   * How many rows the LIST form draws before it defers to the fuller surface.
+   *
+   * Absent draws them all, which is right for a deck that IS its page. A capped
+   * list is for a page that OPENS with the decisions and goes on to something
+   * else: three questions a reader can answer on the way past, and the rest
+   * where every one of them is. The cap never reaches the deck form — a stack
+   * hides what is behind the live card anyway, and capping it would leave a
+   * count that says "4 more behind" over a pile that holds three.
+   */
+  listCap?: number;
+  /** The way to the rest, drawn under a list the cap cut. */
+  listRest?: (hidden: number) => ReactNode;
+}>;
+
+/**
+ * The deck's parts, for a surface that frames them.
+ *
+ * Two rather than a slot per piece: the toggle is what a header band wants and
+ * everything else — the body, the tray, the notice — is one block that belongs
+ * under it in that order. A frame that could reorder those would be a second
+ * opinion about what a reader reads first.
+ */
+export type DeckFrame = Readonly<{
+  /** The Deck/List control, or null while there is nothing to switch between. */
+  toggle: ReactNode;
+  /** The queue, the staging tray and any notice under it. */
+  content: ReactNode;
 }>;
 
 export function DecisionDeck({
@@ -406,6 +348,9 @@ export function DecisionDeck({
   loadingLabel,
   notice,
   chips,
+  frame,
+  listCap,
+  listRest,
 }: DecisionDeckProps) {
   const reduced = usePrefersReducedMotion();
   // THE LIST IS THE DEFAULT, for every reader.
@@ -635,16 +580,14 @@ export function DecisionDeck({
       />
     ) : null;
 
-  return (
-    <section className="ddeck" aria-label={labels.deckLabel}>
-      {/* Titled, the heading and the toggle are ONE row: `SectionHeader` already
-          lays a title against its own controls, so the deck reuses it rather
-          than growing a second header that would have to agree with it. */}
-      {title ? (
-        <SectionHeader level={2} title={title} actions={toggle} />
-      ) : (
-        toggle && <div className="ddeck-head">{toggle}</div>
-      )}
+  // What the LIST shows, and what it leaves to the surface behind it. The cap
+  // is the list's alone: the stack already hides what is behind the live card,
+  // and a capped stack would count what it does not hold.
+  const listed = listCap === undefined ? waiting : waiting.slice(0, listCap);
+  const hidden = waiting.length - listed.length;
+
+  const body = (
+    <>
       <SurfaceState
         state={resolved}
         emptyLabel={labels.empty}
@@ -680,20 +623,25 @@ export function DecisionDeck({
             onLeaveEnd={() => setLeaving(null)}
           />
         ) : (
-          <ul className="ddeck-list">
-            {waiting.map((item) => (
-              <li key={item.id}>
-                <ItemCard
-                  item={item}
-                  layout="row"
-                  now={now}
-                  labels={labels}
-                  chips={chips}
-                  onStage={stage}
-                />
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="ddeck-list">
+              {listed.map((item) => (
+                <li key={item.id}>
+                  <DeckItemCard
+                    item={item}
+                    layout="row"
+                    now={now}
+                    labels={labels}
+                    chips={chips}
+                    onStage={stage}
+                  />
+                </li>
+              ))}
+            </ul>
+            {/* A list showing three of nine that did not say where the other
+                six are has hidden them. */}
+            {hidden > 0 && listRest?.(hidden)}
+          </>
         )}
       </SurfaceState>
       {staged.length > 0 && (
@@ -707,6 +655,28 @@ export function DecisionDeck({
         />
       )}
       {notice}
+    </>
+  );
+
+  // FRAMED BY THE SURFACE, where one is offered: the toggle goes wherever that
+  // surface keeps its controls — a panel's header band — and the deck claims no
+  // region of its own, because the frame's own heading already names one and two
+  // names for one zone put it in a screen reader's list twice.
+  if (frame) {
+    return frame({ toggle, content: body });
+  }
+
+  return (
+    <section className="ddeck" aria-label={labels.deckLabel}>
+      {/* Titled, the heading and the toggle are ONE row: `SectionHeader` already
+          lays a title against its own controls, so the deck reuses it rather
+          than growing a second header that would have to agree with it. */}
+      {title ? (
+        <SectionHeader level={2} title={title} actions={toggle} />
+      ) : (
+        toggle && <div className="ddeck-head">{toggle}</div>
+      )}
+      {body}
     </section>
   );
 }
@@ -891,7 +861,7 @@ function DeckStack({
                 : undefined
             }
           >
-            <ItemCard
+            <DeckItemCard
               item={live}
               layout="deck"
               now={now}
@@ -907,75 +877,5 @@ function DeckStack({
       </p>
       <p className="t-caption ddeck-keys">{labels.keys}</p>
     </div>
-  );
-}
-
-// One item as a card. A bundle carries the count of what saying yes would decide
-// on its meta line and its members behind an expander, because the API decides
-// the set in one call and the reader answers it once.
-function ItemCard({
-  item,
-  layout,
-  now,
-  labels,
-  chips,
-  onStage,
-}: Readonly<{
-  item: DecisionDeckItem;
-  layout: "deck" | "row";
-  now: number;
-  labels: DecisionDeckLabels;
-  chips?: (
-    approval: DecisionApproval,
-    shared: DecisionSharedFacts,
-  ) => DecisionDeckChips;
-  onStage: (item: DecisionDeckItem, verdict: DeckVerdict) => void;
-}>) {
-  const approval = representative(item, now);
-  const trim = chips?.(approval, sharedFacts(item)) ?? {};
-  const members = item.kind === "bundle" ? item.members : [];
-  return (
-    <DecisionCard
-      approval={approval}
-      layout={layout}
-      now={now}
-      labels={labels.card}
-      provenance={trim.provenance}
-      confidence={trim.confidence}
-      display={trim.display}
-      aside={trim.aside}
-      meta={
-        <>
-          {trim.meta}
-          {members.length > 0 && (
-            <span className="ddeck-bundle-count">
-              {labels.bundleSummary(members.length)}
-            </span>
-          )}
-        </>
-      }
-      detail={
-        members.length > 0 ? (
-          <Disclosure
-            className="ddeck-bundle-open"
-            summary={labels.bundleMembers(members.length)}
-          >
-            {/* A list, not an indent: the size and the boundaries of the set
-                have to reach a reader who is hearing this page. */}
-            <ul className="ddeck-bundle-members">
-              {members.map((member) => (
-                <li key={member.id} className="t-caption">
-                  {member.summary ?? member.kind}
-                </li>
-              ))}
-            </ul>
-          </Disclosure>
-        ) : undefined
-      }
-      onAccept={() => onStage(item, "accept")}
-      onEdit={() => onStage(item, "edit")}
-      onReject={() => onStage(item, "reject")}
-      onSkip={() => onStage(item, "skip")}
-    />
   );
 }

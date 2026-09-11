@@ -2655,12 +2655,12 @@ export const vi = {
   "decision.status.rejected": "Đã từ chối",
   "decision.status.expired": "Đã hết hạn",
 
-  "brief.pipelineWeighted": "{amount} theo trọng số",
-  "brief.pipelineCount_one": "{count} deal đang mở",
-  "brief.pipelineCount_other": "{count} deal đang mở",
   "brief.pipelinePartial":
     "{count} deal không nằm trong các số này — quyền của bạn không bao gồm chúng.",
   "brief.pipelineUnavailable": "Không tải được số liệu này.",
+  "brief.pipelineBasis_one": "{weighted} theo trọng số · {count} deal đang mở",
+  "brief.pipelineBasis_other":
+    "{weighted} theo trọng số · {count} deal đang mở",
   "brief.panel.weekly": "Tuần trước",
   "brief.weekly.weekOf": "Tuần từ {day}",
   "brief.weekly.learnings.title": "Tuần này dạy điều gì",
@@ -2704,13 +2704,6 @@ export const vi = {
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
   "plan.title": "Lập kế hoạch tuần của bạn",
-  // Phần đầu của danh sách đã xếp hạng, trên trang mở đầu tiên — cùng những
-  // dòng mà Danh sách công việc hiển thị, theo thứ tự máy chủ đã quyết định.
-  // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
-  // không do mô hình viết.
-  "brief.eyebrow": "Buổi sáng của bạn",
-  "brief.eyebrow.weekly": "Tuần của bạn",
-  "brief.eyebrow.asOf": "{scope} · tính đến {at}",
   // Hai nút chuyển của bản tóm tắt: bản nào, và của ai.
   "brief.view.label": "Bản tóm tắt nào",
   "brief.view.morning": "Buổi sáng",
@@ -2718,12 +2711,15 @@ export const vi = {
   "brief.scope.label": "Bản tóm tắt của ai",
   "brief.scope.mine": "Của tôi",
   "brief.scope.team": "Nhóm",
+  // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
+  // không do mô hình viết.
   "brief.sentence.clear": "Sáng nay không có gì đang chờ bạn.",
   "brief.sentence.one": "Trước tiên: {lead}",
   "brief.sentence.oneWithCost": "Trước tiên: {lead} — {consequence}",
-  "brief.sentence.many": "Trước tiên: {lead} Rồi {rest} mục nữa.",
+  "brief.sentence.many": "Trước tiên: {lead} Rồi {rest}.",
   "brief.sentence.manyWithCost":
-    "Trước tiên: {lead} — {consequence} Rồi {rest} mục nữa.",
+    "Trước tiên: {lead} — {consequence} Rồi {rest}.",
+  "brief.sentence.rest": "{count} mục nữa",
 
   // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
   "brief.week.won": "Bạn đã chốt {count} deal.",
@@ -2735,11 +2731,10 @@ export const vi = {
   "brief.week.quiet":
     "Một tuần yên ắng — không chốt được gì và không có gì chuyển động.",
 
-  "brief.changed.lead": "Thay đổi kể từ bản tóm tắt",
-  "brief.changed.more": "+{count} mục khác",
-  "brief.changed.open": "Mở danh sách công việc",
   "brief.feed.title": "Hôm nay",
-  "brief.feed.sub": "Một thứ tự, quyết định một lần.",
+  "brief.feed.counts": "{items} đang chờ · {urgent} gấp",
+  "brief.feed.changedBadge_one": "1 đã thay đổi",
+  "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang đọc buổi sáng của bạn",
   "brief.feed.clear": "Hiện không có gì đang chờ bạn.",
   "brief.feed.rest": "{count} mục khác trong danh sách công việc",
@@ -2950,29 +2945,30 @@ export const vi = {
   "brief.glance.intro": "Đây là ngày của bạn.",
   "brief.panel.decisions": "Đang chờ bạn",
   "brief.panel.overnight": "Qua đêm",
-  "brief.panel.position": "Vị thế",
+  "brief.panel.pipeline": "Pipeline đang mở",
+  "brief.panel.tasks": "Việc đến hạn",
+  "brief.panel.quiet": "Hôm nay yên ắng",
+  "brief.rail.quietSchedule": "Không có lịch nào",
+  "brief.rail.quietTasks": "Không có việc đến hạn",
+  "brief.rail.quietOvernight": "Không có bản tổng hợp qua đêm",
+  "brief.rail.quietWatch": "Không có gì im ắng",
   "brief.panel.schedule": "Lịch hôm nay",
-  "brief.schedule.clear": "Hôm nay không có lịch nào.",
-  "brief.panel.promises": "Cam kết & công việc",
-  "brief.promises.clear": "Không còn việc nào đang mở.",
-  "brief.promises.untracked":
-    "Cam kết nói trong hội thoại chưa được theo dõi — ở đây chỉ có công việc.",
   "brief.panel.watch": "Đã im ắng",
   "brief.overnight.connectorsUnhealthy": "Các kết nối cần được xử lý",
   "brief.overnight.fixConnector": "Kiểm tra kết nối",
-  "brief.watch.clear": "Không có gì im ắng.",
   "brief.readings.label": "Buổi sáng của bạn qua năm chỉ số",
-  "brief.readings.truncated":
-    "Một nguồn đã được đọc đến giới hạn, nên mọi con số ở trên là mức tối thiểu.",
+  "brief.readings.floorTip":
+    "Một nguồn đã được đọc đến giới hạn, nên con số này là mức tối thiểu.",
   "brief.readings.urgent": "Việc gấp",
   "brief.readings.urgentBasis": "có người đang chờ hoặc một cam kết sắp lỡ",
   "brief.readings.decisions": "Quyết định đang chờ",
   "brief.readings.decisionsBasis":
     "có người phải chờ bạn trả lời mới đi tiếp được",
-  "brief.readings.pipeline": "Toàn cảnh pipeline",
-  "brief.readings.pipelineWorkspace": "Toàn cảnh pipeline · toàn bộ tổ chức",
+  "brief.readings.pipeline": "Toàn cảnh pipeline · {quarter}",
+  "brief.readings.pipelinePlain": "Toàn cảnh pipeline",
+  "brief.readings.pipelineTipWorkspace": "{period} · toàn bộ tổ chức",
   "brief.readings.pipelineBasis":
-    "{period} · {weighted} theo trọng số · {priced} trên {eligible} đã định giá",
+    "{weighted} theo trọng số · {priced} đã định giá",
   "brief.readings.pipelineUnread": "không đọc được pipeline",
   "brief.readings.pipelineReading": "đang đọc pipeline",
   "brief.readings.pipelinePending": "Đang đọc…",
@@ -2985,7 +2981,7 @@ export const vi = {
   "brief.readings.needsPrep_other": "{count} chưa chuẩn bị",
   "brief.readings.prepUnknown": "không kiểm tra được hết",
   "brief.readings.prepared": "đã chuẩn bị đủ",
-  "brief.readings.leads": "Phản hồi khách mới",
+  "brief.readings.leads": "Khách mới chờ trả lời",
   "brief.readings.leadsBasis": "đang chờ câu trả lời đầu tiên",
   "brief.readings.leadsDue": "tiếp theo đến hạn {value}",
   "brief.rail": "Ngữ cảnh",
@@ -2994,6 +2990,10 @@ export const vi = {
   "brief.deck.showMore": "Hiện toàn bộ tin nhắn",
   "brief.deck.showLess": "Hiện ít hơn",
   "brief.deck.view": "Cách hiển thị hàng chờ",
+  "brief.deck.rowDetail": "Nội dung được đề xuất",
+  "brief.deck.rowMore": "Các lựa chọn khác",
+  "brief.deck.rest_one": "1 quyết định khác trong danh sách công việc",
+  "brief.deck.rest_other": "{count} quyết định khác trong danh sách công việc",
   "brief.deck.viewDeck": "Chồng thẻ",
   "brief.deck.viewList": "Danh sách",
   "brief.deck.keys":
@@ -3894,9 +3894,8 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
   "settings.signatureCancel": "Hủy",
-  "brief.coverage.unavailable": "Không phải nguồn nào cũng trả lời",
-  "brief.coverage.summary": "Những nguồn nào còn nhiều hơn",
-  "brief.coverage.bounded": "Hiển thị {shown} trên ít nhất {considered} đã đọc",
+  "brief.coverage.line": "Đã đọc đến giới hạn · {sources}",
+  "brief.coverage.bounded": "{source}: hiển thị {shown}, có thể còn nữa",
   "delivery.morningLabel": "Bản tóm tắt buổi sáng",
   "delivery.morningHelp":
     "Bản tóm tắt trong ngày có được gửi qua email hay không. Dù sao nó cũng có trên trang Tóm tắt.",

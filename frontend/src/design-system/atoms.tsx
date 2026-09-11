@@ -907,6 +907,7 @@ export function StatCard({
   alert,
   onOpen,
   meter,
+  density,
 }: Readonly<{
   label: string;
   value: string;
@@ -947,6 +948,12 @@ export function StatCard({
   // stronger volume, it is a different judgement (the slot itself is bad
   // news, not just its figure).
   alert?: boolean;
+  // HOW MUCH AIR the tile keeps, and nothing about its TYPE — which is the
+  // whole licence for the prop, and why atoms.css spells the distinction where
+  // the intervals are. For a row read as ONE glance rather than a reading at a
+  // time. A closed word, not a boolean: `compact={false}` is a place for a
+  // second SIZE to arrive unnoticed, and a size here is the removed `hero`.
+  density?: "compact";
 }>) {
   const t = useT();
   const labelId = useId();
@@ -957,8 +964,15 @@ export function StatCard({
   const valueClass = tone
     ? `stat-card-value stat-card-${tone}`
     : "stat-card-value";
+  const cardClass = [
+    "stat-card",
+    alert && "stat-card-alert",
+    density && `stat-card-${density}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <section className={alert ? "stat-card stat-card-alert" : "stat-card"}>
+    <section className={cardClass}>
       <span className="stat-card-label">
         {/* The name in its own box: the row also holds the source badge and the
             receipt chip, and a clamp on the row would take those with it. */}

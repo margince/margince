@@ -3,8 +3,13 @@ import { de } from "../i18n/de";
 import type { MessageKey } from "../i18n/en";
 import { en } from "../i18n/en";
 import { vi } from "../i18n/vi";
-import { briefSentence, leadOf, waitingRows } from "./brief.sentence";
-import { itemTitle } from "./worklist.copy";
+import {
+  briefSentence,
+  leadOf,
+  sentenceParts,
+  waitingRows,
+} from "./brief.sentence";
+import { itemTitle, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
 // The Brief's opening sentence.
@@ -146,5 +151,72 @@ describe("the opening sentence", () => {
   it("names no remainder when the lead is the only row", () => {
     const sentence = briefSentence(day([item()]), t, "en");
     expect(sentence?.key).toMatch(/^brief\.sentence\.one/);
+  });
+});
+
+// THE LEAD IS A WAY INTO THE ROW IT NAMES, not just words about it.
+describe("the lead's own address", () => {
+  it("carries the same address the row below it is linked by", () => {
+    const lead = item({ id: "a", subject: { type: "deal", id: "d-1" } });
+    const sentence = briefSentence(day([lead, item({ id: "b" })]), t, "en");
+
+    expect(sentence?.leadHref).toBe(rowHref(lead));
+    expect(sentence?.leadHref).toBeTruthy();
+  });
+
+  // A row that is neither a record nor a queue — a system condition fixed on a
+  // settings screen the queue does not pretend to know — has no address, and
+  // the sentence must say its words rather than link them nowhere.
+  it("carries no address for a row that has none", () => {
+    expect(briefSentence(day([item()]), t, "en")?.leadHref).toBeUndefined();
+  });
+});
+
+// The sentence is translated with its holes INTACT and cut apart, because a
+// string with the holes already filled has nowhere to put a link.
+describe("sentenceParts", () => {
+  it("keeps the template's own words and order around every hole", () => {
+    expect(sentenceParts("First: {lead} Then {rest}.")).toEqual([
+      { kind: "text", text: "First: " },
+      { kind: "slot", name: "lead" },
+      { kind: "text", text: " Then " },
+      { kind: "slot", name: "rest" },
+      { kind: "text", text: "." },
+    ]);
+  });
+
+  // A hole at either end leaves no empty run beside it: an empty text part
+  // would render an element with nothing in it, which a clamp counts as a line.
+  it("leaves no empty run at either end", () => {
+    expect(sentenceParts("{lead}")).toEqual([{ kind: "slot", name: "lead" }]);
+  });
+
+  // A template with nothing to fill is still a sentence. The clear morning's is
+  // exactly that, and it must not come back empty.
+  it("carries a template that has no holes at all", () => {
+    expect(sentenceParts(en["brief.sentence.clear"])).toEqual([
+      { kind: "text", text: en["brief.sentence.clear"] },
+    ]);
+  });
+
+  // EVERY HOLE IN EVERY CATALOG IS ONE THIS SENTENCE CAN FILL. A translator who
+  // spelled a hole the composer does not supply would print its own name on the
+  // page, in that locale only.
+  it("finds only holes the sentence supplies, in all three languages", () => {
+    const supplied = new Set(["lead", "consequence", "rest"]);
+    for (const catalog of [en, de, vi]) {
+      for (const key of [
+        "brief.sentence.one",
+        "brief.sentence.oneWithCost",
+        "brief.sentence.many",
+        "brief.sentence.manyWithCost",
+      ] as const) {
+        for (const part of sentenceParts(catalog[key])) {
+          if (part.kind === "slot") {
+            expect(supplied.has(part.name)).toBe(true);
+          }
+        }
+      }
+    }
   });
 });

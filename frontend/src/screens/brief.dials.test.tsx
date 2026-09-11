@@ -6,7 +6,7 @@ import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
-import { readingsDay, waitingRow } from "./brief.fixtures";
+import { meetingRow, readingsDay, waitingRow } from "./brief.fixtures";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
 import type { Worklist } from "./worklist.queries";
 
@@ -35,7 +35,15 @@ function worklist(scopeOptions: Worklist["scope_options"]) {
   // leaves both empty, and both of those elements return null on an empty one —
   // so a weekly case built on it would assert their absence over elements that
   // were never going to appear, and would keep passing if the guard broke.
-  const day = readingsDay({}, [{ ...waitingRow(), changed_since_brief: true }]);
+  // A MEETING as well as the waiting customer, so the rail's first panel
+  // actually draws rows. Without it `#brief-schedule` renders its empty state
+  // and "keeps the rail on the morning" would pass over a rail that is there
+  // but says nothing — which is indistinguishable from the loading state the
+  // assertion is meant to rule out.
+  const day = readingsDay({}, [
+    { ...waitingRow(), changed_since_brief: true },
+    meetingRow("m1", false),
+  ]);
   return {
     ...day,
     scope_options: scopeOptions,
@@ -156,8 +164,13 @@ describe("the Brief's dials", () => {
     await waitFor(() =>
       expect(document.querySelector("#brief-weekly")).not.toBeNull(),
     );
-    expect(document.querySelector("#brief-schedule")).toBeNull();
-    expect(document.querySelector("#brief-watch")).toBeNull();
+    // `.rail-panel` is what every panel in the rail wears, so this is the rail's
+    // own content rather than one panel's id — a panel that collapses on a
+    // quiet morning is absent for a reason that has nothing to do with the
+    // view, and an id-shaped assertion would pass on that instead. The quiet
+    // LINE goes with them: it is the rail reporting on the rail.
+    expect(document.querySelectorAll(".rail-panel")).toHaveLength(0);
+    expect(document.querySelector("#brief-quiet")).toBeNull();
     // And the TRACK is gone with them. The <aside> element is gated on having
     // content, but the grid template is on the wrapper and driven by `shape` —
     // so dropping only the contents leaves the weekly at seventy per cent
@@ -167,15 +180,15 @@ describe("the Brief's dials", () => {
     expect(document.querySelector(".page-zones-aside")).toBeNull();
   });
 
-  // THE READINGS AND THE NOTICES ABOVE THEM BELONG TO THE MORNING TOO.
+  // THE READINGS AND THE LINE UNDER THEM BELONG TO THE MORNING TOO.
   //
   // The same defect as the rail, one layer up and missed when the rail was
-  // fixed: the coverage callout, the changed-overnight notice and the readings
-  // strip are drawn ABOVE the view branch, so they render whatever the dial
-  // says. All three read the worklist — today's queue — and the worklist is
-  // fetched unconditionally, so under the weekly a rep saw today's urgent count
-  // and today's overnight changes stacked on top of a week that had closed.
-  it("leaves the morning's readings and notices off the weekly", async () => {
+  // fixed: the readings strip and the coverage line are drawn ABOVE the view
+  // branch, so they render whatever the dial says. Both read the worklist —
+  // today's queue — and the worklist is fetched unconditionally, so under the
+  // weekly a rep saw today's urgent count stacked on top of a week that had
+  // closed.
+  it("leaves the morning's readings and coverage line off the weekly", async () => {
     globalThis.location.hash = "#/brief?view=weekly";
     stubBrief(["mine"]);
     render(<BriefScreen />);
@@ -186,31 +199,61 @@ describe("the Brief's dials", () => {
     );
     expect(screen.queryByTestId("brief-readings")).toBeNull();
     expect(document.querySelector(".brief-coverage")).toBeNull();
-    expect(document.body.textContent).not.toContain(en["brief.changed.lead"]);
   });
 
   // The positive control for the case above, and it is the assertion that gives
-  // it any force. All three elements are absent on a weekly for two possible
+  // it any force. Both elements are absent on a weekly for two possible
   // reasons — the guard, or a fixture that never made them appear — and only
   // seeing them on the morning tells those apart.
-  it("keeps the readings and notices on the morning", async () => {
+  it("keeps the readings and coverage line on the morning", async () => {
     stubBrief(["mine"]);
     render(<BriefScreen />);
 
     await screen.findByTestId("brief-readings");
     expect(document.querySelector(".brief-coverage")).not.toBeNull();
-    expect(document.body.textContent).toContain(en["brief.changed.lead"]);
+  });
+
+  // AND THE LINE SITS UNDER THE FIGURES IT QUALIFIES. Above them it was a
+  // caveat a reader met before the numbers it was about, which is the ordering
+  // this move exists to fix — and nothing about a coverage line rendering at
+  // all would catch it back in the wrong place.
+  it("puts the coverage line under the readings, never above them", async () => {
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
+
+    const strip = await screen.findByTestId("brief-readings");
+    const line = document.querySelector(".brief-coverage");
+    if (line === null) {
+      throw new Error("the coverage line is not on the page");
+    }
+    // DOCUMENT_POSITION_FOLLOWING: the line comes after the strip.
+    expect(
+      strip.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   // And it is still there on the morning, or the assertion above passes over a
-  // rail that was deleted rather than placed.
+  // rail that was deleted rather than placed. Asserted on DRAWN ROWS, not on
+  // the region: the day carries a meeting, so the schedule panel has something
+  // to say, and a rail that rendered its empty states would satisfy a check for
+  // the aside while telling a reader nothing.
   it("keeps the rail on the morning", async () => {
     stubBrief(["mine"]);
     render(<BriefScreen />);
 
+    const schedule = await waitFor(() => {
+      const panel = document.querySelector("#brief-schedule");
+      if (panel === null) {
+        throw new Error("the schedule panel is not on the page");
+      }
+      return panel;
+    });
     await waitFor(() =>
-      expect(document.querySelector("#brief-schedule")).not.toBeNull(),
+      expect(
+        schedule.querySelectorAll(".rail-schedule-row").length,
+      ).toBeGreaterThan(0),
     );
+    expect(document.querySelectorAll(".rail-panel").length).toBeGreaterThan(0);
     expect(document.querySelector(".page-zones-aside")).not.toBeNull();
   });
 
@@ -244,23 +287,29 @@ describe("the Brief's dials", () => {
   // The opening block belongs to the view it is about. The sentence is composed
   // from the ranked queue — what waits TODAY — so over the weekly it would be
   // describing this morning under a heading about the week that closed.
-  it("names the view in the eyebrow, and keeps the sentence to the morning", async () => {
+  //
+  // TWO LINES AND NOTHING ELSE, either way. The uppercase eyebrow that named
+  // the view and the clock that reported the minute the queue was read are
+  // gone: the view is the dial's own state, drawn beside this block, and an
+  // as-of that ticked every sixty seconds re-rendered the page's opening for a
+  // digit nobody read.
+  it("keeps the composed sentence to the morning, and names no view above it", async () => {
     stubBrief(["mine"]);
     render(<BriefScreen />);
-    // The expected time is DERIVED, not written down: the runner's zone is not
-    // the fixture's, so a literal "07:00" here passes in Berlin and fails in CI.
-    expect(
-      await screen.findByText(
-        `${en["brief.eyebrow"]} · as of ${formatTimeOfDay(
-          readingsDay({}).as_of,
-          "en",
-          viewerZone(),
-        )}`,
-      ),
-    ).toBeTruthy();
     // findBy: the sentence is composed from the worklist read, so it appears
     // when that lands rather than on the first paint.
     expect(await screen.findByTestId("glance-sentence")).toBeTruthy();
+    // The greeting, and then the sentence. Nothing between them and nothing
+    // above the greeting — which is the whole of what the block draws now.
+    const glance = screen.getByTestId("brief-glance");
+    expect(glance.children).toHaveLength(2);
+    expect(glance.firstElementChild?.tagName).toBe("H1");
+    // And no clock. The time the queue was read was the one thing here that
+    // moved on its own, and a substring read is what catches it coming back in
+    // some other wording.
+    expect(glance.textContent).not.toContain(
+      formatTimeOfDay(readingsDay({}).as_of, "en", viewerZone()),
+    );
 
     cleanup();
     vi.unstubAllGlobals();
@@ -268,13 +317,6 @@ describe("the Brief's dials", () => {
     stubBrief(["mine"]);
     render(<BriefScreen />);
 
-    expect(await screen.findByText(en["brief.eyebrow.weekly"])).toBeTruthy();
-    // Exact match: the morning's eyebrow now composes the scope with an as-of,
-    // so a substring read would call the weekly clean while the morning's own
-    // words were on the page.
-    expect(
-      screen.queryByText((text) => text === en["brief.eyebrow"]),
-    ).toBeNull();
     expect(screen.queryByTestId("glance-sentence")).toBeNull();
     // And the line that stands in for it belongs to the week too. The weekly
     // NEVER composes a sentence, so the fallback is the only line under its

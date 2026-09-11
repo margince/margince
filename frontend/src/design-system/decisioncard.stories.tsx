@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import {
   type DecisionApproval,
@@ -180,6 +181,74 @@ export const Row: Story = {
     ...Deck.args,
     layout: "row",
     onSkip: undefined,
+  },
+};
+
+// The row at LIST DENSITY: one line, and the proposal behind the line's own
+// control. It is the same decision and the same verbs — Accept and Later keep
+// their words, a rejection and an edit go in the menu — so what changes is how
+// much of it stands open, which is why this is a density and not a layout.
+//
+// Check the line in BOTH themes at a narrow width: the question is the only
+// thing on it allowed to be clipped, and a chip that gave way instead would
+// lose the word that carries the claim.
+export const CompactRow: Story = {
+  args: {
+    ...Deck.args,
+    layout: "row",
+    compact: { detail: "What is being proposed", more: "Other answers" },
+  },
+};
+
+// The same row with its proposal open. The popover is portalled beside the
+// line, so opening one row moves no other row's verbs — which is the whole
+// reason it is not a fold.
+export const CompactRowOpen: Story = {
+  args: CompactRow.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The panel is portalled to the body, so the frame is the OPEN row rather
+    // than the panel — which is what a reader of the catalog is checking here.
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "What is being proposed" }),
+    );
+  },
+};
+
+/**
+ * The compact row at a PHONE's width, where it cannot be one line and must not
+ * pretend to be: the question takes the first line, the chips and the verbs
+ * take the second, and nothing is clipped or pushed off the pane.
+ *
+ * `uat-phone` is what drives the capture gate's browser to 390px. Storybook's
+ * own viewport is applied by the MANAGER, which the gate's bare `iframe.html`
+ * never runs — so without the tag this would be captured at desktop width and
+ * would picture the very layout it exists to rule out.
+ */
+export const CompactRowPhone: Story = {
+  args: CompactRow.args,
+  tags: ["uat-phone"],
+  // The panel's own inset, so the row folds where it would on a real surface
+  // rather than against the viewport edge — and `fullscreen` keeps the
+  // catalog's own frame off it, because 390px less two frames is not a width
+  // any reader has.
+  decorators: [
+    (Story) => (
+      <div style={{ padding: "var(--padPanel)" }}>
+        <Story />
+      </div>
+    ),
+  ],
+  parameters: { layout: "fullscreen" },
+};
+
+// A lapsed compact row. The verbs are gone — a control whose only possible
+// answer is a refusal is worse than none — and the row says so on the line,
+// where they were.
+export const CompactRowExpired: Story = {
+  args: {
+    ...CompactRow.args,
+    approval: approval({ expires_at: new Date(NOW - HOUR).toISOString() }),
   },
 };
 

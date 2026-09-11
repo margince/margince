@@ -17,6 +17,7 @@ import {
   type DecisionSharedFacts,
   type StagedDecision,
 } from "./decisiondeck";
+import { Panel } from "./panel";
 import { AutonomyDot } from "./trust";
 
 // The morning queue. Every frame here is about the same question: can a contact
@@ -337,6 +338,45 @@ export const ListView: Story = {
     const user = userEvent.setup();
     await user.click(canvas.getByRole("button", { name: "List" }));
   },
+};
+
+// FRAMED BY A PANEL, at list density and capped — the shape Brief's morning
+// draws. Three things to look at: the toggle in the panel's own header band
+// rather than in a heading row of the deck's, one LINE per decision with the
+// proposal behind the line's own control, and the way to the rest under the
+// rows the cap cut.
+export const FramedCompactList: Story = {
+  args: {
+    ...BASE,
+    items: MANY,
+    labels: {
+      ...LABELS,
+      compactRow: { detail: "What is being proposed", more: "Other answers" },
+    },
+    listCap: 3,
+    // The count goes through the formatter like every other magnitude drawn
+    // for a person, on the locale this catalog is pinned to.
+    listRest: (hidden: number) => (
+      <p className="ddeck-list-rest">
+        <a className="entity-link" href="#/worklist?filter=decisions">
+          {`${formatNumber(hidden, "en")} more decisions on the worklist`}
+        </a>
+      </p>
+    ),
+    frame: ({ toggle, content }) => (
+      <Panel title="Waiting on you" titleAction={toggle}>
+        {content}
+      </Panel>
+    ),
+  },
+};
+
+// The same frame with the queue clear. The toggle goes with the rows it
+// switched between — a control with nothing behind it is noise on the one
+// surface whose whole point is that there is nothing left to do — and the
+// panel's band stands at the same height it did full.
+export const FramedEmpty: Story = {
+  args: { ...FramedCompactList.args, items: [] },
 };
 
 // A live queue: the deck, and a parent that removes what it was handed. This is

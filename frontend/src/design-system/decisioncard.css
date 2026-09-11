@@ -333,3 +333,94 @@
   -webkit-line-clamp: 3;
   line-clamp: 3;
 }
+
+/*
+ * The COMPACT row: one decision, one line.
+ *
+ * It is the density a dense list is read at — the question, its chips and its
+ * verbs at one x down the column, so a reader scanning twenty of them reads
+ * twenty questions rather than twenty cards. Everything a reader has to WEIGH
+ * is behind the line's own popover, which is why this is a density and not a
+ * third layout: the anatomy is the row's, and what changes is how much of it
+ * stands open.
+ *
+ * The block inset comes down a rung from `.staging-card`'s, which is what puts
+ * the line inside a list row's measure rather than a card's. The side inset
+ * stays: it is the dashed edge's own clearance, and a row that lost it would
+ * read as a different box from every other staged surface.
+ */
+.dcard[data-density="compact"] {
+  padding-block: var(--space-2);
+}
+
+/* IT WRAPS, and that is not a fallback — it is the only honest answer when the
+   question, its chips and three verbs together want more room than the panel
+   has. Unwrapped, the row ran past the panel's edge and clipped Accept, which
+   is the one control on it a reader came for. */
+.dcard-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  row-gap: var(--space-2);
+}
+
+/* The question TAKES the room and gives it back first. It is the one string on
+   this line of unbounded length, so it is the only thing that may be clipped —
+   a chip squeezed to buy it space loses its word, which is the signal.
+
+   Its BASIS is what decides where the line breaks. `min(100%, 20rem)` means:
+   claim the whole first line on a pane too narrow to carry anything beside the
+   question, and otherwise take 20rem and grow into whatever the chips and the
+   verbs leave. At `auto` an unbounded string put the line into negative free
+   space at every width and every shrinkable item collapsed together; at `0` the
+   question shared its line with the chips at a phone's width and was clipped to
+   a dozen characters with the verbs pushed off the pane. */
+.dcard[data-density="compact"] .approval-headline {
+  flex: 1 1 min(100%, 20rem);
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--fs-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The chips give way SECOND, and by wrapping rather than by clipping: they keep
+   `.dcard-meta`'s own wrap (above) because a countdown cut in half is a
+   deadline a reader cannot read, and a dropped chip is one they never learn
+   about. `min-width: 0` is what lets the block narrow at all before the line
+   breaks under it. */
+.dcard[data-density="compact"] .dcard-meta {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* The way to the proposal, as quiet as the chips beside it — it reveals and
+   decides nothing, so it is not competing with the verbs at the end. */
+.dcard-detail {
+  flex: none;
+  font-size: var(--fs-meta);
+}
+
+/* The verbs end the line. `ActionRow` owns the gap between them and the push
+   that holds Accept on the trailing edge; what is declared here is only that
+   the group does not stretch, and that it takes no air above it — the air
+   belongs above a band, and on this row there is no band. */
+.dcard[data-density="compact"] .dcard-verbs {
+  flex: none;
+  margin-top: 0;
+  /* WHERE THEY LAND WHEN THEY WRAP. On the trailing edge of whichever line
+     they end up on, which `margin-inline-start: auto` gives on both and
+     `justify-content` on neither — the same reasoning `ActionRow` states for
+     its own trail. A primary that wrapped to the LEADING edge would land
+     exactly where the reader's thumb had been pressing the verb beside it. */
+  margin-inline-start: auto;
+}
+
+/* A lapsed compact row says so where its verbs would have been, on the line
+   rather than under it. */
+.dcard[data-density="compact"] .dcard-lapsed {
+  flex: 0 0 auto;
+  margin-top: 0;
+}

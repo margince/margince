@@ -8,14 +8,19 @@ import { useNow } from "../format/now";
 import { useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
-import { ChangedSinceBrief } from "./brief.changed";
+import { changedSinceBrief } from "./brief.changed";
 import { DecisionsSection } from "./brief.decisions";
 import { BriefDials } from "./brief.dials";
 import { BriefFeed } from "./brief.feed";
 import { BriefGlance } from "./brief.glance";
 import { PlanSection } from "./brief.plan";
 import { quietDeals, useBriefDeals, useWeeklyReview } from "./brief.queries";
-import { OvernightPanel, PositionPanel, WatchPanel } from "./brief.rail";
+import {
+  OvernightPanel,
+  PositionPanel,
+  RailQuiet,
+  WatchPanel,
+} from "./brief.rail";
 import { BriefReadingsStrip } from "./brief.readings";
 import { PromisesPanel, SchedulePanel } from "./brief.schedule";
 import { BriefTeamBoard } from "./brief.teamboard";
@@ -168,7 +173,18 @@ function BriefWork({
   // rep reconcile them. The server ranks everything once now, with the night's
   // composite as a tie-break inside a level, so the page draws that order and
   // adds nothing to it.
-  const feed = <BriefFeed key="feed" day={day} state={dayState} />;
+  // The count of rows that have moved since the overnight run rides the feed's
+  // own head. It is a fact about THESE rows, and it used to be a titled notice
+  // above the readings naming three of them — the same rows the feed draws in
+  // full directly below, with their verbs.
+  const feed = (
+    <BriefFeed
+      key="feed"
+      day={day}
+      state={dayState}
+      changed={changedSinceBrief(day)}
+    />
+  );
   const board = <BriefTeamBoard key="board" offered={teamOffered} />;
 
   // ONE VIEW AT A TIME, and every combination the dials offer has a surface
@@ -290,23 +306,16 @@ export function BriefScreen() {
           asserted them either. */}
       {address.view !== "weekly" && worklistQuery.data && (
         <>
-          {/* Before the readings, because a strip of numbers a reader cannot trust
-            is worse than one they can qualify — and in the MAIN column rather
-            than the rail, though the rail is where the Brief plan drew it. This
-            is a callout that appears only when a source was withheld, failed or
-            stopped short, so it is a fact about the whole page rather than
-            context beside it, and it qualifies the strip directly under it. In
-            the rail it would be a warning about the queue, filed away from the
-            queue. */}
-          <BriefCoverage day={worklistQuery.data} />
-          {/* And what has happened since the night looked, under the coverage line
-            and above the readings: both are facts about the page as a whole
-            rather than about any one row, and a reader takes them before the
-            figures they qualify. */}
-          <ChangedSinceBrief day={worklistQuery.data} />
           {/* The strip reads the SAME worklist answer the queue below it reads, so
             the five figures cannot disagree with the rows they summarise. */}
           <BriefReadingsStrip day={worklistQuery.data} />
+          {/* UNDER the figures it qualifies, as their footnote. It appears only
+            when a source was withheld, failed or stopped short, and it is a
+            fact about the whole page rather than context beside it — in the
+            rail it would be a warning about the queue, filed away from the
+            queue. Above the strip it was a caveat a reader met before the
+            numbers it was about. */}
+          <BriefCoverage day={worklistQuery.data} />
         </>
       )}
       {/* Screen-level so it survives the deck re-rendering under it. */}
@@ -372,13 +381,24 @@ export function BriefScreen() {
               />
               <OvernightPanel />
               <PositionPanel />
-              <section id="brief-watch">
-                <WatchPanel
-                  deals={quiet}
-                  more={beyondPage}
-                  state={readState(dealsQuery)}
-                />
-              </section>
+              <WatchPanel
+                deals={quiet}
+                more={beyondPage}
+                state={readState(dealsQuery)}
+              />
+              {/* LAST, and it is the counterweight to every panel above
+                  collapsing: four absent panels say nothing at all, and a
+                  reader cannot tell a source that was quiet from one the page
+                  forgot to draw. It reads the same inputs and the same
+                  predicates those panels collapse on, so the rail cannot print
+                  "nothing booked" over a schedule that drew. */}
+              <RailQuiet
+                day={worklistQuery.data}
+                dayState={readState(worklistQuery)}
+                deals={quiet}
+                more={beyondPage}
+                dealsState={readState(dealsQuery)}
+              />
             </>
           )
         }

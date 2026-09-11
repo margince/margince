@@ -2765,12 +2765,11 @@ export const en = {
   "decision.status.rejected": "Rejected",
   "decision.status.expired": "Expired",
 
-  "brief.pipelineWeighted": "{amount} weighted",
-  "brief.pipelineCount_one": "{count} open deal",
-  "brief.pipelineCount_other": "{count} open deals",
   "brief.pipelinePartial":
     "{count} deals are not in these figures — your access does not cover them.",
   "brief.pipelineUnavailable": "This figure could not be loaded.",
+  "brief.pipelineBasis_one": "{weighted} weighted · {count} open deal",
+  "brief.pipelineBasis_other": "{weighted} weighted · {count} open deals",
   // The morning brief's own narrative. The "no pass" line is the honest degrade:
   // a run nobody annotated and a night with nothing in it read identically as
   // silence, so the screen says which one this is.
@@ -2826,13 +2825,6 @@ export const en = {
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
   "plan.title": "Plan your week",
-  // The head of the ranked queue, on the page a rep opens first. The same rows
-  // the Worklist draws, in the order the server decided.
-  // The Brief's opening sentence, composed from the rows the page is showing —
-  // never model-written, so it cannot say what the rows contradict.
-  "brief.eyebrow": "Your morning",
-  "brief.eyebrow.weekly": "Your week",
-  "brief.eyebrow.asOf": "{scope} · as of {at}",
   // The Brief's two dials. Which brief, and whose.
   "brief.view.label": "Which brief",
   "brief.view.morning": "Morning",
@@ -2840,12 +2832,17 @@ export const en = {
   "brief.scope.label": "Whose brief",
   "brief.scope.mine": "Mine",
   "brief.scope.team": "Team",
+  // The Brief's opening sentence, composed from the rows the page is showing —
+  // never model-written, so it cannot say what the rows contradict.
   "brief.sentence.clear": "Nothing is waiting on you this morning.",
   "brief.sentence.one": "First: {lead}",
   "brief.sentence.oneWithCost": "First: {lead} — {consequence}",
-  "brief.sentence.many": "First: {lead} Then {rest} more.",
-  "brief.sentence.manyWithCost":
-    "First: {lead} — {consequence} Then {rest} more.",
+  "brief.sentence.many": "First: {lead} Then {rest}.",
+  "brief.sentence.manyWithCost": "First: {lead} — {consequence} Then {rest}.",
+  // The tail of the sentence, which is a LINK to the day's own order: the
+  // whole clause is the control, because a bare numeral is a two-character
+  // press target and reads as a figure rather than as a way anywhere.
+  "brief.sentence.rest": "{count} more",
 
   // The weekly Brief's opening sentence, composed from the counts the week was
   // frozen with. Result first, then what carried — the outcome before the debt.
@@ -2857,11 +2854,14 @@ export const en = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
 
-  "brief.changed.lead": "Changed since the brief",
-  "brief.changed.more": "+{count} more",
-  "brief.changed.open": "Open the worklist",
   "brief.feed.title": "Today",
-  "brief.feed.sub": "One order, decided once.",
+  // What is on screen out of what the day holds, on the panel's own line.
+  "brief.feed.counts": "{items} waiting · {urgent} urgent",
+  // What has MOVED since the brief was written, as a badge beside the title
+  // and a link to exactly those rows. It replaced a titled notice above the
+  // readings that named three rows the feed draws in full directly below it.
+  "brief.feed.changedBadge_one": "1 changed",
+  "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Reading your morning",
   "brief.feed.clear": "Nothing is waiting on you right now.",
   "brief.feed.rest": "{count} more on the worklist",
@@ -3075,41 +3075,54 @@ export const en = {
   "brief.glance.intro": "Here is your day.",
   "brief.panel.decisions": "Waiting on you",
   "brief.panel.overnight": "Overnight",
-  "brief.panel.position": "Position",
+  // The rail's own panels, after the rename that made each title claim exactly
+  // what its rows are. "Promises & tasks" named a thing the product does not
+  // have and stood over a standing line of apology for it.
+  "brief.panel.pipeline": "Open pipeline",
+  "brief.panel.tasks": "Tasks due",
+  // The one panel a silent morning gets: a line per source that had nothing to
+  // report, so a reader can tell a quiet source from one the page forgot.
+  "brief.panel.quiet": "Quiet today",
+  "brief.rail.quietSchedule": "Nothing booked",
+  "brief.rail.quietTasks": "No tasks due",
+  "brief.rail.quietOvernight": "No overnight digest",
+  "brief.rail.quietWatch": "Nothing gone quiet",
   "brief.panel.schedule": "Today's schedule",
-  "brief.schedule.clear": "Nothing is booked today.",
-  "brief.panel.promises": "Promises & tasks",
-  "brief.promises.clear": "Nothing is open on you.",
-  "brief.promises.untracked":
-    "Promises made in conversation are not tracked yet — only tasks are listed here.",
   "brief.panel.watch": "Gone quiet",
   "brief.overnight.connectorsUnhealthy": "Connections need attention",
   "brief.overnight.fixConnector": "Fix the connection",
-  "brief.watch.clear": "Nothing has gone quiet.",
   "brief.readings.label": "Your morning, in five readings",
-  "brief.readings.truncated":
-    "A source was read to its limit, so every figure above is a floor.",
-  "brief.readings.urgent": "Urgent moves",
+  // Why a figure on this plate wears a `+`. It rides the whole cell, because a
+  // mark that explains itself only to a pointer resting on three characters is
+  // one most readers never read.
+  "brief.readings.floorTip":
+    "A source was read to its limit, so this figure is a floor.",
+  "brief.readings.urgent": "Urgent",
   "brief.readings.urgentBasis": "somebody waiting or a promise breaking",
   "brief.readings.decisions": "Decisions waiting",
   "brief.readings.decisionsBasis": "somebody is blocked until you answer",
-  "brief.readings.pipeline": "Pipeline outlook",
-  "brief.readings.pipelineWorkspace": "Pipeline outlook · whole company",
-  "brief.readings.pipelineBasis":
-    "{period} · {weighted} weighted · {priced} of {eligible} priced",
+  "brief.readings.pipeline": "Pipeline · {quarter}",
+  // The same reading where the page cannot name a quarter: the read has not
+  // landed, or its period start is not a month this calendar has.
+  "brief.readings.pipelinePlain": "Pipeline",
+  // The cell's hover line. The title has room for a quarter and nothing more,
+  // so the full range lives here — and where the figure is the whole
+  // organization's rather than this reader's, whose pipeline it is.
+  "brief.readings.pipelineTipWorkspace": "{period} · whole organization",
+  "brief.readings.pipelineBasis": "{weighted} weighted · {priced} priced",
   "brief.readings.pipelineUnread": "the pipeline could not be read",
   "brief.readings.pipelineReading": "reading the pipeline",
   "brief.readings.pipelinePending": "Reading…",
   "brief.readings.pipelineNoRead": "Could not be read",
   "brief.snooze.done": "Set aside until {at}",
   "brief.snooze.undo": "Undo",
-  "brief.readings.meetings": "Meetings ahead",
+  "brief.readings.meetings": "Meetings today",
   "brief.readings.meetingsBasis": "on today's calendar",
   "brief.readings.needsPrep_one": "1 needs prep",
   "brief.readings.needsPrep_other": "{count} need prep",
   "brief.readings.prepUnknown": "not all could be checked",
   "brief.readings.prepared": "all prepared",
-  "brief.readings.leads": "Lead response",
+  "brief.readings.leads": "Leads owed a reply",
   "brief.readings.leadsBasis": "owed a first answer",
   "brief.readings.leadsDue": "next due {value}",
   "brief.rail": "Context",
@@ -3118,6 +3131,16 @@ export const en = {
   "brief.deck.showMore": "Show the whole message",
   "brief.deck.showLess": "Show less",
   "brief.deck.view": "How the queue is shown",
+  // The two words the LINE-PER-DECISION list needs. Brief opens with the
+  // decisions and goes on to the day's own work, so a reader is passing
+  // through rather than working a queue to its end — which is what earns the
+  // dense line. It hides the proposal behind one control and folds the rarer
+  // verdicts into another, and neither is reachable unnamed.
+  "brief.deck.rowDetail": "What is being proposed",
+  "brief.deck.rowMore": "Other answers",
+  // The way to the rest, where the list draws a prefix of the queue.
+  "brief.deck.rest_one": "1 more decision on the worklist",
+  "brief.deck.rest_other": "{count} more decisions on the worklist",
   "brief.deck.viewDeck": "Deck",
   "brief.deck.viewList": "List",
   "brief.deck.keys":
@@ -4030,9 +4053,14 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
-  "brief.coverage.unavailable": "Not every source answered",
-  "brief.coverage.summary": "Which sources had more",
-  "brief.coverage.bounded": "{shown} shown of at least {considered} read",
+  // One line under the readings strip, naming what the day could not read.
+  "brief.coverage.line": "Read to a limit · {sources}",
+  // What the page HAS of a bounded source, and that more exists. Never a
+  // shortfall between two figures: `considered` is itself a floor where a
+  // source was bounded, so naming both read "8 shown of at least 8 read" —
+  // a sentence that claims something is held back and then accounts for all
+  // of it.
+  "brief.coverage.bounded": "{source}: {shown} shown, more may exist",
   "delivery.morningLabel": "Your morning brief",
   "delivery.morningHelp":
     "Whether the day's brief also arrives by email. It is on your Brief page either way.",

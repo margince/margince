@@ -2683,12 +2683,11 @@ export const de = {
   "decision.status.rejected": "Abgelehnt",
   "decision.status.expired": "Abgelaufen",
 
-  "brief.pipelineWeighted": "{amount} gewichtet",
-  "brief.pipelineCount_one": "{count} offener Deal",
-  "brief.pipelineCount_other": "{count} offene Deals",
   "brief.pipelinePartial":
     "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
   "brief.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
+  "brief.pipelineBasis_one": "{weighted} gewichtet · {count} offener Deal",
+  "brief.pipelineBasis_other": "{weighted} gewichtet · {count} offene Deals",
   "brief.panel.weekly": "Letzte Woche",
   "brief.weekly.weekOf": "Woche ab {day}",
   "brief.weekly.learnings.title": "Was diese Woche gelehrt hat",
@@ -2732,13 +2731,6 @@ export const de = {
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
   "plan.title": "Ihre Woche planen",
-  // Der Kopf der sortierten Liste, auf der Seite, die zuerst geöffnet wird —
-  // dieselben Zeilen wie in der Arbeitsliste, in der Reihenfolge des Servers.
-  // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
-  // Seite zeigt — nie von einem Modell geschrieben.
-  "brief.eyebrow": "Dein Morgen",
-  "brief.eyebrow.weekly": "Deine Woche",
-  "brief.eyebrow.asOf": "{scope} · Stand {at}",
   // Die zwei Regler des Briefings: welches, und für wen.
   "brief.view.label": "Welches Briefing",
   "brief.view.morning": "Morgen",
@@ -2746,12 +2738,15 @@ export const de = {
   "brief.scope.label": "Wessen Briefing",
   "brief.scope.mine": "Meins",
   "brief.scope.team": "Team",
+  // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
+  // Seite zeigt — nie von einem Modell geschrieben.
   "brief.sentence.clear": "Heute Morgen wartet nichts auf dich.",
   "brief.sentence.one": "Zuerst: {lead}",
   "brief.sentence.oneWithCost": "Zuerst: {lead} — {consequence}",
-  "brief.sentence.many": "Zuerst: {lead} Danach {rest} weitere.",
+  "brief.sentence.many": "Zuerst: {lead} Danach {rest}.",
   "brief.sentence.manyWithCost":
-    "Zuerst: {lead} — {consequence} Danach {rest} weitere.",
+    "Zuerst: {lead} — {consequence} Danach {rest}.",
+  "brief.sentence.rest": "{count} weitere",
 
   // Der Einstiegssatz des Wochen-Briefs, aus den eingefrorenen Zahlen gebaut.
   "brief.week.won": "Sie haben {count} Abschlüsse gemacht.",
@@ -2763,11 +2758,10 @@ export const de = {
   "brief.week.quiet":
     "Eine ruhige Woche — nichts abgeschlossen, nichts bewegt.",
 
-  "brief.changed.lead": "Seit dem Briefing geändert",
-  "brief.changed.more": "+{count} weitere",
-  "brief.changed.open": "Arbeitsliste öffnen",
   "brief.feed.title": "Heute",
-  "brief.feed.sub": "Eine Reihenfolge, einmal entschieden.",
+  "brief.feed.counts": "{items} offen · {urgent} dringend",
+  "brief.feed.changedBadge_one": "1 geändert",
+  "brief.feed.changedBadge_other": "{count} geändert",
   "brief.feed.loading": "Dein Morgen wird gelesen",
   "brief.feed.clear": "Gerade wartet nichts auf dich.",
   "brief.feed.rest": "{count} weitere in der Arbeitsliste",
@@ -2983,29 +2977,29 @@ export const de = {
   "brief.glance.intro": "Das ist dein Tag.",
   "brief.panel.decisions": "Wartet auf dich",
   "brief.panel.overnight": "Über Nacht",
-  "brief.panel.position": "Bestand",
+  "brief.panel.pipeline": "Offene Pipeline",
+  "brief.panel.tasks": "Fällige Aufgaben",
+  "brief.panel.quiet": "Heute ruhig",
+  "brief.rail.quietSchedule": "Nichts gebucht",
+  "brief.rail.quietTasks": "Keine Aufgaben fällig",
+  "brief.rail.quietOvernight": "Kein Nachtbericht",
+  "brief.rail.quietWatch": "Nichts verstummt",
   "brief.panel.schedule": "Heutiger Kalender",
-  "brief.schedule.clear": "Heute steht nichts an.",
-  "brief.panel.promises": "Zusagen & Aufgaben",
-  "brief.promises.clear": "Nichts ist offen.",
-  "brief.promises.untracked":
-    "Zusagen aus Gesprächen werden noch nicht erfasst — hier stehen nur Aufgaben.",
   "brief.panel.watch": "Still geworden",
   "brief.overnight.connectorsUnhealthy": "Verbindungen brauchen Aufmerksamkeit",
   "brief.overnight.fixConnector": "Verbindung prüfen",
-  "brief.watch.clear": "Nichts ist still geworden.",
   "brief.readings.label": "Dein Morgen in fünf Kennzahlen",
-  "brief.readings.truncated":
-    "Eine Quelle wurde bis zur Grenze gelesen, jede Zahl oben ist also ein Mindestwert.",
-  "brief.readings.urgent": "Dringende Schritte",
+  "brief.readings.floorTip":
+    "Eine Quelle wurde bis zur Grenze gelesen, diese Zahl ist also ein Mindestwert.",
+  "brief.readings.urgent": "Dringend",
   "brief.readings.urgentBasis": "jemand wartet oder eine Zusage bricht",
   "brief.readings.decisions": "Offene Entscheidungen",
   "brief.readings.decisionsBasis":
     "jemand kommt erst weiter, wenn du antwortest",
-  "brief.readings.pipeline": "Pipeline",
-  "brief.readings.pipelineWorkspace": "Pipeline · gesamte Firma",
-  "brief.readings.pipelineBasis":
-    "{period} · {weighted} gewichtet · {priced} von {eligible} bewertet",
+  "brief.readings.pipeline": "Pipeline · {quarter}",
+  "brief.readings.pipelinePlain": "Pipeline",
+  "brief.readings.pipelineTipWorkspace": "{period} · gesamte Organisation",
+  "brief.readings.pipelineBasis": "{weighted} gewichtet · {priced} bewertet",
   "brief.readings.pipelineUnread": "die Pipeline war nicht lesbar",
   "brief.readings.pipelineReading": "Pipeline wird gelesen",
   "brief.readings.pipelinePending": "Wird gelesen…",
@@ -3018,7 +3012,7 @@ export const de = {
   "brief.readings.needsPrep_other": "{count} unvorbereitet",
   "brief.readings.prepUnknown": "nicht alle prüfbar",
   "brief.readings.prepared": "alle vorbereitet",
-  "brief.readings.leads": "Erstkontakt",
+  "brief.readings.leads": "Erstkontakt offen",
   "brief.readings.leadsBasis": "warten auf die erste Antwort",
   "brief.readings.leadsDue": "nächste fällig {value}",
   "brief.rail": "Kontext",
@@ -3027,6 +3021,10 @@ export const de = {
   "brief.deck.showMore": "Ganze Nachricht anzeigen",
   "brief.deck.showLess": "Weniger anzeigen",
   "brief.deck.view": "Wie die Warteschlange gezeigt wird",
+  "brief.deck.rowDetail": "Was vorgeschlagen wird",
+  "brief.deck.rowMore": "Weitere Antworten",
+  "brief.deck.rest_one": "1 weitere Entscheidung in der Arbeitsliste",
+  "brief.deck.rest_other": "{count} weitere Entscheidungen in der Arbeitsliste",
   "brief.deck.viewDeck": "Stapel",
   "brief.deck.viewList": "Liste",
   "brief.deck.keys":
@@ -3942,10 +3940,8 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
-  "brief.coverage.unavailable": "Nicht jede Quelle hat geantwortet",
-  "brief.coverage.summary": "Welche Quellen mehr hatten",
-  "brief.coverage.bounded":
-    "{shown} von mindestens {considered} gelesenen angezeigt",
+  "brief.coverage.line": "Bis zur Grenze gelesen · {sources}",
+  "brief.coverage.bounded": "{source}: {shown} angezeigt, es kann mehr geben",
   "delivery.morningLabel": "Ihr Tagesbriefing",
   "delivery.morningHelp":
     "Ob das Briefing des Tages zusätzlich per E-Mail kommt. Auf Ihrer Briefing-Seite steht es ohnehin.",

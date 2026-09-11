@@ -3,7 +3,7 @@
 
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { consequenceText, itemTitle } from "./worklist.copy";
+import { consequenceText, itemTitle, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
 // The Brief's opening sentence, composed from the rows the page is showing.
@@ -27,7 +27,47 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 export type BriefSentence = Readonly<{
   key: MessageKey;
   values: Readonly<Record<string, string>>;
+  /**
+   * Where the NAMED lead's own record is, so the words the sentence opens with
+   * are the way into the row they describe. Undefined where the row carries no
+   * destination — the same `rowHref` the feed's rows are linked by, so the
+   * sentence and the row below it cannot send a reader to two places.
+   */
+  leadHref?: string;
 }>;
+
+/** One run of a sentence template: its own words, or a hole to fill. */
+export type SentencePart =
+  | Readonly<{ kind: "text"; text: string }>
+  | Readonly<{ kind: "slot"; name: string }>;
+
+/**
+ * A template split into its words and its holes, in order.
+ *
+ * The Brief's opening sentence puts a LINK in two of its holes, and a string
+ * with the holes already filled has nowhere to put one. So the sentence is
+ * translated with its holes intact and cut here, which keeps the translator's
+ * word order: the lead can open the German sentence and close the Vietnamese
+ * one, and neither is assembled from clauses this file joined.
+ *
+ * The hole pattern is `translate`'s own (`{name}`), and it has to stay that way
+ * — a second spelling here would fill holes the translator never wrote.
+ */
+export function sentenceParts(template: string): readonly SentencePart[] {
+  const parts: SentencePart[] = [];
+  let at = 0;
+  for (const hole of template.matchAll(/\{(\w+)\}/g)) {
+    if (hole.index > at) {
+      parts.push({ kind: "text", text: template.slice(at, hole.index) });
+    }
+    parts.push({ kind: "slot", name: hole[1] });
+    at = hole.index + hole[0].length;
+  }
+  if (at < template.length) {
+    parts.push({ kind: "text", text: template.slice(at) });
+  }
+  return parts;
+}
 
 /** How many rows the sentence is allowed to name. */
 const NAMED = 1;
@@ -91,15 +131,21 @@ export function briefSentence(
   if (consequence) {
     values.consequence = consequence;
   }
+  // The row's OWN destination, through the helper the feed's rows are linked
+  // by. A second rule for where the lead goes would let the sentence open a
+  // record the row under it does not.
+  const leadHref = rowHref(lead);
   if (waiting.length === NAMED) {
     return {
       key: consequence ? "brief.sentence.oneWithCost" : "brief.sentence.one",
       values,
+      leadHref,
     };
   }
   return {
     key: consequence ? "brief.sentence.manyWithCost" : "brief.sentence.many",
     values,
+    leadHref,
   };
 }
 

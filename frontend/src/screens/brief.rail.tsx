@@ -1,289 +1,39 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ArrowRight } from "lucide-react";
 import { useRecordZone } from "../app/recordzone";
-import { navigate, routeHash } from "../app/router";
-import { Button } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { routeHash } from "../app/router";
 import { DealCard } from "../design-system/composed";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import {
-  formatDate,
-  formatMoneyOrAbsent,
-  formatNumber,
-} from "../format/format";
+import { formatMoneyCompact, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  type Deal,
-  type MorningDigest,
-  useMorningDigest,
-  usePipelineValue,
-} from "./brief.queries";
-import { QueryGate } from "./common";
-import { errorClassKey, isUnhealthy } from "./connector-status";
-import { toBoardDeal, useCompanyMarks } from "./deals";
-import { EntityRef, rosterOwnerNaming, useRoster } from "./entityref";
-import { isProjectPhase, PHASE_LABEL } from "./projects.form";
+import { type Deal, useMorningDigest, usePipelineValue } from "./brief.queries";
+import { overnightIsEmpty } from "./brief.rail.overnight";
+import { scheduleIsEmpty, tasksIsEmpty } from "./brief.schedule";
+import { toBoardDeal, useOrgMarks } from "./deals";
+import { rosterOwnerNaming, useRoster } from "./entityref";
+import type { Worklist } from "./worklist.queries";
 
 // Brief's context rail: what happened, what the pipeline is worth, and what has
-// gone quiet. Three panels, all of them READ — the work is in the main column
-// beside them, and a rail that asks for a move is a second lead.
+// gone quiet. Every panel is READ — the work is in the main column beside them,
+// and a rail that asks for a move is a second lead.
 //
 // Every panel is `Panel` rather than a card of its own, which is what makes the
 // rail read as one column of the same shape: a header band at one height,
 // full-bleed rows under it, and a footer only where a figure belongs to the
 // whole panel.
-
-type DigestProjects = NonNullable<MorningDigest["projects"]>;
-
-// A rung of the project ladder in the reader's words. The digest carries the
-// phase as open wire text, so a rung added upstream renders as its own word
-// rather than failing the index.
-function phaseWord(phase: string, t: (key: MessageKey) => string): string {
-  return isProjectPhase(phase) ? t(PHASE_LABEL[phase]) : phase;
-}
-
-/** One labelled count inside the overnight panel. */
-function DigestCount({
-  label,
-  value,
-  onOpen,
-}: Readonly<{ label: string; value: number; onOpen?: () => void }>) {
-  const { locale } = useLocale();
-  if (onOpen) {
-    return (
-      <PanelRow interactive>
-        <button type="button" className="rail-count-go" onClick={onOpen}>
-          <span className="rail-count-label">{label}</span>
-          <span className="rail-count-value t-mono">
-            {formatNumber(value, locale)}
-          </span>
-          <ArrowRight size={14} aria-hidden />
-        </button>
-      </PanelRow>
-    );
-  }
-  return (
-    <PanelRow>
-      <span className="rail-count">
-        <span className="rail-count-label">{label}</span>
-        <span className="rail-count-value t-mono">
-          {formatNumber(value, locale)}
-        </span>
-      </span>
-    </PanelRow>
-  );
-}
-
-// What moved on the projects overnight: every project named is a link to its
-// page, because the section exists to send the reader there. A list that is
-// empty renders nothing — the heading alone would claim news it has none of.
-function DigestProjectsBlock({
-  projects,
-}: Readonly<{ projects: DigestProjects }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const { phase_changes, new_commitments, gone_quiet } = projects;
-  // The birth row of a project created overnight carries no from_phase; a move
-  // between rungs is the news, so only those are listed.
-  const moves = phase_changes.filter((change) => change.from_phase != null);
-  if (
-    moves.length === 0 &&
-    new_commitments.length === 0 &&
-    gone_quiet.length === 0
-  ) {
-    return null;
-  }
-  return (
-    <PanelBody className="rail-projects">
-      <span className="t-eyebrow">{t("brief.digestProjects")}</span>
-      {moves.length > 0 && (
-        <ul
-          className="rail-project-list"
-          aria-label={t("brief.digestPhaseChanges")}
-        >
-          {moves.map((change) => (
-            <li key={`${change.project_id}-${change.occurred_at}`}>
-              <EntityRef kind="project" id={change.project_id} />{" "}
-              <span className="t-caption">
-                {t("brief.digestPhaseChange", {
-                  from: phaseWord(change.from_phase ?? "", t),
-                  to: phaseWord(change.to_phase, t),
-                })}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {new_commitments.length > 0 && (
-        <ul
-          className="rail-project-list"
-          aria-label={t("brief.digestNewCommitments")}
-        >
-          {new_commitments.map((item) => (
-            <li key={item.project_id}>
-              <EntityRef kind="project" id={item.project_id} />{" "}
-              <span className="t-caption">
-                {t("brief.digestCommitmentCount", {
-                  count: formatNumber(item.new_open_commitments, locale),
-                })}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {gone_quiet.length > 0 && (
-        <ul
-          className="rail-project-list"
-          aria-label={t("brief.digestGoneQuiet")}
-        >
-          {gone_quiet.map((item) => (
-            <li key={item.project_id}>
-              <EntityRef kind="project" id={item.project_id} />{" "}
-              <span className="t-caption">
-                {t("brief.digestQuietDays", {
-                  days: formatNumber(item.days_quiet, locale),
-                })}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </PanelBody>
-  );
-}
-
-/**
- * What the night shift did: capture counts, what it left for review, and the
- * one connector fact worth interrupting a morning for.
- *
- * Before the first nightly run there is no digest, and this panel is absent
- * rather than a row of zeros — a fabricated count is worse than a missing one,
- * because a reader cannot tell it apart from a real one.
- */
-export function OvernightPanel() {
-  const t = useT();
-  const { locale } = useLocale();
-  // The digest's own day is a fact about the installation's calendar, so it
-  // reads the installation's zone rather than a constant.
-  const recordZone = useRecordZone();
-  const digestQuery = useMorningDigest();
-  return (
-    <QueryGate query={digestQuery} pendingLabel={t("brief.panel.overnight")}>
-      {(digest) => {
-        if (digest === null) {
-          return null;
-        }
-        const { capture, review, connectors, projects } = digest;
-        // A healthy connector is not news, and a permanent green row is noise.
-        // Only an unhealthy one surfaces here, in Settings' own vocabulary so
-        // the two surfaces never describe the same state differently.
-        const unhealthy = connectors.filter(
-          (c) => c.status != null && isUnhealthy(c.status),
-        );
-        return (
-          <Panel
-            title={t("brief.panel.overnight")}
-            sub={t("brief.digestFor", {
-              date: formatDate(digest.date, locale, recordZone),
-            })}
-            className="rail-panel"
-          >
-            <DigestCount
-              label={t("brief.digestSynced")}
-              value={capture.messages_synced ?? 0}
-            />
-            {/* The two counts that name a set of RECORDS, so they open it.
-                The door sorts newest-first rather than bounding by date:
-                `created_at` is a declared sort on both lists and neither
-                endpoint has a "created on this day" filter, so overnight's
-                rows land at the top of a longer list rather than being the
-                whole of it. That is a superset, which is the honest direction
-                to be wrong in — the reader sees the ones this figure counted
-                and more besides, not fewer. The messages-synced count above
-                has no list surface at all and keeps no door. */}
-            <DigestCount
-              label={t("brief.digestContacts")}
-              value={capture.contacts_created ?? 0}
-              onOpen={() =>
-                navigate(
-                  { screen: "contacts" },
-                  new Map([["sort", "-created_at"]]),
-                )
-              }
-            />
-            <DigestCount
-              label={t("brief.digestCompanies")}
-              value={capture.companies_created ?? 0}
-              onOpen={() =>
-                navigate(
-                  { screen: "companies" },
-                  new Map([["sort", "-created_at"]]),
-                )
-              }
-            />
-            <DigestCount
-              label={t("brief.digestDedupe")}
-              value={review.dedupe_open ?? 0}
-              onOpen={() => navigate({ screen: "worklist" })}
-            />
-            <PanelBody>
-              <p className="t-caption">
-                {t("brief.digestClassify", {
-                  commitments: formatNumber(
-                    review.classify?.commitments ?? 0,
-                    locale,
-                  ),
-                  meetings: formatNumber(
-                    review.classify?.meetings ?? 0,
-                    locale,
-                  ),
-                  noise: formatNumber(review.classify?.noise ?? 0, locale),
-                })}
-              </p>
-            </PanelBody>
-            {projects && <DigestProjectsBlock projects={projects} />}
-            {unhealthy.length > 0 && (
-              <PanelBody>
-                {/* EVERY broken connector, not the first one: naming
-                    `unhealthy[0]` alone told a reader with two dead mailboxes
-                    about one of them, and the digest is where they find out at
-                    all. `event`, because a sync failed overnight rather than
-                    under the reader's hand. */}
-                <Callout
-                  tone="warn"
-                  kind="event"
-                  title={t("brief.overnight.connectorsUnhealthy")}
-                  actions={
-                    <Button
-                      small
-                      onClick={() =>
-                        navigate({ screen: "settings", id: "connections" })
-                      }
-                    >
-                      {t("brief.overnight.fixConnector")}
-                    </Button>
-                  }
-                >
-                  <ul>
-                    {unhealthy.map((connector) => (
-                      <li key={connector.provider}>
-                        {t(errorClassKey(connector.last_sync_error_class))}
-                      </li>
-                    ))}
-                  </ul>
-                </Callout>
-              </PanelBody>
-            )}
-          </Panel>
-        );
-      }}
-    </QueryGate>
-  );
-}
+//
+// A PANEL EARNS ITS BOX BY HAVING SOMETHING IN IT. A clear morning used to
+// stack four panels of chrome around four grey sentences, and the two panels
+// that did have news were read last. Empty, a panel draws nothing and
+// `RailQuiet` prints one line per silent source at the foot of the rail.
+//
+// The overnight digest panel lives in `brief.rail.overnight.tsx` — this file
+// was at its line ceiling — and is re-exported here so the rail is still
+// assembled from one import.
+export { OvernightPanel } from "./brief.rail.overnight";
 
 /**
  * The open pipeline, one line per currency.
@@ -306,7 +56,7 @@ export function PositionPanel() {
   }
   if (query.isError) {
     return (
-      <Panel title={t("brief.panel.position")} className="rail-panel">
+      <Panel title={t("brief.panel.pipeline")} className="rail-panel">
         <PanelBody>
           <p className="t-caption">{t("brief.pipelineUnavailable")}</p>
         </PanelBody>
@@ -320,7 +70,7 @@ export function PositionPanel() {
   }
   return (
     <Panel
-      title={t("brief.panel.position")}
+      title={t("brief.panel.pipeline")}
       className="rail-panel"
       footer={
         // A mask kept rows out of these sums, so the figures understate the
@@ -338,20 +88,24 @@ export function PositionPanel() {
       {rows.map((row) => (
         <PanelRow key={row.currency}>
           <span className="rail-money">
+            {/* THE SCALE, NOT THE AMOUNT. `€2.68m` is what a rail column of
+                this width can carry and what a reader takes in at a glance;
+                `€2,680,000.00` is a string of digits to be counted, and it
+                wrapped mid-number. The exact figure belongs to the Pipeline
+                screen, which is where a reader checking one goes. */}
             <span className="rail-money-raw t-mono">
-              {formatMoneyOrAbsent(row.rawMinor, row.currency, locale)}
+              {formatMoneyCompact(row.rawMinor, row.currency, locale)}
             </span>
+            {/* ONE basis line under the figure, not two: the weighted total and
+                the deal count are the same statement about the same figure, and
+                stacked they read as two more readings. */}
             <span className="t-caption">
-              {t("brief.pipelineWeighted", {
-                amount: formatMoneyOrAbsent(
+              {plural("brief.pipelineBasis", row.deals, {
+                weighted: formatMoneyCompact(
                   row.weightedMinor,
                   row.currency,
                   locale,
                 ),
-              })}
-            </span>
-            <span className="t-caption">
-              {plural("brief.pipelineCount", row.deals, {
                 count: formatNumber(row.deals, locale),
               })}
             </span>
@@ -359,6 +113,24 @@ export function PositionPanel() {
         </PanelRow>
       ))}
     </Panel>
+  );
+}
+
+/**
+ * Whether the quiet-deals panel has nothing to draw.
+ *
+ * `more` is why this is not `deals.length === 0`: past the end of Brief's one
+ * page, an empty panel is not "nothing has gone quiet", it is "nothing on the
+ * page we read" — a caveat, which is content, and the panel keeps its box to
+ * say it.
+ */
+export function watchIsEmpty(
+  deals: readonly Deal[],
+  more: boolean,
+  state: SectionState,
+): boolean {
+  return (
+    (state === "ready" || state === "empty") && !more && deals.length === 0
   );
 }
 
@@ -392,30 +164,22 @@ export function WatchPanel({
     "user",
     deals.some((deal) => Boolean(deal.owner_id)),
   );
-  if (state === "loading") {
+  if (state === "loading" || watchIsEmpty(deals, more, state)) {
     return null;
   }
-  // "Nothing has gone quiet" is a CLAIM about the deals, so it may only be made
-  // once they have been read. A failed read used to reach the same sentence,
-  // which told a reader their pipeline was healthy on the strength of a request
-  // that never answered.
-  // Only a settled read may say anything about the deals, and WHICH thing it
-  // says turns on whether the page ended the list: past it, an empty panel is
-  // not "nothing has gone quiet", it is "nothing on the page we read".
-  const settled = state === "ready";
-  const resolved: SectionState = !settled
-    ? state
-    : more
-      ? "partial"
-      : deals.length === 0
-        ? "empty"
-        : state;
+  // A settled read that ended the list has already collapsed above; what is
+  // left is either rows, a page that stopped short — `partial`, the caveat
+  // under the rows — or a read that did not answer, which keeps its own state.
+  // A failure must never resolve to a sentence about the deals: that told a
+  // reader their pipeline was healthy on the strength of a request nobody
+  // answered.
+  const resolved: SectionState = state === "ready" && more ? "partial" : state;
   return (
     <Panel title={t("brief.panel.watch")} className="rail-panel">
       <PanelBody className={deals.length > 0 ? "rail-watch-list" : undefined}>
         <SurfaceState
           state={resolved}
-          emptyLabel={t("brief.watch.clear")}
+          emptyLabel={t("brief.rail.quietWatch")}
           loadingLabel={t("brief.panel.watch")}
         >
           {deals.map((deal) => (
@@ -431,5 +195,66 @@ export function WatchPanel({
         </SurfaceState>
       </PanelBody>
     </Panel>
+  );
+}
+
+/**
+ * The one panel a silent morning gets: a line per source that had nothing to
+ * report.
+ *
+ * It is the counterweight to every panel above collapsing. Four absent panels
+ * say nothing at all — a reader cannot tell a source that was quiet from one
+ * the page forgot to draw — and four boxed sentences say it four times as
+ * loudly as the news beside them. One line each, at meta size, at the foot of
+ * the rail.
+ *
+ * It reads the SAME inputs the panels do and the same predicates they collapse
+ * on, so the rail cannot print "nothing booked" over a schedule panel that
+ * drew. The digest it reads itself: the query is the one the overnight panel
+ * already holds, answered from cache, so asking again costs no request.
+ */
+export function RailQuiet({
+  day,
+  dayState,
+  deals,
+  more,
+  dealsState,
+}: Readonly<{
+  day: Worklist | undefined;
+  dayState: SectionState;
+  deals: readonly Deal[];
+  more: boolean;
+  dealsState: SectionState;
+}>) {
+  const t = useT();
+  const digestQuery = useMorningDigest();
+  // In the rail's own order, so a reader who has learned where each panel sits
+  // finds its absence in the same place.
+  const silent: MessageKey[] = [];
+  if (scheduleIsEmpty(day, dayState)) {
+    silent.push("brief.rail.quietSchedule");
+  }
+  if (tasksIsEmpty(day, dayState)) {
+    silent.push("brief.rail.quietTasks");
+  }
+  if (overnightIsEmpty(digestQuery.data)) {
+    silent.push("brief.rail.quietOvernight");
+  }
+  if (watchIsEmpty(deals, more, dealsState)) {
+    silent.push("brief.rail.quietWatch");
+  }
+  if (silent.length === 0) {
+    return null;
+  }
+  return (
+    <section id="brief-quiet">
+      <Panel title={t("brief.panel.quiet")} className="rail-panel">
+        {silent.map((key) => (
+          <PanelRow key={key}>
+            <span className="t-caption">{t(key)}</span>
+          </PanelRow>
+        ))}
+      </Panel>
+    </section>
   );
 }

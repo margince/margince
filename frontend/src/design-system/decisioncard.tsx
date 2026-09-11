@@ -2,19 +2,27 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Pencil, RotateCcwClock, Trash2 } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId } from "react";
 import type { components } from "../api/schema";
 import { ActionRow } from "./actionrow";
-import { Badge, Button } from "./atoms";
-import { type Fact, FactList } from "./factlist";
+import { Badge, Button, OverflowMenu } from "./atoms";
+import { DecisionContent, DecisionEvidence } from "./decisioncard.content";
+import {
+  type DecisionDiff,
+  type DecisionDisplay,
+  type DecisionDraft,
+  diffsOf,
+  draftOf,
+  type PayloadField,
+  restFields,
+} from "./decisioncard.payload";
 import { IconAction } from "./iconaction";
+import { Popover } from "./popover";
 import type { SectionState } from "./surfacestate";
 import { SurfaceState } from "./surfacestate";
 import {
   type ConfidenceLevel,
   ConfidenceMeter,
-  EvidenceChip,
-  FieldDiff,
   type Provenance,
   ProvenanceTag,
 } from "./trust";
@@ -45,6 +53,11 @@ import "./decisioncard.css";
 // two decisions to the contact answering it.
 
 export type DecisionApproval = components["schemas"]["Approval"];
+
+// The payload vocabulary is re-exported rather than moved out of reach: a
+// caller resolving a kind's display policy is talking to the CARD, and a second
+// import path for the type it hands over would say the two were separate tiers.
+export type { DecisionDisplay } from "./decisioncard.payload";
 
 /**
  * How near the deadline is — the card's own reading of `expires_at`, and the
@@ -283,307 +296,23 @@ export type DecisionCardLabels = Readonly<{
   loading: string;
 }>;
 
-/** The old→new sides of one field the proposal would change. */
-type DecisionDiff = Readonly<{
-  field: string;
-  from: string | null;
-  to: string | null;
-}>;
-
-/** The drafted message a send-shaped payload carries. */
-type DecisionDraft = Readonly<{
-  subject: string | null;
-  body: string | null;
-}>;
-
-// A payload value as one line of text. `proposed_change` is an open map in the
-// contract, so anything can be under any key: a string is shown as written, a
-// scalar as its own digits, and a nested document as its JSON rather than as
-// "[object Object]" — which is what a reader saw on the one card that hit it.
-function asText(value: unknown): string | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  if (typeof value === "string") {
-    return value.trim() === "" ? null : value;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  return JSON.stringify(value);
-}
-
-// The drafted message, for the kinds whose whole question is words somebody is
-// about to send in the reader's name (`held_draft`, `send_email`). Narrowed
-// rather than asserted: a kind that puts something other than a string under
-// `subject` reads as no subject at all, which is what the inbox already did.
-function draftOf(change: Readonly<Record<string, unknown>>): DecisionDraft {
-  const subject = typeof change.subject === "string" ? change.subject : null;
-  const body = typeof change.body === "string" ? change.body : null;
-  return { subject: asText(subject), body: asText(body) };
-}
-
-// The `current_<name>` / `proposed_<name>` pairs, which is how this product's
-// stagers spell a field change: `compose/signalproposals.go` puts
-// current_lifecycle beside proposed_lifecycle precisely so "the card must show
-// both sides", and the company context surface reads current_value /
-// proposed_value the same way. A `proposed_` key with no sibling is NOT a diff
-// — it is a value the proposal adds, and drawing it against a struck-through
-// blank would claim we know the old one was empty.
-const PROPOSED = "proposed_";
-const CURRENT = "current_";
-
-function diffsOf(
-  change: Readonly<Record<string, unknown>>,
-): readonly DecisionDiff[] {
-  const diffs: DecisionDiff[] = [];
-  for (const [key, value] of Object.entries(change)) {
-    if (!key.startsWith(PROPOSED)) {
-      continue;
-    }
-    const field = key.slice(PROPOSED.length);
-    const currentKey = `${CURRENT}${field}`;
-    if (!Object.hasOwn(change, currentKey)) {
-      continue;
-    }
-    diffs.push({ field, from: asText(change[currentKey]), to: asText(value) });
-  }
-  return diffs;
-}
-
 /**
- * What one payload field is called and how to read it, already resolved into
- * the reader's own language by the caller.
+ * The two words a COMPACT row needs, and the switch that turns it on.
  *
- * Resolved rather than looked up here, for the reason DecisionToolChip takes a
- * verb rather than a kind: which fields a kind shows is the product's
- * vocabulary, and a primitive holding a copy of it would be a second author of
- * it. This tier knows how to DRAW a labelled fact; it does not know that a
- * close-date correction has a `basis`.
+ * Presence is the density: a surface that has the words has asked for the dense
+ * form, and one that has not keeps the full row. Held as a pair rather than as a
+ * boolean beside two optional strings, because a compact row with no name for
+ * its fold and no name for its menu is a row whose detail and whose two quieter
+ * verdicts are unreachable — an optional label on a control that MUST exist is a
+ * refusal waiting to happen, which is why `Callout` carries its dismiss label
+ * with its handler rather than beside it.
  */
-export type DecisionDisplay = Readonly<{
-  /** The payload key this describes. */
-  field: string;
-  /** What to call it, in the reader's language. */
-  label: string;
-  /** The value, already formatted — a date on the reader's calendar, an enum
-   *  in words. Null where the payload does not carry the field. */
-  value: string | null;
-  /** Leads the body as a sentence rather than sitting in the fact list. */
-  lead?: boolean;
+export type DecisionCompactWords = Readonly<{
+  /** What opening the row shows: the subject, the message, the deadline. */
+  detail: string;
+  /** Names the menu holding the verdicts the line has no room to spell. */
+  more: string;
 }>;
-
-// Everything the readings above did not consume, as label→value rows.
-//
-// A kind that declares a display policy shows exactly what it declared: the
-// caller resolved those fields, so the payload's remaining keys are identifiers
-// and bookkeeping that answer nothing a contact was asked. Printing them was how
-// a business question came to read as a database row — `deal_id`,
-// `target_version`, `flags: ["unrealistic_stale"]` under a headline about a
-// deal going quiet.
-//
-// A kind that declares nothing keeps the old reading: wire keys as written.
-// That is not a nicer fallback, it is an honest one — the raw-args kinds carry
-// an agent's tool arguments or an automation's action, with no typed payload to
-// describe, and inventing captions for a bag of unknown keys would be guessing
-// at what the software meant. Drawn only in the deck layout, where the row
-// offers a way through to the whole payload instead.
-function restOf(
-  change: Readonly<Record<string, unknown>>,
-  draft: DecisionDraft,
-  diffs: readonly DecisionDiff[],
-  display: readonly DecisionDisplay[],
-): readonly Fact[] {
-  if (display.length > 0) {
-    return display.flatMap((entry) =>
-      entry.lead || entry.value === null
-        ? []
-        : [
-            {
-              key: entry.field,
-              term: <span>{entry.label}</span>,
-              value: <span className="dcard-fact">{entry.value}</span>,
-            },
-          ],
-    );
-  }
-  const consumed = new Set<string>();
-  if (draft.subject) {
-    consumed.add("subject");
-  }
-  if (draft.body) {
-    consumed.add("body");
-  }
-  for (const diff of diffs) {
-    consumed.add(`${PROPOSED}${diff.field}`);
-    consumed.add(`${CURRENT}${diff.field}`);
-  }
-  return Object.entries(change).flatMap(([key, value]) => {
-    const text = consumed.has(key) ? null : asText(value);
-    return text === null
-      ? []
-      : [
-          {
-            key,
-            term: <span className="t-mono">{key}</span>,
-            value: <span className="dcard-fact">{text}</span>,
-          },
-        ];
-  });
-}
-
-// Past this many characters the drafted body is clamped. A card that grows with
-// its content stops being a card: one long email pushes every verb below the
-// fold, and in the deck it pushes the card behind it off the plate entirely.
-const BODY_CLAMP_CHARS = 320;
-
-// The clamped body and its expander.
-//
-// A `.link-button` rather than `Disclosure`, and the difference is the whole
-// point: a disclosure HIDES its content until asked, and a draft nobody can see
-// any of is a question with the answer removed. The reader gets the opening
-// lines unasked, and the control only lifts the clamp — which is why it is an
-// `aria-expanded` toggle over one paragraph rather than a second copy of the
-// text behind a summary.
-function DraftBody({
-  body,
-  labels,
-}: Readonly<{ body: string; labels: DecisionCardLabels }>) {
-  const [open, setOpen] = useState(false);
-  const bodyId = useId();
-  // Expandable only where the caller named both halves of the toggle: a control
-  // whose label the surface has no words for is a control nobody can act on.
-  const expandable =
-    body.length > BODY_CLAMP_CHARS &&
-    labels.showMore !== undefined &&
-    labels.showLess !== undefined;
-  const clampable = body.length > BODY_CLAMP_CHARS;
-  return (
-    <>
-      <p
-        id={bodyId}
-        className="dcard-draft-body"
-        data-clamped={clampable && !open ? "" : undefined}
-      >
-        {body}
-      </p>
-      {expandable && (
-        <button
-          type="button"
-          className="link-button"
-          aria-expanded={open}
-          aria-controls={bodyId}
-          onClick={() => setOpen((shown) => !shown)}
-        >
-          {open ? labels.showLess : labels.showMore}
-        </button>
-      )}
-    </>
-  );
-}
-
-// What the proposal actually says, in the order a reader needs it: why they
-// are being asked, then the words they are being asked to put their name on,
-// then the values that would move, then the rest.
-//
-// The reason comes FIRST and unlabelled. It is a sentence the server wrote for
-// a contact — the close-date sweep calls its own field "the plain-language
-// derivation" — so captioning it would frame an explanation as a data point,
-// and burying it under the values it explains asks the reader to work out the
-// question from the answer.
-function DecisionContent({
-  draft,
-  diffs,
-  lead,
-  rest,
-  raw,
-  labels,
-}: Readonly<{
-  draft: DecisionDraft;
-  diffs: readonly DecisionDiff[];
-  lead: string | null;
-  rest: readonly Fact[];
-  /** The facts are wire keys, not declared fields — see restOf. */
-  raw: boolean;
-  labels: DecisionCardLabels;
-}>) {
-  return (
-    <>
-      {lead && <p className="dcard-lead">{lead}</p>}
-      {draft.body && (
-        <div className="dcard-draft">
-          <span className="t-eyebrow dcard-draft-label">
-            {labels.draftBody}
-          </span>
-          <DraftBody body={draft.body} labels={labels} />
-        </div>
-      )}
-      {diffs.map((diff) => (
-        <div className="dcard-diff" key={diff.field}>
-          <span className="t-eyebrow dcard-draft-label">
-            {diff.field.replaceAll("_", " ")}
-          </span>
-          <FieldDiff oldValue={diff.from} newValue={diff.to} />
-        </div>
-      ))}
-      {rest.length > 0 && (
-        <FactList
-          facts={rest}
-          className={raw ? "dcard-rest dcard-rest-raw" : "dcard-rest"}
-        />
-      )}
-    </>
-  );
-}
-
-// The receipts, always on the card and never behind a popover: this is the one
-// surface where a contact has to be able to check a claim BEFORE agreeing to it.
-// Collapsed in the row layout, where a queue of verbatim snippets would bury
-// the verbs; open in the deck, where there is one card and room to read it.
-function DecisionEvidence({
-  evidence,
-  collapsed,
-}: Readonly<{
-  evidence: DecisionApproval["evidence"];
-  collapsed: boolean;
-}>) {
-  // Two rows of one source can open with the same twelve characters — a quoted
-  // thread quotes itself — and a duplicate key hands one chip's expansion state
-  // to another on the next render. So the key carries an occurrence count of the
-  // otherwise-identical string: derived from the data rather than from the
-  // position, which is what makes it survive a list that arrives in a different
-  // order.
-  const seen = new Map<string, number>();
-  const keyOf = (item: { source_id?: string | null; snippet: string }) => {
-    // The FULL snippet, not a prefix: two quotes from one source that open the
-    // same way are different evidence, and a key that could not tell them apart
-    // handed one chip the other's expansion state whenever the list reordered.
-    const base = JSON.stringify([item.source_id ?? "", item.snippet]);
-    const before = seen.get(base) ?? 0;
-    seen.set(base, before + 1);
-    return before === 0 ? base : `${base}#${before}`;
-  };
-  return (
-    <>
-      {evidence?.map((item) =>
-        item.evidence_snippet ? (
-          <EvidenceChip
-            key={keyOf({
-              source_id: item.source_id,
-              snippet: item.evidence_snippet,
-            })}
-            collapsed={collapsed}
-            evidence={{
-              snippet: item.evidence_snippet,
-              source: item.source_type ?? "",
-              lines: item.source_lines,
-            }}
-          />
-        ) : null,
-      )}
-    </>
-  );
-}
 
 export type DecisionCardProps = Readonly<{
   approval: DecisionApproval;
@@ -646,6 +375,16 @@ export type DecisionCardProps = Readonly<{
   className?: string;
   testId?: string;
   /**
+   * The `row` layout's DENSE form: one line per decision — what is asked, when
+   * it runs out, who staged it, and the verdicts — with the proposal itself
+   * behind a disclosure. Absent draws the full row.
+   *
+   * Ignored in `deck`, where the whole point is the whole payload on one plate:
+   * a tall card that hid its proposal would be a question with the answer taken
+   * out.
+   */
+  compact?: DecisionCompactWords;
+  /**
    * What THIS kind of proposal shows, resolved into the reader's language by
    * the caller. Empty leaves the generic reading — wire keys as written — which
    * is what a kind carrying untyped tool arguments honestly has.
@@ -662,7 +401,7 @@ type PayloadReading = Readonly<{
   diffs: readonly DecisionDiff[];
   /** The declared sentence that says WHY this is being asked, if the kind has one. */
   lead: string | null;
-  rest: readonly Fact[];
+  rest: readonly PayloadField[];
   /** True when `rest` holds wire keys because the kind declared no display policy. */
   raw: boolean;
   hasContent: boolean;
@@ -688,7 +427,7 @@ function readPayload(
   // rendered the reason with no proposed date under it.
   const rest =
     layout === "deck" || display.length > 0
-      ? restOf(change, draft, diffs, display)
+      ? restFields(change, draft, diffs, display)
       : [];
   return {
     draft,
@@ -742,6 +481,7 @@ function DecisionHead({
   aside,
   provenance,
   confidence,
+  compact,
 }: Readonly<{
   approval: DecisionApproval;
   draft: DecisionDraft;
@@ -751,17 +491,38 @@ function DecisionHead({
   aside?: ReactNode;
   provenance?: Provenance;
   confidence?: ConfidenceLevel;
+  /** One line: the question first, its qualifiers after it. */
+  compact?: boolean;
 }>) {
   const named = cardName(approval, draft);
   const headline = named ?? approval.summary ?? null;
+  const chips = (
+    <div className="dcard-meta">
+      {meta}
+      {provenance && <ProvenanceTag provenance={provenance} />}
+      {confidence && <ConfidenceMeter level={confidence} />}
+      {aside && <div className="dcard-aside">{aside}</div>}
+    </div>
+  );
+  // A COMPACT row is scanned by WHAT IS ASKED, so the question leads and the
+  // chips qualify it. The tall card keeps the chips first, where the kind and
+  // the countdown are the frame the rest of the card is read inside — and where
+  // there is a whole plate to read rather than a line to scan.
+  if (compact) {
+    return (
+      <>
+        {headline && (
+          <p className="t-body approval-headline" id={headingId}>
+            {headline}
+          </p>
+        )}
+        {chips}
+      </>
+    );
+  }
   return (
     <>
-      <div className="dcard-meta">
-        {meta}
-        {provenance && <ProvenanceTag provenance={provenance} />}
-        {confidence && <ConfidenceMeter level={confidence} />}
-        {aside && <div className="dcard-aside">{aside}</div>}
-      </div>
+      {chips}
       {/* What KIND of line the headline is, where it is a drafted subject. It
           sits above the headline rather than beside a repeat of it further down:
           the subject printed twice on one card reads as two facts, and the
@@ -822,6 +583,7 @@ export function DecisionCard({
   children,
   className,
   testId,
+  compact,
   display = [],
 }: DecisionCardProps) {
   const headingId = useId();
@@ -831,34 +593,11 @@ export function DecisionCard({
   // the line a sighted reader sees cannot come apart: a card named only by its
   // target_label rendered a headline and pointed aria-labelledby at nothing.
   const named = cardName(approval, payload.draft) ?? approval.summary ?? null;
-
-  return (
-    <article
-      // `.staging-card` as well as its own class, and that is reuse rather than
-      // decoration: the AI-tinted, dashed "this is not real yet" ground is
-      // declared once with the rest of the panel-ai family (panel.css) and is
-      // the same claim this card makes. Re-spelling it here would be a second
-      // copy of the one signal separating a proposal from a persisted fact.
-      className={["staging-card dcard", className ?? ""]
-        .filter(Boolean)
-        .join(" ")}
-      data-layout={layout}
-      data-urgency={urgencyOf(approval, now, decided)}
-      data-lapsed={lapsed ? "" : undefined}
-      data-approval={approval.id}
-      data-testid={testId}
-      aria-labelledby={named ? headingId : undefined}
-    >
-      <DecisionHead
-        approval={approval}
-        draft={payload.draft}
-        labels={labels}
-        headingId={headingId}
-        meta={meta}
-        aside={aside}
-        provenance={provenance}
-        confidence={confidence}
-      />
+  // The dense form belongs to the row. A deck card that folded its proposal
+  // away would be the one thing a tall plate exists not to do.
+  const dense = layout === "row" ? compact : undefined;
+  const proposal = (
+    <>
       <div className="dcard-body">
         <SurfaceState
           state={state ?? (payload.hasContent ? "ready" : "empty")}
@@ -881,24 +620,93 @@ export function DecisionCard({
           collapsed={layout === "row"}
         />
       </div>
-      {/* A lapsed proposal says so where its verbs used to be. Offering Accept
-          on it would be a control whose only possible answer is a refusal. */}
-      {lapsed && <p className="dcard-lapsed">{labels.expired}</p>}
       {detail}
       {/* An open editor closes with the deadline. Left drawn, a proposal that
           lapsed while somebody was editing it still offered "approve edited" —
           a write the server can only refuse, and the one control this card is
           careful never to draw (the verbs go for the same reason, below). */}
       {!lapsed && editor}
-      {!decided && !lapsed && !editor && (
-        <DecisionVerbs
-          labels={labels}
-          pending={pending}
-          onAccept={onAccept}
-          onEdit={onEdit}
-          onReject={onReject}
-          onSkip={onSkip}
-        />
+    </>
+  );
+  // A lapsed proposal says so where its verbs used to be. Offering Accept on it
+  // would be a control whose only possible answer is a refusal.
+  const ranOut = lapsed && <p className="dcard-lapsed">{labels.expired}</p>;
+  const verbs = !decided && !lapsed && !editor && (
+    <DecisionVerbs
+      labels={labels}
+      compact={dense}
+      pending={pending}
+      onAccept={onAccept}
+      onEdit={onEdit}
+      onReject={onReject}
+      onSkip={onSkip}
+    />
+  );
+  const head = (
+    <DecisionHead
+      approval={approval}
+      draft={payload.draft}
+      labels={labels}
+      headingId={headingId}
+      meta={meta}
+      aside={aside}
+      provenance={provenance}
+      confidence={confidence}
+      compact={dense !== undefined}
+    />
+  );
+
+  return (
+    <article
+      // `.staging-card` as well as its own class, and that is reuse rather than
+      // decoration: the AI-tinted, dashed "this is not real yet" ground is
+      // declared once with the rest of the panel-ai family (panel.css) and is
+      // the same claim this card makes. Re-spelling it here would be a second
+      // copy of the one signal separating a proposal from a persisted fact.
+      className={["staging-card dcard", className ?? ""]
+        .filter(Boolean)
+        .join(" ")}
+      data-layout={layout}
+      data-urgency={urgencyOf(approval, now, decided)}
+      data-lapsed={lapsed ? "" : undefined}
+      data-approval={approval.id}
+      data-testid={testId}
+      data-density={dense ? "compact" : undefined}
+      aria-labelledby={named ? headingId : undefined}
+    >
+      {dense ? (
+        <>
+          {/* ONE LINE, and the verbs end it. The question, its chips and the
+              answers keep one x down a queue, which is what makes a list of
+              these scannable — everything a reader must WEIGH is behind the
+              line's own control, off to the side of it rather than under it. */}
+          <div className="dcard-line">
+            {head}
+            {ranOut}
+            {/* A POPOVER rather than a disclosure, which is the catalog's own
+                direction for this case: opening a fold in a list pushes every
+                row under it down, so the reader who wanted to compare two
+                proposals moved the second one out from under their eye — and
+                the verbs with it. Escape closes it and hands the trigger back
+                its focus. */}
+            <Popover label={dense.detail} className="dcard-detail">
+              {/* The sentence that says WHY, which the line gave up to stay
+                  one line. It leads here for the same reason it led the card. */}
+              {named && approval.summary && (
+                <p className="t-caption approval-why">{approval.summary}</p>
+              )}
+              {proposal}
+            </Popover>
+            {verbs}
+          </div>
+        </>
+      ) : (
+        <>
+          {head}
+          {proposal}
+          {ranOut}
+          {verbs}
+        </>
       )}
       {notice}
       {children}
@@ -924,6 +732,7 @@ export function DecisionCard({
 // available yet. Drawing Reject busy would claim a rejection nobody sent.
 function DecisionVerbs({
   labels,
+  compact,
   pending,
   onAccept,
   onEdit,
@@ -931,6 +740,8 @@ function DecisionVerbs({
   onSkip,
 }: Readonly<{
   labels: DecisionCardLabels;
+  /** The dense row's two extra words; absent draws the three glyphs. */
+  compact?: DecisionCompactWords;
   pending?: boolean;
   onAccept?: () => void;
   onEdit?: () => void;
@@ -940,17 +751,45 @@ function DecisionVerbs({
   if (!onAccept && !onEdit && !onReject && !onSkip) {
     return null;
   }
-  return (
-    <ActionRow
-      className="dcard-verbs"
-      primary={
-        onAccept ? (
-          <Button variant="primary" small pending={pending} onClick={onAccept}>
-            {labels.accept}
+  const primary = onAccept ? (
+    <Button variant="primary" small pending={pending} onClick={onAccept}>
+      {labels.accept}
+    </Button>
+  ) : undefined;
+  // THE DENSE ROW SPELLS TWO VERBS AND FOLDS THE REST. Accept is what the row
+  // is for and Later is how a reader passes on it, so both keep their words; a
+  // rejection and an edit are rarer AND heavier, and a menu gives each a whole
+  // line to say so — which is exactly the trade `IconAction` refuses to make
+  // for a verb whose consequence must be read before it is pressed.
+  if (compact) {
+    return (
+      <ActionRow className="dcard-verbs" primary={primary}>
+        {onSkip && labels.skip && (
+          <Button small disabled={pending} onClick={onSkip}>
+            {labels.skip}
           </Button>
-        ) : undefined
-      }
-    >
+        )}
+        {/* Never drawn EMPTY: a caret over no verbs is a control that opens
+            nothing. */}
+        {(onReject || onEdit) && (
+          <OverflowMenu label={compact.more}>
+            {onReject && (
+              <Button small disabled={pending} onClick={onReject}>
+                {labels.reject}
+              </Button>
+            )}
+            {onEdit && (
+              <Button small disabled={pending} onClick={onEdit}>
+                {labels.edit}
+              </Button>
+            )}
+          </OverflowMenu>
+        )}
+      </ActionRow>
+    );
+  }
+  return (
+    <ActionRow className="dcard-verbs" primary={primary}>
       {onReject && (
         <IconAction
           small

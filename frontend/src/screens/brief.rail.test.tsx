@@ -14,8 +14,10 @@ import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
-import { readingsDay } from "./brief.fixtures";
+import { meetingRow, readingsDay } from "./brief.fixtures";
 import type { Deal } from "./brief.queries";
+import { OvernightPanel, RailQuiet } from "./brief.rail";
+import type { WorklistItem } from "./worklist.queries";
 
 // Brief's context rail (screens/brief.rail.tsx): what the night shift did, what
 // the pipeline is worth, and what has gone quiet. Three panels, all of them
@@ -174,11 +176,38 @@ describe("BriefScreen — the context rail", () => {
     expect(within(panel).getByText("Ostwind refit")).toBeTruthy();
   });
 
-  it("says so when nothing has gone quiet", async () => {
+  // A clear watch list is not a panel. The box, the header band and the
+  // hairline stood around one grey sentence beside the panels that did have
+  // news, so the news was read last. The sentence moves to the rail's quiet
+  // panel — the RailQuiet cases at the foot of this file.
+  it("draws no watch panel when nothing has gone quiet", async () => {
     stubApi({ "GET /deals": () => jsonResponse({ data: [fleetDeal] }) });
     render(<BriefScreen />);
 
-    expect(await screen.findByText("Nothing has gone quiet.")).toBeTruthy();
+    await waitFor(() =>
+      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
+    );
+    expect(
+      screen.queryByRole("region", { name: en["brief.panel.watch"] }),
+    ).toBeNull();
+  });
+
+  // The panel keeps its box wherever it has something to SAY. Past the end of
+  // Brief's one page an empty list is "nothing on the page we read" rather than
+  // "nothing has gone quiet", and that caveat is content.
+  it("keeps the watch panel when the page ended short of the list", async () => {
+    stubApi({
+      "GET /deals": () =>
+        jsonResponse({
+          data: [fleetDeal],
+          page: { next_cursor: "c2", has_more: true },
+        }),
+    });
+    render(<BriefScreen />);
+
+    expect(
+      await screen.findByRole("region", { name: en["brief.panel.watch"] }),
+    ).toBeTruthy();
   });
 
   const digestBase = {
@@ -392,9 +421,13 @@ describe("BriefScreen — the open pipeline", () => {
     });
     render(<BriefScreen />);
 
-    expect(await screen.findByText("€99,000.00")).toBeTruthy();
-    expect(screen.getByText("€33,000.00 weighted")).toBeTruthy();
-    expect(screen.getByText("12 open deals")).toBeTruthy();
+    // THE SCALE, NOT THE AMOUNT. The rail gives this figure one short line, and
+    // "€99,000.00" wrapped mid-number there; the exact amount belongs to the
+    // Pipeline screen. The basis is ONE line under it rather than two, because
+    // the weighted total and the count are one statement about one figure.
+    expect(await screen.findByText("€99k")).toBeTruthy();
+    expect(screen.getByText("€33k weighted · 12 open deals")).toBeTruthy();
+    expect(screen.queryByText("€99,000.00")).toBeNull();
   });
 
   it("gives each currency its own line rather than one meaningless sum", async () => {
@@ -422,10 +455,12 @@ describe("BriefScreen — the open pipeline", () => {
     });
     render(<BriefScreen />);
 
-    expect(await screen.findByText("€1,000.00")).toBeTruthy();
-    expect(screen.getByText("US$2,000.00")).toBeTruthy();
+    // Under 10,000 the compact form IS the exact one — "€8k" is no shorter
+    // than "€8,332" and says less — so these two read in full.
+    expect(await screen.findByText("€1,000")).toBeTruthy();
+    expect(screen.getByText("US$2,000")).toBeTruthy();
     // No combined figure anywhere: 300_000 minor units is not a currency.
-    expect(screen.queryByText("€3,000.00")).toBeNull();
+    expect(screen.queryByText("€3,000")).toBeNull();
   });
 
   // The filter is load-bearing: the report's own base predicate is
@@ -496,7 +531,7 @@ describe("BriefScreen — the open pipeline", () => {
       ),
     ).toBeTruthy();
     // And the singular reads as one deal, not "1 open deals".
-    expect(screen.getByText("1 open deal")).toBeTruthy();
+    expect(screen.getByText("€400 weighted · 1 open deal")).toBeTruthy();
   });
 
   it("draws no position panel at all when there is no open pipeline", async () => {
@@ -509,6 +544,166 @@ describe("BriefScreen — the open pipeline", () => {
     await waitFor(() =>
       expect(document.querySelector("[aria-busy='true']")).toBeNull(),
     );
-    expect(screen.queryByText("Position")).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: en["brief.panel.pipeline"] }),
+    ).toBeNull();
   });
+});
+
+// ── When a source has nothing to report ──
+//
+// Four panels of chrome around four grey sentences is what a clear morning used
+// to draw, and it cost the panels that DID have news the reader's eye. Each
+// panel now collapses on its empty reading and one quiet panel carries a line
+// per silent source. The two halves have to agree: a printed "nothing booked"
+// over a schedule panel that drew would be worse than either alone, which is
+// why the panels and this panel share one predicate each.
+
+function taskRow(id: string, title: string): WorklistItem {
+  return {
+    id,
+    source: "task",
+    level: 2,
+    category: "tasks",
+    title,
+    because: [],
+    consequence: "task_slips",
+    actions: ["complete", "open"],
+  };
+}
+
+const busyDay = readingsDay({}, [
+  meetingRow("m1", true),
+  taskRow("t1", "Call Alice back"),
+]);
+
+const quietLines = [
+  en["brief.rail.quietSchedule"],
+  en["brief.rail.quietTasks"],
+  en["brief.rail.quietOvernight"],
+  en["brief.rail.quietWatch"],
+];
+
+describe("the rail's quiet panel", () => {
+  it("names every silent source, in the order the rail draws them", async () => {
+    stubApi({});
+    render(
+      <RailQuiet
+        day={readingsDay({}, [])}
+        dayState="ready"
+        deals={[]}
+        more={false}
+        dealsState="ready"
+      />,
+    );
+
+    // Awaited on the digest's line: the other three are settled on the first
+    // paint, and the panel is the whole point only once all four agree.
+    await screen.findByText(en["brief.rail.quietOvernight"]);
+    const panel = screen.getByRole("region", { name: en["brief.panel.quiet"] });
+    expect(
+      Array.from(
+        panel.querySelectorAll(".panel-row"),
+        (row) => row.textContent,
+      ),
+    ).toEqual(quietLines);
+  });
+
+  // The counterweight: with news in every source there is nothing to report
+  // about the reporting, and a panel saying so is the chrome this replaced.
+  it("draws nothing when every source has news", async () => {
+    stubApi({
+      "GET /digest": () =>
+        jsonResponse({
+          date: "2026-07-16",
+          generated_at: "2026-07-17T03:00:00Z",
+          capture: { messages_synced: 1 },
+          review: { dedupe_open: 0 },
+          connectors: [],
+        }),
+    });
+    render(
+      <RailQuiet
+        day={busyDay}
+        dayState="ready"
+        deals={[quietDeal]}
+        more={false}
+        dealsState="ready"
+      />,
+    );
+
+    // The digest read has to ANSWER before its absence can be ruled out, so
+    // this waits on the page going quiet rather than asserting into a read in
+    // flight — which would pass over a panel that never collapses.
+    await waitFor(() =>
+      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
+    );
+    expect(
+      screen.queryByRole("region", { name: en["brief.panel.quiet"] }),
+    ).toBeNull();
+  });
+
+  // A READ IN FLIGHT IS NOT SILENCE. Saying "nothing booked" while the worklist
+  // is still being read tells a rep their morning is clear on the strength of
+  // an answer nobody has received — and the panel it stands in for is still
+  // drawing its own pending state at the time.
+  it("says nothing about a source whose read has not answered", async () => {
+    stubApi({});
+    render(
+      <RailQuiet
+        day={undefined}
+        dayState="loading"
+        deals={[]}
+        more={false}
+        dealsState="loading"
+      />,
+    );
+
+    await screen.findByText(en["brief.rail.quietOvernight"]);
+    expect(screen.queryByText(en["brief.rail.quietSchedule"])).toBeNull();
+    expect(screen.queryByText(en["brief.rail.quietTasks"])).toBeNull();
+    expect(screen.queryByText(en["brief.rail.quietWatch"])).toBeNull();
+  });
+
+  // Nor is a read that FAILED. The panel keeps its box to say so, and a quiet
+  // line beside it would claim the source answered.
+  it("says nothing about a source whose read failed", async () => {
+    stubApi({});
+    render(
+      <RailQuiet
+        day={undefined}
+        dayState="failed"
+        deals={[]}
+        more={false}
+        dealsState="failed"
+      />,
+    );
+
+    await screen.findByText(en["brief.rail.quietOvernight"]);
+    expect(screen.queryByText(en["brief.rail.quietSchedule"])).toBeNull();
+    expect(screen.queryByText(en["brief.rail.quietWatch"])).toBeNull();
+  });
+});
+
+describe("the overnight panel with no digest", () => {
+  // /v1/digest answers 404 before the first nightly run and 501 where the
+  // installation does not implement it. Both mean the same thing to a reader,
+  // and the panel draws NOTHING for either — not a row of zeros, which a reader
+  // cannot tell from a real count, and not a skeleton, which never resolves.
+  for (const [status, code] of [
+    [404, "no_digest_yet"],
+    [501, "not_implemented"],
+  ] as const) {
+    it(`renders nothing at all for a ${status}`, async () => {
+      stubApi({
+        "GET /digest": () => jsonResponse({ title: "Absent", code }, status),
+      });
+      const { container } = render(<OvernightPanel />);
+
+      await waitFor(() =>
+        expect(container.querySelector("[aria-busy='true']")).toBeNull(),
+      );
+      expect(container.innerHTML).toBe("");
+    });
+  }
 });
