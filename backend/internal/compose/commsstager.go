@@ -115,20 +115,52 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 	if s.authority == nil {
 		return errors.New("compose: no authorization authority is wired on this send path")
 	}
-	set, err := s.authority.AuthorizeStagingTx(ctx, tx, id, in.Authorization)
+	// TOLD WHERE TO LOOK when this message is being resumed from a held row:
+	// the intent names a review, and a review may carry a named human's
+	// recorded decision that this refused message goes anyway. The decision is
+	// resolved and spent inside this transaction, BEFORE the decision rows are
+	// written, because the authority is part of what each row records and
+	// those rows are never updated afterwards (migration 1788529047).
+	set, instruction, err := s.authority.AuthorizeStagingWithDecisionTx(
+		ctx, tx, id, in.Authorization, in.ResumingIntentID,
+		consent.SendingDigest(in.AuthoredSubject, in.AuthoredBody, in.AuthoredHTML))
 	if err != nil {
 		return err
 	}
-	if err := refuseAtStaging(set); err != nil {
-		// CARRIED OUT, NOT WRITTEN HERE. Recording the review needs its own
-		// transaction — this one is about to roll back and would take the row
-		// with it — and opening one now would hold two connections from the
-		// same pool at once. Sixteen concurrent refusals would then wait on
-		// each other for a connection none of them can release.
+	if refusal := refuseAtStaging(set); refusal != nil {
+		// A REFUSAL IS NOT ALWAYS THE END. If this message is being resumed
+		// from a held row, a named human may have read this very refusal and
+		// decided in writing that it goes anyway. That decision is spent here,
+		// inside the transaction that stages the message, so the send and the
+		// spending are one fact.
 		//
-		// So the snapshot travels on the error, and whoever unwinds the
-		// transaction writes it once the connection is back.
-		return &pendingReviewError{set: set, cause: err}
+		// The refusal itself is untouched whichever way this goes: the decision
+		// rows above still record what the engine said, and no suppression is
+		// lifted. What a spent instruction changes is the AUTHORITY the message
+		// leaves under.
+		//
+		// Already resolved and spent by the staging call above, which had to do
+		// it there: the authority is written into the decision rows as they are
+		// inserted, and re-asking here would spend a second decision after the
+		// record of the first had already been written without it.
+		if instruction.IsZero() {
+			// CARRIED OUT, NOT WRITTEN HERE. Recording the review needs its own
+			// transaction — this one is about to roll back and would take the
+			// row with it — and opening one now would hold two connections from
+			// the same pool at once. Sixteen concurrent refusals would then wait
+			// on each other for a connection none of them can release.
+			//
+			// So the snapshot travels on the error, and whoever unwinds the
+			// transaction writes it once the connection is back.
+			return &pendingReviewError{set: set, cause: refusal}
+		}
+		// The delivery says so too, because the WORKER reads this row and never
+		// reads the per-recipient decisions. A build that does not recognise
+		// the authority parks the message rather than sending one it has no
+		// rules for.
+		if err := s.store.RecordDirectedExecutionTx(ctx, tx, id, instruction); err != nil {
+			return err
+		}
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
 		Workspace: ws, DeliveryID: id.String(),

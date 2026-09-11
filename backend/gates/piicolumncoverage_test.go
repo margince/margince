@@ -65,6 +65,13 @@ var erasureColumnBaseline = map[string][]string{
 	// recipient address and the subject link, which is the identifying half.
 	"communication_decision": {
 		"basis",
+		// Two values, both this repository's own: the engine allowed the
+		// message, or a named human decided a refused one goes anyway. It says
+		// nothing about the subject — it says what the CONTROLLER did — and
+		// clearing it would leave a sent message with no record of the
+		// authority behind it, which is the accountability half Art. 5(2)
+		// requires the erasure to keep.
+		"execution_authority",
 		"legacy_verdict",
 		"mode",
 		"phase",
@@ -127,6 +134,10 @@ var erasureColumnBaseline = map[string][]string{
 		"co_target_entity_type",
 	},
 	"comms_outbound": {
+		// The delivery's half of the decision vocabulary, read by the worker
+		// rather than by an auditor. See
+		// communication_decision.execution_authority.
+		"execution_authority",
 		// The controller lane's vocabulary: which kind of sender, and which
 		// registered wording. Both are this repository's own words rather than
 		// anything a subject wrote or anything written about them, so the

@@ -1618,7 +1618,10 @@ public.comms_outbound.comms_outbound_bounce_is_stated CHECK ((((bounced_at IS NU
 public.comms_outbound.comms_outbound_bounce_kind_named CHECK (((bounce_kind IS NULL) OR (bounce_kind = ANY (ARRAY['hard'::text, 'soft'::text])))) NOT VALID
 public.comms_outbound.comms_outbound_bounce_recipient_stated CHECK (((bounce_recipient IS NULL) OR (bounced_at IS NOT NULL))) NOT VALID
 public.comms_outbound.comms_outbound_cc_array CHECK ((jsonb_typeof(cc) = 'array'::text))
+public.comms_outbound.comms_outbound_execution_authority CHECK ((execution_authority = ANY (ARRAY['supported'::text, 'instruction'::text])))
 public.comms_outbound.comms_outbound_inflight_cannot_detect_prior_send CHECK (((inflight_at IS NULL) OR (channel_user_id IS NOT NULL) OR (sender_kind = 'controller'::text)))
+public.comms_outbound.comms_outbound_instruction_id_fkey FOREIGN KEY (instruction_id) REFERENCES communication_instruction(id) ON DELETE RESTRICT
+public.comms_outbound.comms_outbound_instruction_shape CHECK (((execution_authority = 'instruction'::text) = (instruction_id IS NOT NULL)))
 public.comms_outbound.comms_outbound_link_id_fkey FOREIGN KEY (link_id) REFERENCES confirm_token(id) ON DELETE SET NULL
 public.comms_outbound.comms_outbound_message_unique UNIQUE (message_id)
 public.comms_outbound.comms_outbound_payload_expires CHECK (((payload_ref IS NULL) OR (payload_expires_at IS NOT NULL)))
@@ -1635,11 +1638,13 @@ public.comms_outbound.comms_outbound_template_is_controllers CHECK (((sender_kin
 public.comms_outbound.comms_outbound_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.comms_outbound.consent_purpose text gen=- def=-
 public.comms_outbound.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.comms_outbound.execution_authority text NOT NULL gen=- def='supported'::text
 public.comms_outbound.from_name text gen=- def=-
 public.comms_outbound.html_body text gen=- def=-
 public.comms_outbound.id uuid NOT NULL gen=- def=-
 public.comms_outbound.in_reply_to text gen=- def=-
 public.comms_outbound.inflight_at timestamp with time zone gen=- def=-
+public.comms_outbound.instruction_id uuid gen=- def=-
 public.comms_outbound.link_id uuid gen=- def=-
 public.comms_outbound.list_unsubscribe text gen=- def=-
 public.comms_outbound.message_id text gen=- def=-
@@ -1672,6 +1677,7 @@ public.comms_outbound_attachments_well_formed(files jsonb) secdef=false cfg=- ac
 public.comms_outbound_bounced_idx CREATE INDEX comms_outbound_bounced_idx ON public.comms_outbound USING btree (bounced_at DESC) WHERE (bounced_at IS NOT NULL)
 public.comms_outbound_controller_payload CREATE INDEX comms_outbound_controller_payload ON public.comms_outbound USING btree (payload_expires_at) WHERE (payload_ref IS NOT NULL)
 public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_unique ON public.comms_outbound USING btree (message_id)
+public.comms_outbound_one_delivery_per_instruction CREATE UNIQUE INDEX comms_outbound_one_delivery_per_instruction ON public.comms_outbound USING btree (instruction_id) WHERE (instruction_id IS NOT NULL)
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
 public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id)
 public.communication_basis acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -1704,6 +1710,9 @@ public.communication_decision.basis text gen=- def=-
 public.communication_decision.communication_decision_basis CHECK (((basis IS NULL) OR (basis = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'consent'::text, 'existing_customer_exception'::text, 'vn_subject_agreement'::text]))))
 public.communication_decision.communication_decision_category CHECK ((resolved_category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text])))
 public.communication_decision.communication_decision_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE CASCADE
+public.communication_decision.communication_decision_execution_authority CHECK ((execution_authority = ANY (ARRAY['supported'::text, 'instruction'::text])))
+public.communication_decision.communication_decision_instruction_id_fkey FOREIGN KEY (instruction_id) REFERENCES communication_instruction(id) ON DELETE RESTRICT
+public.communication_decision.communication_decision_instruction_shape CHECK (((execution_authority = 'instruction'::text) = (instruction_id IS NOT NULL)))
 public.communication_decision.communication_decision_mode CHECK ((mode = ANY (ARRAY['observe'::text, 'warn'::text, 'enforce'::text])))
 public.communication_decision.communication_decision_phase CHECK ((phase = ANY (ARRAY['staging'::text, 'transmit'::text])))
 public.communication_decision.communication_decision_pkey PRIMARY KEY (id)
@@ -1715,7 +1724,9 @@ public.communication_decision.decided_at timestamp with time zone NOT NULL gen=-
 public.communication_decision.decision_set_id uuid NOT NULL gen=- def=-
 public.communication_decision.delivery_id uuid NOT NULL gen=- def=-
 public.communication_decision.evidence jsonb NOT NULL gen=- def='{}'::jsonb
+public.communication_decision.execution_authority text NOT NULL gen=- def='supported'::text
 public.communication_decision.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_decision.instruction_id uuid gen=- def=-
 public.communication_decision.legacy_verdict text gen=- def=-
 public.communication_decision.mode text NOT NULL gen=- def=-
 public.communication_decision.phase text NOT NULL gen=- def=-
@@ -1733,6 +1744,7 @@ public.communication_decision_one_per_decision CREATE UNIQUE INDEX communication
 public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pkey ON public.communication_decision USING btree (id)
 public.communication_instruction acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_instruction.acknowledged_at timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.acknowledged_wording bytea gen=- def=-
 public.communication_instruction.communication_instruction_consumption_shape CHECK (((status = 'consumed'::text) = (consumed_at IS NOT NULL)))
 public.communication_instruction.communication_instruction_directed_by_fkey FOREIGN KEY (directed_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.communication_instruction.communication_instruction_explained CHECK ((length(btrim(explanation)) > 0))
@@ -1744,9 +1756,11 @@ public.communication_instruction.communication_instruction_review_id_key UNIQUE 
 public.communication_instruction.communication_instruction_revocation_shape CHECK (((status = 'revoked'::text) = ((revoked_at IS NOT NULL) AND (revoked_by IS NOT NULL) AND (revoked_reason IS NOT NULL))))
 public.communication_instruction.communication_instruction_revocation_whole CHECK ((num_nonnulls(revoked_at, revoked_by, revoked_reason) = ANY (ARRAY[0, 3])))
 public.communication_instruction.communication_instruction_revoked_by_fkey FOREIGN KEY (revoked_by) REFERENCES app_user(id) ON DELETE RESTRICT
+public.communication_instruction.communication_instruction_spent_on_shape CHECK (((status = 'consumed'::text) = (delivery_id IS NOT NULL)))
 public.communication_instruction.communication_instruction_status CHECK ((status = ANY (ARRAY['directed'::text, 'consumed'::text, 'revoked'::text, 'expired'::text])))
 public.communication_instruction.communication_instruction_window CHECK ((valid_until > facts_as_of))
 public.communication_instruction.consumed_at timestamp with time zone gen=- def=-
+public.communication_instruction.delivery_id uuid gen=- def=-
 public.communication_instruction.directed_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_instruction.directed_by uuid NOT NULL gen=- def=-
 public.communication_instruction.explanation text NOT NULL gen=- def=-
@@ -1770,21 +1784,16 @@ BEGIN
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'communication_instruction_immutable';
   END IF;
-  -- The ID FIRST, because everything else that points at this row points at
-  -- it: the audit entries naming the decision, and any later reference to the
-  -- instruction a send went out under. Moving it would disconnect the record
-  -- from its own history while leaving every frozen field untouched.
-  -- ONE WAY THROUGH THE FREEZE, and only one: an Art. 17 erasure tombstoning
-  -- the words. The explanation is written by a rep about a named subject, so it
-  -- is personal data the installation may be told to destroy — and a record
-  -- that could not be scrubbed would put immutability above the right it
-  -- exists inside.
-  --
-  -- The TOMBSTONE is the whole of what is allowed: the explanation may become
-  -- exactly this string and nothing else, so the freeze still refuses an
-  -- improved account of the decision. What survives is the fact that somebody
-  -- decided, who they were, when, and under which reason code — the accountable
-  -- half, which names no subject.
+  IF NEW.acknowledged_wording IS DISTINCT FROM OLD.acknowledged_wording THEN
+    RAISE EXCEPTION 'a communication instruction records the message that was acknowledged and cannot be re-pointed at another'
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'communication_instruction_immutable';
+  END IF;
+  IF OLD.delivery_id IS NOT NULL AND NEW.delivery_id IS DISTINCT FROM OLD.delivery_id THEN
+    RAISE EXCEPTION 'a communication instruction is spent on one message and cannot be re-pointed at another'
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'communication_instruction_immutable';
+  END IF;
   IF NEW.explanation = '[erased]'
      AND NEW.id IS NOT DISTINCT FROM OLD.id
      AND NEW.review_id IS NOT DISTINCT FROM OLD.review_id

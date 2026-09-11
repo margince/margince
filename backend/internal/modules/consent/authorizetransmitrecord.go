@@ -11,6 +11,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -34,6 +35,18 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 	if err != nil {
 		return nil, err
 	}
+	// THE AUTHORITY THIS DELIVERY IS GOING OUT UNDER, read from the delivery
+	// rather than decided again here.
+	//
+	// The staging phase settled it: a named human's decision was spent, and the
+	// delivery row records which. A transmit row that defaulted to the engine's
+	// permission would say a message consent allowed went out, when the truth
+	// is that consent refused it and somebody overrode that — and the transmit
+	// rows are the ones an auditor reads for what actually happened.
+	authority, instruction, err := deliveryAuthorityTx(ctx, tx, req.DeliveryID)
+	if err != nil {
+		return nil, err
+	}
 	for _, d := range set.Decisions {
 		// Both or neither, which the table's own CHECK also demands: a
 		// subject_kind naming a row with no id describes nothing.
@@ -47,13 +60,18 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, resolved_category, verdict, reason_code, basis, suppression,
-			   content_fingerprint, legacy_verdict, mode, actor)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+			   content_fingerprint, legacy_verdict, mode, actor,
+			   execution_authority, instruction_id)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
 			req.DeliveryID, req.Attempt, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), string(d.Resolved), string(d.Verdict),
 			d.ReasonCode, nullableBasis(d.Basis), nullableText(d.Suppression),
-			sum[:], d.LegacyVerdict, string(d.Mode), by)
+			sum[:], d.LegacyVerdict, string(d.Mode), by,
+			// Named on the REFUSED rows only, as at staging: a message allowed
+			// for one recipient and directed for another did not go out on
+			// somebody's decision for both.
+			authorityFor(authority, d.Verdict), instructionFor(instruction, d.Verdict))
 		if err != nil {
 			return nil, fmt.Errorf("consent: record the transmit decision: %w", err)
 		}
@@ -169,4 +187,42 @@ func decisionRecipientKey(r connector.Recipient) string {
 		return r.Channel.Provider + ":" + r.Channel.ChannelUserID
 	}
 	return r.Email
+}
+
+// deliveryAuthorityTx reads what the staging phase decided this delivery goes
+// out under. A delivery with no row — which no production path produces — reads
+// as the engine's own permission, which is what every send was before directed
+// sends existed.
+func deliveryAuthorityTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (string, *ids.UUID, error) {
+	var authority string
+	var instruction *ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT execution_authority, instruction_id FROM comms_outbound WHERE id = $1`,
+		deliveryID).Scan(&authority, &instruction)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return AuthoritySupported, nil, nil
+	}
+	if err != nil {
+		return "", nil, fmt.Errorf("consent: reading the authority this delivery goes out under: %w", err)
+	}
+	return authority, instruction, nil
+}
+
+// authorityFor names the instruction on a refused row and the engine's own
+// permission on an allowed one, so a mixed envelope records each recipient
+// truthfully.
+func authorityFor(authority string, verdict commsauthz.Verdict) string {
+	if verdict == commsauthz.VerdictAllow {
+		return AuthoritySupported
+	}
+	return authority
+}
+
+// instructionFor is authorityFor's other half: the shape CHECK requires the id
+// and the authority to agree, so they are decided by one rule.
+func instructionFor(instruction *ids.UUID, verdict commsauthz.Verdict) *ids.UUID {
+	if verdict == commsauthz.VerdictAllow {
+		return nil
+	}
+	return instruction
 }

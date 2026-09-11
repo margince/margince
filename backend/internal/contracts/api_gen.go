@@ -6388,6 +6388,30 @@ func (e DemoteLeadResponseUnwind) Valid() bool {
 	}
 }
 
+// Defines values for DirectCommunicationSendRequestReasonCode.
+const (
+	DirectCommunicationSendRequestReasonCodeContractualNecessity        DirectCommunicationSendRequestReasonCode = "contractual_necessity"
+	DirectCommunicationSendRequestReasonCodeCustomerRequestedOutsideCrm DirectCommunicationSendRequestReasonCode = "customer_requested_outside_crm"
+	DirectCommunicationSendRequestReasonCodeLegalObligation             DirectCommunicationSendRequestReasonCode = "legal_obligation"
+	DirectCommunicationSendRequestReasonCodeOther                       DirectCommunicationSendRequestReasonCode = "other"
+)
+
+// Valid indicates whether the value is a known member of the DirectCommunicationSendRequestReasonCode enum.
+func (e DirectCommunicationSendRequestReasonCode) Valid() bool {
+	switch e {
+	case DirectCommunicationSendRequestReasonCodeContractualNecessity:
+		return true
+	case DirectCommunicationSendRequestReasonCodeCustomerRequestedOutsideCrm:
+		return true
+	case DirectCommunicationSendRequestReasonCodeLegalObligation:
+		return true
+	case DirectCommunicationSendRequestReasonCodeOther:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailAccessChangeMode.
 const (
 	EmailAccessChangeModeMessageAudience    EmailAccessChangeMode = "message_audience"
@@ -25562,6 +25586,32 @@ type DemoteLeadResponse struct {
 // nulled (formulas §26).
 type DemoteLeadResponseUnwind string
 
+// DirectCommunicationSendRequest A designated human's decision that one refused message goes out anyway. Every field is frozen
+// on the record once written.
+type DirectCommunicationSendRequest struct {
+	// Acknowledged The tick. Refused when false — the acknowledgement is the act, and an instruction written
+	// without one would record a decision nobody made.
+	Acknowledged bool `json:"acknowledged"`
+
+	// Explanation What this person says the reason is, in their own words. Required and must say something:
+	// a blank explanation is an acknowledgement nobody can be held to.
+	Explanation string `json:"explanation"`
+
+	// ReasonCode Why the installation has a basis the engine cannot see. A closed list, because an audit
+	// of overrides needs to be countable — free text alone cannot answer "how often do we send
+	// on a contract clause".
+	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
+
+	// WarningVersion The compliance text they were shown. Recorded because a record naming no version cannot
+	// say what they were told, and the text changes.
+	WarningVersion string `json:"warning_version"`
+}
+
+// DirectCommunicationSendRequestReasonCode Why the installation has a basis the engine cannot see. A closed list, because an audit
+// of overrides needs to be countable — free text alone cannot answer "how often do we send
+// on a contract clause".
+type DirectCommunicationSendRequestReasonCode string
+
 // DiscoveredLeadSource A source value present on leads but absent from the administered list — a connector family, a seed, an import.
 type DiscoveredLeadSource struct {
 	// Key The stored value, or for `connector:<name>:<id>` values the `connector:<name>` family.
@@ -43143,6 +43193,9 @@ type ColdStartPreviewJSONRequestBody = ColdStartRequest
 // DecideCommissionEntryJSONRequestBody defines body for DecideCommissionEntry for application/json ContentType.
 type DecideCommissionEntryJSONRequestBody = DecideCommissionRequest
 
+// DirectCommunicationSendJSONRequestBody defines body for DirectCommunicationSend for application/json ContentType.
+type DirectCommunicationSendJSONRequestBody = DirectCommunicationSendRequest
+
 // CreateCompanyJSONRequestBody defines body for CreateCompany for application/json ContentType.
 type CreateCompanyJSONRequestBody = CreateCompanyRequest
 
@@ -52078,6 +52131,9 @@ type ServerInterface interface {
 	// What a refused send was refused for, and for whom.
 	// (GET /communication-reviews/{id})
 	GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Send a refused message anyway, on a named person's recorded decision.
+	// (POST /communication-reviews/{id}/direct-send)
+	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List companies (live by default; cursor-paginated).
 	// (GET /companies)
 	ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams)
@@ -54364,6 +54420,12 @@ func (_ Unimplemented) DecideCommissionEntry(w http.ResponseWriter, r *http.Requ
 // What a refused send was refused for, and for whom.
 // (GET /communication-reviews/{id})
 func (_ Unimplemented) GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Send a refused message anyway, on a named person's recorded decision.
+// (POST /communication-reviews/{id}/direct-send)
+func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62287,6 +62349,38 @@ func (siw *ServerInterfaceWrapper) GetCommunicationReview(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCommunicationReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DirectCommunicationSend operation middleware
+func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DirectCommunicationSend(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84283,6 +84377,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/communication-reviews/{id}", wrapper.GetCommunicationReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/communication-reviews/{id}/direct-send", wrapper.DirectCommunicationSend)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies", wrapper.ListCompanies)

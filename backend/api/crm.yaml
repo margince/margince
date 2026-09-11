@@ -13369,6 +13369,53 @@ paths:
               schema: { $ref: '#/components/schemas/CommunicationReview' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /communication-reviews/{id}/direct-send:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Communication]
+      operationId: directCommunicationSend
+      security: [ { cookieAuth: [] } ]   # human session only — a person takes responsibility, never a credential
+      x-agent-access: human-only
+      summary: Send a refused message anyway, on a named person's recorded decision.
+      description: |
+        The engine refused this message and the refusal stands. This records that a designated human
+        read it, was shown the compliance warning, acknowledged it, and decided in writing that the
+        message goes — and then sends the exact message the review was holding.
+
+        NOTHING ABOUT THE REFUSAL CHANGES. No consent is written and no stop is lifted. The decision
+        rows still read `deny`; what changes is one column saying the message left under a person's
+        instruction rather than under the engine's permission. A subject asking later why they
+        received it is shown the refusal AND the decision, never a grant nobody made.
+
+        HUMAN-ONLY, AND THAT IS THE POINT. An agent running under somebody's passport inherits their
+        grants, so without this an agent could mint the very record that says a human decided. It
+        also needs the `communication_exception` object at `create`: directing a send is its own
+        authority, and a seat that may edit a contact has not thereby been given the right to act
+        against the engine's answer about them.
+
+        The acknowledgement is required and the explanation must say something. Both are frozen on
+        the record once written: an account of an override that its author could improve afterwards
+        is the one thing a dispute about that override needs not to be possible.
+
+        SPENT ONCE. The decision authorizes this message to this envelope and is consumed when it
+        goes. The next message to the same person needs its own.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DirectCommunicationSendRequest' }
+      responses:
+        '201':
+          description: The activity the sent message produced.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Activity' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /data-subject-requests/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -39737,6 +39784,38 @@ components:
           type: array
           description: What was refused, per recipient. Empty once an erasure has cleared the subject from it.
           items: { $ref: '#/components/schemas/RefusedRecipient' }
+
+    DirectCommunicationSendRequest:
+      type: object
+      description: |
+        A designated human's decision that one refused message goes out anyway. Every field is frozen
+        on the record once written.
+      required: [reason_code, explanation, warning_version, acknowledged]
+      properties:
+        reason_code:
+          type: string
+          enum: [customer_requested_outside_crm, contractual_necessity, legal_obligation, other]
+          description: |
+            Why the installation has a basis the engine cannot see. A closed list, because an audit
+            of overrides needs to be countable — free text alone cannot answer "how often do we send
+            on a contract clause".
+        explanation:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: |
+            What this person says the reason is, in their own words. Required and must say something:
+            a blank explanation is an acknowledgement nobody can be held to.
+        warning_version:
+          type: string
+          description: |
+            The compliance text they were shown. Recorded because a record naming no version cannot
+            say what they were told, and the text changes.
+        acknowledged:
+          type: boolean
+          description: |
+            The tick. Refused when false — the acknowledgement is the act, and an instruction written
+            without one would record a decision nobody made.
 
     DataSubjectRequest:
       type: object

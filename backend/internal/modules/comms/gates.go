@@ -323,10 +323,71 @@ func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (commsauthz.
 		o, w, err := d.retry(ctx, del.ID, terr)
 		return none, o, w, err
 	}
+	return d.gateConsentDecision(ctx, ticket, del)
+}
+
+// gateConsentDecision is what the gate DOES with the engine's answer, split out
+// so the rule can be exercised without a database behind it. The asking is
+// above; this is the deciding.
+func (d *Dispatcher) gateConsentDecision(
+	ctx context.Context, ticket commsauthz.TransmitTicket, del Delivery,
+) (commsauthz.TransmitTicket, Outcome, time.Duration, error) {
 	if !ticket.Allowed {
+		// A REFUSAL A NAMED HUMAN ALREADY ANSWERED.
+		//
+		// The engine refused this message at staging and refuses it again here,
+		// which is correct and is exactly what the record should say. What
+		// changed is that somebody with the authority read that refusal, took
+		// responsibility in writing, and their decision was spent on this
+		// delivery inside the transaction that staged it.
+		//
+		// So the ticket's answer is not overruled here — it is not re-asked.
+		// The authority on the row was decided before the message was queued,
+		// by a person, and this worker's job is to carry out what was decided
+		// rather than to decide again.
+		//
+		// ONLY THE CONSENT REFUSAL. The human was shown the engine's answer
+		// about the RECIPIENTS and signed for that; they were not shown, and
+		// cannot have signed for, a message that was edited after it was
+		// checked. A branch that waived every refusal because the delivery
+		// carries an instruction would send the wrong message under their name
+		// — which is what this branch did when it asked only whether an
+		// instruction existed.
+		if ticket.ConsentRefused &&
+			del.ExecutionAuthority == authorityInstruction && !del.InstructionID.IsZero() {
+			return ticket, outcomeUndecided, 0, nil
+		}
 		o, w, err := d.park(ctx, del.ID, ticket.Reason)
 		return ticket, o, w, err
 	}
 
 	return ticket, outcomeUndecided, 0, nil
+}
+
+// Execution authorities this build understands.
+const (
+	authoritySupported   = "supported"
+	authorityInstruction = "instruction"
+)
+
+// gateExecutionAuthority parks a delivery whose authority this build does not
+// recognise.
+//
+// A WORKER THAT DOES NOT UNDERSTAND WHY A MESSAGE MAY GO MUST NOT SEND IT.
+// Deployments roll forward one process at a time, so an older worker can pick
+// up a delivery written by a newer API. If a later change adds an authority
+// this build has never heard of, the safe reading is not "probably fine" — it
+// is a message whose permission this process cannot evaluate.
+//
+// Parked rather than retried, because waiting changes nothing: the row will
+// read the same value on every attempt until somebody deploys a build that
+// knows what it means.
+func (d *Dispatcher) gateExecutionAuthority(ctx context.Context, del Delivery) (Outcome, time.Duration, error) {
+	switch del.ExecutionAuthority {
+	case "", authoritySupported, authorityInstruction:
+		return outcomeUndecided, 0, nil
+	default:
+		return d.park(ctx, del.ID,
+			"this worker does not understand the authority this delivery goes out under")
+	}
 }

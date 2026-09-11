@@ -33,6 +33,18 @@ type Delivery struct {
 	// attachments, so asking those questions about it would refuse every
 	// message for the absence of things it was never meant to have.
 	SenderKind string
+	// ExecutionAuthority is why this message is allowed to leave: 'supported'
+	// when the engine permitted it, 'instruction' when a named human decided
+	// in writing that a refused message goes anyway.
+	//
+	// READ BY THE DISPATCHER, which is the whole reason it lives on the
+	// delivery rather than only on the per-recipient decisions. A build that
+	// does not recognise the value parks the message instead of sending one it
+	// has no rules for.
+	ExecutionAuthority string
+	// InstructionID names the recorded decision a directed delivery goes out
+	// under. Zero for every ordinary send.
+	InstructionID ids.UUID
 	// TemplateKey and TemplateVersion name the registered wording a controller
 	// message was rendered from. A controller send carries no caller-supplied
 	// subject or body.

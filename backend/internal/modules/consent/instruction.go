@@ -157,14 +157,37 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 			Status:     InstructionDirected,
 			ValidUntil: time.Now().Add(InstructionValidity),
 		}
+		// THE MESSAGE THEY READ, fingerprinted now. The held row this review
+		// names can be edited afterwards, so a check made later against that
+		// row would compare the message with itself.
+		wording, known, err := acknowledgedWordingTx(ctx, tx, review.IntentID)
+		if err != nil {
+			return err
+		}
+		// A review with no readable held message records no fingerprint rather
+		// than a zero one: an all-zero digest would later compare unequal to
+		// every real message and refuse a send nobody can fix.
+		var acknowledged []byte
+		if known {
+			acknowledged = wording[:]
+		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication_instruction
 			  (review_id, directed_by, reason_code, explanation, warning_version,
-			   acknowledged_at, facts_as_of, valid_until)
-			VALUES ($1, $2, $3, $4, $5, now(), $6, $7)
+			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording)
+			VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8)
 			RETURNING id`,
 			reviewID, director, in.ReasonCode, strings.TrimSpace(in.Explanation),
-			in.WarningVersion, review.OpenedAt, out.ValidUntil).Scan(&out.ID); err != nil {
+			in.WarningVersion, review.OpenedAt, out.ValidUntil, acknowledged).Scan(&out.ID); err != nil {
+			// A DECISION ALREADY STANDS ON THIS REVIEW, which is what the
+			// unique key on review_id says. Named rather than reported as a
+			// storage fault: the caller retrying a send whose decision already
+			// committed needs to tell this apart from a real failure, or a
+			// transient hiccup in the send would trap the reviewer behind their
+			// own record.
+			if isDuplicateInstruction(err) {
+				return ErrDecisionAlreadyRecorded
+			}
 			return fmt.Errorf("consent: recording the decision to send this refused message: %w", err)
 		}
 		// AuditEvent, not Audit: an instruction being given is an occurrence
@@ -289,6 +312,9 @@ func validateDirect(in DirectInput) error {
 type directableReview struct {
 	State    string
 	OpenedAt time.Time
+	// IntentID is the held message this review is about, so the decision can
+	// fingerprint what the person is looking at.
+	IntentID ids.UUID
 }
 
 // claimReviewForDirectionTx takes the review this decision is about.
@@ -301,10 +327,11 @@ type directableReview struct {
 func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (directableReview, error) {
 	var out directableReview
 	err := tx.QueryRow(ctx, `
-		SELECT state, opened_at
+		SELECT state, opened_at,
+		       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid)
 		  FROM communication_review
 		 WHERE id = $1 AND resolved_at IS NULL
-		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt)
+		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt, &out.IntentID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return directableReview{}, apperrors.ErrNotFound
 	}
@@ -337,4 +364,17 @@ func requireAPersonAtTheKeyboard(ctx context.Context) error {
 			apperrors.ErrPermissionDenied)
 	}
 	return nil
+}
+
+// ErrDecisionAlreadyRecorded reports that this review already carries a
+// decision. It is not a failure of the act — somebody decided, and the record
+// of it stands — so a caller whose send failed after the decision committed
+// treats it as "already done" and goes on to the send.
+var ErrDecisionAlreadyRecorded = errors.New("consent: a decision already stands on this review")
+
+// isDuplicateInstruction recognises the unique key on review_id, which is what
+// makes one review carry one decision.
+func isDuplicateInstruction(err error) bool {
+	constraint, ok := storekit.UniqueViolation(err)
+	return ok && strings.Contains(constraint, "review_id")
 }
