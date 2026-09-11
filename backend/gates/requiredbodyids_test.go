@@ -64,6 +64,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"DraftIntroNoteJSONBody":            true,
 	"SetProjectCompanyRequest":          true,
 	"CreateRecordGrantRequest":          true,
+	"CreateRecordAssignmentRequest":     true,
 	"MergePersonJSONBody":               true,
 	"RecordConversationClaimRequest":    true,
 	"MergeCompanyJSONBody":              true,

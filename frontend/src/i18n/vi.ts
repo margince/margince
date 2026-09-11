@@ -2491,6 +2491,32 @@ export const vi = {
   "deal.priorityMedium": "Trung bình",
   "deal.priorityLow": "Thấp",
   "deal.acquisitionSource": "Nguồn tiếp cận",
+  "assignments.title": "Phụ trách",
+  "assignments.noAccessNote":
+    "Ghi nhận ai chịu trách nhiệm. Nó không cấp quyền truy cập vào bản ghi này.",
+  "assignments.empty": "Chưa có ai được phân công",
+  "assignments.emptyDetail":
+    "Phân công một đồng nghiệp hoặc một nhóm để ghi nhận ai chịu trách nhiệm cho công việc này.",
+  "assignments.roleRetired": "(vai trò đã ngừng)",
+  "assignments.teamSuffix": "(nhóm)",
+  "assignments.subjectInactive": "(không hoạt động)",
+  "recordRoles.title": "Vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
+  "recordRoles.sub":
+    "\u0110i\u1ec1u m\u00e0 m\u1ed9t \u0111\u1ed3ng nghi\u1ec7p ho\u1eb7c nh\u00f3m c\u00f3 th\u1ec3 ch\u1ecbu tr\u00e1ch nhi\u1ec7m tr\u00ean c\u00f4ng ty, giao d\u1ecbch ho\u1eb7c d\u1ef1 \u00e1n. Vai tr\u00f2 kh\u00f4ng c\u1ea5p quy\u1ec1n truy c\u1eadp v\u00e0o b\u1ea3n ghi.",
+  "recordRoles.listLabel": "Vai tr\u00f2",
+  "recordRoles.loading": "\u0110ang t\u1ea3i vai tr\u00f2",
+  "recordRoles.readOnly":
+    "Ch\u1ec9 qu\u1ea3n tr\u1ecb vi\u00ean m\u1edbi c\u00f3 th\u1ec3 thay \u0111\u1ed5i c\u00e1c vai tr\u00f2 n\u00e0y.",
+  "recordRoles.builtIn": "C\u00f3 s\u1eb5n",
+  "recordRoles.addOpen": "Th\u00eam vai tr\u00f2",
+  "recordRoles.addTitle": "Th\u00eam vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
+  "recordRoles.addLabel": "T\u00ean",
+  "recordRoles.addHint":
+    "\u0110i\u1ec1u m\u00e0 b\u00ean ph\u1ee5 tr\u00e1ch ch\u1ecbu tr\u00e1ch nhi\u1ec7m, di\u1ec5n \u0111\u1ea1t d\u1ec5 hi\u1ec3u.",
+  "recordRoles.addConfirm": "Th\u00eam vai tr\u00f2",
+  "recordRoles.labelFor": "T\u00ean cho {key}",
+  "recordRoles.activeFor":
+    "{label} c\u00f3 th\u1ec3 \u0111\u01b0\u1ee3c ph\u00e2n c\u00f4ng m\u1edbi",
   "deal.acquisitionUnset": "Chưa đặt",
   "deal.acquisitionRetired": "(đã ngừng)",
   "deal.waitUntil": "Chờ đến",
@@ -6438,6 +6464,8 @@ export const vi = {
     "C\u00e1c giai \u0111o\u1ea1n m\u1ed9t deal \u0111i qua, cho to\u00e0n c\u00f4ng ty.",
   "settings.page.acquisition.sub":
     "Các kênh kinh doanh mà một thương vụ có thể được quy về.",
+  "settings.page.recordroles.sub":
+    "\u0110i\u1ec1u m\u00e0 m\u1ed9t \u0111\u1ed3ng nghi\u1ec7p ho\u1eb7c nh\u00f3m c\u00f3 th\u1ec3 ch\u1ecbu tr\u00e1ch nhi\u1ec7m tr\u00ean m\u1ed9t b\u1ea3n ghi. N\u00f3 kh\u00f4ng c\u1ea5p quy\u1ec1n truy c\u1eadp.",
   "settings.page.leads.sub":
     "T\u1eeb ng\u1eef c\u00f4ng ty n\u00e0y d\u00f9ng \u0111\u1ec3 m\u00f4 t\u1ea3 m\u1ed9t lead \u0111\u1ebfn t\u1eeb \u0111\u00e2u.",
   "settings.page.fields.sub":
@@ -6497,6 +6525,7 @@ export const vi = {
   "settings.tab.stageautomation": "T\u1ef1 \u0111\u1ed9ng giai \u0111o\u1ea1n",
   "settings.tab.pipelines": "Quy trình",
   "settings.tab.acquisition": "Nguồn tiếp cận",
+  "settings.tab.recordroles": "Vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
   "settings.tab.leads": "Xử lý khách tiềm năng",
   "settings.tab.fields": "Trường",
   "settings.tab.tags": "Thẻ",

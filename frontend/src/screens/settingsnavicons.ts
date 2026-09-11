@@ -46,6 +46,7 @@ export const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
   stageautomation: Gauge,
   leads: Database,
   acquisition: Database,
+  recordroles: UsersRound,
   fields: Database,
   tags: Database,
   products: Database,

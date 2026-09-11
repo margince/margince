@@ -212,6 +212,19 @@ var rowScopeSpellings = map[string]bool{
 	// includes the row half, while backend/gates/edgereaders_test.go refuses the row
 	// half alone. Neither gate accepts the object half on its own.
 	"EdgeReadScope": true,
+	// The write-authority family, for the same reason EdgeReadScope is here:
+	// each OPENS with a member of the EnsureVisible family and then narrows
+	// further. EnsureWritable calls EnsureVisible, EnsureWritableLive calls
+	// EnsureVisibleLive, and HoldWritableLive is EnsureWritableLive followed by
+	// the subject lock — so a read reaching any of them has applied the row
+	// bound as surely as one calling the visible half directly, and strictly
+	// more besides.
+	//
+	// Their absence was a gap rather than a policy, and it pushed in the wrong
+	// direction: a writer that correctly took the STRONGER probe reported as
+	// unscoped, and the fix a reader would reach for from that message is a
+	// second, weaker call over the same row.
+	"EnsureWritable": true, "EnsureWritableLive": true, "HoldWritableLive": true,
 }
 
 // referenceSite is one SQL select list in the compose tier that names a

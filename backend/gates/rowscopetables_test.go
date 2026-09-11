@@ -58,8 +58,13 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureVisible":                 {argument: 2},
 	"EnsureVisibleLive":             {argument: 2},
 	"EnsureVisibleForSubjectRights": {argument: 2},
-	"EnsureLinkTarget":              {argument: 2},
-	"VisibleTo":                     {argument: 2},
+	// The write-authority family takes the same (ctx, tx, table, id) shape as
+	// the visible family it opens with, so the table is in the same position.
+	"EnsureWritable":     {argument: 2},
+	"EnsureWritableLive": {argument: 2},
+	"HoldWritableLive":   {argument: 2},
+	"EnsureLinkTarget":   {argument: 2},
+	"VisibleTo":          {argument: 2},
 	// The link target's table is the caller's to name in its own allowlist;
 	// this clause renders over the alias it is given.
 	"LinkTargetVisibleClause": {table: anyTable},

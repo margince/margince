@@ -119,6 +119,12 @@ type joinTable struct {
 // neither, which is what fails the gate. The reason is the point: a bare
 // exclusion list would read as "handled" and this reads as "decided".
 var notAnEdge = map[string]string{
+	"record_assignment": "company_id, deal_id and project_id are alternative PARENTS of one " +
+		"assignment — the record_assignment_one_parent CHECK admits exactly one — so the three " +
+		"together are a polymorphic parent rather than a path between records. Nothing traverses " +
+		"from a deal to a company through one: an assignment relates a record to the PERSON OR TEAM " +
+		"responsible for it, and that subject is an app_user or a team, neither of which a record " +
+		"hop searches for",
 	"activity_participant": "who capture MATCHED from an address, where activity_link is what it " +
 		"ASSERTED about the record — graphactivity.go ranks the assertion above the match for the " +
 		"same reason a hop should traverse it and not this",

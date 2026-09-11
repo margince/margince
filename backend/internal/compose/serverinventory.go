@@ -166,6 +166,10 @@ type Server struct {
 	// The notices transport: one verb (mark read); the content reaches the
 	// reader on the Worklist's notices lane.
 	noticesHandlers
+	// Who is responsible for a record, and the administered roles they hold it
+	// under. Its authority is the parent record's own, so it wires no
+	// permission of its own.
+	assignmentHandlers
 	// The week ahead: the rep's own plan, and the one write their lead has on
 	// it. The week just gone is weeklyHandlers, which shares no table with it.
 	weeklyPlanHandlers

@@ -156,7 +156,10 @@ const SALES_READS: readonly {
   readonly object: RbacObject;
   readonly opens: readonly SettingsPageId[];
 }[] = [
-  { object: "custom_field", opens: ["leads", "acquisition", "fields"] },
+  {
+    object: "custom_field",
+    opens: ["leads", "acquisition", "recordroles", "fields"],
+  },
   { object: "pipeline", opens: ["pipelines", "stageautomation"] },
   { object: "product", opens: ["products"] },
   { object: "offer_template", opens: ["products"] },
@@ -245,6 +248,7 @@ const SEEDED_READ_PAGES = pagesNamed(
   "stageautomation",
   "leads",
   "acquisition",
+  "recordroles",
   "fields",
   "products",
   "capture",
@@ -268,6 +272,7 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "stageautomation",
   "leads",
   "acquisition",
+  "recordroles",
   "fields",
   "products",
   "capture",

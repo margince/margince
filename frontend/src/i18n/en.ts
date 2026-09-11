@@ -2589,6 +2589,30 @@ export const en = {
   "deal.priorityMedium": "Medium",
   "deal.priorityLow": "Low",
   "deal.acquisitionSource": "Acquisition source",
+  "assignments.title": "Responsible",
+  "assignments.noAccessNote":
+    "Records who is accountable. It does not grant access to this record.",
+  "assignments.empty": "Nobody is assigned yet",
+  "assignments.emptyDetail":
+    "Assign a colleague or a team to record who is accountable for this work.",
+  "assignments.roleRetired": "(retired role)",
+  "assignments.teamSuffix": "(team)",
+  "assignments.subjectInactive": "(inactive)",
+  "recordRoles.title": "Responsibility roles",
+  "recordRoles.sub":
+    "What a colleague or team can be accountable for on a company, deal or project. A role grants no access to the record.",
+  "recordRoles.listLabel": "Roles",
+  "recordRoles.loading": "Loading roles",
+  "recordRoles.readOnly": "Only an administrator can change these roles.",
+  "recordRoles.builtIn": "Built in",
+  "recordRoles.addOpen": "Add role",
+  "recordRoles.addTitle": "Add a responsibility role",
+  "recordRoles.addLabel": "Name",
+  "recordRoles.addHint":
+    "What the responsible party is accountable for, as a reader would say it.",
+  "recordRoles.addConfirm": "Add role",
+  "recordRoles.labelFor": "Name for {key}",
+  "recordRoles.activeFor": "{label} can be newly assigned",
   "deal.acquisitionUnset": "Not set",
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
@@ -6641,6 +6665,8 @@ export const en = {
     "The stages a deal moves through, for the whole company.",
   "settings.page.acquisition.sub":
     "The business channels a deal can be attributed to.",
+  "settings.page.recordroles.sub":
+    "What a colleague or team can be accountable for on a record. It grants no access.",
   "settings.page.leads.sub":
     "The words this company uses to describe where a lead came from.",
   "settings.page.fields.sub":
@@ -6696,6 +6722,7 @@ export const en = {
   "settings.tab.stageautomation": "Stage automation",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.acquisition": "Acquisition sources",
+  "settings.tab.recordroles": "Responsibility roles",
   "settings.tab.leads": "Lead handling",
   "settings.tab.fields": "Fields",
   "settings.tab.tags": "Tags",
