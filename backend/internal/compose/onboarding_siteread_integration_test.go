@@ -131,6 +131,11 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 		startRec.Header().Get("Location") != "/v1/company/site-reads/"+started.Id.String() || len(inserter.inserts) != 1 {
 		t.Fatalf("started dossier = %+v, location %q, jobs %d", started, startRec.Header().Get("Location"), len(inserter.inserts))
 	}
+	// Onboarding is a person watching this page — it must never queue behind
+	// a boot sweep's housekeeping fan-out on the shared deep_read pool.
+	if got := inserter.opts[0].Priority; got != DeepReadPriorityLive {
+		t.Fatalf("an onboarding deep read queued at priority %d, want %d (live)", got, DeepReadPriorityLive)
+	}
 
 	read, err := e.People.GetOnboardingSiteRead(human, ids.UUID(started.Id))
 	if err != nil {

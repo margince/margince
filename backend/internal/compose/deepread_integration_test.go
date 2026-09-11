@@ -486,6 +486,11 @@ func TestDeepReadStartQueuesOnceAndAReClickJoinsWithoutASecondInsert(t *testing.
 		args.SiteReadID != ids.UUID(first.ReadId) || args.RequestedBy != "human:"+e.Rep1.String() {
 		t.Fatalf("job args = %+v, want the dossier's own identity and the human who asked", args)
 	}
+	// A rep pressed the button for this — it must never queue behind a boot
+	// sweep's housekeeping fan-out on the shared deep_read pool.
+	if got := inserter.opts[0].Priority; got != DeepReadPriorityLive {
+		t.Fatalf("a human-started deep read queued at priority %d, want %d (live)", got, DeepReadPriorityLive)
+	}
 
 	// A second click while the read is in flight joins it: same read id,
 	// answered as running, and NO second job rides the queue.

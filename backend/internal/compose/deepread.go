@@ -76,12 +76,32 @@ const (
 	deepReadMaxWorkers = 2
 )
 
-// siteDeepReadInsertOpts routes the job to its own queue and deduplicates by
-// args: the dossier id is unique per read, so a re-submitted enqueue of the
-// SAME read collapses while a fresh read (new dossier) always queues.
-func siteDeepReadInsertOpts() *river.InsertOpts {
+// DeepReadPriorityLive is the priority a human or agent action's own deep
+// read carries — River's default (1 of 4, highest) — so it is fetched ahead
+// of any housekeeping sweep sharing deepReadQueue's two workers.
+const DeepReadPriorityLive = river.PriorityDefault
+
+// DeepReadPriorityHousekeeping is the priority a sweep-sourced deep read
+// carries: River's lowest tier (4 of 4). capture_auto_enrich_sweep and
+// domain triage's own periodic pass both run at boot and can fan out dozens
+// of reads in one pass — at River's default priority that fan-out queued
+// ahead of a live read arriving moments later, holding it behind up to the
+// whole boot-time backlog on a pool sized for on-demand traffic. Lowest
+// priority means a live read waiting behind the fan-out is fetched first the
+// instant a worker frees, and a housekeeping read that loses that race is not
+// lost: sweepWorkspace already tolerates exactly this ("a pass that stops
+// early simply leaves the rest due for tomorrow").
+const DeepReadPriorityHousekeeping = 4
+
+// siteDeepReadInsertOpts routes the job to its own queue, deduplicates by
+// args (the dossier id is unique per read, so a re-submitted enqueue of the
+// SAME read collapses while a fresh read always queues), and sets priority —
+// DeepReadPriorityLive for a human or agent-initiated read,
+// DeepReadPriorityHousekeeping for one a sweep fanned out on its own.
+func siteDeepReadInsertOpts(priority int) *river.InsertOpts {
 	return &river.InsertOpts{
-		Queue: deepReadQueue,
+		Queue:    deepReadQueue,
+		Priority: priority,
 		// Swept: capture_auto_enrich_sweep re-nominates an organization that is
 		// still due on its next daily pass, so a crawl that cannot finish is
 		// re-read tomorrow rather than re-walked all afternoon.

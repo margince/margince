@@ -49,7 +49,7 @@ func (e *deepReadEngine) startCompanySiteRead(w http.ResponseWriter, r *http.Req
 			return e.enqueue.EnqueueTx(ctx, tx, SiteDeepReadArgs{
 				Workspace: storekit.MustWorkspace(ctx), SiteReadID: read.ID,
 				RequestedBy: read.RequestedBy,
-			}, siteDeepReadInsertOpts())
+			}, siteDeepReadInsertOpts(DeepReadPriorityLive))
 		})
 	if err != nil {
 		httperr.Write(w, r, err)

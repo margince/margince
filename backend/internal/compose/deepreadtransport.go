@@ -142,7 +142,7 @@ func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, overrid
 				OrganizationID: orgID.UUID,
 				SiteReadID:     read.ID,
 				RequestedBy:    read.RequestedBy,
-			}, siteDeepReadInsertOpts())
+			}, siteDeepReadInsertOpts(DeepReadPriorityLive))
 		})
 	if err != nil {
 		return crmcontracts.SiteReadStarted{}, err

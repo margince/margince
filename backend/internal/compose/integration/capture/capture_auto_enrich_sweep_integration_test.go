@@ -100,6 +100,21 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedOrg(t *testing.T) {
 		t.Fatalf("dossier count=%d requested_by=%q, want 1 / system:capture_auto_enrich", readCount, requestedBy)
 	}
 
+	// ...at the housekeeping priority (River's lowest tier) — a boot-time fan-out
+	// across every due org must never queue ahead of a live, human-started read
+	// sharing deep_read's two workers.
+	var priority int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT priority FROM river_job WHERE kind = $1`, compose.SiteDeepReadArgs{}.Kind(),
+		).Scan(&priority)
+	}); err != nil {
+		t.Fatalf("reading the enqueued read's priority: %v", err)
+	}
+	if priority != compose.DeepReadPriorityHousekeeping {
+		t.Fatalf("sweep-enqueued deep read priority = %d, want %d (housekeeping)", priority, compose.DeepReadPriorityHousekeeping)
+	}
+
 	// ...and armed the cursor (attempt counted, outcome queued)...
 	var attempts int
 	var outcome string
