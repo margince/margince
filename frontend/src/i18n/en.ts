@@ -528,6 +528,7 @@ export const en = {
   "partner.stage.noFit": "No fit",
 
   "rel.add": "Add relationship",
+  "rel.seatOnDeal": "Add to a deal",
   "rel.addStakeholder": "Add stakeholder",
   "rel.dealStakeholders": "Stakeholders",
   "rel.dealStakeholdersEmpty": "No stakeholder is recorded on this deal",

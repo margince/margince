@@ -506,6 +506,7 @@ export const vi = {
   "partner.stage.noFit": "Không phù hợp",
 
   "rel.add": "Thêm quan hệ",
+  "rel.seatOnDeal": "Thêm vào một thương vụ",
   "rel.addStakeholder": "Thêm bên liên quan",
   "rel.dealStakeholders": "Các bên liên quan",
   "rel.dealStakeholdersEmpty": "Chưa ghi nhận bên liên quan nào cho deal này",
