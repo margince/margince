@@ -119,6 +119,36 @@ func (h Handlers) RequestCommunicationDecision(
 	})
 }
 
+// RecordCommunicationContext takes one rep's statement about one person and
+// answers with the review as it now stands.
+//
+// Thin transport, like its siblings. Which refusals a statement can answer, who
+// may make one and what it is written to are the store's.
+//
+// THE RESPONSE IS THE RE-READ REVIEW rather than a 204, and that is the fix for
+// the defect this endpoint shipped with the first time: a caller has to be able
+// to see that something changed. A review that still names the same refusal
+// after a statement was accepted is a rep about to type the sentence again.
+func (h Handlers) RecordCommunicationContext(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
+) {
+	var body crmcontracts.RecordCommunicationContextRequest
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	review, err := h.store.RecordContext(r.Context(), ids.UUID(id), RecordContextInput{
+		SubjectID:  ids.From[ids.PersonKind](ids.UUID(body.SubjectId)),
+		Kind:       string(body.Kind),
+		Note:       body.Note,
+		OccurredAt: body.OccurredAt,
+	})
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireReview(review))
+}
+
 // ListCommunicationReviews serves GET /communication-reviews.
 //
 // Wire-only, for GetCommunicationReview's reason: the store owns who may read

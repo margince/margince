@@ -9387,6 +9387,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/communication-reviews/{id}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a refusal by saying what happened away from the system.
+         * @description The engine refuses a send to somebody it has no evidence about, and it is right to:
+         *     nothing on the record connects this workspace to that person. But the record is not the
+         *     world. A customer rang and asked for a quote; somebody took a card at a stand. The rep
+         *     who was there is the only place that fact exists, and this is where they put it on the
+         *     record without leaving the message they are trying to send.
+         *
+         *     WHAT IT WRITES is a qualifying event (`consent_qualifying_event`) — the same row the
+         *     `business_correspondence` verdict reads. So the next preview of the same message answers
+         *     differently, which is the whole point: the earlier version of this endpoint wrote to a
+         *     table nothing reads, answered 204, and left the rep refused for the same reason.
+         *
+         *     IT NAMES ONE PERSON. A statement is about whoever it is about, and a review can name
+         *     several recipients — so the body carries the `subject_id` the statement concerns, and it
+         *     must be somebody this review was actually refused for.
+         *
+         *     IT ANSWERS ONE KIND OF REFUSAL. A qualifying event settles whether ordinary business
+         *     correspondence is lawful at all (`no_compatible_evidence`). It does not touch a marketing
+         *     objection, a suppression, a bounce or a frequency cap — those are the subject's own
+         *     decisions or facts about the address, and no rep's recollection overrides one. Asking it
+         *     to answer one of those is a 422 naming what is really in the way.
+         *
+         *     IT DOES NOT SEND. Recording evidence and sending are two decisions; the caller re-previews
+         *     and presses send.
+         */
+        post: operations["recordCommunicationContext"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/communication-reviews/{id}/direct-send": {
         parameters: {
             query?: never;
@@ -10270,19 +10314,20 @@ export interface paths {
          * @description A qualifying event is what a `business_correspondence` verdict reads to answer whether
          *     we may write to somebody at all (`getPersonConsentGuard`). Most arrive on their own —
          *     an inbound message, an inquiry, an open deal are all derived from records the product
-         *     already holds. One cannot: **a card handed over in person**, which happened away from
-         *     every system and is a fact only the person who was there can state.
+         *     already holds. Two cannot: **a card handed over in person**, and **a request the person
+         *     made themselves** by phone or across a counter. Both happened away from every system and
+         *     are facts only the person who was there can state.
          *
-         *     This is where they state it. `in_person` requires a `note` saying what happened, because
+         *     This is where they state it. Both kinds require a `note` saying what happened, because
          *     that note IS the evidence — there is no message to cite and no deal to point at, and a
          *     recorded basis nobody can check is not accountability.
          *
-         *     It does not grant marketing consent and never could: §7 UWG asks for express consent, and
-         *     a card is not one. What it settles is the narrower question of whether an ordinary business
-         *     email may be sent — which is the question the confirm-your-details flow has to answer
-         *     before it can send anything at all.
+         *     Neither grants marketing consent and neither could: §7 UWG asks for express consent, and
+         *     a card is not one, nor is "send me a quote". What they settle is the narrower question of
+         *     whether an ordinary business email may be sent — which is the question the
+         *     confirm-your-details flow has to answer before it can send anything at all.
          *
-         *     Human-only. An agent never asserts that a person met somebody.
+         *     Human-only. An agent never asserts that a person met somebody or rang up.
          */
         post: operations["recordQualifyingEvent"];
         delete?: never;
@@ -20660,14 +20705,14 @@ export interface components {
          */
         ConsentQualifyingEvent: {
             /** @enum {string} */
-            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting";
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting" | "requested_by_subject";
             /** Format: date-time */
             occurred_at: string;
             /** @enum {string|null} */
             source_entity_type?: "activity" | "deal" | null;
             /** Format: uuid */
             source_entity_id?: string | null;
-            /** @description The typed evidence for an `in_person` exchange, where a named human's note IS the record. */
+            /** @description The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note IS the record. */
             note?: string | null;
         };
         /** @description The local graph around one contact — nodes, the edges between them, and the route worth taking. */
@@ -25403,17 +25448,43 @@ export interface components {
             source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             source_id?: string | null;
         };
+        /** @description One rep's statement about one person, answering one refusal. */
+        RecordCommunicationContextRequest: {
+            /**
+             * Format: uuid
+             * @description The person this statement is about. It must be somebody this review was refused for,
+             *     and the refusal must be one a statement can answer — a review naming three people
+             *     takes three statements, not one copied across them.
+             */
+            subject_id: string;
+            /**
+             * @description How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
+             *     person asking us to write to them by phone or across a counter.
+             * @enum {string}
+             */
+            kind: "in_person" | "requested_by_subject";
+            /** @description What happened, in the words of whoever was there. Required — it is the only evidence there is. */
+            note: string;
+            /**
+             * Format: date-time
+             * @description When it happened, not when it was typed in. A future moment is refused.
+             */
+            occurred_at: string;
+        };
         /** @description One exchange that makes ordinary business correspondence lawful. */
         RecordQualifyingEventRequest: {
             /**
-             * @description Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
-             *     active_deal, meeting — is DERIVED from records the product already holds, and a
-             *     hand-written one would be a second, unbacked answer to a question the data already
-             *     settles.
+             * @description The two kinds a human may state. `in_person` is an exchange that happened in a room —
+             *     a card handed over at a stand. `requested_by_subject` is the person asking us to write
+             *     to them away from every system: a phone call, a conversation at a counter.
+             *
+             *     Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
+             *     records the product already holds, and a hand-written one would be a second, unbacked
+             *     answer to a question the data already settles.
              * @enum {string}
              */
-            kind: "in_person";
-            /** @description What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has. */
+            kind: "in_person" | "requested_by_subject";
+            /** @description What happened, in the words of whoever was there. Required — it is the only evidence a hand-recorded exchange has. */
             note: string;
             /**
              * Format: date-time
@@ -48375,6 +48446,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommunicationDecisionRequested"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordCommunicationContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordCommunicationContextRequest"];
+            };
+        };
+        responses: {
+            /** @description The review as it stands after the statement was recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationReview"];
                 };
             };
             404: components["responses"]["NotFound"];
