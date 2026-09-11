@@ -250,33 +250,6 @@ type UpdateRelationshipInput struct {
 	Evidence map[string]any
 }
 
-// lockPersonForEmployment serializes every writer of one person's employment
-// flags, which is what the demote-then-grant pair below needs to be one unit.
-// Without it two patches on DIFFERENT employments of the same person each read
-// "no primary elsewhere" and each grant the flag, and the second commit answers
-// 409 on uq_rel_current_primary_employer — the same race the create path already
-// closed, reached through the other verb.
-//
-// Silent for anything that is not an employment: a deal stakeholder or a partner
-// edge shares none of this state, and taking a person lock for one would
-// serialize writes that never contend.
-func lockPersonForEmployment(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	var personID *ids.PersonID
-	err := tx.QueryRow(ctx,
-		`SELECT person_id FROM relationship WHERE id = $1 AND kind = 'employment'`, id).Scan(&personID)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		// Not an employment, or gone. Either way the row lock below is what
-		// reports it, and it reports it the same way it always has.
-		return nil
-	case err != nil:
-		return fmt.Errorf("people: reading the employment's person for the write lock: %w", err)
-	case personID == nil:
-		return nil
-	}
-	return storekit.LockWriteIdentity(ctx, tx, employmentKind, personID.String())
-}
-
 func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRelationshipInput) (relationshipRow, error) {
 	// Who is editing. The row becomes theirs — see the captured_by assignment
 	// in the statement below.
@@ -383,6 +356,19 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 			// update. current.Kind, because a patch cannot change the kind.
 			return mapRelationshipConstraint(err, current.Kind)
 		}
+		// Only when the patch ENDED the employment. A caller sending
+		// is_current_primary = false is STATING that this is not the person's
+		// primary employer, and promoting the same row straight back would
+		// overrule a human with the answer they had just rejected — the one
+		// case where leaving the slot empty is the product doing as it was told.
+		// Whether the end date has actually arrived is the statement's own
+		// question, asked once there: an employment ending next month keeps the
+		// flag, keeps the slot, and the promotion below finds nothing to do.
+		if out.Kind == employmentKind && out.PersonID != nil && in.EndedAt != nil {
+			if err := promoteLoneSurvivingEmployment(ctx, tx, *out.PersonID); err != nil {
+				return err
+			}
+		}
 		return emitRelationshipChangeWithEvidence(ctx, tx, "update",
 			relationshipFieldImage(current), out, in.Evidence)
 	})
@@ -434,13 +420,18 @@ func (s *Store) archiveRelationshipWithEvidence(ctx context.Context, id ids.UUID
 	}
 	var out relationshipRow
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		// No per-person employment lock here, deliberately. This path frees the
-		// current-primary slot but never DECIDES anything from a read of it, so
-		// every interleaving with a writer that does lands on a state one of the
-		// two sequential orders also produces: a create that read the incumbent
-		// as live inserts an unpromoted second employment, which is the create-
-		// then-archive order. A person left with an employment and no primary
-		// one is a successor nobody promotes, not a race.
+		// The per-person employment lock, FIRST — before any row this path
+		// touches, which is the order create and update take it in. Two writers
+		// taking the same pair in opposite orders is a deadlock.
+		//
+		// This path used to take none, because it freed the current-primary slot
+		// and never decided anything from a read of it. It decides now: retiring
+		// the primary edge promotes the survivor when exactly one remains, and a
+		// create landing between that read and its write would leave two
+		// employments and one arbitrary primary.
+		if err := lockPersonForEmployment(ctx, tx, id); err != nil {
+			return err
+		}
 		current, err := s.visibleRelationship(ctx, tx, id)
 		if err != nil {
 			return err
@@ -470,6 +461,14 @@ func (s *Store) archiveRelationshipWithEvidence(ctx context.Context, id ids.UUID
 			return apperrors.ErrNotFound
 		} else if err != nil {
 			return err
+		}
+		// The archived edge no longer holds the flag, and the person may still
+		// work somewhere. Same call as the patch path, and the same reason for
+		// making it: the statement asks whether there is anything to promote.
+		if out.Kind == employmentKind && out.PersonID != nil {
+			if err := promoteLoneSurvivingEmployment(ctx, tx, *out.PersonID); err != nil {
+				return err
+			}
 		}
 		return emitRelationshipChangeWithEvidence(ctx, tx, "archive", nil, out, evidence)
 	})
