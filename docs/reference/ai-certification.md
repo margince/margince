@@ -24,12 +24,12 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 43 |
+| Shipped invocation sites | 45 |
 | … best state `current` | 1 |
 | … best state `partial` | 0 |
 | … best state `stale` | 41 |
-| … `absent` on every binding | 1 |
-| Scenarios in the corpus | 161 |
+| … `absent` on every binding | 3 |
+| Scenarios in the corpus | 163 |
 | Committed records | 74 |
 | Bindings measured | 10 |
 
@@ -84,7 +84,7 @@ today. It says nothing about how well the model did — that is the band.
 
 ## Index
 
-### Sites (43)
+### Sites (45)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -125,9 +125,11 @@ Which model to run each site on, and what that choice rests on.
 | [`summarize/company_ask`](#summarizecompany_ask) | - | - | - | `stale` | 2 | 2 |
 | [`summarize/company_brief`](#summarizecompany_brief) | - | - | - | `stale` | 2 | 2 |
 | [`summarize/company_dossier`](#summarizecompany_dossier) | - | - | - | `stale` | 1 | 2 |
+| [`summarize/meeting_brief`](#summarizemeeting_brief) | - | - | - | `absent` | 1 | 0 |
 | [`summarize/meeting_plan`](#summarizemeeting_plan) | - | - | - | `stale` | 1 | 2 |
 | [`summarize/person_brief`](#summarizeperson_brief) | - | - | - | `stale` | 2 | 2 |
 | [`transcript_propose/next_steps`](#transcript_proposenext_steps) | - | - | - | `stale` | 3 | 2 |
+| [`voice_build/demo_draft`](#voice_builddemo_draft) | - | - | - | `absent` | 1 | 0 |
 | [`voice_build/derive`](#voice_buildderive) | - | - | - | `stale` | 1 | 3 |
 | [`voice_build/eval_draft`](#voice_buildeval_draft) | - | - | - | `stale` | 1 | 3 |
 | [`voice_build/eval_scores`](#voice_buildeval_scores) | - | - | - | `stale` | 1 | 3 |
@@ -1102,6 +1104,18 @@ Records (2):
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1889ms | 3181ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1318ms | 2158ms | 3 | 0 | 0 | 0 |
 
+#### `summarize/meeting_brief`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (1):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `meeting_brief_reads_the_thread_that_matters` | `accepted` | [meeting_brief_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_brief_reads_the_thread_that_matters_01.yaml) |
+
+No record: this site has never been certified on any binding.
+
 #### `summarize/meeting_plan`
 
 Scope a run of it can claim: `full_invocation`.
@@ -1159,6 +1173,18 @@ Records (2):
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 753ms | 1658ms | 9 | 0 | 0 | 0 |
 
 ### `voice_build`
+
+#### `voice_build/demo_draft`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (1):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `the_card_shows_a_line_in_the_built_voice` | `accepted` | [demo_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/demo_draft_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 #### `voice_build/derive`
 

@@ -1,0 +1,71 @@
+name: the_card_shows_a_line_in_the_built_voice
+task: voice_build
+site: demo_draft
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# The same built voice eval_draft is measured against, deliberately: the two
+# sites read one candidate, and certifying them against different voices would
+# let one pass on a profile the other could not. This site carries no held-out
+# sample and no repeat index, because it answers a FIXED task in the built
+# voice rather than replying to one withheld message.
+fixture:
+  personality: |
+    Blunt. Decides in the first sentence and then says why. Short sentences, no
+    adjectives, no hedging.
+  voice_profile_md: |
+    # Voice DNA
+
+    ## Identity
+
+    Writes like an operator confirming a date: the verdict first, then the two
+    facts that hold it up.
+
+    ## Structure
+
+    Two or three short paragraphs. No preamble, no sign-off flourish.
+
+    ## Directness
+
+    Answers in the opening sentence. Disagrees in writing rather than deferring
+    to a meeting.
+  exemplars:
+    - register: customer_email
+      kind: email
+      text: >-
+        Thanks for the drawings. Two things before we commit. First, the tolerance
+        on the bracket is tighter than what the sheet says. We can hold it, but it
+        adds a grinding pass and about two days. I would rather tell you that now
+        than surprise you in week three. Second, the delivery date. You asked for
+        the 14th. We commission on the 14th and hand over on the 16th. If the 14th
+        is hard, say so and I will look at running the second shift.
+    - register: internal_chat
+      kind: chat
+      text: >-
+        This is heading the right way. Cut the second paragraph. It says the same
+        thing as the first with more adjectives. Lead with the customer result and
+        let the detail follow. I would also drop the word transformative. We do
+        not talk like that and neither do they.
+  stats: {"sample_count":4,"word_count":809,"sentence_count":79,"mean_sentence_words":10.24,"median_sentence_words":10,"sentence_word_stddev":5.44,"em_dash_per_100_words":0,"question_per_100_words":0.12,"exclaim_per_100_words":0,"ellipsis_per_100_words":0,"line_breaks_per_100_words":11.12,"register_words":{"customer_email":438,"internal_chat":371},"top_words":["that","this","thing","what","will","before","have","need","tell","with","because","customer"]}
+expect:
+  outcome: accepted
+  # A stylometric floor, the same instrument and the same shape eval_draft
+  # beside it uses. Deliberately NOT a phrase from the corpus: this call answers
+  # a fixed hypothetical about unspecified work and is forbidden from inventing
+  # particulars, so a correct draft has no reason to reach for one — asking for
+  # it would reward parroting an exemplar and fail the drafts that did the job.
+  answer: 0.6
+  rubric: >
+    The card exists so a member can read one line of their built voice and judge
+    it. Score whether the draft reads as this author — verdict first, short
+    sentences, no preamble, no adjectives the corpus never uses — and whether a
+    reader who knows them would accept it as theirs. A draft that is merely
+    competent, or that opens with pleasantries, or that reaches for vocabulary
+    this corpus never produces, defeats the step: the member looks at the card
+    and sees a model, which is the one outcome that makes a voice build
+    worthless. The deterministic half of the score is how close the draft's own
+    sentence rhythm and punctuation rates sit to the corpus fingerprint; this
+    rubric is the other half.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

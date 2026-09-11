@@ -203,6 +203,12 @@ func TestMissingCompanyContextIsExplicitMetadataWithoutGuessedData(t *testing.T)
 	}
 }
 
+// account_scan is the vehicle rather than summarize because it is the task that
+// both declares a conditional policy AND opts in at its own call site, so the
+// test exercises the whole mechanism instead of only its refusal half.
+// summarize declares one that nothing has ever requested — deliberately, per
+// ADR-0065 and the assertion in tasks_gen_test.go that it stay conditional — so
+// a test driven through it can never reach the injection path at all.
 func TestConditionalPolicyRequiresExplicitOptIn(t *testing.T) {
 	reader := &contextReaderStub{result: people.CompanyContext{
 		Fingerprint: strings.Repeat("b", 64),
@@ -212,14 +218,14 @@ func TestConditionalPolicyRequiresExplicitOptIn(t *testing.T) {
 		}},
 	}}
 	provider := newCompanyContextProvider(reader)
-	without, err := provider.Prepare(context.Background(), ai.TaskSummarize, model.Request{})
+	without, err := provider.Prepare(context.Background(), ai.TaskAccountScan, model.Request{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(reader.calls) != 0 || len(without.ContextScopes) != 0 || without.ContextFingerprint != "" {
 		t.Fatalf("conditional policy ran without opt-in: calls %v request %+v", reader.calls, without)
 	}
-	with, err := provider.Prepare(context.Background(), ai.TaskSummarize, model.Request{IncludeCompanyContext: true})
+	with, err := provider.Prepare(context.Background(), ai.TaskAccountScan, model.Request{IncludeCompanyContext: true})
 	if err != nil {
 		t.Fatal(err)
 	}

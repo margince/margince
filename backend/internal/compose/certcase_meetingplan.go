@@ -33,7 +33,6 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -119,36 +118,8 @@ func (meetingPlanCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 // refuseUnpreparableMeeting names a fixture or expectation that would measure
 // nothing, at parse time rather than after a paid run.
 func refuseUnpreparableMeeting(f meetingPlanFixture, want meetingPlanExpectation) error {
-	if len(f.Messages) < 2 {
-		return fmt.Errorf(
-			"summarize/meeting_plan: the fixture supplies %d conversation(s); with fewer than two there is no wrong one to cite",
-			len(f.Messages))
-	}
-	if strings.TrimSpace(want.NamesToken) == "" {
-		return errors.New(
-			"summarize/meeting_plan: the expectation names no account-specific token, so a generic plan would satisfy it")
-	}
-	seen := map[string]bool{}
-	for i, message := range f.Messages {
-		if strings.TrimSpace(message.Label) == "" {
-			return fmt.Errorf("summarize/meeting_plan: the message at position %d carries no label", i+1)
-		}
-		if seen[message.Label] {
-			return fmt.Errorf(
-				"summarize/meeting_plan: two messages are labelled %q, so an expectation naming it means neither",
-				message.Label)
-		}
-		seen[message.Label] = true
-	}
-	if !seen[want.CitesLabel] {
-		return fmt.Errorf(
-			"summarize/meeting_plan: the expectation names %q, which the fixture does not carry — no reply could satisfy it",
-			want.CitesLabel)
-	}
-	if !strings.Contains(bodiesOf(f), want.NamesToken) {
-		return fmt.Errorf(
-			"summarize/meeting_plan: the expectation's token %q appears in no message, so only an invented plan could name it",
-			want.NamesToken)
+	if err := refuseUnusableMeetingFixture("summarize/meeting_plan", f, want); err != nil {
+		return err
 	}
 	// And the token must be something the FLOOR does not already say. The
 	// deterministic plan quotes captured claims, so a token drawn from one
@@ -164,15 +135,69 @@ func refuseUnpreparableMeeting(f meetingPlanFixture, want meetingPlanExpectation
 	return nil
 }
 
-func bodiesOf(f meetingPlanFixture) string {
-	var all strings.Builder
-	for _, message := range f.Messages {
-		all.WriteString(message.Subject)
-		all.WriteString(" ")
-		all.WriteString(message.Body)
-		all.WriteString(" ")
+// refuseUnusableMeetingFixture holds what BOTH sites over one meeting need of
+// a scenario: two conversations so citing the right one is a choice, a label
+// per message so an expectation can name one, and a token this account
+// actually produced. The site-specific half is the FLOOR each one degrades to,
+// which differs, so each caller checks its own after this one passes.
+func refuseUnusableMeetingFixture(site string, f meetingPlanFixture, want meetingPlanExpectation) error {
+	if len(f.Messages) < 2 {
+		return fmt.Errorf(
+			"%s: the fixture supplies %d conversation(s); with fewer than two there is no wrong one to cite",
+			site, len(f.Messages))
 	}
-	return all.String()
+	if strings.TrimSpace(want.NamesToken) == "" {
+		return fmt.Errorf(
+			"%s: the expectation names no account-specific token, so a generic answer would satisfy it", site)
+	}
+	seen := map[string]bool{}
+	for i, message := range f.Messages {
+		if strings.TrimSpace(message.Label) == "" {
+			return fmt.Errorf("%s: the message at position %d carries no label", site, i+1)
+		}
+		if seen[message.Label] {
+			return fmt.Errorf(
+				"%s: two messages are labelled %q, so an expectation naming it means neither", site, message.Label)
+		}
+		seen[message.Label] = true
+	}
+	if !seen[want.CitesLabel] {
+		return fmt.Errorf(
+			"%s: the expectation names %q, which the fixture does not carry — no reply could satisfy it",
+			site, want.CitesLabel)
+	}
+	// A claim whose source label names no message maps to an EMPTY source id:
+	// the plan drops it at wire validation and the brief parser can keep an
+	// empty citation, so the scenario quietly measures less than it reads as.
+	for i, claim := range f.Claims {
+		if !seen[claim.FromLabel] {
+			return fmt.Errorf(
+				"%s: the claim at position %d is sourced to %q, which names no message the fixture supplies",
+				site, i+1, claim.FromLabel)
+		}
+	}
+	// The token has to be in the CITED message, not merely somewhere in the
+	// fixture. meeting_brief requires one sentence to both cite that message
+	// and carry the token, so a token living only in a distractor describes an
+	// answer no correct reply could give — and on the plan side it would accept
+	// a citation and a phrase that have nothing to do with each other.
+	if !strings.Contains(citedMessageText(f, want.CitesLabel), want.NamesToken) {
+		return fmt.Errorf(
+			"%s: the expectation's token %q does not appear in the message it names, %q, so no reply could both "+
+				"cite that conversation and say it", site, want.NamesToken, want.CitesLabel)
+	}
+	return nil
+}
+
+// citedMessageText is the subject and body of the one message an expectation
+// names, which is where its token has to live.
+func citedMessageText(f meetingPlanFixture, label string) string {
+	for _, message := range f.Messages {
+		if message.Label == label {
+			return message.Subject + " " + message.Body
+		}
+	}
+	return ""
 }
 
 // meetingPlanInput assembles what the service assembles, with minted ids.

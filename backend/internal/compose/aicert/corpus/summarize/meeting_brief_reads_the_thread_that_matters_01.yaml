@@ -1,0 +1,71 @@
+name: meeting_brief_reads_the_thread_that_matters
+task: summarize
+site: meeting_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# The same meeting the plan scenario prepares, read for its SECTIONS instead.
+# Deliberately the same fixture: the two sites run one assembled meeting, and
+# certifying them against different meetings would let one pass on a scenario
+# the other could not.
+fixture:
+  subject: Coffee with Rainer
+  company: Asia Flight Services
+  attendee: Rainer Vogt
+  # Two moments and a wall of noise. The wish list is what this meeting is
+  # about; the newsletter is what a recency-ordered reader would have shown
+  # instead, and it is here so that citing the right one is a choice rather
+  # than the only option.
+  messages:
+    - label: wish_list
+      days_ago: 62
+      direction: inbound
+      subject: CRM requirements
+      body: >
+        We keep losing track of issues and quotes. What we need is issue
+        tracking, quote tracking and multi-channel capture in one place, so
+        nobody has to ask three people where a request went. How do we get
+        started on this?
+    - label: ownership_change
+      days_ago: 30
+      direction: inbound
+      subject: Workstream ownership
+      body: >
+        Rainer takes the requirements from here so Nabil can stay on the
+        security work. One point of contact from your side, please.
+    - label: newsletter
+      days_ago: 1
+      direction: outbound
+      subject: Product news for August
+      body: >
+        This month's release notes, plus two customer stories from the
+        logistics sector.
+  claims:
+    - kind: open_question
+      body: How do we get started on the CRM work?
+      from_label: wish_list
+expect:
+  outcome: accepted
+  # Correct sections are grounded in the requirements thread and say "quote
+  # tracking" — a phrase only this account produced. Sections citing only the
+  # newsletter have read the newest thing rather than the relevant one; ones
+  # that never name what this account asked for would read the same about any
+  # prospect, and a reader cannot prepare from that.
+  answer:
+    cites_label: wish_list
+    names_token: quote tracking
+  bands:
+    # The sections degrade to a deterministic floor whenever the model is
+    # unavailable or wrong, and the floor is useful on its own — so the bar is
+    # "reliably reads the right conversation", not "flawless", for the reason
+    # the plan scenario beside it gives.
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the brief's sections are about the conversation this meeting
+    is about — the requirements thread — rather than about the most recent
+    message, and whether they name what this account actually asked for in
+    their own words. Sections that read well and cite only the newsletter have
+    read the newest thing rather than the relevant one. Sections that would
+    read identically about another company have not prepared anybody, however
+    well grounded each sentence is.

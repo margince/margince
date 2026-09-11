@@ -218,16 +218,32 @@ func (c *voiceEvalDraftCase) Run(ctx context.Context, completer aitasks.Complete
 // so the tells go into the Detail, where a corpus author reading an accepted run
 // still learns the draft earned the build a review.
 func (c *voiceEvalDraftCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	reply, err := readVoiceEvalDraft(trace.Output)
+	return voiceDraftProximityOutcome(c.artifact.Stats, c.floor, trace.Output)
+}
+
+// voiceDraftProximityOutcome grades one draft against a corpus fingerprint: the
+// production reader first, then the distance the evaluation itself measures.
+//
+// Both voice drafting sites spend it, because it is ONE question asked twice —
+// eval_draft about a held-out reply, demo_draft about the card's own line — and
+// two copies of it would drift until one draft scored differently depending on
+// which site asked.
+//
+// The order is the meaning: a draft the reader refuses has no fingerprint to
+// disagree with. The anti-AI tells ride in the Detail rather than refusing the
+// draft, because the build counts them against the candidate's activation
+// rather than throwing the measurement away.
+func voiceDraftProximityOutcome(stats ai.VoiceStats, floor float64, output string) aitasks.Outcome {
+	reply, err := readVoiceEvalDraft(output)
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
-	proximity := stylometricProximity(c.artifact.Stats, reply.body)
+	proximity := stylometricProximity(stats, reply.body)
 	result := aitasks.OutcomeAccepted
 	detail := fmt.Sprintf("the draft sits at %.4f of the corpus fingerprint", proximity)
-	if proximity < c.floor {
+	if proximity < floor {
 		result = aitasks.OutcomeWrongAnswer
-		detail += fmt.Sprintf(", and the scenario expects at least %.4f", c.floor)
+		detail += fmt.Sprintf(", and the scenario expects at least %.4f", floor)
 	}
 	if len(reply.tells) > 0 {
 		detail += "; " + voiceEvalTellNote(reply.tells)
