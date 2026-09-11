@@ -126,11 +126,21 @@ export function mount(
 
 // Edit, merge, share, full history, research and archive are ROWS of the
 // header's overflow menu, and the menu does not mount its rows until it has
-// been opened once — so a spec reaching for one opens it first. Shared for the
-// same reason the fixture above is: two suites each spelling this would be two
-// answers to where those verbs live.
+// been opened once — so a spec reaching for one opens it first.
+//
+// Both person surfaces draw that menu (PersonPageV2 through personactions.tsx,
+// PersonScreen through contacts.tsx), so both suites reach for these: a copy
+// per suite would be two answers to where those verbs live, and the suite
+// holding the stale one would go on passing against a header nobody ships.
 export async function openRecordMenu(): Promise<void> {
   await userEvent.click(
     await screen.findByRole("button", { name: en["record.moreActions"] }),
   );
+}
+
+// Open the menu and press one of its rows — the two steps every spec that
+// exercises one of those verbs starts with.
+export async function pressRecordVerb(testId: string): Promise<void> {
+  await openRecordMenu();
+  await userEvent.click(await screen.findByTestId(testId));
 }

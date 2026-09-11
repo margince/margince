@@ -4,7 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
-import { mount, openRecordMenu, view } from "./personpage.testkit";
+import {
+  mount,
+  openRecordMenu,
+  pressRecordVerb,
+  view,
+} from "./personpage.testkit";
 import { jsonResponse } from "./story-utils";
 
 // The header's edit/merge/archive verbs, restored to the record page every
@@ -78,8 +83,7 @@ describe("the header's core record verbs — edit, merge, archive", () => {
 
     const subtitle = () => document.querySelector(".record-sub");
     await waitFor(() => expect(subtitle()?.textContent).toBe("Old title"));
-    await openRecordMenu();
-    await userEvent.click(await screen.findByTestId("edit-record"));
+    await pressRecordVerb("edit-record");
     const title = await screen.findByLabelText("Title");
     await userEvent.clear(title);
     await userEvent.type(title, "New title");
@@ -102,8 +106,7 @@ describe("the header's core record verbs — edit, merge, archive", () => {
       },
     });
 
-    await openRecordMenu();
-    await userEvent.click(await screen.findByTestId("archive-record"));
+    await pressRecordVerb("archive-record");
     await userEvent.click(await screen.findByTestId("archive-confirm"));
 
     await waitFor(() => expect(archived).toBe(true));

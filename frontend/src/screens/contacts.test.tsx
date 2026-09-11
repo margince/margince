@@ -18,6 +18,9 @@ import { activityTimeline } from "../design-system/activitytimeline";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ContactsScreen, PersonScreen } from "./contacts";
+// The header's overflow menu is the same control on both person surfaces, so
+// the openers are the testkit's rather than this file's.
+import { openRecordMenu, pressRecordVerb } from "./personpage.testkit";
 
 // B-EP09.10a acceptance: per-row provenance chips, row→360 navigation, and
 // the honest error state. Lead-specific acceptance (score thresholds,
@@ -88,21 +91,6 @@ const employmentRel = {
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
-
-// Edit, merge, share and archive are ROWS of the header's overflow menu, and
-// the menu does not mount its rows until it has been opened once.
-async function openRecordMenu(): Promise<void> {
-  await userEvent.click(
-    await screen.findByRole("button", { name: en["record.moreActions"] }),
-  );
-}
-
-// Open the menu and press one of its rows — the two steps every write spec
-// below starts with.
-async function pressRecordVerb(testId: string): Promise<void> {
-  await openRecordMenu();
-  await userEvent.click(await screen.findByTestId(testId));
-}
 
 describe("ContactsScreen (B-EP09.10a)", () => {
   it("names the owner on each row and navigates to the person 360", async () => {

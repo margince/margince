@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { DealScreen, DealsScreen, FxLine } from "./deals";
 import {
@@ -131,6 +132,14 @@ function installDealStub(
   offers: unknown[],
   record: unknown = deal,
   approvals: unknown[] = [],
+  // The caller the page asks about. The default holds no grant at all, which
+  // is the reading the frames below document; a frame about an AVAILABLE verb
+  // has to name the grant that verb reads, or the page draws a refusal.
+  me: unknown = {
+    user: { id: "u-9", display_name: "Me" },
+    roles: ["rep"],
+    teams: [],
+  },
 ) {
   installFetchStub({
     "GET /deals/d1": () => jsonResponse(record),
@@ -146,12 +155,7 @@ function installDealStub(
     "GET /activities": () => jsonResponse(emptyPage),
     "GET /records/deal/d1/context": () =>
       jsonResponse({ anchor: { type: "deal", id: "d1" }, sections: [] }),
-    "GET /me": () =>
-      jsonResponse({
-        user: { id: "u-9", display_name: "Me" },
-        roles: ["rep"],
-        teams: [],
-      }),
+    "GET /me": () => jsonResponse(me),
   });
 }
 
@@ -199,6 +203,16 @@ export const WithheldReferences: Story = {
   },
 };
 
+// WON and writable, which is the only reading that offers all four rows: Reopen
+// answers a closed deal and nothing else, and the other stories' deal carries no
+// `writable`, which fails closed — a menu of four refusals would document the
+// state this frame is not about.
+const wonDeal = { ...deal, status: "won", stage_id: "s3", writable: true };
+
+// The seat and the grant those verbs read alongside the row's own `writable`
+// — app/capability.ts asks all three, so a row flag on its own still refuses.
+const writer = meFixture({ allow: { deal: ["read", "update", "delete"] } });
+
 /**
  * The header's overflow, open.
  *
@@ -206,17 +220,26 @@ export const WithheldReferences: Story = {
  * archive are worded rows in this list, because each is a verb whose
  * consequence a reader has to read before pressing and a row is where a verb
  * can say what it does. No glyphs in it: a column of icons beside four labels
- * is decoration to scan past.
+ * is decoration to scan past. Archive goes last, farthest from the press that
+ * opened the menu.
  */
 export const HeaderMenu: Story = {
   name: "Header overflow, open",
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // FOUND, not got: the screen renders its pending skeleton first, so a
+    // synchronous read runs against a `role="status"` with no verbs in it.
     await userEvent.click(
-      within(canvasElement).getByRole("button", { name: "More actions" }),
+      await canvas.findByRole("button", { name: "More actions" }),
     );
+    // The panel is portalled to the body — a Panel clips its own overflow —
+    // so the frame is settled when an ITEM is in the document, not the canvas.
+    await within(canvasElement.ownerDocument.body).findByRole("button", {
+      name: "Archive deal",
+    });
   },
   render: () => {
-    installDealStub([offer]);
+    installDealStub([offer], wonDeal, [], writer);
     return (
       <StoryProviders>
         <DealScreen id="d1" />
