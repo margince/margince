@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page, type Request, test } from "@playwright/test";
 import { mockApi } from "./seed";
 
 /**
@@ -20,6 +20,14 @@ import { mockApi } from "./seed";
  * Run it with `make bench-mobile`. It is not collected by `pnpm e2e`.
  */
 
+declare global {
+  interface Window {
+    /** Long tasks the renderer ran, stamped on the wall clock so a window
+     * measured from the driver's side can be compared against them. */
+    perfLongTasks?: LongTask[];
+  }
+}
+
 // Chrome DevTools' own Fast-3G preset. Named constants rather than inline
 // arithmetic because these are the numbers MOBILE-PARAM-2 refers to by name,
 // and a reader has to be able to check them against the profile they claim.
@@ -31,6 +39,15 @@ const FAST_3G = {
 
 const SAMPLES = 20;
 const PERCEIVED_BUDGET_MS = 300;
+
+/** One measured open: the click, the heading, and what sat between them. */
+type Open = { from: number; to: number; ms: number };
+
+/** One request's LIFE on the wire, rather than the moment it was issued. */
+type Exchange = { path: string; from: number; to: number };
+
+/** One task that held the renderer's main thread for over 50 ms. */
+type LongTask = { at: number; ms: number };
 
 /**
  * Throttle the link the way a phone experiences it.
@@ -69,22 +86,81 @@ function nearestRank(samples: number[], quantile: number): number {
 }
 
 /**
- * Every read the page issued, with the moment it was issued.
+ * Every request's SPAN, over every path.
  *
- * `in_order` said the slow opens arrive on a CLOCK — indices 5, 11 and 17 of a
- * 20-sample run, a period of six, which at that run's pace is ~33s against the
- * 30s `STALE_TIME_MS` in src/app/queryclient.ts. What it cannot say is whether
- * the stale refetch is what the slow sample was WAITING for, and that is the
- * whole remaining question: a burst that fires beside a slow open and a burst
- * that causes one look identical in a latency series.
+ * The instrument this replaces recorded the moment a read was ISSUED, and only
+ * `/v1/` paths. It answered "no reads" for all six slow opens of the last run,
+ * and both of its limits hide the same thing, so that answer settles nothing:
  *
- * Recorded here rather than inferred from a laptop, because the two machines
- * disagree and only the runner's answer counts. Locally the same bursts fire on
- * the same clock and cost the open nothing, even with the renderer throttled 6x
- * — but only the BROWSER is throttled there, while these route handlers keep a
- * full-speed Node process to themselves. On a two-core runner they share.
+ * - A `/v1/` handler here sleeps out a 562 ms round trip — LONGER than any open
+ *   this lane measures. A refetch issued shortly before a click is in flight for
+ *   the whole of the open while STARTING outside it, and a start-time filter
+ *   reports zero for exactly the case it was built to catch.
+ * - A lazily fetched route chunk is not a `/v1/` path at all, and at 1.6 Mbit/s
+ *   a ~40 KB chunk costs about the 220 ms that separates this run's two modes.
+ *
+ * What a window needs is traffic OVERLAPPING it. A request that never finishes
+ * keeps an infinite `to`, which is the honest reading: still in flight.
  */
-const reads: { path: string; at: number }[] = [];
+function recordTraffic(page: Page): Exchange[] {
+  const exchanges: Exchange[] = [];
+  const inFlight = new Map<Request, Exchange>();
+  page.on("request", (request) => {
+    const exchange = {
+      // Paths only: a full URL adds the origin to every line and answers
+      // nothing this is asking.
+      path: new URL(request.url()).pathname,
+      from: Date.now(),
+      to: Number.POSITIVE_INFINITY,
+    };
+    inFlight.set(request, exchange);
+    exchanges.push(exchange);
+  });
+  const settle = (request: Request) => {
+    const exchange = inFlight.get(request);
+    if (exchange) exchange.to = Date.now();
+    inFlight.delete(request);
+  };
+  page.on("requestfinished", settle);
+  page.on("requestfailed", settle);
+  return exchanges;
+}
+
+/**
+ * Watch the renderer's main thread, which is the half of a slow open that no
+ * amount of request logging can see.
+ *
+ * Traffic and main-thread work are the two things an open can be WAITING for,
+ * and the pair is what makes either reading conclusive. A slow open with a long
+ * task ran code — that is a real cost a user meets, and it is bisectable. A slow
+ * open with neither traffic nor a long task did not wait for the product at all,
+ * and the stall is in the harness measuring it.
+ *
+ * Stamped on the wall clock (`timeOrigin` + `startTime`) because the window it
+ * has to be compared against is measured from the driver's side in `Date.now()`.
+ * Drained ONCE at the end rather than per sample: a round trip between samples
+ * would change the pace of the very loop whose pace is under investigation.
+ */
+async function observeLongTasks(page: Page) {
+  await page.addInitScript(() => {
+    window.perfLongTasks = [];
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        window.perfLongTasks?.push({
+          at: Math.round(performance.timeOrigin + entry.startTime),
+          ms: Math.round(entry.duration),
+        });
+      }
+    }).observe({ type: "longtask", buffered: true });
+  });
+}
+
+/** Whether something running from `from` to `to` was in flight during the open.
+ * Strict at both ends: a request that settled ON the click is not what the click
+ * waited for, and one issued as the heading appeared is not either. */
+function overlaps(open: Open, from: number, to: number): boolean {
+  return from < open.to && to > open.from;
+}
 
 /**
  * Open one record from the list, and answer what the click cost.
@@ -93,9 +169,7 @@ const reads: { path: string; at: number }[] = [];
  * one. A warm-up that took a shortcut would leave whatever it skipped to be
  * paid by sample 1, which is the defect it exists to remove.
  */
-async function openOneRecord(
-  page: Page,
-): Promise<{ startedAt: number; ms: number }> {
+async function openOneRecord(page: Page): Promise<Open> {
   await page.goto("/#/contacts");
   // Anchor on a settled screen before measuring, for the reason ac.spec.ts
   // records: a click during hydration lands on a row whose handler is not
@@ -110,7 +184,7 @@ async function openOneRecord(
   const row = page.getByRole("row", { name: "Anna Weber" });
   await expect(row).toBeVisible();
 
-  const start = Date.now();
+  const from = Date.now();
   await row.click();
   // The record's OWN header, not the shell's: the head shows only the trail
   // on a record route and renders from the router before any record read
@@ -120,12 +194,84 @@ async function openOneRecord(
   await expect(
     page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
   ).toBeVisible();
-  // The START is returned rather than left to be derived. A caller computing it
-  // as `end - ms` from its own clock reads LATER than this one did, because the
-  // await returns before that line runs — and the reads it would drop are the
-  // ones issued in the first milliseconds by the click, which are precisely the
-  // ones the window is being measured to catch.
-  return { startedAt: start, ms: Date.now() - start };
+  // Both ENDS are returned rather than left to be derived. A caller computing
+  // the start as `end - ms` from its own clock reads LATER than this one did,
+  // because the await returns before that line runs — and the traffic it would
+  // drop is what the click issued in its first milliseconds, which is precisely
+  // what the window is being measured to catch.
+  const to = Date.now();
+  return { from, to, ms: to - from };
+}
+
+/**
+ * Say what the run measured, in the four readings it takes to tell this lane's
+ * breaches apart. Whoever reads a breach reads this log and nothing else.
+ */
+function report(
+  opens: Open[],
+  traffic: Exchange[],
+  longTasks: LongTask[],
+  measured: number,
+) {
+  const samples = opens.map((open) => open.ms);
+  console.log(
+    `perfbench [fast-3g/390px]: record_open_perceived p95=${measured}ms ` +
+      `(budget ${PERCEIVED_BUDGET_MS}ms, ${SAMPLES} samples)`,
+  );
+  // The SHAPE as well as the verdict, because this lane can report breaches
+  // that need opposite answers and a lone p95 does not separate them: a
+  // distribution that has moved is a regression to bisect, a tight one behind a
+  // single straggler is a runner that was busy.
+  console.log(
+    `perfbench [fast-3g/390px]: record_open_perceived ` +
+      `p50=${nearestRank(samples, 0.5)}ms p99=${nearestRank(samples, 0.99)}ms ` +
+      `min=${Math.min(...samples)}ms max=${Math.max(...samples)}ms ` +
+      `samples=${JSON.stringify([...samples].sort((a, b) => a - b))}`,
+  );
+  // And in the order they were MEASURED, which is the one question the sorted
+  // line cannot answer. A third shape reaches this lane: a tight fast body with
+  // several stragglers behind a clean gap, which is neither a moved
+  // distribution nor one unlucky sample. Sorting throws exactly that away.
+  //
+  // `span_ms` is the wall clock the whole loop took, and it is what makes a
+  // laptop's run comparable to a runner's at all. The two are not the same
+  // experiment: this loop has run in 1.3s on a developer machine and in ~115s
+  // on CI, and the difference decides whether the twenty opens fit inside ONE
+  // 30s `STALE_TIME_MS` window (so nothing is ever re-read) or cross four.
+  console.log(
+    `perfbench [fast-3g/390px]: record_open_perceived ` +
+      `span_ms=${opens[opens.length - 1].to - opens[0].from} ` +
+      `in_order=${JSON.stringify(samples)}`,
+  );
+  // The two things an open can WAIT for, aligned index-for-index with
+  // `in_order` above: requests in flight across the window, and milliseconds
+  // the renderer's main thread spent blocked inside it. A slow open with
+  // neither waited for nothing the product did.
+  const busy = opens.map((open) => ({
+    paths: traffic
+      .filter((exchange) => overlaps(open, exchange.from, exchange.to))
+      .map((exchange) => exchange.path),
+    blockedMs: longTasks
+      .filter((task) => overlaps(open, task.at, task.at + task.ms))
+      .reduce((total, task) => total + task.ms, 0),
+  }));
+  console.log(
+    `perfbench [fast-3g/390px]: record_open_perceived ` +
+      `in_flight=${JSON.stringify(busy.map((b) => b.paths.length))} ` +
+      `blocked_ms=${JSON.stringify(busy.map((b) => b.blockedMs))}`,
+  );
+  // And WHICH requests, for the windows that had any — the counts say something
+  // was in flight, the paths say what, and a fix has to name an endpoint or a
+  // chunk rather than a number.
+  busy.forEach((b, i) => {
+    if (b.paths.length > 0 || b.blockedMs > 0) {
+      console.log(
+        `perfbench [fast-3g/390px]: record_open_perceived ` +
+          `sample=${i} ms=${samples[i]} blocked_ms=${b.blockedMs} ` +
+          `in_flight=${JSON.stringify(b.paths)}`,
+      );
+    }
+  });
 }
 
 test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 390px", async ({
@@ -133,13 +279,8 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
 }) => {
   await mockApi(page);
   await throttle(page);
-  // Paths only: a full URL adds the origin to every line and answers nothing
-  // this is asking. Non-API traffic is left out — the bundle and the fonts are
-  // shaped by CDP and settle long before the first sample.
-  page.on("request", (r) => {
-    const path = new URL(r.url()).pathname;
-    if (path.startsWith("/v1/")) reads.push({ path, at: Date.now() });
-  });
+  const traffic = recordTraffic(page);
+  await observeLongTasks(page);
 
   // ONE DISCARDED OPEN FIRST, and it is not a kindness to the number.
   //
@@ -159,68 +300,29 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
   // record has changed. Discarding the arrival is what buys the headroom back.
   await openOneRecord(page);
 
-  const samples: number[] = [];
-  // One window per sample, so a read can be attributed to the open it landed
-  // inside rather than to the run as a whole.
-  const windows: { path: string; at: number }[][] = [];
+  const opens: Open[] = [];
   for (let i = 0; i < SAMPLES; i++) {
-    const before = reads.length;
-    const { startedAt, ms } = await openOneRecord(page);
-    samples.push(ms);
-    windows.push(
-      reads
-        .slice(before)
-        .filter((r) => r.at >= startedAt && r.at <= startedAt + ms),
-    );
+    opens.push(await openOneRecord(page));
   }
+  const longTasks = await page.evaluate(() => window.perfLongTasks ?? []);
 
+  // The INSTRUMENT's liveness, before any reading is taken from it. `blocked_ms`
+  // answers its question by reporting zero, and an observer that silently
+  // stopped delivering reports zero too — under-recognition is the one way this
+  // must not break, because it reads as a clean answer with no failing
+  // assertion to notice. The discarded arrival parses the bundle over a Fast-3G
+  // link and blocks the main thread far past the 50ms long-task threshold every
+  // time, so a run that saw NO long task anywhere saw nothing rather than
+  // nothing happening. This lane has already retired one hypothesis on a
+  // filter's silence; it does not get to do that twice.
+  expect(
+    longTasks.length,
+    "the long-task observer delivered nothing, so blocked_ms means nothing",
+  ).toBeGreaterThan(0);
+
+  const samples = opens.map((open) => open.ms);
   const measured = nearestRank(samples, 0.95);
-  console.log(
-    `perfbench [fast-3g/390px]: record_open_perceived p95=${measured}ms ` +
-      `(budget ${PERCEIVED_BUDGET_MS}ms, ${SAMPLES} samples)`,
-  );
-  // The SHAPE as well as the verdict, because this lane can report breaches
-  // that need opposite answers and a lone p95 does not separate them: a
-  // distribution that has moved is a regression to bisect, a tight one behind a
-  // single straggler is a runner that was busy. Whoever reads the breach reads
-  // this log and nothing else, so the log has to carry the difference.
-  console.log(
-    `perfbench [fast-3g/390px]: record_open_perceived ` +
-      `p50=${nearestRank(samples, 0.5)}ms p99=${nearestRank(samples, 0.99)}ms ` +
-      `min=${Math.min(...samples)}ms max=${Math.max(...samples)}ms ` +
-      `samples=${JSON.stringify([...samples].sort((a, b) => a - b))}`,
-  );
-  // And in the order they were MEASURED, which is the one question the sorted
-  // line cannot answer. A third shape reaches this lane: a tight fast body with
-  // several stragglers behind a clean gap, which is neither a moved
-  // distribution nor one unlucky sample. Where those stragglers sit separates
-  // its causes — bunched at the front is something still warming past the
-  // discarded open, evenly spaced is something expiring on a clock, scattered
-  // is the runner. Sorting threw exactly that away, and a reader could not get
-  // it back without another weekly run.
-  console.log(
-    `perfbench [fast-3g/390px]: record_open_perceived ` +
-      `in_order=${JSON.stringify(samples)}`,
-  );
-  // The reads that were in flight during each open, aligned index-for-index with
-  // `in_order` above. This is the line that separates the two readings a clock
-  // allows: a slow open that carries reads is one waiting on them, and a slow
-  // open that carries none is a clock that only correlates.
-  console.log(
-    `perfbench [fast-3g/390px]: record_open_perceived ` +
-      `reads_in_window=${JSON.stringify(windows.map((w) => w.length))}`,
-  );
-  // And WHICH reads, for the windows that had any — the counts say a burst
-  // happened, the paths say what the app decided to re-read, and a fix has to
-  // name endpoints rather than a number.
-  windows.forEach((w, i) => {
-    if (w.length > 0) {
-      console.log(
-        `perfbench [fast-3g/390px]: record_open_perceived ` +
-          `sample=${i} ms=${samples[i]} reads=${JSON.stringify(w.map((r) => r.path))}`,
-      );
-    }
-  });
+  report(opens, traffic, longTasks, measured);
   // Written BEFORE the assertion, deliberately: a breach is the run whose
   // number a reader most wants to see, and recording afterwards would leave
   // the published page green while the run went red.
