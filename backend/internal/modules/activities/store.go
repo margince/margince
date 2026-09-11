@@ -90,6 +90,10 @@ type Store struct {
 	// heldNotifier puts a stopped scheduled message in the rep's approval
 	// inbox; nil holds silently (WithHeldNotifier wires it).
 	heldNotifier HeldNotifier
+	// reviewCloser closes the review a cancelled message leaves behind.
+	// Injected because consent is a sibling; nil on a composition with no
+	// review surface, and a cancel then proceeds as it always did.
+	reviewCloser ReviewCloser
 	// clock reads the current instant. Injected so the scheduling suites can
 	// pin a due moment and a missed window without sleeping (P3).
 	clock func() time.Time
@@ -106,6 +110,14 @@ func NewStore(db *database.DB) *Store {
 func (s *Store) WithHeldNotifier(notifier HeldNotifier) *Store {
 	clone := *s
 	clone.heldNotifier = notifier
+	return &clone
+}
+
+// WithReviewCloser wires the consent-side seam a cancelled message reaches, so
+// the review it leaves behind is closed with it.
+func (s *Store) WithReviewCloser(closer ReviewCloser) *Store {
+	clone := *s
+	clone.reviewCloser = closer
 	return &clone
 }
 

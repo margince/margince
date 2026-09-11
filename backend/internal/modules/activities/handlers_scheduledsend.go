@@ -23,6 +23,14 @@ func (h Handlers) WithScheduleTimer(timer ScheduleTimer) Handlers {
 	return h
 }
 
+// WithReviewCloser returns handlers whose store closes the review a cancelled
+// message leaves behind. It lives on the STORE for the notifier's reason: the
+// cancel is written there, and the handlers carry their own store instance.
+func (h Handlers) WithReviewCloser(closer ReviewCloser) Handlers {
+	h.store = h.store.WithReviewCloser(closer)
+	return h
+}
+
 // WithHeldNotifier returns handlers whose store raises the inbox card when a
 // message is stopped. The notifier lives on the STORE because that is where a
 // hold is written, and the handlers carry their own store instance.

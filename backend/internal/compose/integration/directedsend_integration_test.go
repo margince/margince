@@ -21,6 +21,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -345,5 +346,144 @@ func TestTheWarningADirectorAcknowledgesIsTheServersOwn(t *testing.T) {
 	if recorded != opened.Warning.Version {
 		t.Errorf("the record names warning %q and the director was shown %q",
 			recorded, opened.Warning.Version)
+	}
+}
+
+// CANCELLING A HELD MESSAGE CLOSES THE REVIEW IT LEFT BEHIND.
+//
+// A refusal freezes the message and opens a review for it. A rep who then
+// cancels has answered that review — not by sending, but by deciding not to.
+// Left live, it shows a decider work about a message that is already dead, and
+// somebody may record an override for a send that cannot happen.
+func TestCancellingAHeldMessageClosesItsReview(t *testing.T) {
+	c := setupConsent(t)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send → %d, want 409", status)
+	}
+	var held string
+	if err := c.Owner.QueryRow(context.Background(),
+		`SELECT id::text FROM scheduled_send WHERE status = 'held'`).Scan(&held); err != nil {
+		t.Fatalf("finding the held message: %v", err)
+	}
+
+	// The state before the cancel, read from the row itself so the audit's
+	// before-image is compared against what was really there.
+	var state0 string
+	if err := c.Owner.QueryRow(context.Background(),
+		`SELECT state FROM communication_review`).Scan(&state0); err != nil {
+		t.Fatalf("reading the review: %v", err)
+	}
+
+	if status := c.Call(t, "POST", "/v1/scheduled-sends/"+held+"/cancel", AnyMap{}, nil, nil); status >= 400 {
+		t.Fatalf("cancelling the held message → %d", status)
+	}
+
+	var state string
+	var resolved *string
+	if err := c.Owner.QueryRow(context.Background(),
+		`SELECT state, resolved_at::text FROM communication_review`).Scan(&state, &resolved); err != nil {
+		t.Fatalf("reading the review: %v", err)
+	}
+	if state != "cancelled" {
+		t.Errorf("the review reads %q after its message was cancelled, want cancelled — a "+
+			"decider is shown work about a message that is already dead", state)
+	}
+	if resolved == nil {
+		t.Error("the review says it is finished and names no moment, which its own shape check " +
+			"refuses")
+	}
+	// CANCELLED, not resolved. Resolved is what a message GOING OUT leaves
+	// behind, and a reader asking why somebody received a message must not find
+	// one of those about a message nobody got.
+	if state == "resolved" {
+		t.Error("a cancelled message left a resolved review, which reads as a message that went")
+	}
+	// AND THE AUDIT SAYS WHAT IT MOVED FROM. The before-image is the half that
+	// records the change; writing a fixed value would report every cancelled
+	// review as having been the same thing, whatever it actually was.
+	var before string
+	if err := c.Owner.QueryRow(context.Background(), `
+		SELECT before->>'status' FROM audit_log
+		 WHERE entity_type = 'communication_review' AND action = 'update'
+		 ORDER BY occurred_at DESC LIMIT 1`).Scan(&before); err != nil {
+		t.Fatalf("reading the audit: %v", err)
+	}
+	if before == "cancelled" {
+		t.Error("the audit says the review moved from cancelled to cancelled — the before-image " +
+			"is reading the statement's own result rather than the state it replaced")
+	}
+	// This refusal is one no evidence can answer — no marketing consent — so
+	// the review opened as needs_repair. What matters is that the audit names
+	// the state the row actually held rather than a fixed value.
+	if before != state0 {
+		t.Errorf("the audit says the review moved from %q and the row held %q", before, state0)
+	}
+}
+
+// A DECISION PAST ITS WINDOW SAYS SO RATHER THAN LOOPING THE CALLER.
+//
+// The unique key on the review means a standing decision blocks a fresh one. If
+// that standing decision has expired, telling the caller "already recorded"
+// sends them on to a send that consumption then refuses for a reason nothing
+// reported — they press again, are told the same thing, and never learn why.
+//
+// The instruction's window is aged directly. Waiting out the real validity is
+// not a test, and the rule under test is what the DOOR says when a standing
+// decision can no longer carry a send.
+func TestADecisionPastItsWindowSaysSoRatherThanLoopingTheCaller(t *testing.T) {
+	c := setupConsent(t)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send → %d, want 409", status)
+	}
+	review := liveReviewID(t, c)
+
+	// A decision is recorded against this review and then left to go stale.
+	// Written directly because the route records and sends in one action, and
+	// what is under test is the door's answer once the window has closed.
+	if _, err := c.Owner.Exec(context.Background(), `
+		INSERT INTO communication_instruction
+		  (review_id, directed_by, reason_code, explanation, warning_version,
+		   acknowledged_at, facts_as_of, valid_until)
+		SELECT $1, u.id, 'contractual_necessity', 'decided a while ago', 'override-v1',
+		       now() - interval '2 days', now() - interval '2 days', now() - interval '1 day'
+		  FROM app_user u WHERE NOT u.is_agent LIMIT 1`, review); err != nil {
+		t.Fatalf("recording the stale decision: %v", err)
+	}
+
+	var problem struct {
+		Code    string `json:"code"`
+		Detail  string `json:"detail"`
+		Details struct {
+			Errors []struct {
+				Code string `json:"code"`
+			} `json:"errors"`
+		} `json:"details"`
+	}
+	status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
+		directed(), nil, &problem)
+	if status == http.StatusCreated {
+		t.Fatal("a send went out on a decision past its window — the facts it was taken on are " +
+			"a day old and nobody has looked at them since")
+	}
+	// NAMED IN THE FIELD, which is where a typed refusal puts its machine code
+	// — the top-level code is the transport's classification and reads
+	// validation_error for every field fault.
+	named := false
+	for _, f := range problem.Details.Errors {
+		if f.Code == "decision_not_spendable" {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("the refusal reads %q (%s) and never says the decision cannot be spent — the "+
+			"caller presses again forever", problem.Code, problem.Detail)
+	}
+	// AND IT SAYS WHY in words the caller can act on: taking the decision again
+	// is a different move from waiting, and a refusal that did not distinguish
+	// them would leave them pressing the same button.
+	if !strings.Contains(problem.Detail, "past its window") {
+		t.Errorf("the refusal says %q and never says the window has closed", problem.Detail)
 	}
 }

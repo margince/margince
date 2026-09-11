@@ -257,3 +257,15 @@ func returnRoutedReview(ctx context.Context, tx pgx.Tx, proposedChange json.RawM
 	}
 	return consent.ReturnToAskerTx(ctx, tx, reviewID, why)
 }
+
+// reviewCloser closes the review a cancelled message leaves behind.
+//
+// A seam rather than a direct call because activities may not import consent.
+// It carries no state: the work is one statement on the caller's transaction,
+// and the review is found through the held row's own id.
+type reviewCloser struct{}
+
+// CancelReviewForIntentTx implements activities.ReviewCloser.
+func (reviewCloser) CancelReviewForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) error {
+	return consent.CancelReviewForIntentTx(ctx, tx, intentID)
+}

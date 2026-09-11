@@ -37,7 +37,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -104,7 +103,14 @@ func (e *InstructionStaleError) FieldFault() (field, code, message string) {
 //
 // A zero id means no live decision, which is the ordinary case for every
 // message in the installation and is not an error.
-func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID, now time.Time) (LiveInstruction, error) {
+// ONE CLOCK DECIDES. The window is asked of the DATABASE rather than of this
+// process, because the other side of the same question — whether a standing
+// decision can still be spent (standingdecision.go) — is asked there. Two
+// clocks would disagree at the boundary and under skew: the door would say
+// reusable, consumption would find nothing live, and the caller would get a
+// generic consent refusal instead of the sentence saying their decision has
+// expired.
+func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) (LiveInstruction, error) {
 	var out LiveInstruction
 	err := tx.QueryRow(ctx, `
 		SELECT i.id, i.review_id, r.delivery_intent_id, i.acknowledged_wording
@@ -112,10 +118,10 @@ func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUI
 		  JOIN communication_review r ON r.id = i.review_id
 		 WHERE r.delivery_intent_id = $1
 		   AND i.status = 'directed'
-		   AND i.valid_until > $2
+		   AND i.valid_until > now()
 		 ORDER BY i.directed_at DESC
 		 LIMIT 1
-		   FOR UPDATE OF i`, intentID, now).
+		   FOR UPDATE OF i`, intentID).
 		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LiveInstruction{}, nil
@@ -254,7 +260,7 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 		// ordinary send lands here.
 		return ids.UUID{}, nil
 	}
-	inst, err := liveInstructionForIntentTx(ctx, tx, intentID, time.Now())
+	inst, err := liveInstructionForIntentTx(ctx, tx, intentID)
 	if err != nil {
 		return ids.UUID{}, err
 	}
