@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Card, Field, Radio } from "../design-system/atoms";
 import { ordinalNumber } from "../format/format";
 import { useT } from "../i18n";
@@ -46,6 +46,26 @@ export function RepeatableRowsField({
   // through a polite live region rather than left silent.
   const [moveNotice, setMoveNotice] = useState("");
 
+  // After a reorder, focus follows the row that MOVED rather than staying on the
+  // fixed DOM position the index key reuses — otherwise the next press acts on
+  // whatever row slid into that slot. When the moved row reaches an end its own
+  // direction button disables, so focus lands on the opposite one rather than
+  // falling to <body>.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pendingFocus = useRef<{ pos: number; dir: "up" | "down" } | null>(null);
+  useEffect(() => {
+    const req = pendingFocus.current;
+    if (!req) {
+      return;
+    }
+    pendingFocus.current = null;
+    containerRef.current
+      ?.querySelector<HTMLButtonElement>(
+        `[data-move="${req.dir}"][data-row="${req.pos}"]`,
+      )
+      ?.focus();
+  });
+
   function updateRow(index: number, key: string, value: string) {
     setRows(withRowUpdated(rows, index, key, value, primaryKey, typeKey));
   }
@@ -62,6 +82,12 @@ export function RepeatableRowsField({
     if (target < 0 || target >= rows.length) {
       return;
     }
+    const dirEnabledAtTarget =
+      direction === "up" ? target > 0 : target < rows.length - 1;
+    pendingFocus.current = {
+      pos: target,
+      dir: dirEnabledAtTarget ? direction : direction === "up" ? "down" : "up",
+    };
     setRows(withRowMoved(rows, index, direction));
     setMoveNotice(t("field.rowMoved", { n: ordinalNumber(target + 1) }));
   }
@@ -71,7 +97,7 @@ export function RepeatableRowsField({
   }
 
   return (
-    <div className="field-repeatable">
+    <div className="field-repeatable" ref={containerRef}>
       <span className="t-label">
         {fieldLabel(field, t)}
         {field.required ? " *" : ""}
@@ -124,6 +150,8 @@ export function RepeatableRowsField({
             small
             type="button"
             variant="ghost"
+            data-move="up"
+            data-row={index}
             disabled={index === 0}
             aria-label={t("field.moveRowUp", { n: ordinalNumber(index + 1) })}
             onClick={() => moveRow(index, "up")}
@@ -134,6 +162,8 @@ export function RepeatableRowsField({
             small
             type="button"
             variant="ghost"
+            data-move="down"
+            data-row={index}
             disabled={index === rows.length - 1}
             aria-label={t("field.moveRowDown", { n: ordinalNumber(index + 1) })}
             onClick={() => moveRow(index, "down")}

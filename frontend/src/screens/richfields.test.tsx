@@ -151,6 +151,34 @@ describe("repeatable-row fields", () => {
     ).toHaveProperty("disabled", true);
   });
 
+  it("keeps focus on the row that moved, not the slot it left", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByText("Add email"));
+    }
+    // Move the third row up into the middle. Focus must follow it — otherwise a
+    // second press would act on whatever row slid into row 3's old position.
+    await user.click(screen.getByRole("button", { name: "Move row 3 up" }));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Move row 2 up" }),
+    );
+  });
+
+  it("moves focus off the edge button its own move disabled", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByText("Add email"));
+    }
+    // Row 2 to the top disables its own up button, so focus lands on the down
+    // button of that row rather than falling to <body>.
+    await user.click(screen.getByRole("button", { name: "Move row 2 up" }));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Move row 1 down" }),
+    );
+  });
+
   it("collects the rows for submission", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
