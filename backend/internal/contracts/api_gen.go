@@ -21053,6 +21053,11 @@ type CommunicationEvidence struct {
 // given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
 // what the consent rows say today.
 type CommunicationReview struct {
+	// ApprovalId The card a routed review was handed to, so a decider reading this can find the decision
+	// they are being asked to make. Null on a review nobody has asked about, which is most of
+	// them.
+	ApprovalId *openapi_types.UUID `json:"approval_id,omitempty"`
+
 	// DeliveryIntentId The held message this review can resume. A refused send freezes the message into a held
 	// `scheduled_send` — subject, body, recipients, attachments and the claimed purpose — so
 	// resolving the review fires what the rep wrote rather than something retyped from memory.
@@ -21090,6 +21095,15 @@ type CommunicationReviewKind string
 // somebody who may override it: their work no longer, so a surface should say so rather
 // than showing them a form they have already filled in.
 type CommunicationReviewState string
+
+// CommunicationReviewList A page of refused sends waiting for a decision.
+type CommunicationReviewList struct {
+	Data []CommunicationReview `json:"data"`
+
+	// Total How many are waiting in total. A page at its limit has more behind it, and this is how
+	// the caller knows rather than by discovering it.
+	Total int `json:"total"`
+}
 
 // Company A company. Mirrors the `company` table.
 type Company struct {
@@ -38907,6 +38921,11 @@ type DecideCommissionEntryParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// ListCommunicationReviewsParams defines parameters for ListCommunicationReviews.
+type ListCommunicationReviewsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListCompaniesParams defines parameters for ListCompanies.
 type ListCompaniesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -52157,6 +52176,9 @@ type ServerInterface interface {
 	// Approve, pay, or void one entry.
 	// (POST /commissions/{id}/decide)
 	DecideCommissionEntry(w http.ResponseWriter, r *http.Request, id Id, params DecideCommissionEntryParams)
+	// Refused sends waiting on somebody who may decide them.
+	// (GET /communication-reviews)
+	ListCommunicationReviews(w http.ResponseWriter, r *http.Request, params ListCommunicationReviewsParams)
 	// What a refused send was refused for, and for whom.
 	// (GET /communication-reviews/{id})
 	GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -54446,6 +54468,12 @@ func (_ Unimplemented) GetCommissionEntry(w http.ResponseWriter, r *http.Request
 // Approve, pay, or void one entry.
 // (POST /commissions/{id}/decide)
 func (_ Unimplemented) DecideCommissionEntry(w http.ResponseWriter, r *http.Request, id Id, params DecideCommissionEntryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Refused sends waiting on somebody who may decide them.
+// (GET /communication-reviews)
+func (_ Unimplemented) ListCommunicationReviews(w http.ResponseWriter, r *http.Request, params ListCommunicationReviewsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62355,6 +62383,45 @@ func (siw *ServerInterfaceWrapper) DecideCommissionEntry(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DecideCommissionEntry(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCommunicationReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListCommunicationReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCommunicationReviewsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCommunicationReviews(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84444,6 +84511,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/commissions/{id}/decide", wrapper.DecideCommissionEntry)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/communication-reviews", wrapper.ListCommunicationReviews)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/communication-reviews/{id}", wrapper.GetCommunicationReview)

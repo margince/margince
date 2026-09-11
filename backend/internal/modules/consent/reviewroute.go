@@ -27,6 +27,7 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -36,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // FieldReviewID is the review's name on the wire, in an audit payload and in a
@@ -280,3 +282,79 @@ func ReturnToAskerTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, why stri
 		map[string]any{fieldStatus: ReviewNeedsContext, "returned_because": why})
 	return err
 }
+
+// AwaitingDecision lists the refused sends waiting on somebody who may decide
+// them.
+//
+// THE DECIDER'S OWN QUEUE, and gated on the grant that makes them one. A seat
+// that cannot direct a send has nothing to do with this list, and handing it to
+// them would be disclosing other people's refused correspondence to somebody
+// with no reason to see it.
+//
+// EVERY WAITING REVIEW, not only the ones routed to them personally. Routing
+// names no assignee: a rep asks the installation, not a colleague, and whoever
+// holds the authority answers. An assignee-scoped list would leave a card
+// nobody could find the moment the person it named went on leave.
+//
+// BOUNDED, because a queue read has to answer in time whatever the backlog is.
+// A list at its limit is a list with more behind it, and the caller is told so
+// by the count rather than by discovering it.
+func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int, error) {
+	// A PERSON, not merely a principal auth.RequireHuman admits. That check
+	// refuses buyers and agents and lets CONNECTORS through, and a connector
+	// runs with the granting human's own grants — so it would hold whatever
+	// this queue is gated on and could read the installation's refused
+	// correspondence wholesale. This list is a person's work queue.
+	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
+		return nil, 0, err
+	}
+	// READ rather than create, for ReviewForReader's reason: seeing the queue
+	// and overriding the engine are different authorities, and an installation
+	// can grant the first without the second.
+	if err := auth.Require(ctx, entityCommunicationException, principal.ActionRead); err != nil {
+		return nil, 0, err
+	}
+	if limit <= 0 || limit > maxAwaitingDecision {
+		limit = maxAwaitingDecision
+	}
+	var out []Review
+	var total int
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Count and page share a statement snapshot, even when another person
+		// routes or resolves a review while this request is reading.
+		rows, err := tx.Query(ctx, `
+			SELECT id, state, kind,
+			       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
+			       refusals, reason_code,
+			       coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid),
+			       coalesce(approval_id, '00000000-0000-0000-0000-000000000000'::uuid),
+			       count(*) OVER ()
+			  FROM communication_review
+			 WHERE state = 'awaiting_decision' AND resolved_at IS NULL
+			 ORDER BY opened_at
+			 LIMIT $1`, limit)
+		if err != nil {
+			return fmt.Errorf("consent: reading the refused sends waiting for a decision: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var r Review
+			var payload []byte
+			if err := rows.Scan(&r.ID, &r.State, &r.Kind, &r.IntentID, &payload,
+				&r.ReasonCode, &r.InitiatedBy, &r.ApprovalID, &total); err != nil {
+				return fmt.Errorf("consent: reading a waiting review: %w", err)
+			}
+			if err := json.Unmarshal(payload, &r.Refusals); err != nil {
+				return fmt.Errorf("consent: reading what a waiting review was refused for: %w", err)
+			}
+			out = append(out, r)
+		}
+		return rows.Err()
+	})
+	return out, total, err
+}
+
+// maxAwaitingDecision bounds one page of the queue. Oldest first, so a backlog
+// is worked from the end that has been waiting longest rather than from
+// whichever rows the planner happened to reach.
+const maxAwaitingDecision = 100

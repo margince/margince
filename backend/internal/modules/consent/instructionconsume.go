@@ -298,6 +298,9 @@ func (s *Store) HeldMessageForReview(ctx context.Context, reviewID ids.UUID) (id
 	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
 		return ids.UUID{}, err
 	}
+	// CREATE here, not read: this lookup exists to serve DIRECTING a send, and
+	// it answers to the same grant that act does. Reading the review is its own
+	// door (ReviewForReader) and takes the read verb.
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
 		return ids.UUID{}, err
 	}
