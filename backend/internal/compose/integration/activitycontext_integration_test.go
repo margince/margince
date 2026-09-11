@@ -244,22 +244,11 @@ func TestAMeetingLinkedOnlyToALeadPrepsAgainstTheLead(t *testing.T) {
 	// of leads, so the one test that looked at this agreed the emptiness was
 	// correct. A prep built on a lead nobody can see the history of is the
 	// answer that had a model call a lead untouched.
-	if !containsString(summariesIn(assembled, "recent_touches"), "Discovery call") {
+	touches := summariesIn(assembled, "recent_touches")
+	if !strings.Contains(strings.Join(touches, " | "), "Discovery call") {
 		t.Errorf("recent_touches = %v, want the meeting this lead is linked to — a lead subject "+
-			"whose timeline comes back empty reads as a lead nothing has happened to",
-			summariesIn(assembled, "recent_touches"))
+			"whose timeline comes back empty reads as a lead nothing has happened to", touches)
 	}
-}
-
-// containsString is one section's membership test, spelled once for the suites
-// that assert on summaries rather than on refs.
-func containsString(haystack []string, want string) bool {
-	for _, got := range haystack {
-		if strings.Contains(got, want) {
-			return true
-		}
-	}
-	return false
 }
 
 // An event this workspace holds no record for still answers, and the answer is
