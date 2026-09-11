@@ -196,7 +196,7 @@ func setupStep(t *testing.T, e *apptest.AppEnv, which crmcontracts.InstallationS
 func TestInstallationSetupOverHTTPTracksTheGoogleApp(t *testing.T) {
 	e := setupConnectorAppHTTP(t)
 
-	if step := setupStep(t, e, crmcontracts.OauthApp); step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepOauthApp); step.Configured {
 		t.Fatal("a fresh installation reports the Google app as configured")
 	}
 	secret := httpSecret
@@ -204,13 +204,13 @@ func TestInstallationSetupOverHTTPTracksTheGoogleApp(t *testing.T) {
 		crmcontracts.ConnectorAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("PUT the app → %d, want 204", status)
 	}
-	if step := setupStep(t, e, crmcontracts.OauthApp); !step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepOauthApp); !step.Configured {
 		t.Fatal("the setup report still calls the Google app unconfigured after it was stored")
 	}
 	if status := e.Call(t, "DELETE", "/v1/installation/oauth-apps/google", nil, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("DELETE the app → %d, want 204", status)
 	}
-	if step := setupStep(t, e, crmcontracts.OauthApp); step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepOauthApp); step.Configured {
 		t.Fatal("the setup report still calls the Google app configured after it was removed")
 	}
 }
@@ -398,11 +398,11 @@ func TestOnlyTheModelBindingBlocksFirstRun(t *testing.T) {
 
 	fresh := readSetup(t, e)
 	for _, step := range fresh.Steps {
-		if step.Blocking && step.Step != crmcontracts.AiModels {
+		if step.Blocking && step.Step != crmcontracts.InstallationSetupStepStepAiModels {
 			t.Errorf("step %q blocks first run; only ai_models may, because it is the only one onboarding can ask for", step.Step)
 		}
 	}
-	if step := setupStep(t, e, crmcontracts.AiModels); !step.Blocking {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); !step.Blocking {
 		t.Error("ai_models does not block first run, so nothing gates the cold-start read the product cannot run without")
 	}
 	if fresh.Complete {
@@ -419,7 +419,7 @@ func TestOnlyTheModelBindingBlocksFirstRun(t *testing.T) {
 		t.Errorf("setup reads incomplete with a model bound and keyed: %+v", setup.Steps)
 	}
 	for _, step := range setup.Steps {
-		if step.Step == crmcontracts.OauthApp && step.Configured {
+		if step.Step == crmcontracts.InstallationSetupStepStepOauthApp && step.Configured {
 			t.Fatal("the Google app reads configured though none was ever stored, so completeness in this same report proves nothing about skipping it")
 		}
 	}
@@ -434,21 +434,21 @@ func TestOnlyTheModelBindingBlocksFirstRun(t *testing.T) {
 func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
 	e := setupConnectorAppHTTP(t)
 
-	if step := setupStep(t, e, crmcontracts.AiModels); step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); step.Configured {
 		t.Fatal("a fresh installation reports the AI step as configured with nothing bound")
 	}
 
 	bindCloudRouting(t, e)
 
 	// Bound, and still NOT configured: the vendor has no key.
-	if step := setupStep(t, e, crmcontracts.AiModels); step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); step.Configured {
 		t.Error("the AI step reads configured with a cloud vendor bound and no key for it — onboarding would wave the admin through into a cold start that cannot make a call")
 	}
 
 	storeCloudProviderKey(t, e)
 
 	// Both halves present: now it is configured.
-	if step := setupStep(t, e, crmcontracts.AiModels); !step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); !step.Configured {
 		t.Error("the AI step still reads unconfigured with a binding AND its key stored")
 	}
 }
@@ -515,8 +515,8 @@ func TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem(t *testing.T) 
 		t.Fatalf("GET installation/setup → %d, want 200", status)
 	}
 	want := []crmcontracts.InstallationSetupStepStep{
-		crmcontracts.AiModels,
-		crmcontracts.OauthApp,
+		crmcontracts.InstallationSetupStepStepAiModels,
+		crmcontracts.InstallationSetupStepStepOauthApp,
 	}
 	if len(setup.Steps) != len(want) {
 		t.Fatalf("the report carries %d steps, want %d: %+v", len(setup.Steps), len(want), setup.Steps)

@@ -64,7 +64,7 @@ func TestOmittedNamesCarriesTheSectionsTheReaderCouldNotSee(t *testing.T) {
 		t.Errorf("nothing omitted should answer nil, got %+v", got)
 	}
 	got := personcontext.OmittedNames([]crmcontracts.Person360SectionsOmitted{
-		crmcontracts.Person360SectionsOmittedNextMeeting,
+		crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedNextMeeting,
 	})
 	if len(got) != 1 || got[0] != "next_meeting" {
 		t.Errorf("OmittedNames = %+v, want [next_meeting]", got)

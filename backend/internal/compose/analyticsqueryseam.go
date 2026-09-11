@@ -70,8 +70,32 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 
 func addFields(into map[string]analyticsquery.Field, from map[string]string, kind analyticsquery.FieldKind) {
 	for name, expr := range from {
-		into[name] = analyticsquery.Field{Name: name, Expr: expr, Kind: kind}
+		// A measure is a number by construction — it is the thing an aggregate
+		// adds up — so a caller's 1000 binds to it as readily as their "1000".
+		// A dimension is text unless its column says otherwise.
+		shape := columnValueShapes[expr]
+		if kind == analyticsquery.KindMeasure {
+			shape = analyticsquery.ShapeNumber
+		}
+		into[name] = analyticsquery.Field{Name: name, Expr: expr, Kind: kind, Shape: shape}
 	}
+}
+
+// columnValueShapes are the dimension EXPRESSIONS whose column holds something
+// other than text, so a filter against one carries the JSON literal a question
+// is naturally written in rather than a quoted spelling of it.
+//
+// Keyed by the expression rather than declared per spec, because what a column
+// holds is the COLUMN's property and not each spec's that exposes it:
+// win_probability is a dimension of two reports today, and a per-spec
+// declaration would let the two disagree about it.
+//
+// A column missing from here is compared as text, which refuses its literal
+// with the quoted spelling that binds — recoverable advice, never the opaque
+// fault this list exists to keep a caller out of.
+var columnValueShapes = map[string]analyticsquery.ColumnShape{
+	colWinProbability:    analyticsquery.ShapeNumber,
+	colBecameOpportunity: analyticsquery.ShapeBoolean,
 }
 
 // schemaVersion is a digest of the vocabulary this caller was handed.

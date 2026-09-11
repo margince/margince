@@ -150,8 +150,8 @@ func TestSelectedOptionAuthorizesTheChangeEndToEnd(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
 		t.Fatalf("decode reply: %v", err)
 	}
-	if reply.Kind != crmcontracts.CompanyConversationCorrection || len(reply.ProposedChanges) != 1 ||
-		reply.ProposedChanges[0].Value != "Acme GmbH" || reply.Act != crmcontracts.OnboardingActCompany {
+	if reply.Kind != crmcontracts.CompanyConversationResponseKindCompanyConversationCorrection || len(reply.ProposedChanges) != 1 ||
+		reply.ProposedChanges[0].Value != "Acme GmbH" || reply.Act != crmcontracts.OnboardingActOnboardingActCompany {
 		t.Fatalf("reply = %+v", reply)
 	}
 	// The click reaches the model as an explicit administrator statement, so the
@@ -285,8 +285,8 @@ func TestVoiceActAnswersFromServerCorpusNumbersOnly(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
 		t.Fatalf("decode reply: %v", err)
 	}
-	if reply.Act != crmcontracts.OnboardingActVoice || len(reply.ProposedChanges) != 0 ||
-		reply.AvailableAction == nil || *reply.AvailableAction != crmcontracts.OnboardingAvailableActionStartVoiceBuild {
+	if reply.Act != crmcontracts.OnboardingActOnboardingActVoice || len(reply.ProposedChanges) != 0 ||
+		reply.AvailableAction == nil || *reply.AvailableAction != crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionStartVoiceBuild {
 		t.Fatalf("voice reply = %+v", reply)
 	}
 	if !strings.Contains(brain.request.Messages[0].Content, `"corpus_total_words":1240`) ||
@@ -315,7 +315,7 @@ func TestVoiceActBelowTheFloorOffersUploadInstead(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
 		t.Fatalf("decode reply: %v", err)
 	}
-	if reply.AvailableAction == nil || *reply.AvailableAction != crmcontracts.OnboardingAvailableActionUploadVoiceSource {
+	if reply.AvailableAction == nil || *reply.AvailableAction != crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionUploadVoiceSource {
 		t.Fatalf("below-floor voice reply = %+v", reply)
 	}
 }
@@ -358,7 +358,7 @@ func TestResultsActRecognizesAManuallySavedCompany(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
 		t.Fatalf("decode reply: %v", err)
 	}
-	if reply.AvailableAction == nil || *reply.AvailableAction != crmcontracts.OnboardingAvailableActionFinish ||
+	if reply.AvailableAction == nil || *reply.AvailableAction != crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionFinish ||
 		len(reply.RemainingRequiredFields) != 0 {
 		t.Fatalf("manual-anchor results reply = %+v", reply)
 	}
@@ -400,8 +400,8 @@ func TestResultsAndConnectActsAnswerFromProgressContext(t *testing.T) {
 		act        string
 		wantAction crmcontracts.OnboardingCompanyMessageReplyAvailableAction
 	}{
-		"results": {act: "results", wantAction: crmcontracts.OnboardingAvailableActionFinish},
-		"connect": {act: "connect", wantAction: crmcontracts.OnboardingAvailableActionConnectInbox},
+		"results": {act: "results", wantAction: crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionFinish},
+		"connect": {act: "connect", wantAction: crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionConnectInbox},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {

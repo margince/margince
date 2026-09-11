@@ -443,12 +443,12 @@ func nothingNeededMoment(_ context.Context, now time.Time, page *crmcontracts.Pe
 	// nothing" includes "was not allowed to look". Saying nobody is waiting on
 	// a reply when the timeline was withheld states a fact about data this
 	// reader could not see, so the sentence says what is actually true instead.
-	if withheld(page, crmcontracts.Person360SectionsOmittedActivities,
-		crmcontracts.Person360SectionsOmittedLastTouch,
-		crmcontracts.Person360SectionsOmittedNextMeeting,
-		crmcontracts.Person360SectionsOmittedNextSteps,
-		crmcontracts.Person360SectionsOmittedClaims,
-		crmcontracts.Person360SectionsOmittedCommercial) {
+	if withheld(page, crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedActivities,
+		crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedLastTouch,
+		crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedNextMeeting,
+		crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedNextSteps,
+		crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedClaims,
+		crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedCommercial) {
 		why = "Nothing needs you in what this record shows you. Parts of it are not yours to see, so this is not the whole picture."
 	}
 	return crmcontracts.PersonMoment{

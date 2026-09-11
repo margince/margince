@@ -9,7 +9,6 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { primaryEmail } from "../format/primaryemail";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
 import {
@@ -169,11 +168,14 @@ describe("ComposeModal recipient", () => {
     expect(screen.queryByText("dung.ly@example.test")).toBeNull();
   });
 
-  // A CONTACT's address, picked by the shared rule rather than by this test.
-  // A person carries a list, so the page decides which one; what must not
-  // happen is a retired address being offered, and the rule that prevents it
-  // is format/primaryEmail — mirrored by the drafter and held by
-  // backend/gates/frontendprimaryemail_test.go.
+  // A CONTACT's address, as the SERVER picked it.
+  //
+  // The composer is handed one address and offers it — it does not choose from
+  // a list, and neither does any other screen: `person.primary_email` is the
+  // product's one answer to "which address is this contact reachable at",
+  // decided in the read that builds the row. A retired address never reaches
+  // this prop, which is why the assertion below is about what is OFFERED
+  // rather than about a rule this test would otherwise have to restate.
   it("addresses a first message to the contact's live primary address", async () => {
     stubRoutes();
     render(
@@ -181,35 +183,15 @@ describe("ComposeModal recipient", () => {
         entityType="person"
         entityId="p-1"
         personId="p-1"
-        recordAddress={primaryEmail([
-          {
-            id: "e-1",
-            email: "left@buyer.test",
-            email_type: "work",
-            is_primary: true,
-            position: 0,
-            source: "manual",
-            captured_by: "human:u-1",
-            archived_at: "2026-01-01T00:00:00Z",
-          },
-          {
-            id: "e-2",
-            email: "anna@buyer.test",
-            email_type: "work",
-            is_primary: false,
-            position: 1,
-            source: "manual",
-            captured_by: "human:u-1",
-          },
-        ])}
+        recordAddress="anna@buyer.test"
         open
         onClose={vi.fn()}
       />,
     );
 
     expect(await screen.findByText("anna@buyer.test")).toBeTruthy();
-    // The retired one is never offered: mail sent there either bounces or
-    // reaches somebody who asked us to stop using it.
+    // Nothing else is offered: the composer has one address, not a list to
+    // pick from.
     expect(screen.queryByText("left@buyer.test")).toBeNull();
   });
 

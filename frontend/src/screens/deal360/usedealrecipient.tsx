@@ -5,13 +5,12 @@
 //
 // Two steps, because a deal reaches an address through a person: pick the seat
 // (dealRecipientSeat), then read that person for the address the rest of the
-// product writes to (format/primaryEmail). Neither half decides anything on its
-// own — the seat rule is the deal's, the address rule is shared with the
-// drafter and every screen.
+// product writes to. Neither half decides anything on its own — the seat rule
+// is the deal's, and the address is the server's `primary_email`, which every
+// screen and the drafter read rather than choose again.
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import { primaryEmail } from "../../format/primaryemail";
 import { throwProblem } from "../common";
 import { dealRecipientSeat } from "./dealrecipient";
 import type { useDealCoverage } from "./usedealcoverage";
@@ -52,5 +51,5 @@ export function useDealRecipientAddress(
     },
     enabled: seat?.person_id != null,
   });
-  return primaryEmail(person.data?.emails);
+  return person.data?.primary_email ?? undefined;
 }

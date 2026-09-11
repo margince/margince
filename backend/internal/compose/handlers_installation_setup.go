@@ -127,8 +127,8 @@ func (h installationSetupHandlers) steps(ctx context.Context) ([]crmcontracts.In
 		return nil, err
 	}
 	return []crmcontracts.InstallationSetupStep{
-		{Step: crmcontracts.AiModels, Configured: aiReady, Blocking: true},
-		{Step: crmcontracts.OauthApp, Configured: appReady, Blocking: false},
+		{Step: crmcontracts.InstallationSetupStepStepAiModels, Configured: aiReady, Blocking: true},
+		{Step: crmcontracts.InstallationSetupStepStepOauthApp, Configured: appReady, Blocking: false},
 	}, nil
 }
 

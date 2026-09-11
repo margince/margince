@@ -61,7 +61,7 @@ func TestAGroundedFindingCarriesTheMessageAsItsReceipt(t *testing.T) {
 	if got.Kind != crmcontracts.Company360SuggestionKindQuestionUnanswered {
 		t.Errorf("kind = %q", got.Kind)
 	}
-	if got.WrittenBy == nil || *got.WrittenBy != crmcontracts.Model {
+	if got.WrittenBy == nil || *got.WrittenBy != crmcontracts.WrittenByModel {
 		t.Errorf("written_by = %v, want the model named as the writer", got.WrittenBy)
 	}
 	cited := got.Evidence[0]

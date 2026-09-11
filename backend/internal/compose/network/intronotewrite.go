@@ -49,13 +49,13 @@ func writeIntroNote(
 ) crmcontracts.AccountEmailDraft {
 	floor := noteFloor(facts)
 	if lane == nil {
-		return wireIntroNote(floor, crmcontracts.Deterministic, facts)
+		return wireIntroNote(floor, crmcontracts.WrittenByDeterministic, facts)
 	}
 	written, err := noteFromModel(ctx, lane, facts)
 	if err != nil {
-		return wireIntroNote(floor, crmcontracts.Deterministic, facts)
+		return wireIntroNote(floor, crmcontracts.WrittenByDeterministic, facts)
 	}
-	return wireIntroNote(written, crmcontracts.Model, facts)
+	return wireIntroNote(written, crmcontracts.WrittenByModel, facts)
 }
 
 // noteFromModel writes the note and checks what came back.
@@ -299,7 +299,7 @@ func noteRelationship(wording noteWording, facts noteFacts) string {
 func wireIntroNote(
 	note introNote, by crmcontracts.WrittenBy, facts noteFacts,
 ) crmcontracts.AccountEmailDraft {
-	aiWritten := by == crmcontracts.Model
+	aiWritten := by == crmcontracts.WrittenByModel
 	out := crmcontracts.AccountEmailDraft{
 		Subject: note.subject,
 		Body:    note.body,

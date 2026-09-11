@@ -263,6 +263,35 @@ func TestEverySubjectLinkArmIsRanked(t *testing.T) {
 	}
 }
 
+// Every record type an activity can be linked to must be readable as a context
+// ANCHOR, because an anchor the walk does not follow answers its profile and
+// nothing else — and the tool that serves that walk tells its caller "what
+// cannot be evidenced is absent rather than inferred". The two sentences
+// together turn a leg nobody wrote into a report that nothing happened.
+//
+// That is not hypothetical. activity_link admitted a lead arm and this walk did
+// not follow it, so a lead's whole timeline was invisible; a model asked to
+// close off the dead ends in a lead queue was shown three empty records and
+// correctly declined to act on any of them.
+//
+// READ OFF THE DDL, not off activityLinkArms, even though anchorLinkColumn is
+// now derived from that list. A census whose expected side is the thing under
+// test passes by construction and would go on passing if both fell behind the
+// table together.
+func TestEveryLinkableRecordIsWalkableAsAnAnchor(t *testing.T) {
+	declared := activityLinkEntityTypes(t)
+	if len(declared) == 0 {
+		t.Fatal("the migrations declared no activity_link entity type, so this census read nothing")
+	}
+	for _, entity := range declared {
+		if _, walkable := anchorLinkColumn[entity]; !walkable {
+			t.Errorf("activity_link admits entity_type %q and no anchor walk follows it — a %s "+
+				"anchor answers its profile alone, which a caller reads as a record nothing "+
+				"has happened to", entity, entity)
+		}
+	}
+}
+
 // activityLinkEntityTypes reads the live vocabulary off the migrations: the
 // LAST activity_link_entity_type_check to be declared wins, which is the one a
 // fresh database ends up with. Core migrations are zero-padded, so filename

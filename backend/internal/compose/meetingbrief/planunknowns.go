@@ -42,32 +42,32 @@ func unknownsFor(in Input, typ MeetingType, arc []ArcMoment) []Unknown {
 	add := func(kind crmcontracts.MeetingPlanUnknownKind, question string) {
 		out = append(out, Unknown{Kind: kind, Question: question})
 	}
-	if typ.Value == crmcontracts.MeetingPlanTypeUnknown {
-		add(crmcontracts.MeetingPlanUnknownIntentNotCaptured,
+	if typ.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown {
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured,
 			"What would make this hour worth your time?")
 	}
 	if in.Deal == nil {
-		add(crmcontracts.MeetingPlanUnknownNoOpenDeal,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal,
 			"Is there a piece of work here you are trying to get funded, or is this still exploratory?")
 	}
 	if !hasClaimKind(in, kindDecisionProcess) {
-		add(crmcontracts.MeetingPlanUnknownDecisionRouteNotCaptured,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured,
 			"Who else has to agree before this can go ahead?")
 	}
 	if len(in.PriorMeetings) == 0 {
-		add(crmcontracts.MeetingPlanUnknownNoPriorMeeting,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoPriorMeeting,
 			"Have you spoken to anyone else on our side before today?")
 	}
 	if len(in.Commitments) == 0 {
-		add(crmcontracts.MeetingPlanUnknownNoCommitmentsCaptured,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoCommitmentsCaptured,
 			"Is anything outstanding from either side that I should pick up?")
 	}
 	if len(arc) == 0 {
-		add(crmcontracts.MeetingPlanUnknownNoHistory,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoHistory,
 			"How much of the background do you already have from your side?")
 	}
 	if len(in.Attendees) == 0 {
-		add(crmcontracts.MeetingPlanUnknownAttendeesNotVisible,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownAttendeesNotVisible,
 			"Who else is joining, and what do they need from this?")
 	}
 	return out
@@ -136,9 +136,9 @@ func askBasis(claim ClaimIn) string {
 
 func relevanceOf(claim ClaimIn) crmcontracts.MeetingPlanTier {
 	if claim.Status == statusOpen {
-		return crmcontracts.MeetingPlanTierHigh
+		return crmcontracts.MeetingPlanTierMeetingPlanTierHigh
 	}
-	return crmcontracts.MeetingPlanTierMedium
+	return crmcontracts.MeetingPlanTierMeetingPlanTierMedium
 }
 
 // questionsFor is what to ask THEM.
@@ -199,11 +199,11 @@ func accountAnchor(in Input) string {
 
 func unknownWhy(kind crmcontracts.MeetingPlanUnknownKind, anchor string) string {
 	switch kind {
-	case crmcontracts.MeetingPlanUnknownIntentNotCaptured:
+	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured:
 		return fmt.Sprintf("Nothing in the record says what %s wants from this meeting.", anchor)
-	case crmcontracts.MeetingPlanUnknownDecisionRouteNotCaptured:
+	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured:
 		return fmt.Sprintf("The record does not name who decides at %s.", anchor)
-	case crmcontracts.MeetingPlanUnknownNoOpenDeal:
+	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal:
 		return fmt.Sprintf("There is no open deal with %s, so what this is for is unstated.", anchor)
 	default:
 		// The rest are gaps worth stating and not worth spending one of five
@@ -215,9 +215,9 @@ func unknownWhy(kind crmcontracts.MeetingPlanUnknownKind, anchor string) string 
 
 func unknownListenFor(kind crmcontracts.MeetingPlanUnknownKind) string {
 	switch kind {
-	case crmcontracts.MeetingPlanUnknownIntentNotCaptured:
+	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured:
 		return "The word they use for the problem, and whether a date is attached to it."
-	case crmcontracts.MeetingPlanUnknownDecisionRouteNotCaptured:
+	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured:
 		return "Names and roles: who approves, who pays, who can veto."
 	default:
 		return "Whether the answer names a person, a date, or neither."

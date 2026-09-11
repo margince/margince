@@ -187,6 +187,78 @@ else
 	echo "ok: a run that answered wrongly still fails its scenario"
 fi
 
+# --- ONE QUESTION, TWO HONEST ENGINES -----------------------------------------
+#
+# Alternatives inside one must_call or must_call_with entry are an any-of group,
+# which is what `|` already means in a must_mention entry. It exists because
+# pinning one of two doors that answer the same question measures which door the
+# model liked rather than whether the answer came from the product — case 7's
+# counts come from the same population through run_report or through
+# run_analytics_query, and both are right.
+#
+# BOTH DIRECTIONS, because an any-of that admitted anything would satisfy the
+# first half alone: either door with the right population passes, and the wrong
+# population through a door still fails, naming every alternative it tried so
+# the reader can see which one was meant.
+anyof="$work/anyof.yaml"
+cat >"$anyof" <<'YAML'
+name: anyof_case
+runs: 1
+pass_at: 1
+prompt: |
+  irrelevant, the transcripts here are written by hand
+must_call:
+  - list_records|search_records
+must_call_with:
+  - list_records.record_type=company|search_records.record_type=company
+YAML
+
+# anyof_is <name> <expected-exit> <substring the output must carry> <<<transcript
+anyof_is() {
+	local name="$1" want="$2" carries="$3" file="$work/anyof.jsonl" out status=0
+	cat >"$file"
+	out="$(python3 "$check" --check "$anyof" "$file" 2>&1)" || status=$?
+	if [[ $status -ne $want ]]; then
+		echo "FAIL: any-of/$name — exit $status, want $want"
+		echo "$out" | sed 's/^/    /'
+		failures=$((failures + 1))
+		return
+	fi
+	if [[ -n "$carries" && "$out" != *"$carries"* ]]; then
+		echo "FAIL: any-of/$name — output does not carry '$carries'"
+		echo "$out" | sed 's/^/    /'
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: any-of/$name"
+}
+
+anyof_is "the first door satisfies the group" 0 "" <<'JSONL'
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{"record_type":"company"}}]}}
+{"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
+JSONL
+
+anyof_is "the second door satisfies the group" 0 "" <<'JSONL'
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__search_records","input":{"record_type":"company"}}]}}
+{"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
+JSONL
+
+# The argument is still the assertion. A door reached with the wrong value is the
+# failure an any-of must not excuse — otherwise widening the tool half would
+# quietly take the argument half with it.
+anyof_is "a door reached with the wrong value still fails" 1 "record_type=company" <<'JSONL'
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__search_records","input":{"record_type":"person"}}]}}
+{"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
+JSONL
+
+# And neither door is neither. The message names both, because "never called
+# list_records" would send the reader to fix a run that was free to call the
+# other one.
+anyof_is "neither door fails, naming both" 1 "never called list_records or search_records" <<'JSONL'
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__read_record","input":{}}]}}
+{"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
+JSONL
+
 # The lane's own wiring. Asserted as the whole stop BLOCK rather than as tokens
 # anywhere in the file: a check that is present but not reached, or reached and
 # not exited on, satisfies three greps and none of the behaviour.
@@ -682,17 +754,27 @@ judges case10-finish-the-import.yaml case10 german-report-that-skipped-a-row 1 "
 # The commit is now required to be reported as done, and the table that only
 # says what the import WOULD do reaches none of it.
 judges case10-finish-the-import.yaml case10 stops-at-the-dry-run 1 "never said anything matching" "!forbids"
+# And the mapping the run had to invent. `name,city,size,country` places nothing
+# on its own, so every run chooses where those columns go — and a run that chose
+# `size`→description and reported "4 companies created, 0 skipped" satisfied
+# every other assertion this case had. This fixture is that run: the counts are
+# right, the commit is reported, and what the spreadsheet actually became is
+# never said.
+judges case10-finish-the-import.yaml case10 maps-a-column-and-never-says-so 1 "size[_ ]band" "!forbids"
 
-# CASE 2 — the false all-clear was forbidden as three literal strings, and
-# "Margince found nothing resembling her already on file" is the same claim in
-# words none of them reached — and it satisfied the REQUIRED half through the
-# bare word "already", so the denial scored as the report. One fixture per
-# claim; the spared one says "no duplicate record was created", which is a true
-# statement about the write and must stay green.
-judges case2-business-card.yaml case2 reports-the-candidate-in-the-queue 0 "!forbids"
-judges case2-business-card.yaml case2 says-nothing-resembles-her 1 "nothing resembling"
-judges case2-business-card.yaml case2 says-there-were-no-possible-matches 1 "no possible matches"
-judges case2-business-card.yaml case2 says-the-check-did-not-flag-anything 1 "did not flag"
+# CASE 2 — the denial half is judged, because a flat pattern over the answer
+# cannot tell WHICH record it denies. This prompt creates two, and only one of
+# them has a duplicate: the person does, the company does not, so "Terralogic is
+# new and nothing matched it" is true and the pattern that stood here red it.
+#
+# One fixture per claim, all three about HER; the spared one says "no duplicate
+# record was created", which is a statement about the write rather than about
+# what was found, and must stay green.
+c2_allclear="the judge says NO to: Criterion 4, the other direction."
+judges case2-business-card.yaml case2 reports-the-candidate-in-the-queue 0 "!the judge says NO"
+judges case2-business-card.yaml case2 says-nothing-resembles-her 1 "$c2_allclear"
+judges case2-business-card.yaml case2 says-there-were-no-possible-matches 1 "$c2_allclear"
+judges case2-business-card.yaml case2 says-the-check-did-not-flag-anything 1 "$c2_allclear"
 
 # CASE 20 and CASE 21 — the same shape twice: a capability denial written around
 # a fixed list of verb phrases. "Composing this into a document is not possible
@@ -838,12 +920,18 @@ c41_allclear="the judge says NO to: Criterion 2, the other direction."
 c41_deal="the judge says NO to: Criterion 1, the wrong record."
 judges "$c41" case41 names-the-open-commitment 0 "!the judge says NO"
 judges "$c41" case41 closes-the-project-not-the-deal 0 "!the judge says NO"
-judges "$c41" case41 closes-over-the-commitment 1 "$c41_open" "$c41_allclear" "$c41_deal"
+# THE LADDER'S ENUM IS NOT THE WALK-THROUGH, and both defective fixtures show
+# what that looks like: they recite "initiative, pursuing, delivering", which
+# advance_project_phase's own argument list hands over, and carry nothing from
+# the phase history's reasons. The phase-history assertion fires on exactly
+# that, and it is named here so the mechanical half cannot quietly stop firing
+# while the judged halves carry the fixture.
+judges "$c41" case41 closes-over-the-commitment 1 "$c41_open" "$c41_allclear" "$c41_deal" "Wismar|Greifswald"
 # The positive form of the false all-clear, which named no absence at all and so
 # matched nothing while this was a pattern. It fails both halves of criterion 2 —
 # the commitment is never named AND the queue is declared clear — and both are
 # asserted, so one of them quietly ceasing to fire would go red here.
-judges "$c41" case41 claims-every-task-is-done 1 "$c41_allclear" "$c41_open"
+judges "$c41" case41 claims-every-task-is-done 1 "$c41_allclear" "$c41_open" "Wismar|Greifswald"
 
 # CASE 42 — the longest patterns in the tree, and the reply half was revised in
 # four separate rounds: "No reply has been sent" red as a send, then the fix that

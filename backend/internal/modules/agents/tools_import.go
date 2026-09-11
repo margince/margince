@@ -123,8 +123,8 @@ const importConnectorCSV = "csv"
 // The two duplicate policies, spelled here so the tool schema and the contract
 // enum cannot drift apart.
 const (
-	importOnDuplicateCreate = string(crmcontracts.Create)
-	importOnDuplicateSkip   = string(crmcontracts.Skip)
+	importOnDuplicateCreate = string(crmcontracts.ImportOnDuplicateCreate)
+	importOnDuplicateSkip   = string(crmcontracts.ImportOnDuplicateSkip)
 )
 
 // refuseUnimportableObject holds `object` to the vocabulary, naming the whole

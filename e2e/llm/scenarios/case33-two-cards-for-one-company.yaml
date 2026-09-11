@@ -33,6 +33,10 @@
 #                     that route cannot produce her id. This case fails without
 #                     the roster call, which is the bar a must_call has to clear.
 #
+#   update_record   — where that seat id is spent. The roster answers who Lena
+#                     is; only this verb puts the surviving company on her book,
+#                     and without it the errand is a sentence rather than an act.
+#
 # whoami is NOT required anywhere in this case or any other one added with it.
 # Nothing here needs the acting user's own identity, and a goal invented to need
 # it would be "who am I" — a question whose answer is a tick rather than a test.
@@ -70,12 +74,13 @@ must_call:
   - merge_records
   - archive_record
   - list_colleagues
+  - update_record
 
-# record_type on both write verbs. Both serve several record types from one
+# record_type on every write verb. Each serves several record types from one
 # door, and this prompt names people as well as companies — Lena Fischer, who
-# takes the account — so the tool name alone passes a merge or an archive aimed
-# at a person of that name. The type is what says the errand landed on the
-# company.
+# takes the account — so the tool name alone passes a merge, an archive or an
+# owner change aimed at a person of that name. The type is what says the errand
+# landed on the company.
 #
 # The ids are not pinned because the fixture mints them at seed time. Which
 # record survives is therefore judged from the answer, which is also where the
@@ -83,13 +88,23 @@ must_call:
 must_call_with:
   - merge_records.record_type=company
   - archive_record.record_type=company
+  # CRITERION 3, AND THE HALF THE NAME ALONE CANNOT HOLD. "Lena Fischer" below
+  # is satisfied by the sentence that says the handover did NOT happen — "handing
+  # it to Lena Fischer, not done, waiting on you" — so the criterion scored an
+  # errand nobody had carried out. What it asks is that the account change was
+  # ISSUED on the surviving company with the seat id only the roster carries, and
+  # that is a call rather than a sentence.
+  #
+  # Whether the product applies that change or stages it for release is the
+  # product's own decision and not this case's question, so nothing here asserts
+  # which: an owner change that comes back staged has still been made.
+  - update_record.record_type=company
 
 may_call:
   - search_records
   - read_record
   - query_workspace
   - list_records
-  - update_record
   - resolve_entities
   - catch_me_up_on
   - who_knows

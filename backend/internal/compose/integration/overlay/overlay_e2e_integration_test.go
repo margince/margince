@@ -294,7 +294,7 @@ func assertDispatchedReadCarriesExternalTrust(adminCtx context.Context, t *testi
 	}
 	contractResults := compose.ContractSearchResults(searchRes)
 	tier := contractResults[0].TrustTier
-	if tier == nil || *tier != crmcontracts.SearchResultTrustTierExternal {
+	if tier == nil || *tier != crmcontracts.SearchResultTrustTierSearchResultTrustTierExternal {
 		t.Fatalf("overlay-served search result TrustTier = %v, want external", tier)
 	}
 	readRec, err := dispatcher.Read(adminCtx, searchRes.Records[0].Ref)
@@ -337,7 +337,7 @@ func assertHumanRestSurfaceServesTheMirror(t *testing.T, e *apptest.AppEnv) {
 	if len(searchPage.Data) != 1 {
 		t.Fatalf("overlay-mode search = %d hits, want 1", len(searchPage.Data))
 	}
-	if searchPage.Data[0].TrustTier == nil || *searchPage.Data[0].TrustTier != crmcontracts.SearchResultTrustTierExternal {
+	if searchPage.Data[0].TrustTier == nil || *searchPage.Data[0].TrustTier != crmcontracts.SearchResultTrustTierSearchResultTrustTierExternal {
 		t.Fatalf("overlay search hit TrustTier = %v, want external", searchPage.Data[0].TrustTier)
 	}
 	if searchPage.Data[0].Title == nil || *searchPage.Data[0].Title != "Ada Overlay" {

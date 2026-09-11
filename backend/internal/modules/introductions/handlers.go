@@ -65,7 +65,7 @@ func (h Handlers) CreateIntroRequest(w http.ResponseWriter, r *http.Request, id 
 	// half alone describes a route nobody can act on, and the table refuses it
 	// too — this is here so the caller is told which half is wrong.
 	throughGiven := body.ThroughPersonId != nil
-	wantsThrough := body.RouteType == crmcontracts.PersonGraphRouteTypeThroughContact
+	wantsThrough := body.RouteType == crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeThroughContact
 	if throughGiven != wantsThrough {
 		httperr.Write(w, r, httperr.Validation(
 			"through_person_id", "route_shape",

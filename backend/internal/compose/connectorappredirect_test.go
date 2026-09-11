@@ -38,7 +38,7 @@ func TestTheAdvertisedSignInRedirectIsTheOneTheFlowSends(t *testing.T) {
 		RedirectBase: "https://api.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed",
 	})(&s, nil)
 
-	shown, ok := advertised(s.composed[capture.AppProviderGoogle].redirectURIs, crmcontracts.SignIn)
+	shown, ok := advertised(s.composed[capture.AppProviderGoogle].redirectURIs, crmcontracts.ConnectorAppRedirectUriPurposeSignIn)
 	if !ok {
 		t.Fatal("a deployment that composed sign-in advertises no sign-in redirect URI, so an operator is told to register nothing")
 	}
@@ -84,7 +84,7 @@ func TestTheAdvertisedMicrosoftSignInRedirectIsTheOneTheFlowSends(t *testing.T) 
 		RedirectBase: "https://api.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed",
 	})(&s, nil)
 
-	shown, ok := advertised(s.composed[capture.AppProviderMicrosoft].redirectURIs, crmcontracts.SignIn)
+	shown, ok := advertised(s.composed[capture.AppProviderMicrosoft].redirectURIs, crmcontracts.ConnectorAppRedirectUriPurposeSignIn)
 	if !ok {
 		t.Fatal("a deployment that composed Microsoft sign-in advertises no sign-in redirect URI, so an operator is told to register nothing")
 	}
@@ -113,7 +113,7 @@ func TestTheSignInRedirectIsAdvertisedBeforeTheAppIsConfigured(t *testing.T) {
 	var s Server
 	WithGoogleSignIn(GoogleSignInConfig{RedirectBase: "https://api.example.com"})(&s, nil)
 
-	shown, ok := advertised(s.composed[capture.AppProviderGoogle].redirectURIs, crmcontracts.SignIn)
+	shown, ok := advertised(s.composed[capture.AppProviderGoogle].redirectURIs, crmcontracts.ConnectorAppRedirectUriPurposeSignIn)
 	if !ok {
 		t.Fatal("an operator with no Google app yet is told no sign-in URI to register, which is the one they need to create it")
 	}
@@ -123,7 +123,7 @@ func TestTheSignInRedirectIsAdvertisedBeforeTheAppIsConfigured(t *testing.T) {
 		ClientID: "cid", ClientSecret: "secret", StateKey: "0123456789012345678901234567890123",
 		RedirectBase: "https://api.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed",
 	})(&configured, nil)
-	willSend, _ := advertised(configured.composed[capture.AppProviderGoogle].redirectURIs, crmcontracts.SignIn)
+	willSend, _ := advertised(configured.composed[capture.AppProviderGoogle].redirectURIs, crmcontracts.ConnectorAppRedirectUriPurposeSignIn)
 	if shown != willSend {
 		t.Errorf("the URI advertised before configuration is %q but after it is %q; an operator would register the wrong one", shown, willSend)
 	}
@@ -134,7 +134,7 @@ func TestTheSignInRedirectIsAdvertisedBeforeTheAppIsConfigured(t *testing.T) {
 func TestNoSignInRedirectIsAdvertisedWithoutABase(t *testing.T) {
 	var s Server
 	WithGoogleSignIn(GoogleSignInConfig{ClientID: "cid"})(&s, nil)
-	if _, ok := advertised(s.composed[capture.AppProviderGoogle].redirectURIs, crmcontracts.SignIn); ok {
+	if _, ok := advertised(s.composed[capture.AppProviderGoogle].redirectURIs, crmcontracts.ConnectorAppRedirectUriPurposeSignIn); ok {
 		t.Error("a deployment with no redirect base advertises a URI built on nothing")
 	}
 }
@@ -273,8 +273,8 @@ func TestEveryMicrosoftBackedConnectorIsAdvertisedUnderItsOwnRouteKey(t *testing
 		purpose crmcontracts.ConnectorAppRedirectUriPurpose
 		suffix  string
 	}{
-		{crmcontracts.MailboxConnect, "/v1/connectors/" + providerGraph + "/callback"},
-		{crmcontracts.CalendarConnect, "/v1/connectors/" + providerGraphCal + "/callback"},
+		{crmcontracts.ConnectorAppRedirectUriPurposeMailboxConnect, "/v1/connectors/" + providerGraph + "/callback"},
+		{crmcontracts.ConnectorAppRedirectUriPurposeCalendarConnect, "/v1/connectors/" + providerGraphCal + "/callback"},
 	} {
 		got := seen[want.purpose]
 		if got == "" {

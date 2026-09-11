@@ -28,7 +28,7 @@ func TestLogActivityInputCarriesTheTransportTheCallerNamed(t *testing.T) {
 	provider := "telegram"
 
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind:            crmcontracts.CreateActivityRequestKindMessage,
+		Kind:            crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMessage,
 		ChannelProvider: &provider,
 		Source:          "human",
 	})
@@ -48,7 +48,7 @@ func TestLogActivityInputCarriesTheTransportTheCallerNamed(t *testing.T) {
 // same rule and surfacing as an unattributable 500.
 func TestLogActivityInputRefusesAMessageWithNoTransport(t *testing.T) {
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind:   crmcontracts.CreateActivityRequestKindMessage,
+		Kind:   crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMessage,
 		Source: "human",
 	})
 
@@ -69,11 +69,11 @@ func TestLogActivityInputRefusesATransportOnAKindThatTravelledOnNothing(t *testi
 	provider := "telegram"
 
 	for _, kind := range []crmcontracts.CreateActivityRequestKind{
-		crmcontracts.CreateActivityRequestKindNote,
-		crmcontracts.CreateActivityRequestKindEmail,
-		crmcontracts.CreateActivityRequestKindMeeting,
-		crmcontracts.CreateActivityRequestKindCall,
-		crmcontracts.CreateActivityRequestKindTask,
+		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
+		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindEmail,
+		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
+		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindCall,
+		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindTask,
 	} {
 		_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 			Kind:            kind,
@@ -91,9 +91,9 @@ func TestLogActivityInputRefusesATransportOnAKindThatTravelledOnNothing(t *testi
 // stops the rule above from being satisfied by refusing everything.
 func TestLogActivityInputAcceptsANonMessageWithNoTransport(t *testing.T) {
 	for _, kind := range []crmcontracts.CreateActivityRequestKind{
-		crmcontracts.CreateActivityRequestKindNote,
-		crmcontracts.CreateActivityRequestKindEmail,
-		crmcontracts.CreateActivityRequestKindMeeting,
+		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
+		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindEmail,
+		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
 	} {
 		in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: kind, Source: "human"})
 		if err != nil {

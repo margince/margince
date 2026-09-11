@@ -81,7 +81,7 @@ func (h companyHandlers) GetAnchorCompanyContextCapabilities(w http.ResponseWrit
 
 func (h companyHandlers) GetAnchorCompany(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		httperr.NotImplemented(w, r, "getCompany")
+		httperr.NotImplemented(w, r, "getAnchorCompany")
 		return
 	}
 	company, err := h.store.GetAnchorCompany(r.Context())
@@ -96,7 +96,7 @@ func (h companyHandlers) GetAnchorCompany(w http.ResponseWriter, r *http.Request
 
 func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		httperr.NotImplemented(w, r, "putCompany")
+		httperr.NotImplemented(w, r, "putAnchorCompany")
 		return
 	}
 	var req crmcontracts.CompanyProfileInput
@@ -179,11 +179,11 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 
 func (h companyHandlers) GetAnchorCompanyContext(w http.ResponseWriter, r *http.Request, params crmcontracts.GetAnchorCompanyContextParams) {
 	if !companyContextReadEnabled(h.rollout) {
-		httperr.NotImplemented(w, r, "getCompanyContext (company context rollout is off)")
+		httperr.NotImplemented(w, r, "getAnchorCompanyContext (company context rollout is off)")
 		return
 	}
 	if h.store == nil {
-		httperr.NotImplemented(w, r, "getCompanyContext")
+		httperr.NotImplemented(w, r, "getAnchorCompanyContext")
 		return
 	}
 	scopes, ok := parseCompanyContextScopes(w, r, params.Scopes)
@@ -327,7 +327,7 @@ func toContractCompanyContext(c people.CompanyContext) crmcontracts.CompanyConte
 		})
 	}
 	return crmcontracts.CompanyContext{
-		CompanyId: openapi_types.UUID(c.CompanyID.UUID), SchemaVersion: crmcontracts.N1,
+		CompanyId: openapi_types.UUID(c.CompanyID.UUID), SchemaVersion: crmcontracts.CompanyContextSchemaVersionN1,
 		Scopes: scopes, Fingerprint: c.Fingerprint, GeneratedAt: c.GeneratedAt,
 	}
 }

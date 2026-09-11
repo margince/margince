@@ -108,13 +108,13 @@ func TestARouteIdSaysWhichKindItIs(t *testing.T) {
 		t.Fatalf("expected both routes, got %d", len(routes))
 	}
 	direct, indirect := routes[0], routes[1]
-	if direct.RouteType != crmcontracts.PersonGraphRouteTypeDirect {
+	if direct.RouteType != crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeDirect {
 		t.Errorf("the direct route is typed %q", direct.RouteType)
 	}
 	if direct.ThroughPersonId != nil {
 		t.Error("a direct route named an intermediary")
 	}
-	if indirect.RouteType != crmcontracts.PersonGraphRouteTypeThroughContact {
+	if indirect.RouteType != crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeThroughContact {
 		t.Errorf("the indirect route is typed %q", indirect.RouteType)
 	}
 	if indirect.ThroughPersonId == nil {

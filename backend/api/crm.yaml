@@ -25973,6 +25973,23 @@ components:
         emails:
           type: array
           items: { $ref: '#/components/schemas/PersonEmail' }
+        primary_email:
+          type: [string, 'null']
+          format: email
+          readOnly: true
+          description: >-
+            The one address this contact is reachable at, chosen by the server: the primary
+            one if they have one, else the first live address in the order `emails` is sent
+            in. Null when every address is archived, or when they have none.
+
+            It is a derived field and not a second column. The choice used to be made in the
+            browser, which meant each surface that needed "the address" re-made it — and a
+            list could not be ORDERED by it at all, because the rule was not one the server
+            knew. Sending the answer makes the address a reader sees and the address the page
+            is arranged by the same string.
+
+            Never a RETIRED address. An archived one is out of service, and offering it is
+            worse than offering none: a reader writes to it and hears nothing back.
         phones:
           type: array
           items: { $ref: '#/components/schemas/PersonPhone' }

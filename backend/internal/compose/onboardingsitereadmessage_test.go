@@ -261,11 +261,11 @@ func TestOnboardingCompanyStatusQuestionsNeverBecomeChanges(t *testing.T) {
 		t.Fatal("an in-scope company question was classified as a workspace status question")
 	}
 
-	reply := onboardingCompanyReply(string(crmcontracts.OnboardingActCompany), companyReadModelReply{
+	reply := onboardingCompanyReply(string(crmcontracts.OnboardingActOnboardingActCompany), companyReadModelReply{
 		Kind: "status", Message: onboardingStatusMessage("en", onboardingResearchState{ready: true}, 2),
 	}, nil, []string{"display_name", "icp"}, onboardingResearchState{ready: true}, ai.RunSummary{Currency: "USD"})
-	if reply.Kind != crmcontracts.CompanyConversationStatus || len(reply.ProposedChanges) != 0 ||
-		reply.NextRequiredField == nil || *reply.NextRequiredField != crmcontracts.OnboardingNextRequiredDisplayName ||
+	if reply.Kind != crmcontracts.CompanyConversationResponseKindCompanyConversationStatus || len(reply.ProposedChanges) != 0 ||
+		reply.NextRequiredField == nil || *reply.NextRequiredField != crmcontracts.OnboardingCompanyMessageReplyNextRequiredFieldOnboardingNextRequiredDisplayName ||
 		reply.AvailableAction != nil {
 		t.Fatalf("status reply = %+v", reply)
 	}

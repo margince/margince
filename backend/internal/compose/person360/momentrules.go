@@ -83,9 +83,9 @@ func withheld(page *crmcontracts.Person360, sections ...crmcontracts.Person360Se
 // person who sits on it. The gap is the finding.
 func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
 	// "Nothing is scheduled" is only true if this reader could see the schedule.
-	if withheld(page, crmcontracts.Person360SectionsOmittedNextMeeting,
-		crmcontracts.Person360SectionsOmittedNextSteps,
-		crmcontracts.Person360SectionsOmittedCommercial) {
+	if withheld(page, crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedNextMeeting,
+		crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedNextSteps,
+		crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedCommercial) {
 		return crmcontracts.PersonMoment{}, false
 	}
 	if page.Commercial == nil || page.Commercial.Deal == nil {

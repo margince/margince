@@ -134,7 +134,7 @@ func Write(
 ) ([]Sentence, crmcontracts.WrittenBy, error) {
 	floor := Deterministic(personID, in)
 	if lane == nil {
-		return floor, crmcontracts.Deterministic, nil
+		return floor, crmcontracts.WrittenByDeterministic, nil
 	}
 	written, err := writeWithModel(ctx, lane, personID, in, lang)
 	if err != nil {
@@ -143,9 +143,9 @@ func Write(
 		// the card down with it: the reader gets the floor, and generated_by
 		// tells them which of the two they are reading.
 		//nolint:nilerr // on_budget_exhausted: degrade — the fallback IS the answer, and generated_by reports it
-		return floor, crmcontracts.Deterministic, nil
+		return floor, crmcontracts.WrittenByDeterministic, nil
 	}
-	return written, crmcontracts.Model, nil
+	return written, crmcontracts.WrittenByModel, nil
 }
 
 func writeWithModel(

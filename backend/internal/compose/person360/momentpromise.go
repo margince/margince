@@ -214,7 +214,7 @@ func owedPromises(page *crmcontracts.Person360) []owedwork.Item {
 	}
 	if page.Claims != nil {
 		for _, claim := range *page.Claims {
-			if claim.Kind != crmcontracts.CommitmentOurs ||
+			if claim.Kind != crmcontracts.ConversationClaimKindCommitmentOurs ||
 				claim.Status != crmcontracts.ConversationClaimStatusOpen {
 				continue
 			}

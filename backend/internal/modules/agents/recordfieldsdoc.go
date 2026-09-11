@@ -75,21 +75,47 @@ func (RecordFieldsResource) Resources(context.Context) []mcp.Resource {
 	}}
 }
 
+// RecordFieldsReader is the seam the describe tool reads through.
+type RecordFieldsReader interface {
+	RecordFieldsDocument(ctx context.Context) (json.RawMessage, error)
+}
+
 // ReadResource composes the document. An unknown URI answers ErrNotFound,
 // matching how every other read on this surface treats something the caller
 // cannot see.
-func (RecordFieldsResource) ReadResource(_ context.Context, uri string) (mcp.ResourceContents, error) {
+func (r RecordFieldsResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != RecordFieldsURI {
 		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
 	}
-	body, err := json.Marshal(recordFieldsDocument())
+	body, err := r.RecordFieldsDocument(ctx)
 	if err != nil {
-		return mcp.ResourceContents{}, fmt.Errorf("agents: rendering the record write vocabulary: %w", err)
+		return mcp.ResourceContents{}, err
 	}
 	return mcp.ResourceContents{URI: uri, MIMEType: mimeApplicationJSON, Text: string(body)}, nil
 }
 
-var _ mcp.ResourceProvider = RecordFieldsResource{}
+// RecordFieldsDocument is the ONE composition, read by the resource above and
+// by describe_record_fields — so the two doors cannot drift into two answers to
+// one question.
+//
+// Held by: TestTheRecordFieldsResourceAndTheSeamServeTheSameBytes
+// (internal/modules/agents/recordfieldsdoc_test.go)
+//
+// The context is unused: the document is composed from the contract alone and
+// is the same for every caller in every workspace. It is in the signature
+// because the seam is what a composition root may decorate.
+func (RecordFieldsResource) RecordFieldsDocument(context.Context) (json.RawMessage, error) {
+	body, err := json.Marshal(recordFieldsDocument())
+	if err != nil {
+		return nil, fmt.Errorf("agents: rendering the record write vocabulary: %w", err)
+	}
+	return body, nil
+}
+
+var (
+	_ mcp.ResourceProvider = RecordFieldsResource{}
+	_ RecordFieldsReader   = RecordFieldsResource{}
+)
 
 // recordFieldsDoc is the published shape: one section per WRITE, because the
 // two disagree about more than their field lists. An activity's links are

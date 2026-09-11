@@ -98,6 +98,15 @@ must_mention:
   # first. Under-recognition is the direction this must not fail in, so the
   # window is generous (60 characters) and the alternations are wide.
   #
+  # THE OBJECT IS NAMED IN MORE WORDS THAN THE FIELD'S. What was staged is an
+  # owner_id change, and an answer reports it as the handoff, the handover or the
+  # reassignment it is — "Rejected — the Taunus Gerätebau GmbH handoff from Sofia
+  # Meier to Demo Admin" is the right verdict on the right item, named by both
+  # owners, and the object list it reached was `owner|ownership|Inhaber` plus an
+  # `account…hand` form the reverse alternative did not even carry. Widened on
+  # the REJECT half only: the approve half is what catches the swap, and a wider
+  # object list there would start admitting one.
+  #
   # THE SWAP IS CAUGHT BY THE FIRST HALF, and only by it. "I approved the owner
   # change and rejected the description rewrite" still greens the second, because
   # its reverse-order alternative reads "owner change and rejected" and the
@@ -105,7 +114,7 @@ must_mention:
   # rather than papered over: the pair fails such an answer, one member of it
   # does not, and a future edit that relaxes the first half loses the swap.
   - "(?:approv\w*|genehmigt|greenlit|signed off)(?:(?!reject|declin|refus)[^\n]){0,60}(?:description|blurb|Beschreibung|Werkzeugbau)|(?:description|blurb|Beschreibung|Werkzeugbau)(?:(?!reject|declin|refus)[^\n]){0,60}(?:approv\w*|genehmigt|greenlit|signed off)"
-  - "(?:reject\w*|declin\w*|refus\w*|turned down|abgelehnt)(?:(?!approv|genehmigt)[^\n]){0,60}(?:owner|ownership|Inhaber|account.{0,20}(?:move|hand|transfer))|(?:owner|ownership|Inhaber)(?:(?!approv|genehmigt)[^\n]){0,60}(?:reject\w*|declin\w*|refus\w*|turned down|abgelehnt)"
+  - "(?:reject\w*|declin\w*|refus\w*|turned down|abgelehnt)(?:(?!approv|genehmigt)[^\n]){0,60}(?:owner|ownership|Inhaber|hand-?off|handover|reassign\w*|re-assign\w*|transfer\w*|Übergabe|account.{0,20}(?:move|hand|transfer))|(?:owner|ownership|Inhaber|hand-?off|handover|reassign\w*|re-assign\w*|transfer\w*|Übergabe|account.{0,20}(?:move|hand|transfer))(?:(?!approv|genehmigt)[^\n]){0,60}(?:reject\w*|declin\w*|refus\w*|turned down|abgelehnt)"
 
 must_not_mention:
   # CRITERION 3. The failure this case exists for is not a wrong verdict — that

@@ -51,7 +51,7 @@ func TestManualMeetingClimbsTheLeadLadder(t *testing.T) {
 	subject := "Kickoff on site"
 	held := crmcontracts.CreateActivityRequestMeetingStatusHeld
 	in, err := activities.LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind:          crmcontracts.CreateActivityRequestKindMeeting,
+		Kind:          crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
 		Subject:       &subject,
 		MeetingStatus: &held,
 		Links: &[]struct {
@@ -134,7 +134,7 @@ func TestManualNoteMarksTheLeadContacted(t *testing.T) {
 	})
 	subject := "Sent the intro mail"
 	in, err := activities.LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind:    crmcontracts.CreateActivityRequestKindNote,
+		Kind:    crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
 		Subject: &subject,
 		Links: &[]struct {
 			EntityId   openapi_types.UUID                                `json:"entity_id"` //nolint:staticcheck // mirrors the generated inline struct, whose field is spelled EntityId

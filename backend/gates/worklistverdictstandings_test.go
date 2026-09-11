@@ -145,10 +145,10 @@ func standingsTheMapperServes(t *testing.T) []string {
 // Written as the CONSTANTS rather than as string literals, so the values come
 // from the generated contract and a renamed member is a compile error here.
 var standingConstants = map[string]crmcontracts.WorklistDealVerdictStanding{
-	"WorklistStandingLive":     crmcontracts.WorklistStandingLive,
-	"WorklistStandingDrifting": crmcontracts.WorklistStandingDrifting,
-	"WorklistStandingBlocked":  crmcontracts.WorklistStandingBlocked,
-	"WorklistStandingCold":     crmcontracts.WorklistStandingCold,
+	"WorklistDealVerdictStandingWorklistStandingLive":     crmcontracts.WorklistDealVerdictStandingWorklistStandingLive,
+	"WorklistDealVerdictStandingWorklistStandingDrifting": crmcontracts.WorklistDealVerdictStandingWorklistStandingDrifting,
+	"WorklistDealVerdictStandingWorklistStandingBlocked":  crmcontracts.WorklistDealVerdictStandingWorklistStandingBlocked,
+	"WorklistDealVerdictStandingWorklistStandingCold":     crmcontracts.WorklistDealVerdictStandingWorklistStandingCold,
 }
 
 // constantsInKnownStandingCases walks knownStanding's switch and collects the

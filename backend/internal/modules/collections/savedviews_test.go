@@ -97,8 +97,8 @@ func TestASavedViewFilterThatIsNotATreeIsRefused(t *testing.T) {
 // one carries view state without a filter this module can check. Named here so
 // the gate below can tell "intentionally unfilterable" from "forgotten".
 var nonFilterableViewResources = map[string]bool{
-	string(crmcontracts.SavedViewResourceActivities): true,
-	string(crmcontracts.SavedViewResourcePartners):   true,
+	string(crmcontracts.SavedViewResourceSavedViewResourceActivities): true,
+	string(crmcontracts.SavedViewResourceSavedViewResourcePartners):   true,
 }
 
 // contractViewResources is the SavedViewResource enum as the contract declares
@@ -107,13 +107,13 @@ var nonFilterableViewResources = map[string]bool{
 // derived form belongs in the backend-root suite, where contractSchema already
 // parses api/crm.yaml — tracked separately rather than half-built here.
 var contractViewResources = []crmcontracts.SavedViewResource{
-	crmcontracts.SavedViewResourceActivities,
-	crmcontracts.SavedViewResourceDeals,
-	crmcontracts.SavedViewResourceLeads,
-	crmcontracts.SavedViewResourceCompanies,
-	crmcontracts.SavedViewResourcePartners,
-	crmcontracts.SavedViewResourcePeople,
-	crmcontracts.SavedViewResourceProjects,
+	crmcontracts.SavedViewResourceSavedViewResourceActivities,
+	crmcontracts.SavedViewResourceSavedViewResourceDeals,
+	crmcontracts.SavedViewResourceSavedViewResourceLeads,
+	crmcontracts.SavedViewResourceSavedViewResourceCompanies,
+	crmcontracts.SavedViewResourceSavedViewResourcePartners,
+	crmcontracts.SavedViewResourceSavedViewResourcePeople,
+	crmcontracts.SavedViewResourceSavedViewResourceProjects,
 }
 
 // Every contract member is either filterable or declared deliberately not, in

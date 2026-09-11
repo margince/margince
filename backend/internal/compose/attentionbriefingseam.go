@@ -69,7 +69,7 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 	// read as a cold relationship — see SignalOf.
 	warmthKnown := true
 	for _, factor := range run.FactorsOmitted {
-		if factor == string(crmcontracts.Warmth) {
+		if factor == string(crmcontracts.MorningBriefFactorsOmittedWarmth) {
 			warmthKnown = false
 		}
 	}

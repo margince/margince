@@ -20,7 +20,6 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
-import { primaryEmail } from "../format/primaryemail";
 import { linkedinUrl } from "../format/weburl";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -420,7 +419,7 @@ export function PersonPageV2({
                 />
                 <PersonEmailPanel
                   personId={id}
-                  recordAddress={primaryEmail(person.emails)}
+                  recordAddress={person.primary_email ?? undefined}
                   overlay={overlay}
                   archived={Boolean(person.archived_at)}
                 />
@@ -575,7 +574,7 @@ export function PersonPageV2({
           <PersonMailDrawer
             personId={id}
             view={view.data}
-            recordAddress={primaryEmail(person.emails)}
+            recordAddress={person.primary_email ?? undefined}
             open={composer.open}
             intent={composer.intent}
             threadId={composer.threadId}

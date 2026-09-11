@@ -441,7 +441,7 @@ func WithMicrosoftSignIn(cfg MicrosoftSignInConfig) Option {
 		// lists, so one missing here is a sign-in that fails at Microsoft's
 		// consent screen with AADSTS50011 — naming no URI.
 		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
-			s.addRedirectURI(capture.AppProviderMicrosoft, crmcontracts.SignIn,
+			s.addRedirectURI(capture.AppProviderMicrosoft, crmcontracts.ConnectorAppRedirectUriPurposeSignIn,
 				identity.SignInRedirectURI(base, microsoftProviderKey))
 		}
 		if !cfg.Enabled() {

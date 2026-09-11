@@ -84,7 +84,7 @@ func TestAWiredLaneThatDidNotAnswerIsReportedSoItsFallbackIsNotCached(t *testing
 	}
 	// The reader still gets a working card — the degrade is declared. Refusing
 	// the page would be the worse answer.
-	if card.GeneratedBy != crmcontracts.Deterministic {
+	if card.GeneratedBy != crmcontracts.WrittenByDeterministic {
 		t.Errorf("the fallback card is not labelled deterministic: %s", card.GeneratedBy)
 	}
 }
@@ -101,7 +101,7 @@ func TestAnAbsentLaneIsNotAFailureAndItsCardIsCacheable(t *testing.T) {
 		t.Error("a deployment with no lane was reported as a lane failure, so every card it writes would " +
 			"be recomputed on every read rather than cached")
 	}
-	if card.GeneratedBy != crmcontracts.Deterministic {
+	if card.GeneratedBy != crmcontracts.WrittenByDeterministic {
 		t.Errorf("the card is not labelled deterministic: %s", card.GeneratedBy)
 	}
 }
@@ -148,7 +148,7 @@ func TestTheLaneIsNotAskedAboutADealWithNothingToCite(t *testing.T) {
 	if laneFailed {
 		t.Error("not asking was reported as a lane failure, which would stop the floor being cached")
 	}
-	if card.GeneratedBy != crmcontracts.Deterministic {
+	if card.GeneratedBy != crmcontracts.WrittenByDeterministic {
 		t.Errorf("the card claims to be %q when no model wrote it", card.GeneratedBy)
 	}
 }

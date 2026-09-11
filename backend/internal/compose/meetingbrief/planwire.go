@@ -31,7 +31,7 @@ func wirePlan(plan Plan, in Input) crmcontracts.MeetingPlan {
 		// Overwritten by the caller with what actually wrote this plan. The
 		// floor is the honest default: a plan nobody told us about is one the
 		// deterministic builders produced.
-		GeneratedBy: crmcontracts.Deterministic,
+		GeneratedBy: crmcontracts.WrittenByDeterministic,
 		MeetingType: crmcontracts.MeetingPlanType{
 			Value:      plan.Type.Value,
 			Confidence: plan.Type.Confidence,
@@ -78,9 +78,9 @@ func wirePlan(plan Plan, in Input) crmcontracts.MeetingPlan {
 
 func wireReadiness(out crmcontracts.MeetingPlan) crmcontracts.MeetingPlanReadiness {
 	if out.TopRisk != nil && len(out.LikelyAsks) >= 2 && len(out.Questions) >= 3 {
-		return crmcontracts.MeetingPlanReadinessPrepared
+		return crmcontracts.MeetingPlanReadinessMeetingPlanReadinessPrepared
 	}
-	return crmcontracts.MeetingPlanReadinessOutline
+	return crmcontracts.MeetingPlanReadinessMeetingPlanReadinessOutline
 }
 
 // groundedSentence renders one sentence, refusing it unless every record it

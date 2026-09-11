@@ -68,8 +68,8 @@ func foldedFrom(claims ...crmcontracts.ConversationClaim) Input {
 // question they asked, which is the kind that led before.
 func TestAnOverduePromiseOfOursLeadsTheDraft(t *testing.T) {
 	in := foldedFrom(
-		claim(crmcontracts.OpenQuestion, "the API rate limits", crmcontracts.ConversationClaimStatusOpen, nil),
-		claim(crmcontracts.CommitmentOurs, "the integration scope document",
+		claim(crmcontracts.ConversationClaimKindOpenQuestion, "the API rate limits", crmcontracts.ConversationClaimStatusOpen, nil),
+		claim(crmcontracts.ConversationClaimKindCommitmentOurs, "the integration scope document",
 			crmcontracts.ConversationClaimStatusOpen, at(25)),
 	)
 
@@ -86,7 +86,7 @@ func TestAnOverduePromiseOfOursLeadsTheDraft(t *testing.T) {
 // of them as an overdue promise of ours puts a false claim in front of a
 // customer.
 func TestOnlyAnOpenOverduePromiseOfOursLeads(t *testing.T) {
-	question := claim(crmcontracts.OpenQuestion, "the API rate limits",
+	question := claim(crmcontracts.ConversationClaimKindOpenQuestion, "the API rate limits",
 		crmcontracts.ConversationClaimStatusOpen, nil)
 
 	cases := []struct {
@@ -95,30 +95,30 @@ func TestOnlyAnOpenOverduePromiseOfOursLeads(t *testing.T) {
 	}{
 		{
 			name: "a promise THEY made, past its date",
-			claim: claim(crmcontracts.CommitmentTheirs, "the signed order form",
+			claim: claim(crmcontracts.ConversationClaimKindCommitmentTheirs, "the signed order form",
 				crmcontracts.ConversationClaimStatusOpen, at(25)),
 		},
 		{
 			name: "a promise of ours already kept",
-			claim: claim(crmcontracts.CommitmentOurs, "the integration scope document",
+			claim: claim(crmcontracts.ConversationClaimKindCommitmentOurs, "the integration scope document",
 				crmcontracts.ConversationClaimStatusDone, at(25)),
 		},
 		{
 			name: "a promise of ours still within its date",
 			claim: func() crmcontracts.ConversationClaim {
 				later := time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)
-				return claim(crmcontracts.CommitmentOurs, "the integration scope document",
+				return claim(crmcontracts.ConversationClaimKindCommitmentOurs, "the integration scope document",
 					crmcontracts.ConversationClaimStatusOpen, &later)
 			}(),
 		},
 		{
 			name: "a promise of ours with no date at all",
-			claim: claim(crmcontracts.CommitmentOurs, "looking into the integration",
+			claim: claim(crmcontracts.ConversationClaimKindCommitmentOurs, "looking into the integration",
 				crmcontracts.ConversationClaimStatusOpen, nil),
 		},
 		{
 			name: "a promise due at this very instant is not yet late",
-			claim: claim(crmcontracts.CommitmentOurs, "the integration scope document",
+			claim: claim(crmcontracts.ConversationClaimKindCommitmentOurs, "the integration scope document",
 				crmcontracts.ConversationClaimStatusOpen, &draftedAt),
 		},
 	}
@@ -139,12 +139,12 @@ func TestOnlyAnOpenOverduePromiseOfOursLeads(t *testing.T) {
 func TestTheLongestOverduePromiseSurvivesABusyRecord(t *testing.T) {
 	var claims []crmcontracts.ConversationClaim
 	for i := range draftInputClaims + 3 {
-		claims = append(claims, claim(crmcontracts.OpenQuestion,
+		claims = append(claims, claim(crmcontracts.ConversationClaimKindOpenQuestion,
 			"a question about topic "+string(rune('A'+i)),
 			crmcontracts.ConversationClaimStatusOpen, nil))
 	}
 	// Oldest, so newest-first ordering puts it last of all.
-	claims = append(claims, claim(crmcontracts.CommitmentOurs, "the integration scope document",
+	claims = append(claims, claim(crmcontracts.ConversationClaimKindCommitmentOurs, "the integration scope document",
 		crmcontracts.ConversationClaimStatusOpen, at(2)))
 
 	body := Deterministic(foldedFrom(claims...)).Body
@@ -157,7 +157,7 @@ func TestTheLongestOverduePromiseSurvivesABusyRecord(t *testing.T) {
 // the recipient as a raw timestamp. A person writes "last month", not
 // "2026-07-25T00:00:00Z".
 func TestTheDueDateNeverReachesTheBodyAsATimestamp(t *testing.T) {
-	in := foldedFrom(claim(crmcontracts.CommitmentOurs, "das Angebot",
+	in := foldedFrom(claim(crmcontracts.ConversationClaimKindCommitmentOurs, "das Angebot",
 		crmcontracts.ConversationClaimStatusOpen, at(25)))
 	in.Envelope = envelopeAt(textlang.German, convstate.BandWeeks)
 

@@ -164,6 +164,10 @@ var personBindings = EntityBinding{
 		{WireSlot: "title", CanonicalKey: "title", Incumbent: []string{"jobtitle"}, Disposition: DispositionMapped},
 		{WireSlot: "address", CanonicalKey: "address", Incumbent: []string{"address", "city", "state", "zip", "country"}, Transform: "address_json", Disposition: DispositionMapped},
 		{WireSlot: "emails", CanonicalKey: "person_email", Incumbent: []string{"email"}, Transform: "lowercase", Disposition: DispositionMapped},
+		{
+			WireSlot: "primary_email", Disposition: DispositionNativeOnly,
+			Reason: "Which address a contact is reachable at is a DECISION this server makes over the addresses above — live, primary first, then the record's own arrangement — and it is derived on every read rather than stored. A mirror carries the addresses; the choice among them is this product's, made the same way for a mirrored contact as for a native one, so there is nothing for an incumbent to supply.",
+		},
 		{WireSlot: "phones", CanonicalKey: "person_phone", Incumbent: []string{"phone", "mobilephone"}, Disposition: DispositionMapped},
 		{WireSlot: "created_at", CanonicalKey: "created_at", Incumbent: []string{"createdate"}, Disposition: DispositionMapped},
 		{WireSlot: "updated_at", CanonicalKey: "last_synced_at", Incumbent: []string{"lastmodifieddate"}, Disposition: DispositionMapped},

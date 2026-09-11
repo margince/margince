@@ -194,7 +194,7 @@ func (h Handlers) ListCompanyContacts(w http.ResponseWriter, r *http.Request, id
 		Query:  params.Q,
 		Cursor: params.Cursor,
 		Limit:  params.Limit,
-		Sort:   string(crmcontracts.Recommended),
+		Sort:   string(crmcontracts.ListCompanyContactsParamsSortRecommended),
 	}
 	if params.Status != nil {
 		if !params.Status.Valid() {

@@ -40,10 +40,10 @@ func TestThePlanAndTheSectionsAgreeOnWhatMatters(t *testing.T) {
 func TestUnknownsComeOnlyFromAbsence(t *testing.T) {
 	full := planOf(fullInput())
 	for _, unknown := range full.Unknowns {
-		if unknown.Kind == crmcontracts.MeetingPlanUnknownNoOpenDeal {
+		if unknown.Kind == crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal {
 			t.Error("a meeting WITH a deal reported no_open_deal")
 		}
-		if unknown.Kind == crmcontracts.MeetingPlanUnknownNoCommitmentsCaptured {
+		if unknown.Kind == crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoCommitmentsCaptured {
 			t.Error("a meeting WITH commitments reported none captured")
 		}
 	}
@@ -54,11 +54,11 @@ func TestUnknownsComeOnlyFromAbsence(t *testing.T) {
 		got[unknown.Kind] = true
 	}
 	for _, want := range []crmcontracts.MeetingPlanUnknownKind{
-		crmcontracts.MeetingPlanUnknownIntentNotCaptured,
-		crmcontracts.MeetingPlanUnknownNoOpenDeal,
-		crmcontracts.MeetingPlanUnknownNoPriorMeeting,
-		crmcontracts.MeetingPlanUnknownNoCommitmentsCaptured,
-		crmcontracts.MeetingPlanUnknownNoHistory,
+		crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured,
+		crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal,
+		crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoPriorMeeting,
+		crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoCommitmentsCaptured,
+		crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoHistory,
 	} {
 		if !got[want] {
 			t.Errorf("a record answering nothing did not report %q", want)
@@ -109,13 +109,13 @@ func TestNoAnchorMeansNoTemplatedQuestion(t *testing.T) {
 // Readiness decides whether a client leads with the plan. It must be read off
 // what SURVIVED grounding, not off what was built.
 func TestReadinessReportsWhatSurvived(t *testing.T) {
-	if got := planOf(fullInput()).Readiness; got != crmcontracts.MeetingPlanReadinessOutline {
+	if got := planOf(fullInput()).Readiness; got != crmcontracts.MeetingPlanReadinessMeetingPlanReadinessOutline {
 		// fullInput has one claim: a risk, two asks and three questions cannot
 		// all come from it, so this is an outline and says so.
 		t.Errorf("readiness = %q, want outline for a one-claim meeting", got)
 	}
 	bare := Input{ActivityID: meetingID, Now: at(10), StartsAt: at(12)}
-	if got := planOf(bare).Readiness; got != crmcontracts.MeetingPlanReadinessOutline {
+	if got := planOf(bare).Readiness; got != crmcontracts.MeetingPlanReadinessMeetingPlanReadinessOutline {
 		t.Errorf("readiness = %q, want outline for an empty record", got)
 	}
 }
@@ -170,7 +170,7 @@ func TestAPlanClaimCitingARecordTheInputNeverCarriedIsDropped(t *testing.T) {
 	plan.LikelyAsks = append(plan.LikelyAsks, Ask{
 		Question:  "Will you cite a record I cannot open?",
 		Basis:     Sentence{Text: "From nowhere.", Evidence: []Evidence{{EntityType: citeActivity, EntityID: elsewhere}}},
-		Relevance: crmcontracts.MeetingPlanTierHigh,
+		Relevance: crmcontracts.MeetingPlanTierMeetingPlanTierHigh,
 		Prepare:   "It should not be here.",
 	})
 	before := len(plan.LikelyAsks)
@@ -246,14 +246,14 @@ func TestThePlanNeverSpellsARecordIDInItsProse(t *testing.T) {
 // running stack; no unit test would have noticed, because each half was right.
 func TestEveryMeetingKindHasACaveatThatFitsIt(t *testing.T) {
 	for _, kind := range []crmcontracts.MeetingPlanTypeValue{
-		crmcontracts.MeetingPlanTypeRelationship,
-		crmcontracts.MeetingPlanTypeFirstDiscovery,
-		crmcontracts.MeetingPlanTypeFollowupDiscovery,
-		crmcontracts.MeetingPlanTypeDemo,
-		crmcontracts.MeetingPlanTypeCommercial,
-		crmcontracts.MeetingPlanTypeDecision,
-		crmcontracts.MeetingPlanTypeDelivery,
-		crmcontracts.MeetingPlanTypeRenewalRisk,
+		crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship,
+		crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery,
+		crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFollowupDiscovery,
+		crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDemo,
+		crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial,
+		crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDecision,
+		crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery,
+		crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRenewalRisk,
 	} {
 		if got := caveatFor(MeetingType{Value: kind}); got == caveatUnknown {
 			t.Errorf("a %q meeting is told the plan does not know what it is for", kind)
@@ -261,7 +261,7 @@ func TestEveryMeetingKindHasACaveatThatFitsIt(t *testing.T) {
 	}
 	// And `unknown` still gets the one that says so, or the check above would
 	// pass by making every kind share a caveat that fits none of them.
-	if got := caveatFor(MeetingType{Value: crmcontracts.MeetingPlanTypeUnknown}); got != caveatUnknown {
+	if got := caveatFor(MeetingType{Value: crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown}); got != caveatUnknown {
 		t.Errorf("an unknown meeting's caveat = %q, want the one that says to ask", got)
 	}
 }

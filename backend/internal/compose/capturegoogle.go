@@ -186,8 +186,8 @@ var googleBackedConnectors = []struct {
 	purpose  crmcontracts.ConnectorAppRedirectUriPurpose
 	provider string
 }{
-	{crmcontracts.MailboxConnect, providerGmail},
-	{crmcontracts.CalendarConnect, providerGcal},
+	{crmcontracts.ConnectorAppRedirectUriPurposeMailboxConnect, providerGmail},
+	{crmcontracts.ConnectorAppRedirectUriPurposeCalendarConnect, providerGcal},
 }
 
 // WithGmailCapture mounts the Gmail and Google Calendar connect flow on the

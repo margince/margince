@@ -2,4 +2,4 @@
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__preview_import", "input": {"object": "company"}}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_import_report", "input": {}}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__commit_import", "input": {}}]}}
-{"type": "result", "subtype": "success", "is_error": false, "result": "The preview read 4 organizations out of the file and I committed the run.\n\nNothing was skipped — skipped: 0, no failures, no unusable rows."}
+{"type": "result", "subtype": "success", "is_error": false, "result": "The preview read 4 organizations out of the file and I committed the run.\n\nNothing was skipped — skipped: 0, no failures, no unusable rows.\n\nNone of the four headers matched an organization field by name, so I mapped them: `name`→display_name, `city`→address.city, `size`→size_band, `country`→address.country."}

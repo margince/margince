@@ -128,8 +128,8 @@ var microsoftBackedConnectors = []struct {
 	purpose  crmcontracts.ConnectorAppRedirectUriPurpose
 	provider string
 }{
-	{crmcontracts.MailboxConnect, providerGraph},
-	{crmcontracts.CalendarConnect, providerGraphCal},
+	{crmcontracts.ConnectorAppRedirectUriPurposeMailboxConnect, providerGraph},
+	{crmcontracts.ConnectorAppRedirectUriPurposeCalendarConnect, providerGraphCal},
 }
 
 // WithGraphCapture wires the Microsoft Graph half of the connector OAuth

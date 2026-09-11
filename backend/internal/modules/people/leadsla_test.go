@@ -25,10 +25,10 @@ func TestLeadSLAFieldsFollowTheClock(t *testing.T) {
 		firstResponse, archived *time.Time
 		want                    *crmcontracts.LeadSlaState
 	}{
-		"fresh, clock from created_at": {created: now.Add(-time.Hour), want: state(crmcontracts.LeadSlaStateWithinTarget)},
-		"routing restarts the clock":   {created: now.Add(-48 * time.Hour), routed: now.Add(-time.Hour), want: state(crmcontracts.LeadSlaStateWithinTarget)},
-		"inside the last quarter":      {created: routed, want: state(crmcontracts.LeadSlaStateAtRisk)},
-		"past the deadline":            {created: now.Add(-DefaultFirstResponseTarget - time.Minute), want: state(crmcontracts.LeadSlaStateBreached)},
+		"fresh, clock from created_at": {created: now.Add(-time.Hour), want: state(crmcontracts.LeadSlaStateLeadSlaStateWithinTarget)},
+		"routing restarts the clock":   {created: now.Add(-48 * time.Hour), routed: now.Add(-time.Hour), want: state(crmcontracts.LeadSlaStateLeadSlaStateWithinTarget)},
+		"inside the last quarter":      {created: routed, want: state(crmcontracts.LeadSlaStateLeadSlaStateAtRisk)},
+		"past the deadline":            {created: now.Add(-DefaultFirstResponseTarget - time.Minute), want: state(crmcontracts.LeadSlaStateLeadSlaStateBreached)},
 		"answered leads owe nothing":   {created: now.Add(-48 * time.Hour), firstResponse: &responded, want: nil},
 		"closed leads owe nothing":     {created: now.Add(-48 * time.Hour), archived: &closed, want: nil},
 	}

@@ -3,10 +3,11 @@
 
 package agents
 
-// What book_meeting stages, and what it refuses to stage. Split from
-// tools_comms_test.go alongside the source it covers: a booking anchors on no
-// row, so everything here is about the records it ATTACHES to — which is a
-// different subject from the mail and channel sends next door.
+// What the scheduling verbs claim, and what they refuse to. Split from
+// tools_comms_test.go alongside the source they cover: booking anchors on no
+// row, so everything about it here is the records it ATTACHES to, and
+// availability answers about a calendar this product may not even hold — which
+// is a different subject from the mail and channel sends next door.
 
 import (
 	"context"
@@ -15,10 +16,12 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A booking with no links is refused, at BOTH doors.
@@ -159,5 +162,82 @@ func TestABookingWithNoDurationIsRefusedAtBothDoors(t *testing.T) {
 				t.Error("a booking with no duration reached the comms seam")
 			}
 		})
+	}
+}
+
+// availabilityComms answers the free/busy question with one prepared window and
+// leaves the rest of the seam to the double the send tests already use — the
+// scheduling verbs are the only thing under test here.
+type availabilityComms struct {
+	*recordingComms
+	answer AvailabilityResult
+}
+
+func (c availabilityComms) Availability(context.Context, *ids.UUID, time.Time, time.Time, int) (AvailabilityResult, error) {
+	return c.answer, nil
+}
+
+// aWorkdayOfSlots is the shape both cases answer with: a full day free. It is
+// the same list in each, because the defect is that the two states are
+// indistinguishable from the slots alone.
+func aWorkdayOfSlots() []FreeSlot {
+	start := time.Date(2026, time.September, 11, 7, 0, 0, 0, time.UTC)
+	slots := make([]FreeSlot, 0, 16)
+	for i := 0; i < 16; i++ {
+		at := start.Add(time.Duration(i) * 30 * time.Minute)
+		slots = append(slots, FreeSlot{Start: at, End: at.Add(30 * time.Minute)})
+	}
+	return slots
+}
+
+func checkAvailabilityWindow(t *testing.T, answer AvailabilityResult) Envelope {
+	t.Helper()
+	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	registry.Register(checkAvailability{comms: availabilityComms{
+		recordingComms: &recordingComms{}, answer: answer,
+	}})
+	sealed, err := registry.Invoke(scopedAgentCtx(principal.ScopeRead), "check_availability",
+		json.RawMessage(`{"from":"2026-09-11T00:00:00Z","to":"2026-09-12T00:00:00Z","duration_minutes":30}`))
+	if err != nil {
+		t.Fatalf("check_availability: %v", err)
+	}
+	return sealedEnvelope(t, sealed)
+}
+
+// An unconnected calendar must not answer as an empty one. A host whose diary
+// this product was never shown returns exactly the slots a host with a clear
+// day returns, so the only thing separating the two is what the envelope says
+// about them: the warning that names the conclusion not to draw, and the
+// authority claim an answer computed without its source may not make.
+func TestAnUnconnectedCalendarDoesNotAnswerAsAnEmptyOne(t *testing.T) {
+	env := checkAvailabilityWindow(t, AvailabilityResult{
+		Slots: aWorkdayOfSlots(), CalendarConnected: false,
+	})
+
+	warning, warned := warningNamed(env, warningNoCalendarConnected)
+	if !warned {
+		t.Fatalf("a free day read off an unconnected calendar carries no warning: %v", env.Warnings)
+	}
+	if warning.Message == "" {
+		t.Error("the warning carries a code with nothing for a reader to act on")
+	}
+	if env.Freshness.Authoritative {
+		t.Error("an answer computed without the calendar it reports on claims to be authoritative")
+	}
+}
+
+// And a calendar this product does read says nothing of the sort: a genuinely
+// free day is a real answer, and a warning on it would train a reader to
+// discount the ones that matter.
+func TestAGenuinelyFreeDayCarriesNoCalendarWarning(t *testing.T) {
+	env := checkAvailabilityWindow(t, AvailabilityResult{
+		Slots: aWorkdayOfSlots(), CalendarConnected: true,
+	})
+
+	if _, warned := warningNamed(env, warningNoCalendarConnected); warned {
+		t.Errorf("a connected calendar's free day is reported as unread: %v", env.Warnings)
+	}
+	if !env.Freshness.Authoritative {
+		t.Error("a window read off the host's own calendar disclaims its own authority")
 	}
 }

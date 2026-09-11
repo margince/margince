@@ -76,7 +76,10 @@ var sendMessageCopy = toolCopy{
 var checkAvailabilityCopy = toolCopy{
 	Purpose: "Find when a host is free, so a time can be proposed to someone.",
 	Limits: "It reads free/busy over the window you ask for and books nothing. It answers for one " +
-		"host — the acting user unless another is named — not for the invitees.",
+		"host — the acting user unless another is named — not for the invitees. With no calendar " +
+		"connected for that host the slots are only what meetings recorded in this CRM leave open, " +
+		"and the answer says so: a free window is then no evidence the host is free, and none at " +
+		"all that a meeting they told you about is missing from their diary.",
 	Instead: "Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already " +
 		"exists and the goal is walking in ready.",
 	Retain: "Keep the exact start and end of the slot you intend to take; book_meeting takes " +

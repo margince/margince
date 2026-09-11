@@ -103,17 +103,17 @@ func momentEvidence(in Input, self []Evidence) []Evidence {
 // invented sentence about it.
 func changeLine(change ChangeIn) string {
 	switch change.Kind {
-	case string(crmcontracts.RepliedAfterGap):
+	case string(crmcontracts.PersonRelationshipChangeKindRepliedAfterGap):
 		if change.Days > 0 {
 			return fmt.Sprintf("They answered after %d days of silence.", change.Days)
 		}
 		return "They answered after a long silence."
-	case string(crmcontracts.WentQuiet):
+	case string(crmcontracts.PersonRelationshipChangeKindWentQuiet):
 		if change.Days > 0 {
 			return fmt.Sprintf("This relationship has been quiet for %d days.", change.Days)
 		}
 		return "This relationship has gone quiet."
-	case string(crmcontracts.Warmed), string(crmcontracts.Cooled):
+	case string(crmcontracts.PersonRelationshipChangeKindWarmed), string(crmcontracts.PersonRelationshipChangeKindCooled):
 		return fmt.Sprintf("The relationship moved from %s to %s.",
 			readableBand(change.From), readableBand(change.To))
 	default:
@@ -175,8 +175,8 @@ func readableRole(role string) string {
 // conversation it was said in rather than the derived claim row — the reader
 // checks a sentence against what was actually written.
 func caresAboutLine(in Input) (string, []Evidence, bool) {
-	priorities := claimsOfKind(in, string(crmcontracts.Priority))
-	objections := claimsOfKind(in, string(crmcontracts.Objection))
+	priorities := claimsOfKind(in, string(crmcontracts.ConversationClaimKindPriority))
+	objections := claimsOfKind(in, string(crmcontracts.ConversationClaimKindObjection))
 	if len(priorities) == 0 && len(objections) == 0 {
 		return "", nil, false
 	}

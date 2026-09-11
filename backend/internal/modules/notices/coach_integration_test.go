@@ -52,7 +52,7 @@ func TestALeadCoachesATeammateAndTheNoticeIsTheirs(t *testing.T) {
 
 	notice, err := e.store.RaiseCoachNotice(
 		e.asRole(lead, "manager"), teammatesSaying(true), rep,
-		crmcontracts.CoachReplyAging, "  Kirsten has been waiting since Tuesday.  ")
+		crmcontracts.NoticeKindCoachReplyAging, "  Kirsten has been waiting since Tuesday.  ")
 	if err != nil {
 		t.Fatalf("a Team Lead coaching their teammate: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestALeadCoachesATeammateAndTheNoticeIsTheirs(t *testing.T) {
 	if notice.Body != "Kirsten has been waiting since Tuesday." {
 		t.Fatalf("the note came back as %q", notice.Body)
 	}
-	if notice.Kind != string(crmcontracts.CoachReplyAging) {
+	if notice.Kind != string(crmcontracts.NoticeKindCoachReplyAging) {
 		t.Fatalf("the notice recorded kind %q", notice.Kind)
 	}
 	if notice.CreatedAt.IsZero() {
@@ -96,7 +96,7 @@ func TestARepDoesNotCoachEvenATeammate(t *testing.T) {
 
 	_, err := e.store.RaiseCoachNotice(
 		e.asRole(e.other, "rep"), teammatesSaying(true), e.recipient,
-		crmcontracts.CoachGeneral, "a word")
+		crmcontracts.NoticeKindCoachGeneral, "a word")
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a rep coaching a teammate got %v, wanted a refusal", err)
 	}
@@ -105,7 +105,7 @@ func TestARepDoesNotCoachEvenATeammate(t *testing.T) {
 	// refusal above is about the role and nothing else.
 	if _, err := e.store.RaiseCoachNotice(
 		e.asRole(e.other, "manager"), teammatesSaying(true), e.recipient,
-		crmcontracts.CoachGeneral, "a word"); err != nil {
+		crmcontracts.NoticeKindCoachGeneral, "a word"); err != nil {
 		t.Fatalf("a Team Lead over the same membership answer was refused: %v", err)
 	}
 }
@@ -117,7 +117,7 @@ func TestALeadDoesNotCoachSomebodyOnAnotherTeam(t *testing.T) {
 
 	_, err := e.store.RaiseCoachNotice(
 		e.asRole(e.other, "manager"), teammatesSaying(false), e.recipient,
-		crmcontracts.CoachGeneral, "a word")
+		crmcontracts.NoticeKindCoachGeneral, "a word")
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a lead coaching a stranger got %v, wanted a refusal", err)
 	}
@@ -130,7 +130,7 @@ func TestASystemPassDoesNotCoach(t *testing.T) {
 
 	_, err := e.store.RaiseCoachNotice(
 		e.engineCtx(), teammatesSaying(true), e.recipient,
-		crmcontracts.CoachGeneral, "a word")
+		crmcontracts.NoticeKindCoachGeneral, "a word")
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("the automation engine coaching a person got %v, wanted a refusal", err)
 	}
@@ -148,11 +148,11 @@ func TestARefusedCallerCannotTellAValidRequestFromAnInvalidOne(t *testing.T) {
 	rep := e.asRole(e.other, "rep")
 
 	_, valid := e.store.RaiseCoachNotice(
-		rep, teammatesSaying(true), e.recipient, crmcontracts.CoachGeneral, "a word")
+		rep, teammatesSaying(true), e.recipient, crmcontracts.NoticeKindCoachGeneral, "a word")
 	_, unknownKind := e.store.RaiseCoachNotice(
 		rep, teammatesSaying(true), e.recipient, crmcontracts.NoticeKind("automation"), "a word")
 	_, noRecipient := e.store.RaiseCoachNotice(
-		rep, teammatesSaying(true), ids.UserID{}, crmcontracts.CoachGeneral, "a word")
+		rep, teammatesSaying(true), ids.UserID{}, crmcontracts.NoticeKindCoachGeneral, "a word")
 
 	for name, err := range map[string]error{
 		"a well-formed ask": valid,
@@ -197,7 +197,7 @@ func TestAnOversizeNoteIsRefusedRatherThanTrimmed(t *testing.T) {
 
 	_, err := e.store.RaiseCoachNotice(
 		e.asRole(e.other, "manager"), teammatesSaying(true), e.recipient,
-		crmcontracts.CoachGeneral, strings.Repeat("x", noteBound+1))
+		crmcontracts.NoticeKindCoachGeneral, strings.Repeat("x", noteBound+1))
 	var parse *values.ParseError
 	if !errors.As(err, &parse) || parse.Field != "note" {
 		t.Fatalf("an oversize note got %v, wanted a validation error on note", err)
@@ -207,7 +207,7 @@ func TestAnOversizeNoteIsRefusedRatherThanTrimmed(t *testing.T) {
 	// direction nobody notices.
 	if _, err := e.store.RaiseCoachNotice(
 		e.asRole(e.other, "manager"), teammatesSaying(true), e.recipient,
-		crmcontracts.CoachGeneral, strings.Repeat("x", noteBound)); err != nil {
+		crmcontracts.NoticeKindCoachGeneral, strings.Repeat("x", noteBound)); err != nil {
 		t.Fatalf("a note exactly at the ceiling was refused: %v", err)
 	}
 }
@@ -219,7 +219,7 @@ func TestCoachingYourselfIsRefused(t *testing.T) {
 
 	_, err := e.store.RaiseCoachNotice(
 		e.asRole(e.other, "manager"), teammatesSaying(true), e.other,
-		crmcontracts.CoachGeneral, "a word")
+		crmcontracts.NoticeKindCoachGeneral, "a word")
 	var parse *values.ParseError
 	if !errors.As(err, &parse) || parse.Field != "recipient_user_id" {
 		t.Fatalf("coaching yourself got %v, wanted a validation error on the recipient", err)
@@ -233,7 +233,7 @@ func TestANoticeWithNoNoteStillSaysWhatItIsAbout(t *testing.T) {
 
 	notice, err := e.store.RaiseCoachNotice(
 		e.asRole(e.other, "manager"), teammatesSaying(true), e.recipient,
-		crmcontracts.CoachReviewBacklog, "")
+		crmcontracts.NoticeKindCoachReviewBacklog, "")
 	if err != nil {
 		t.Fatalf("raising a notice with no note: %v", err)
 	}

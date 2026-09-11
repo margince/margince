@@ -66,13 +66,27 @@ type graphItem struct {
 // with thousands of links costs the same as one with fifty.
 const graphExpansionLimit = 50
 
-// anchorLinkColumn names the activity_link column an anchor type walks.
-var anchorLinkColumn = map[string]string{
-	string(datasource.EntityPerson):  "person_id",
-	string(datasource.EntityCompany): "company_id",
-	string(datasource.EntityDeal):    "deal_id",
-	string(datasource.EntityProject): "project_id",
-}
+// anchorLinkColumn names the activity_link column an anchor type walks,
+// DERIVED from activityLinkArms rather than listed a second time.
+//
+// It was a list of its own, and it had already fallen behind by one arm: the
+// link shape has admitted a lead since core 0038, this map did not, and a lead
+// anchor therefore answered its profile and nothing else. The tool advertising
+// that walk says "what cannot be evidenced is absent rather than inferred", so
+// a model read the empty answer as a lead nothing had happened to and said so
+// to the person asking. A walk that cannot reach a record's activity must not
+// be reachable through a list somebody has to remember to extend.
+//
+// activityLinkArms is the one that is held against the DDL's own enum
+// (TestEverySubjectLinkArmIsRanked), which is why the derivation runs in this
+// direction and not the other.
+var anchorLinkColumn = func() map[string]string {
+	columns := make(map[string]string, len(activityLinkArms))
+	for _, arm := range activityLinkArms {
+		columns[arm.entity] = arm.column
+	}
+	return columns
+}()
 
 // assembleGraph is the fixed-depth context walk (B-EP05.20a): anchor →
 // linked activities (hop 1) → those activities' other link targets
@@ -136,11 +150,8 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 	if err := auth.Require(ctx, anchorType, principal.ActionRead); err != nil {
 		return nil, err
 	}
-	// anchorLinkColumn is what this walk can READ, not what activity_link can
-	// hold: the link shape has admitted a lead arm since core 0038, and this
-	// walk does not follow it, so a lead anchor's context is its profile alone.
-	// That is an honestly-empty neighborhood rather than a walk silently
-	// skipped — and it is a gap, tracked rather than restated as a property.
+	// Every arm activity_link admits is walkable, so `walkable` now says only
+	// that this anchor is a record activities hang off at all.
 	linkCol, walkable := anchorLinkColumn[anchorType]
 	now := time.Now().UTC()
 
@@ -469,11 +480,8 @@ func sortAndTrim(items *[]graphItem, maxItems int) {
 }
 
 func plural(entity string) string {
-	switch {
-	case strings.HasSuffix(entity, "person"):
+	if strings.HasSuffix(entity, "person") {
 		return "people"
-	case strings.HasSuffix(entity, "company"):
-		return strings.TrimSuffix(entity, "company") + "companies"
 	}
 	return entity + "s"
 }

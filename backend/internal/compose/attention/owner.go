@@ -121,11 +121,11 @@ func ownerOnTheWire(row ranked, reader ids.UUID) *crmcontracts.WorklistOwner {
 	switch row.ownerRef.kind {
 	case ownerNamed:
 		return &crmcontracts.WorklistOwner{
-			Kind: crmcontracts.WorklistOwnerUser,
+			Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUser,
 			Id:   idPtr(row.ownerRef.user),
 		}
 	case ownerNobody:
-		return &crmcontracts.WorklistOwner{Kind: crmcontracts.WorklistOwnerUnassigned}
+		return &crmcontracts.WorklistOwner{Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned}
 	case ownerUnreadable:
 		// Withheld, and the contract's own answer for a fact this caller may
 		// not resolve: the field is absent. A client draws the row without an
@@ -146,10 +146,10 @@ func ownerOnTheWire(row ranked, reader ids.UUID) *crmcontracts.WorklistOwner {
 			return nil
 		}
 		if row.item.Deal.OwnerId == nil {
-			return &crmcontracts.WorklistOwner{Kind: crmcontracts.WorklistOwnerUnassigned}
+			return &crmcontracts.WorklistOwner{Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned}
 		}
 		return &crmcontracts.WorklistOwner{
-			Kind: crmcontracts.WorklistOwnerUser,
+			Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUser,
 			Id:   row.item.Deal.OwnerId,
 		}
 	case ownerTheReader:
@@ -160,7 +160,7 @@ func ownerOnTheWire(row ranked, reader ids.UUID) *crmcontracts.WorklistOwner {
 			return nil
 		}
 		return &crmcontracts.WorklistOwner{
-			Kind: crmcontracts.WorklistOwnerUser,
+			Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUser,
 			Id:   idPtr(reader),
 		}
 	default:

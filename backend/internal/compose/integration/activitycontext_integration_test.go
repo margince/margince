@@ -239,13 +239,15 @@ func TestAMeetingLinkedOnlyToALeadPrepsAgainstTheLead(t *testing.T) {
 		t.Fatalf("preparing for the meeting: %v", err)
 	}
 	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityLead, ID: lead})
-	// A lead carries no activity_link neighborhood the record walk reads, so
-	// the prep is honestly the event and the lead — never the 500 an unwalkable
-	// subject would raise.
-	for _, section := range assembled.Sections {
-		if section.Name == "recent_touches" || section.Name == "open_tasks" {
-			t.Errorf("a lead subject produced a %q section, which a lead has no walk for", section.Name)
-		}
+	// And the lead's own neighborhood comes back with it. This assertion used
+	// to run the other way — it froze the walk's missing lead arm as a property
+	// of leads, so the one test that looked at this agreed the emptiness was
+	// correct. A prep built on a lead nobody can see the history of is the
+	// answer that had a model call a lead untouched.
+	touches := summariesIn(assembled, "recent_touches")
+	if !strings.Contains(strings.Join(touches, " | "), "Discovery call") {
+		t.Errorf("recent_touches = %v, want the meeting this lead is linked to — a lead subject "+
+			"whose timeline comes back empty reads as a lead nothing has happened to", touches)
 	}
 }
 
@@ -609,4 +611,42 @@ func sectionNames(assembled retrieval.Context) []string {
 		out = append(out, section.Name)
 	}
 	return out
+}
+
+// A LEAD anchor walks its own timeline, and the case for asserting it is what
+// an empty one is read as.
+//
+// `activity_link` has admitted a lead arm since the 0001 baseline, and the walk
+// followed person, company, deal and project. So a lead answered its
+// profile and nothing else, while the tool serving this walk tells its caller
+// that what cannot be evidenced is absent rather than inferred. The two
+// sentences together turn a leg nobody wrote into a report that nothing has
+// happened — and that is what a model did with it, declining to close off a
+// dead lead because the record it was shown carried no history at all.
+//
+// Asserting the SUMMARY rather than the section being present is deliberate: a
+// walk emitting an empty recent_touches would satisfy a check on the sections.
+func TestALeadAnchorWalksItsOwnTimeline(t *testing.T) {
+	e := SetupSearch(t)
+	lead := e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, company_name, status, source, captured_by)
+		VALUES ($1, $2, 'Bruno Kellner', 'Kellner Anlagenbau', 'new', 'manual', 'human:x')`, e.Rep1)
+	note := e.SeedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'note', 'Mail kam als unzustellbar zurück', now(), 'manual', 'human:x')`)
+	linkMeeting(t, e, note, "lead", "lead_id", lead)
+
+	assembled, err := search.NewRetriever(e.Store, nil).AssembleContext(e.Admin(),
+		datasource.EntityRef{Type: datasource.EntityLead, ID: lead},
+		retrieval.AssembleOptions{MaxItems: 5})
+	if err != nil {
+		t.Fatalf("walking the lead's context: %v", err)
+	}
+
+	touches := summariesIn(assembled, "recent_touches")
+	if len(touches) == 0 {
+		t.Fatalf("a lead with a linked activity walked back no recent_touches at all, which a "+
+			"caller reads as a lead nothing has happened to: sections %+v", assembled.Sections)
+	}
+	if !strings.Contains(strings.Join(touches, " | "), "unzustellbar") {
+		t.Errorf("recent_touches = %v, want the note filed against this lead", touches)
+	}
 }

@@ -156,20 +156,24 @@ func readMergeFaces(
 	}
 }
 
-// readPersonFaces names people, with the first email as the detail line.
+// readPersonFaces names people, with the address they are reachable at as the
+// detail line.
 //
-// ORDER BY position, created_at, and DISTINCT ON the person: the same order
-// attachPersonEmails imposes, so the address a card shows is the one the record
-// page calls first. A different pick here would make the merge screen name a
-// person by an address they are not otherwise known by.
+// ReachableEmailOrder, so the card shows what the record page and the contacts
+// list show. It used to order by position alone and say in this comment that
+// that matched the record page — which stopped being true the moment the page
+// started preferring the PRIMARY address: a person whose primary is not first
+// was named by one address on the merge screen and another everywhere else,
+// which is the worst place for it. A merge asks somebody to decide that two
+// records are one person, and it has to name them the way they are known.
 func readPersonFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, into map[ids.UUID]MergeFace) error {
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.full_name, p.created_at, e.email
 		FROM person p
 		LEFT JOIN LATERAL (
 			SELECT pe.email FROM person_email pe
-			WHERE pe.person_id = p.id AND pe.archived_at IS NULL
-			ORDER BY pe.position, pe.created_at
+			WHERE pe.person_id = p.id AND pe.archived_at IS NULL`+
+		ReachableEmailOrder+`
 			LIMIT 1
 		) e ON true
 		WHERE p.id = ANY($1) AND p.archived_at IS NULL`, rowIDs)

@@ -121,11 +121,11 @@ func sortExceptions(found []crmcontracts.TeamException) {
 // exceptionRank is the order a lead reads the four kinds in.
 func exceptionRank(kind crmcontracts.TeamExceptionKind) int {
 	switch kind {
-	case crmcontracts.TeamExceptionResponseBreached:
+	case crmcontracts.TeamExceptionKindTeamExceptionResponseBreached:
 		return 0
-	case crmcontracts.TeamExceptionRevenueAtRisk:
+	case crmcontracts.TeamExceptionKindTeamExceptionRevenueAtRisk:
 		return 1
-	case crmcontracts.TeamExceptionUnassigned:
+	case crmcontracts.TeamExceptionKindTeamExceptionUnassigned:
 		return 2
 	default:
 		return 3
@@ -153,24 +153,24 @@ func exceptionOf(row ranked, asOf time.Time) (crmcontracts.TeamException, bool) 
 	// A first reply the policy says is already late. The THRESHOLD is that
 	// policy's own state, so the manager and the rep read one rule.
 	case row.item.Source == sourceLeadResponse && breachedReply(row):
-		return exception(row, owner, crmcontracts.TeamExceptionResponseBreached,
-			string(crmcontracts.LeadSlaStateBreached), asOf), true
+		return exception(row, owner, crmcontracts.TeamExceptionKindTeamExceptionResponseBreached,
+			string(crmcontracts.LeadSlaStateLeadSlaStateBreached), asOf), true
 	// Revenue the day already judged material — the pipeline's own median,
 	// which is what makes "material" track the business rather than a number
 	// somebody typed once.
 	case row.item.Source == sourceAtRisk && row.item.Level <= levelMaterialRisk:
-		return exception(row, owner, crmcontracts.TeamExceptionRevenueAtRisk,
+		return exception(row, owner, crmcontracts.TeamExceptionKindTeamExceptionRevenueAtRisk,
 			thresholdMaterial, asOf), true
 	// Work nobody has taken. Stated by the producer rather than inferred: an
 	// unstated owner is a lane that never answered, which is not the same as
 	// nobody holding the row.
-	case owner != nil && owner.Kind == crmcontracts.WorklistOwnerUnassigned:
-		return exception(row, owner, crmcontracts.TeamExceptionUnassigned,
+	case owner != nil && owner.Kind == crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned:
+		return exception(row, owner, crmcontracts.TeamExceptionKindTeamExceptionUnassigned,
 			thresholdUnowned, asOf), true
 	// One broken thing reported many times. The fold already decided these are
 	// one condition rather than a pile, so the count is the evidence.
 	case row.item.Batch != nil && row.item.Batch.Key == keySystemIncident:
-		return exception(row, owner, crmcontracts.TeamExceptionRepeatedFailure,
+		return exception(row, owner, crmcontracts.TeamExceptionKindTeamExceptionRepeatedFailure,
 			thresholdRepeated, asOf), true
 	}
 	return crmcontracts.TeamException{}, false

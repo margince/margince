@@ -72,13 +72,20 @@ def _tool_calls(scenario):
     equal to itself either way. Nothing here is testing must_call_with — it is
     being satisfied, and the simplest thing that satisfies it is the least to go
     wrong.
+
+    AN ANY-OF ENTRY IS SATISFIED BY ITS FIRST ALTERNATIVE. check.check accepts
+    any of them, so one is enough; calling the whole group would put tools in
+    the transcript the scenario never asked for. Splitting the entry matters
+    rather than being tidiness: a group written back as one tool name reaches no
+    tool at all, and every candidate answer for that scenario would then be
+    reported as a FALSE RED for a reason that is not in the prose.
     """
     calls = [
-        {"type": "tool_use", "name": "mcp__margince__" + tool, "input": {}}
-        for tool in scenario.get("must_call", [])
+        {"type": "tool_use", "name": "mcp__margince__" + check.alternatives(entry)[0], "input": {}}
+        for entry in scenario.get("must_call", [])
     ]
-    for spec in scenario.get("must_call_with", []):
-        target, _, value = spec.partition("=")
+    for entry in scenario.get("must_call_with", []):
+        target, _, value = check.alternatives(entry)[0].partition("=")
         tool, _, argument = target.partition(".")
         if not tool or not argument:
             continue

@@ -129,7 +129,7 @@ func TestBothPagesNameTheProjectsSectionWhenTheCallerLacksTheGrant(t *testing.T)
 	if personPage.Projects != nil {
 		t.Error("the person page served projects to a caller with no project grant")
 	}
-	if !containsPersonSection(personPage.SectionsOmitted, crmcontracts.Person360SectionsOmittedProjects) {
+	if !containsPersonSection(personPage.SectionsOmitted, crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedProjects) {
 		t.Errorf("person page sections_omitted = %v, want projects named", personPage.SectionsOmitted)
 	}
 }

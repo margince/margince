@@ -46,7 +46,7 @@ func TestDemoteReversesAPromotionThatCreatedThePerson(t *testing.T) {
 	if err != nil {
 		t.Fatalf("demote: %v", err)
 	}
-	if out.Unwind != crmcontracts.DemoteUnwindReversed {
+	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed {
 		t.Errorf("unwind = %q, want reversed: the promotion created this person", out.Unwind)
 	}
 	if out.Lead.Status != crmcontracts.LeadStatusEngaged || out.Lead.ArchivedAt != nil || out.Lead.PromotedPersonId != nil {
@@ -90,7 +90,7 @@ func TestDemoteOfAMergeTouchesOnlyTheLineage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("demote: %v", err)
 	}
-	if out.Unwind != crmcontracts.DemoteUnwindMergeLineageOnly {
+	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly {
 		t.Errorf("unwind = %q, want merge_lineage_only", out.Unwind)
 	}
 	archived, from := e.personState(t, ids.UUID(existing.Id))
@@ -130,7 +130,7 @@ func TestDemoteNeverArchivesAMergeSurvivor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("demote: %v", err)
 	}
-	if out.Unwind != crmcontracts.DemoteUnwindMergeLineageOnly {
+	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly {
 		t.Errorf("unwind = %q, want merge_lineage_only: the person is a merge survivor", out.Unwind)
 	}
 	archived, from := e.personState(t, ids.UUID(created.Id))
@@ -201,14 +201,14 @@ func TestPromotePreviewNamesTheOutcomeWithoutWriting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("preview fresh: %v", err)
 	}
-	if preview.Outcome != crmcontracts.PromoteLeadPreviewOutcomeCreate || preview.Person != nil {
+	if preview.Outcome != crmcontracts.PromoteLeadPreviewOutcomePromoteLeadPreviewOutcomeCreate || preview.Person != nil {
 		t.Errorf("fresh lead preview = %+v, want create with no person", preview)
 	}
 	preview, err = e.store.PreviewLeadPromotion(e.ctx, known)
 	if err != nil {
 		t.Fatalf("preview known: %v", err)
 	}
-	if preview.Outcome != crmcontracts.PromoteLeadPreviewOutcomeMerge || preview.Person == nil || preview.Person.Id != existing.Id {
+	if preview.Outcome != crmcontracts.PromoteLeadPreviewOutcomePromoteLeadPreviewOutcomeMerge || preview.Person == nil || preview.Person.Id != existing.Id {
 		t.Errorf("known lead preview = %+v, want merge into %v", preview, existing.Id)
 	}
 
@@ -329,7 +329,7 @@ func TestDemoteNeedsNoArchiveGrantToUndoACreatedPerson(t *testing.T) {
 	if err != nil {
 		t.Fatalf("demote as rep: %v — the reversal must run under the same authority as the promotion", err)
 	}
-	if out.Unwind != crmcontracts.DemoteUnwindReversed {
+	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed {
 		t.Errorf("unwind = %q, want reversed", out.Unwind)
 	}
 	if archived, _ := e.personState(t, ids.UUID(person.Id)); !archived {
@@ -357,7 +357,7 @@ func TestDemoteKeepsAPersonAnotherLeadPromotedInto(t *testing.T) {
 	if err != nil {
 		t.Fatalf("demote first: %v", err)
 	}
-	if out.Unwind != crmcontracts.DemoteUnwindMergeLineageOnly {
+	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly {
 		t.Errorf("unwind = %q, want merge_lineage_only: another lead depends on this person", out.Unwind)
 	}
 	if archived, _ := e.personState(t, ids.UUID(person.Id)); archived {
@@ -395,7 +395,7 @@ func TestPromotePreviewWithholdsThePersonWithoutThePersonReadGrant(t *testing.T)
 	if err != nil {
 		t.Fatalf("preview: %v", err)
 	}
-	if preview.Outcome != crmcontracts.PromoteLeadPreviewOutcomeMerge {
+	if preview.Outcome != crmcontracts.PromoteLeadPreviewOutcomePromoteLeadPreviewOutcomeMerge {
 		t.Errorf("outcome = %q, want merge — the outcome is a fact about the lead", preview.Outcome)
 	}
 	if preview.Person != nil || preview.PersonWithheld == nil || !*preview.PersonWithheld {

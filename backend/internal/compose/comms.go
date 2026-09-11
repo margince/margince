@@ -50,6 +50,11 @@ type commsAdapter struct {
 	// defer, exactly as it does on the HTTP transport: an agent must not be
 	// able to promise a moment nothing will wake at.
 	timer activities.ScheduleTimer
+	// calendars answers whether a host's own diary reaches this product. Nil
+	// answers no, so a free/busy window from an unwired deployment says what it
+	// is instead of passing for a reading of the host's calendar
+	// (calendarBacking, schedulingseam.go).
+	calendars calendarBacking
 	// own answers whether an addressee is one of the workspace's own people.
 	// The activities store excludes participants with a seat; a colleague
 	// without one is only recognisable by domain, and that set is capture's.
@@ -334,8 +339,18 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 	if err != nil {
 		return agents.AvailabilityResult{}, err
 	}
+	calendarOwner := ids.From[ids.UserKind](hostID)
+	// Whether a calendar backs the answer is read BEFORE the slots, so a
+	// deployment that cannot answer it publishes no window at all. The busy list
+	// alone cannot be read honestly: a host with no connected calendar and a host
+	// with an empty day produce the same slots, and the caller has no other way
+	// to tell them apart.
+	connected, err := c.calendars.connected(ctx, calendarOwner)
+	if err != nil {
+		return agents.AvailabilityResult{}, err
+	}
 	// The store applies its default slot duration when none is named.
-	slots, truncated, err := c.store.Availability(ctx, ids.From[ids.UserKind](hostID), from, to, time.Duration(durationMinutes)*time.Minute)
+	slots, truncated, err := c.store.Availability(ctx, calendarOwner, from, to, time.Duration(durationMinutes)*time.Minute)
 	if err != nil {
 		return agents.AvailabilityResult{}, err
 	}
@@ -351,7 +366,7 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 	for _, s := range slots {
 		free = append(free, agents.FreeSlot{Start: s.Start, End: s.End})
 	}
-	return agents.AvailabilityResult{Slots: free, Truncated: truncated}, nil
+	return agents.AvailabilityResult{Slots: free, Truncated: truncated, CalendarConnected: connected}, nil
 }
 
 func (c commsAdapter) BookMeeting(ctx context.Context, in agents.BookMeetingArgs) (json.RawMessage, error) {

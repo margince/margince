@@ -154,7 +154,7 @@ func Read(
 	ctx context.Context, lane Completer, companyID ids.CompanyID, in Input, lang string,
 ) ([]crmcontracts.Company360Suggestion, crmcontracts.WrittenBy, error) {
 	if lane == nil || len(in.Messages) == 0 {
-		return nil, crmcontracts.Deterministic, nil
+		return nil, crmcontracts.WrittenByDeterministic, nil
 	}
 	resp, err := ai.Ask(ctx, lane, ScanRequest(in, lang), func(text string) error {
 		_, refused, parseErr := ParseFindings(text, companyID, in)
@@ -168,16 +168,16 @@ func Read(
 	})
 	var deferral *ai.BudgetDeferralError
 	if errors.As(err, &deferral) {
-		return nil, crmcontracts.Deterministic, err
+		return nil, crmcontracts.WrittenByDeterministic, err
 	}
 	if err != nil {
-		return nil, crmcontracts.Deterministic, &LaneError{Cause: err}
+		return nil, crmcontracts.WrittenByDeterministic, &LaneError{Cause: err}
 	}
 	kept, _, err := ParseFindings(resp.Text, companyID, in)
 	if err != nil {
-		return nil, crmcontracts.Deterministic, &LaneError{Cause: err}
+		return nil, crmcontracts.WrittenByDeterministic, &LaneError{Cause: err}
 	}
-	return kept, crmcontracts.Model, nil
+	return kept, crmcontracts.WrittenByModel, nil
 }
 
 // rawFinding is the reply's shape before anything is checked.
@@ -264,7 +264,7 @@ func ground(raw rawFinding, companyID ids.CompanyID, in Input) (crmcontracts.Com
 		At:         &message.At,
 		Origin:     ptr(origin(message)),
 	}}
-	by := crmcontracts.Model
+	by := crmcontracts.WrittenByModel
 	out := crmcontracts.Company360Suggestion{
 		Kind:        kind,
 		Title:       &title,

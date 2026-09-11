@@ -122,7 +122,7 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 // could see.
 func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistReason) {
 	switch lead.State {
-	case string(crmcontracts.LeadSlaStateBreached):
+	case string(crmcontracts.LeadSlaStateLeadSlaStateBreached):
 		because := []crmcontracts.WorklistReason{reason("response_overdue", nil)}
 		if !lead.DeadlineAt.IsZero() {
 			days := daysSince(lead.DeadlineAt, asOf)
@@ -131,7 +131,7 @@ func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistRe
 			}
 		}
 		return levelWaiting, because
-	case string(crmcontracts.LeadSlaStateAtRisk):
+	case string(crmcontracts.LeadSlaStateLeadSlaStateAtRisk):
 		// The deadline travels with the reason, because "reply due soon" alone
 		// asks the rep to guess how soon. Its breached sibling above already
 		// carries a figure (the days it has been overdue); this is the same

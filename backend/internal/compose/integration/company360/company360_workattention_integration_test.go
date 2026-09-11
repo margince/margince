@@ -53,7 +53,7 @@ func TestCompany360_ADealCarriesItsMostOverdueTaskAsTheReason(t *testing.T) {
 
 	view := assemble(t, e, companyID)
 	attention := dealAttention(t, view, dealID)
-	if attention.Kind != crmcontracts.WorkAttentionOverdueTask {
+	if attention.Kind != crmcontracts.Company360WorkAttentionKindWorkAttentionOverdueTask {
 		t.Fatalf("kind = %q, want an overdue task", attention.Kind)
 	}
 	// Most overdue wins, and it must be stable: without the id tiebreaker two
@@ -107,7 +107,7 @@ func TestCompany360_AProjectCarriesTheOpenCommitmentTheyMade(t *testing.T) {
 
 	view := assemble(t, e, companyID)
 	attention := projectAttention(t, view, projectID)
-	if attention.Kind != crmcontracts.WorkAttentionCommitmentTheirs {
+	if attention.Kind != crmcontracts.Company360WorkAttentionKindWorkAttentionCommitmentTheirs {
 		t.Fatalf("kind = %q, want a commitment they made", attention.Kind)
 	}
 	// Verbatim: the card quotes the body, and a paraphrase here would be the

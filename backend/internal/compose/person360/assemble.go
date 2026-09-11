@@ -190,68 +190,68 @@ type section struct {
 
 func (s *Service) sections(personID ids.PersonID, now time.Time, opts AssembleOptions) []section {
 	return []section{
-		{name: crmcontracts.Person360SectionsOmittedStrength, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedStrength, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.strengthSection(ctx, tx, personID, now, opts.ProjectID, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedRelationshipChanges, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedRelationshipChanges, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.relationshipChangesSection(ctx, tx, personID, now, opts.ProjectID, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedEmployments, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedEmployments, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.employmentsSection(ctx, tx, personID, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedDealRoles, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedDealRoles, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.dealRolesSection(ctx, tx, personID, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedProjects, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedProjects, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.projectsSection(ctx, tx, personID, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedActivities, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedActivities, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.activitiesSection(ctx, tx, personID, opts, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedNextSteps, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedNextSteps, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.nextStepsSection(ctx, tx, personID, opts, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedLastTouch, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedLastTouch, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.lastTouchSection(ctx, tx, personID, opts, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedNetwork, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedNetwork, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.networkSection(ctx, tx, personID, now, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedConsent, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedConsent, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.consentSection(ctx, tx, personID, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedDeadAddresses, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedDeadAddresses, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.deadAddressesSection(ctx, tx, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedProfileFields, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedProfileFields, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.profileFieldsSection(ctx, tx, personID, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedSinceLastVisit, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedSinceLastVisit, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.sinceLastVisitSection(ctx, tx, personID, opts, out)
 		}},
 		// Both of these run BEFORE the moments below, because the ladder's
 		// rules read them: the meeting-prep rung asks what is booked, and the
 		// missing-next-step rung asks whether an open deal has nothing
 		// scheduled on it.
-		{name: crmcontracts.Person360SectionsOmittedClaims, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedClaims, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.claimsSection(ctx, tx, personID, opts, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedCommercial, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedCommercial, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.commercialSection(ctx, tx, personID, out)
 		}},
 		// What a licensed provider was PAID to tell us about this person
 		// (ADR-0101). Beside the canonical record, never folded into it.
-		{name: crmcontracts.Person360SectionsOmittedProviderProfile, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedProviderProfile, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.providerProfileSection(ctx, tx, personID, out)
 		}},
-		{name: crmcontracts.Person360SectionsOmittedNextMeeting, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedNextMeeting, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.nextMeetingSection(ctx, tx, personID, now, opts, out)
 		}},
 		// LAST, and it has to be: the moments are derived from what the
 		// sections above gathered, so a moment can never cite evidence this
 		// page is not showing, and a section withheld for want of a grant
 		// contributes no moments rather than leaking through one.
-		{name: crmcontracts.Person360SectionsOmittedMoments, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedMoments, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.momentsSection(ctx, tx, personID, now, out)
 		}},
 	}

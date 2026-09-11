@@ -11,12 +11,14 @@
 # list.
 #
 # So this scenario asks a question whose answer is a NUMBER broken down by a
-# dimension whose name the model is not told: `direction`. Three routes are
+# dimension whose name the model is not told: `direction`. Four routes are
 # legitimate and the scenario is deliberately indifferent between them —
 #
 #   - guess `direction`, which is a good guess, and be right first time;
 #   - guess wrong, read the refusal, and use the list it carries;
-#   - open describe_report_vocabulary and read the names.
+#   - open describe_report_vocabulary and read the names;
+#   - take the same population through the analytics engine instead, which is
+#     where the catalog's silence about `direction` sends a careful reader.
 #
 # What it is NOT indifferent about is the fourth outcome: concluding that this
 # workspace cannot answer the question. That is the failure the query vocabulary
@@ -48,25 +50,37 @@ prompt: |
   Roughly how much of what we have logged in the CRM is us reaching out versus
   them coming to us? I want the counts, not the individual records.
 
-must_call:
-  - run_report
-
-# The tool name alone is not the assertion. `must_call` would pass on a call to
-# some OTHER report followed by invented inbound and outbound counts, and nothing
-# that reads the closing prose can tell an invented number from a read one — so
-# the report itself is pinned.
+# EITHER ENGINE, AND THE POPULATION IS WHAT IS PINNED.
 #
-# `group_by` is deliberately NOT pinned. More than one plan answers this
-# honestly: grouping by `direction`, or filtering to each direction in turn. What
-# would be wrong is answering from a different report, and that is what this
-# catches.
+# Two doors answer this question from the same aggregate: run_report over the
+# prebuilt `activities-by-kind` report, and run_analytics_query over the entity
+# of that name. Both read the activity population and group it; neither is the
+# wrong route. The catalog publishes each report's DEFAULT grouping and warns
+# that a default is not that report's reach, but it names no dimension: a model
+# that reads it, sees nothing resembling direction and follows run_report's own
+# boundary sentence into the analytics engine has done what the surface told it
+# to. Which door it takes is therefore the surface's answer, not the model's,
+# and scoring the model for it measures the wrong party.
+#
+# Case 20 already refuses to pin which population answers a question that has
+# more than one honest answer, for the same reason: failing a run for the engine
+# it picked measures the model's taste, not the product.
+#
+# What IS the assertion is that the counts came from an aggregate over the
+# activity population rather than from the model's own reading of the records —
+# so the population name is pinned on whichever door was used. `group_by` stays
+# unpinned: grouping by `direction` and filtering to each direction in turn are
+# both honest plans.
+must_call:
+  - run_report|run_analytics_query
 must_call_with:
-  - run_report.report=activities-by-kind
+  - run_report.report=activities-by-kind|run_analytics_query.entity=activities-by-kind
 may_call:
-  # The door, when a name is wanted rather than guessed. Optional on purpose:
-  # a run that guesses `direction` correctly and never opens it has done the
+  # The doors, when a name is wanted rather than guessed. Optional on purpose:
+  # a run that guesses `direction` correctly and never opens one has done the
   # better thing, and requiring the call would score the cheap path as a failure.
   - describe_report_vocabulary
+  - describe_analytics_vocabulary
   - query_workspace
   - search_records
   - list_records

@@ -267,13 +267,13 @@ func (h Handlers) accessTokenTTL() *time.Duration {
 // momentary mis-report costs an unsorted list, never a wrong answer.
 func (h Handlers) resolveSorMode(ctx context.Context) crmcontracts.MeResponseSystemOfRecordMode {
 	if h.sorMode == nil {
-		return crmcontracts.Native
+		return crmcontracts.MeResponseSystemOfRecordModeNative
 	}
 	overlay, err := h.sorMode(ctx)
 	if err != nil || !overlay {
-		return crmcontracts.Native
+		return crmcontracts.MeResponseSystemOfRecordModeNative
 	}
-	return crmcontracts.Overlay
+	return crmcontracts.MeResponseSystemOfRecordModeOverlay
 }
 
 // Login implements (POST /auth/login). The route is public; the singleton

@@ -87,7 +87,7 @@ func TestCompanySiteReadSaysWhyTheCrawlStopped(t *testing.T) {
 	if got.StoppedReason == nil {
 		t.Fatal("a bounded read must be able to say what bounded it")
 	}
-	if *got.StoppedReason != crmcontracts.CompanySiteReadStoppedReasonPageCap {
+	if *got.StoppedReason != crmcontracts.CompanySiteReadStoppedReasonCompanySiteReadStoppedReasonPageCap {
 		t.Errorf("stopped_reason = %q, want the page cap the store recorded", *got.StoppedReason)
 	}
 

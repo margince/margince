@@ -463,10 +463,10 @@ func TestSavedViewResourceCheckAgainstTheContractEnum(t *testing.T) {
 
 	declared := map[string]bool{}
 	for _, r := range []crmcontracts.SavedViewResource{
-		crmcontracts.SavedViewResourceActivities, crmcontracts.SavedViewResourceDeals,
-		crmcontracts.SavedViewResourceLeads, crmcontracts.SavedViewResourceCompanies,
-		crmcontracts.SavedViewResourcePartners, crmcontracts.SavedViewResourcePeople,
-		crmcontracts.SavedViewResourceProjects,
+		crmcontracts.SavedViewResourceSavedViewResourceActivities, crmcontracts.SavedViewResourceSavedViewResourceDeals,
+		crmcontracts.SavedViewResourceSavedViewResourceLeads, crmcontracts.SavedViewResourceSavedViewResourceCompanies,
+		crmcontracts.SavedViewResourceSavedViewResourcePartners, crmcontracts.SavedViewResourceSavedViewResourcePeople,
+		crmcontracts.SavedViewResourceSavedViewResourceProjects,
 	} {
 		declared[string(r)] = true
 	}
@@ -496,7 +496,7 @@ func TestSavedViewOverProjectsIsStoredAndReadBack(t *testing.T) {
 		"filter":  map[string]any{"field": "phase", "op": "eq", "value": "delivering"},
 	}
 	created, err := store.CreateSavedView(rep, collections.CreateSavedViewInput{
-		Resource: string(crmcontracts.SavedViewResourceProjects), Name: "In delivery", Query: query,
+		Resource: string(crmcontracts.SavedViewResourceSavedViewResourceProjects), Name: "In delivery", Query: query,
 	})
 	if err != nil {
 		t.Fatalf("create a saved view over projects: %v", err)
@@ -505,7 +505,7 @@ func TestSavedViewOverProjectsIsStoredAndReadBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read the view back: %v", err)
 	}
-	if got.Resource != string(crmcontracts.SavedViewResourceProjects) {
+	if got.Resource != string(crmcontracts.SavedViewResourceSavedViewResourceProjects) {
 		t.Errorf("resource = %q, want projects", got.Resource)
 	}
 	if !jsonEqual(t, query, got.Query) {

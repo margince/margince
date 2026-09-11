@@ -16,7 +16,6 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
-import { primaryEmail } from "../format/primaryemail";
 import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -318,16 +317,17 @@ export function ContactsScreen() {
           {
             key: "email",
             header: t("people.email"),
-            // The shared rule, not a second spelling of it. This column used
-            // to take find(is_primary) ?? [0], which shows a RETIRED address
-            // whenever one sits first — the reader then writes to an address
-            // somebody deliberately took out of service.
+            // The SERVER's pick, not a rule re-made here. Which of a
+            // contact's addresses they are reachable at is one question, and
+            // answering it in the browser meant the list could not be ordered
+            // by it and each surface that needed the address answered again.
             //
             // An address is words a person reads, so it takes the body face
             // like every other value in the row. The mono face is for a
             // machine name — a name and a domain set in it read as an
             // identifier rather than as somebody a reader could write to.
-            cell: (person: Person) => primaryEmail(person.emails) ?? "",
+            cell: (person: Person) => person.primary_email ?? "",
+            sort: "primary_email",
           },
           {
             // Who they work for TODAY, from the row itself: the wire carries

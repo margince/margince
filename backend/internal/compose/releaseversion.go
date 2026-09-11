@@ -58,6 +58,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -93,16 +94,35 @@ const releaseLedgerFact = "release-version"
 // ledger, so the api's own row is the newest as soon as it boots. The window is
 // a worker booting against residue before that api boot, which is #2196.
 //
-// occurred_at leads the ordering, with id as the deterministic tiebreak, for the
-// reason extensioninventory spells out: uuidv7 ids are monotonic only within one
-// process, and concurrently booting replicas mint theirs independently. COALESCE
-// because an absent key must read as the empty string — the same value "no
+// THE ORDERING KEY OBSERVES THE LOCK, which occurred_at does not.
+//
+// system_log.occurred_at defaults to now(), the TRANSACTION timestamp, and the
+// advisory lock above is taken inside the transaction. So a replica that begins
+// first, is descheduled, and commits second carries the OLDER stamp — and this
+// read would return the other replica's row although this one committed last.
+// The lock serialises the write correctly; the key simply did not observe that.
+//
+// `observed_at` is clock_timestamp() read after the lock is held, so it orders
+// by the moment the writer actually got its turn. Rows written before it exists
+// fall back to occurred_at, which is what they were ordered by anyway: the
+// coalesce makes this a strict improvement rather than a cliff at the deploy
+// that introduces it.
+//
+// Cast rather than compared as text. A timestamp rendered one way sorts
+// lexicographically and rendered another does not, and nothing here would say
+// which it got.
+//
+// id stays the deterministic tiebreak, for the reason extensioninventory spells
+// out: uuidv7 ids are monotonic only within one process, and concurrently
+// booting replicas mint theirs independently. The outer COALESCE is a different
+// one — an absent release key must read as the empty string, the same value "no
 // record at all" produces, since both mean there is nothing to compare.
 const lastObservedReleaseQuery = `
 	SELECT COALESCE(detail->>'release_version', '')
 	  FROM system_log
 	 WHERE action = $1 AND detail->>'installation' = $2
-	 ORDER BY occurred_at DESC, id DESC LIMIT 1`
+	 ORDER BY COALESCE((detail->>'observed_at')::timestamptz, occurred_at) DESC, id DESC
+	 LIMIT 1`
 
 // RecordInstallationRelease records the release this api was built from as the
 // installation's release, when it differs from the last one recorded.
@@ -151,9 +171,19 @@ func RecordInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 		if last == version {
 			return nil
 		}
+		// The instant this writer got its turn, read from the database AFTER the
+		// lock is held. It is what the read above orders by, and taking it here
+		// rather than at transaction start is the whole of the fix: a replica
+		// descheduled between BEGIN and the lock would otherwise stamp a moment
+		// earlier than a replica that started later and finished first.
+		var observedAt time.Time
+		if err := tx.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&observedAt); err != nil {
+			return fmt.Errorf("compose: reading the instant this release observation got its turn: %w", err)
+		}
 		if _, err := storekit.LogSystem(ctx, tx, installationReleaseObserved, map[string]any{
 			"release_version": version,
 			"installation":    installationMarker(ctx),
+			"observed_at":     observedAt.UTC().Format(time.RFC3339Nano),
 		}); err != nil {
 			return err
 		}

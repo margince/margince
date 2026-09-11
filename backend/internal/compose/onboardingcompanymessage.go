@@ -94,7 +94,7 @@ func (a *onboardingCompanyAssistant) message(w http.ResponseWriter, r *http.Requ
 	}
 	remaining := remainingOnboardingFields(currentDraft)
 	act := onboardingRequestAct(req)
-	if act != string(crmcontracts.OnboardingActCompany) {
+	if act != string(crmcontracts.OnboardingActOnboardingActCompany) {
 		// The recap acts speak about the company that EXISTS, not about
 		// the resumable draft: a manually saved anchor is a confirmed
 		// company with no required fields left, whatever the draft says.
@@ -167,7 +167,7 @@ func (a *onboardingCompanyAssistant) converse(ctx context.Context, req crmcontra
 	locale := string(req.Locale)
 	remaining := conversation.RemainingRequired
 	switch {
-	case act != string(crmcontracts.OnboardingActCompany):
+	case act != string(crmcontracts.OnboardingActOnboardingActCompany):
 		voiceCtx, err := a.voiceContext(ctx)
 		if err != nil {
 			return companyReadModelReply{}, nil, nil, err
@@ -249,7 +249,7 @@ func recordedSelection(selection crmcontracts.OnboardingClarifySelection, locale
 // Validity was checked at decode time.
 func onboardingRequestAct(req crmcontracts.OnboardingCompanyMessageRequest) string {
 	if req.Act == nil {
-		return string(crmcontracts.OnboardingActCompany)
+		return string(crmcontracts.OnboardingActOnboardingActCompany)
 	}
 	return string(*req.Act)
 }
@@ -296,7 +296,7 @@ func decodeOnboardingCompanyMessage(w http.ResponseWriter, r *http.Request) (crm
 // non-empty value — the pair it authorizes verbatim.
 func invalidOnboardingSelection(req crmcontracts.OnboardingCompanyMessageRequest) (field, code, detail string) {
 	selection := *req.SelectedOption
-	if onboardingRequestAct(req) != string(crmcontracts.OnboardingActCompany) {
+	if onboardingRequestAct(req) != string(crmcontracts.OnboardingActOnboardingActCompany) {
 		return "selected_option", "invalid", "a clarify selection applies only to the company act"
 	}
 	if strings.TrimSpace(selection.ClarifyId) == "" {
@@ -434,14 +434,14 @@ func onboardingCompanyReply(act string, answer companyReadModelReply, evidence [
 	for i, field := range remaining {
 		out.RemainingRequiredFields[i] = crmcontracts.OnboardingCompanyMessageReplyRemainingRequiredFields(field)
 	}
-	if act != string(crmcontracts.OnboardingActCompany) {
+	if act != string(crmcontracts.OnboardingActOnboardingActCompany) {
 		return out
 	}
 	if len(remaining) > 0 {
 		next := crmcontracts.OnboardingCompanyMessageReplyNextRequiredField(remaining[0])
 		out.NextRequiredField = &next
 	} else if research.ready && !research.confirmed {
-		action := crmcontracts.OnboardingAvailableActionConfirmCompany
+		action := crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionConfirmCompany
 		out.AvailableAction = &action
 	}
 	return out

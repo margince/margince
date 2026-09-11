@@ -152,7 +152,7 @@ func TestADuplicateShellIsSilentEvenThoughItIsShort(t *testing.T) {
 	}
 	var reported []string
 	for _, skip := range crawl.Skipped {
-		if skip.Reason == crmcontracts.SiteReadSkipReasonUnreadable {
+		if skip.Reason == crmcontracts.SiteReadSkipReasonSiteReadSkipReasonUnreadable {
 			reported = append(reported, skip.URL)
 		}
 	}
@@ -186,7 +186,7 @@ func TestACatchAllServingTheSeedItselfIsSilent(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, skip := range crawl.Skipped {
-		if skip.Reason == crmcontracts.SiteReadSkipReasonUnreadable {
+		if skip.Reason == crmcontracts.SiteReadSkipReasonSiteReadSkipReasonUnreadable {
 			t.Fatalf("the seed's own body was reported as an unreadable page at %s", skip.URL)
 		}
 	}
@@ -229,7 +229,7 @@ func TestAShortPageSeenOnceIsStillReportedUnreadable(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, skip := range crawl.Skipped {
-		if skip.URL == seedURL+"/about" && skip.Reason == crmcontracts.SiteReadSkipReasonUnreadable {
+		if skip.URL == seedURL+"/about" && skip.Reason == crmcontracts.SiteReadSkipReasonSiteReadSkipReasonUnreadable {
 			return
 		}
 	}

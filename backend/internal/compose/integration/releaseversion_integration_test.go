@@ -194,3 +194,62 @@ func TestReleaseGuardIgnoresAPredecessorsRelease(t *testing.T) {
 		t.Fatal("a role matched the PREDECESSOR's release; that row is not this installation's")
 	}
 }
+
+// "LATEST" MEANS LAST COMMITTED, not first begun.
+//
+// system_log.occurred_at defaults to now(), which is the TRANSACTION timestamp,
+// and the advisory lock this write takes is inside the transaction. So a replica
+// that begins first, is descheduled, and commits second carries the OLDER stamp
+// — and a read ordered by occurred_at returns the other replica's row although
+// this one committed last. The lock serialises the writes; the key did not
+// observe it.
+//
+// That is ordinary during a rollout, when replicas from two releases are alive
+// at once, and what it costs is which release the whole fleet is held to: every
+// role that disagrees with the winning row refuses to boot.
+//
+// The two rows are written directly rather than raced, because a race
+// reproduces this about as often as the scheduler happens to interleave that
+// way — the shape is what is under test, and a case that reproduces it
+// sometimes is one that reports a regression as a flake. What IS production's
+// here is the read: the assertion goes through AssertInstallationRelease, which
+// is what every non-api role boots on.
+func TestTheRecordedReleaseIsTheOneCommittedLast(t *testing.T) {
+	env := Setup(t)
+	ctx := context.Background()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	// The api records once, so the installation marker and the row shape are
+	// production's rather than this test's guess at them.
+	if err := compose.RecordInstallationRelease(ctx, env.Pool, logger, "1970.42"); err != nil {
+		t.Fatalf("recording the first release: %v", err)
+	}
+
+	// The straggler: it BEGAN before the row above (older occurred_at) and got
+	// its turn under the lock after it (later observed_at). Copied from the
+	// recorded row so every other field — the marker especially — is the one
+	// production wrote.
+	if _, err := env.Pool.Exec(ctx, `
+		INSERT INTO system_log (id, actor_type, actor_id, action, detail, occurred_at)
+		SELECT uuidv7(), actor_type, actor_id, action,
+		       jsonb_set(
+		           jsonb_set(detail, '{release_version}', '"1970.43"'),
+		           '{observed_at}', to_jsonb(to_char(occurred_at + interval '1 hour',
+		                                             'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'))),
+		       occurred_at - interval '1 hour'
+		  FROM system_log
+		 WHERE action = 'release.version_observed'`); err != nil {
+		t.Fatalf("seeding the late-committing replica's row: %v", err)
+	}
+
+	// The row that committed last is the one the fleet is held to, even though
+	// its transaction began first.
+	if err := compose.AssertInstallationRelease(ctx, env.Pool, logger, "1970.43"); err != nil {
+		t.Errorf("a role at the last-committed release refused to start: %v — the read is ordering by "+
+			"when a writer BEGAN, so whichever replica was descheduled longest wins the record", err)
+	}
+	if err := compose.AssertInstallationRelease(ctx, env.Pool, logger, "1970.42"); err == nil {
+		t.Error("a role at the superseded release started — with the ordering wrong in the other " +
+			"direction this passes for free, so both halves are asserted")
+	}
+}

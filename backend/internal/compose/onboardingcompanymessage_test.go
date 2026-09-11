@@ -99,9 +99,9 @@ func TestOnboardingCompanyMessageAnswersAndReturnsTheDeterministicNextField(t *t
 	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
 		t.Fatalf("decode reply: %v", err)
 	}
-	if reply.Kind != crmcontracts.CompanyConversationCorrection || len(reply.ProposedChanges) != 1 ||
+	if reply.Kind != crmcontracts.CompanyConversationResponseKindCompanyConversationCorrection || len(reply.ProposedChanges) != 1 ||
 		reply.ProposedChanges[0].Field != crmcontracts.CompanySiteReadSuggestedChangeFieldDisplayName ||
-		reply.NextRequiredField == nil || *reply.NextRequiredField != crmcontracts.OnboardingNextRequiredDisplayName ||
+		reply.NextRequiredField == nil || *reply.NextRequiredField != crmcontracts.OnboardingCompanyMessageReplyNextRequiredFieldOnboardingNextRequiredDisplayName ||
 		reply.AvailableAction != nil || runtime.runID != stateID {
 		t.Fatalf("reply = %+v, runtime run = %s", reply, runtime.runID)
 	}
@@ -133,7 +133,7 @@ func TestOnboardingCompanyStatusReportsLiveResearchWithoutCallingTheModel(t *tes
 	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
 		t.Fatalf("decode reply: %v", err)
 	}
-	if reply.Kind != crmcontracts.CompanyConversationStatus || !strings.Contains(reply.Message, "still researching") ||
+	if reply.Kind != crmcontracts.CompanyConversationResponseKindCompanyConversationStatus || !strings.Contains(reply.Message, "still researching") ||
 		len(reply.ProposedChanges) != 0 || len(reply.Citations) != 0 || runtime.runID != readID || brain.request.System != "" {
 		t.Fatalf("status reply = %+v, runtime run = %s, model request = %+v", reply, runtime.runID, brain.request)
 	}
@@ -158,7 +158,7 @@ func TestOnboardingCompanyStatusOffersConfirmationOnlyWhenComplete(t *testing.T)
 	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
 		t.Fatalf("decode reply: %v", err)
 	}
-	if reply.AvailableAction == nil || *reply.AvailableAction != crmcontracts.OnboardingAvailableActionConfirmCompany ||
+	if reply.AvailableAction == nil || *reply.AvailableAction != crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionConfirmCompany ||
 		reply.NextRequiredField != nil || len(reply.RemainingRequiredFields) != 0 || !strings.Contains(reply.Message, "0 Pflichtangaben") {
 		t.Fatalf("complete status reply = %+v", reply)
 	}

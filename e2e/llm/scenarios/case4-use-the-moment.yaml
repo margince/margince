@@ -5,12 +5,25 @@
 #
 # The prompt is the HARD version, verbatim from the 2026-08-26 run. It never
 # says "companies", never says "address", never says "distance", and names no
-# tool. Working out that "nearby" means a distance search — and that it can ASK
-# which fields are geo — is the whole case.
+# tool. Working out that "nearby" is a question the workspace can be asked at
+# all — and that it can ASK which fields carry a place — is the whole case.
 #
 # Do NOT replace it with the earlier scripted wording ("Which customers are
 # nearby? Rank them by fit and relationship strength"). That version hands over
 # the answer and tests something materially easier.
+#
+# WHAT "NEARBY" CAN BE ANSWERED WITH HERE, and it is a fact about this stack
+# rather than about the product. The three Köln companies carry an address and
+# no coordinates: the public API has no field for a point and no geocoder runs
+# in the LLM stack, so nothing places them. A `within_radius` plan therefore
+# matches none of them and a filter on address.city matches all three, which is
+# why nothing below requires the radius plan — requiring it would reward a call
+# that comes back empty. The route is not the assertion; what is asserted is
+# that the assistant finds the companies, names whose they are, and never
+# reports that this workspace cannot answer where anybody is.
+#
+# The Go suite measures the radius half, because it seeds the coordinates
+# through SQL that the API carries no way to express.
 name: case4_use_the_moment
 criteria: [1, 6]
 

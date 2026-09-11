@@ -59,13 +59,13 @@ func TestADealRowCarriesTheCachedVerdictBesideItsMove(t *testing.T) {
 	if verdict == nil {
 		t.Fatal("the row carries no verdict")
 	}
-	if verdict.Standing == nil || *verdict.Standing != crmcontracts.WorklistStandingBlocked {
+	if verdict.Standing == nil || *verdict.Standing != crmcontracts.WorklistDealVerdictStandingWorklistStandingBlocked {
 		t.Errorf("standing = %v, want blocked", verdict.Standing)
 	}
 	if verdict.Line != "Legal has not returned the DPA." {
 		t.Errorf("line = %q", verdict.Line)
 	}
-	if verdict.Source != crmcontracts.WorklistInsightSourceDealStatus {
+	if verdict.Source != crmcontracts.WorklistDealVerdictSourceWorklistInsightSourceDealStatus {
 		t.Errorf("source = %q, want deal_status", verdict.Source)
 	}
 	if verdict.AsOf == nil {
@@ -92,7 +92,7 @@ func TestAnUncachedDealUsesTheGroundedBriefFinding(t *testing.T) {
 	if verdict == nil {
 		t.Fatal("the row carries no verdict, so the night's finding was thrown away")
 	}
-	if verdict.Source != crmcontracts.WorklistInsightSourceBriefFinding {
+	if verdict.Source != crmcontracts.WorklistDealVerdictSourceWorklistInsightSourceBriefFinding {
 		t.Errorf("source = %q, want brief_finding", verdict.Source)
 	}
 	if verdict.Line != "The buyer asked for pricing and nobody answered." {
@@ -251,7 +251,7 @@ func TestAnUnboundStandingSeamStillCarriesTheNightsFinding(t *testing.T) {
 		t.Fatalf("naming the standing: %v", err)
 	}
 
-	if queue[0].Verdict == nil || queue[0].Verdict.Source != crmcontracts.WorklistInsightSourceBriefFinding {
+	if queue[0].Verdict == nil || queue[0].Verdict.Source != crmcontracts.WorklistDealVerdictSourceWorklistInsightSourceBriefFinding {
 		t.Error("an unbound card seam took the night's finding away with it")
 	}
 }

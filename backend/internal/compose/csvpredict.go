@@ -126,7 +126,7 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (
 	if !collides {
 		return predictCreate, "", nil
 	}
-	if w.onDuplicate == string(crmcontracts.Skip) {
+	if w.onDuplicate == string(crmcontracts.ImportOnDuplicateSkip) {
 		return predictCollidesSkipped, "", nil
 	}
 	return predictCollides, "", nil

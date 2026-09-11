@@ -8,12 +8,12 @@
   "runs": 3,
   "pass_at": 2,
   "usage": {
-    "input_tokens": 20,
-    "output_tokens": 1322,
-    "cache_creation_input_tokens": 20443,
-    "cache_read_input_tokens": 555956,
+    "input_tokens": 18,
+    "output_tokens": 1207,
+    "cache_creation_input_tokens": 19418,
+    "cache_read_input_tokens": 508111,
     "runs_measured": 3,
     "runs_costed": 3,
-    "cost_usd": 0.2062
+    "cost_usd": 0.1944
   }
 }

@@ -42,15 +42,15 @@ func writeIntroRequest(
 ) crmcontracts.AccountEmailDraft {
 	floor := introFloor(facts)
 	if lane == nil {
-		return wireIntroRequest(floor, crmcontracts.Deterministic, facts)
+		return wireIntroRequest(floor, crmcontracts.WrittenByDeterministic, facts)
 	}
 	written, err := introFromModel(ctx, lane, facts)
 	if err != nil {
 		// Degrading to the floor IS the answer: the reader gets a sendable
 		// message rather than an error about a lane they cannot configure.
-		return wireIntroRequest(floor, crmcontracts.Deterministic, facts)
+		return wireIntroRequest(floor, crmcontracts.WrittenByDeterministic, facts)
 	}
-	return wireIntroRequest(written, crmcontracts.Model, facts)
+	return wireIntroRequest(written, crmcontracts.WrittenByModel, facts)
 }
 
 // introFromModel writes the ask and checks what came back.

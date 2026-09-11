@@ -164,8 +164,8 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, pe
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.full_name, p.title,
 		       (SELECT e.email FROM person_email e
-		         WHERE e.person_id = p.id AND e.archived_at IS NULL
-		         ORDER BY e.is_primary DESC, e.position, e.id
+		         WHERE e.person_id = p.id AND e.archived_at IS NULL`+
+		people.ReachableEmailOrder+`
 		         LIMIT 1),
 		       CASE WHEN coalesce(p.title, '') <> '' THEN NULL ELSE
 		         (SELECT NULLIF(c.value_json->>'job_title', '')

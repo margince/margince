@@ -215,7 +215,7 @@ func TestOnlyAModelWrittenNoteCarriesTheDisclosure(t *testing.T) {
 	t.Parallel()
 	note := introNote{subject: "s", body: "b"}
 
-	written := wireIntroNote(note, crmcontracts.Model, warmNote())
+	written := wireIntroNote(note, crmcontracts.WrittenByModel, warmNote())
 	if written.AiGenerated == nil || !*written.AiGenerated {
 		t.Error("a model-written note does not say so")
 	}
@@ -223,7 +223,7 @@ func TestOnlyAModelWrittenNoteCarriesTheDisclosure(t *testing.T) {
 		t.Error("a model-written note carries no Art. 50 disclosure")
 	}
 
-	floor := wireIntroNote(note, crmcontracts.Deterministic, warmNote())
+	floor := wireIntroNote(note, crmcontracts.WrittenByDeterministic, warmNote())
 	if floor.AiGenerated == nil || *floor.AiGenerated {
 		t.Error("a template-written note claims a model wrote it")
 	}
@@ -239,7 +239,7 @@ func TestTheDisclosureSpeaksTheNotesLanguage(t *testing.T) {
 	note := introNote{subject: "s", body: "b"}
 	facts := warmNote()
 	facts.lang = textlang.German
-	german := wireIntroNote(note, crmcontracts.Model, facts)
+	german := wireIntroNote(note, crmcontracts.WrittenByModel, facts)
 	if german.AiDisclosure == nil || !strings.Contains(*german.AiDisclosure, "KI") {
 		t.Errorf("a German note's disclosure is %v; want German", german.AiDisclosure)
 	}
@@ -256,9 +256,9 @@ func TestReasoningIsAlwaysAnArrayOnTheWire(t *testing.T) {
 	bare := noteFacts{lang: textlang.English}
 	for name, out := range map[string]crmcontracts.AccountEmailDraft{
 		"with facts": wireIntroNote(
-			introNote{subject: "s", body: "b"}, crmcontracts.Model, warmNote()),
+			introNote{subject: "s", body: "b"}, crmcontracts.WrittenByModel, warmNote()),
 		"with none": wireIntroNote(
-			introNote{subject: "s", body: "b"}, crmcontracts.Deterministic, bare),
+			introNote{subject: "s", body: "b"}, crmcontracts.WrittenByDeterministic, bare),
 	} {
 		raw, err := json.Marshal(out)
 		if err != nil {

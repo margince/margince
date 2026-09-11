@@ -355,9 +355,12 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 			" Do not stage another: repeat this call with \"approval_id\": \"" +
 			staged.ApprovalID.String() + "\"."
 	}
-	return "Confirm-first (🟡): a person answers this before it runs. " + what +
-		" Tell them that, in those words; they release it in the CRM, and this exact call then " +
-		"repeats with \"approval_id\": \"" + staged.ApprovalID.String() + "\". " +
+	return "Confirm-first (🟡): a person answers this before it runs, and it is not yours to answer. " +
+		what +
+		" Put what it would do in front of them and wait for their word. They can release it in the " +
+		"CRM, or you can relay the answer they give you with decide_approval — list_approvals is the " +
+		"same queue either way. Once released, this exact call repeats with \"approval_id\": \"" +
+		staged.ApprovalID.String() + "\". " +
 		"Blocks THIS call only — do the rest of what you were asked that does not depend on it, " +
 		"and report what you DID alongside what is waiting."
 }

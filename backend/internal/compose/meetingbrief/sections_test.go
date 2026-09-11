@@ -202,7 +202,7 @@ func TestTheGoalIsTheOpenQuestionWhenNothingOfOursIsOverdue(t *testing.T) {
 // would put the correction in front of the person it was wrong about.
 func TestADismissedClaimNeverReachesTheBrief(t *testing.T) {
 	folded := foldClaims("Ana Roth", []crmcontracts.ConversationClaim{{
-		Kind:   crmcontracts.CommitmentTheirs,
+		Kind:   crmcontracts.ConversationClaimKindCommitmentTheirs,
 		Body:   "they will introduce us to procurement",
 		Status: crmcontracts.ConversationClaimStatusDismissed,
 	}})

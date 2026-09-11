@@ -208,6 +208,18 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// refuses the verb would write a correct query and be refused for it.
 	agents.RegisterAnalyticsVocabularyTool(registry,
 		nativeOnlyAnalyticsVocabularyReader{mode: sorMode, inner: analyticsVocabularyReader{}})
+	// The write vocabulary, as a TOOL and not only as the
+	// margince://schema/record-fields resource — same reason
+	// describe_query_vocabulary exists beside query_workspace, and measured on
+	// this one: a tools-only client reaches the field names by refusal alone,
+	// and a run writing three record types from one card paid one refusal per
+	// type before it wrote anything.
+	//
+	// UNGUARDED, unlike the vocabularies above, and the asymmetry follows the
+	// verbs: those describe a verb an overlay workspace refuses outright, while
+	// the overlay provider serves no CREATE but does serve some UPDATE — so
+	// this document describes writes a caller there may still make.
+	agents.RegisterRecordFieldsTool(registry, agents.RecordFieldsResource{})
 	// The grammar that document is written in, as a TOOL and not only as the
 	// margince://schema/report-blocks resource — same reason
 	// describe_report_vocabulary exists beside run_report: the Surface-B runner
