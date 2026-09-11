@@ -528,3 +528,40 @@ func TestResetEmptiesAnExtensionTable(t *testing.T) {
 		t.Errorf("Reset left %d row(s) in ext.ext_resetprobe_note — an extension's rows would bleed into every later test in this process", remaining)
 	}
 }
+
+// A table the MIGRATIONS seed belongs in PreservedReferenceTables, and this is
+// what says so without anybody remembering to.
+//
+// The two lists this package keeps are both hand-written, and a reference table
+// added to the schema has to be added to them by whoever added it. That is the
+// step #5338 missed: `deal_acquisition_source` shipped seeded and unlisted, the
+// reset scope therefore still covered it, and schemaEmpty — which asks the same
+// fragment — found rows in a freshly cloned schema and refused to vouch for it.
+// The cost was not only the red: reusableClone answers on that verdict, so the
+// integration lane stopped reusing clones and rebuilt the schema for every
+// package instead.
+//
+// DERIVED, not restated. A database that has only just been migrated holds
+// exactly the rows the migrations put there, so the tables holding rows ARE the
+// boot-seeded ones — no second list to keep in step, and a new seeded table
+// fails here the day it lands rather than the day somebody reads a lane log.
+//
+// One direction only. A listed table that is empty is not a finding: a
+// reference catalog seeded later by the application, or one whose rows a
+// migration has since removed, is still a table the reset must leave alone.
+func TestEverySeededReferenceTableIsPreservedByTheReset(t *testing.T) {
+	ctx := context.Background()
+	owner := ownerConn(t)
+
+	// Every table the reset would empty — PreservedReferenceTables already
+	// removed — that nonetheless holds rows on a schema nothing has written to.
+	seededButUnlisted := nonEmptyTables(ctx, t, owner)
+	if len(seededButUnlisted) == 0 {
+		return
+	}
+	t.Errorf("the migrations seed %v, and the reset's scope still covers them. "+
+		"A seeded catalog inside the reset scope is emptied by a reset and, before that, "+
+		"makes schemaEmpty refuse to vouch for a freshly migrated clone — which turns off "+
+		"clone reuse for the whole integration lane. Add them to PreservedReferenceTables.",
+		seededButUnlisted)
+}
