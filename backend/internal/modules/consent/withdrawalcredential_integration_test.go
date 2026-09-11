@@ -654,3 +654,121 @@ func TestTheMintDoorsAskForTheGrantTheirQuestionNeeds(t *testing.T) {
 		}
 	}
 }
+
+// The mint refuses a subject whose record is no longer live.
+//
+// The race: a statement in a read-committed transaction takes a fresh snapshot,
+// so an erasure committing between the send path's address lookup and this
+// insert would leave the mint writing a NEW capability — carrying the plaintext
+// address — for the subject whose credentials that erasure had just deleted. The
+// person row survives an anonymize-in-place, so the foreign key does not catch
+// it and the fresh token resolves happily.
+//
+// TWO LINES HOLD IT, and this case is deliberately indifferent to which:
+// EnsureWritableLive's live half and LockSubjectLive's `archived_at IS NULL`
+// both refuse, so removing either alone leaves the property standing. That is
+// the right shape for a property this serious, and it is worth knowing rather
+// than discovering — a case pinned to one of them would report the belt gone
+// while the braces held.
+func TestTheMintRefusesASubjectWhoseRecordIsGone(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	// It works first, so the refusal below is about the erasure and not about
+	// the fixture never having been mintable.
+	before := mintWithdrawal(t, e, WithdrawalMintInput{
+		Address: "gone@example.test", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+	})
+	if before == "" {
+		t.Fatal("the fixture minted no token before the erasure, so the refusal below would prove nothing")
+	}
+
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE person SET archived_at = now() WHERE id = $1`, e.person); err != nil {
+		t.Fatalf("retiring the subject: %v", err)
+	}
+
+	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		_, mintErr := e.store.EnsureWithdrawalCredentialTx(e.ctx, tx, WithdrawalMintInput{
+			// A DIFFERENT scope, so the idempotent reuse of the live row above
+			// cannot answer this — the mint has to reach the insert to refuse.
+			Address: "gone@example.test", Scope: WithdrawalScopeNamedPurpose,
+			PurposeID: e.newsletter.UUID, PersonID: e.person,
+		})
+		return mintErr
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("minting for an erased subject answered %v, want ErrNotFound — a capability carrying "+
+			"the plaintext address was written for the subject whose credentials were just deleted", err)
+	}
+}
+
+// A READ share is not authority to mint. This is the half of the mint's probe
+// nothing held, and the one that has no second line behind it.
+//
+// `person` is shareable, so a manual read grant widens who can SEE a contact
+// without widening who may act on them — and this path WRITES a bearer
+// credential that can stop that person's mail for two years. LockSubjectLive
+// below the probe asks only `archived_at IS NULL`, so it does not catch this;
+// ensureWriteAuthority inside EnsureWritableLive is the only thing that does,
+// and it is a no-op for an unbounded principal, which is why every existing
+// case in this package walked past it.
+//
+// Both directions, because the refusal alone would also pass against a
+// principal that simply cannot do anything: the same caller with a WRITE grant
+// mints successfully.
+func TestAReadShareOnAContactIsNotAuthorityToMintTheirOptOut(t *testing.T) {
+	e := setupChannelConsent(t)
+	colleague := ids.NewV7()
+
+	// Bounded to their OWN rows, which is what makes the share the only thing
+	// that can admit them: e.person is owned by somebody else.
+	shared := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + colleague.String(), UserID: colleague,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects: map[string]principal.ObjectGrant{
+				// The OBJECT grant is deliberately generous: this case is about
+				// the ROW, and a narrow object grant would refuse one gate
+				// earlier and prove nothing about the other.
+				"person": {Read: true, Update: true},
+			},
+			RowScope: principal.RowScopeOwn,
+		},
+	})
+
+	grant := func(t *testing.T, access string) {
+		t.Helper()
+		if _, err := e.owner.Exec(context.Background(), `
+			INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
+			VALUES ('person', $1, 'user', $2, $3, $4)
+			ON CONFLICT (record_type, record_id, subject_type, subject_id)
+			DO UPDATE SET access = EXCLUDED.access`,
+			e.person, colleague, access, e.user); err != nil {
+			t.Fatalf("granting %s on the contact: %v", access, err)
+		}
+	}
+
+	grant(t, "read")
+	err := e.store.db.Tx(shared, func(tx pgx.Tx) error {
+		_, mintErr := e.store.EnsureWithdrawalCredentialTx(shared, tx, WithdrawalMintInput{
+			Address: "shared@example.test", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+		})
+		return mintErr
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a read-share holder minted an opt-out credential (err = %v) — a share that lets "+
+			"somebody SEE a contact now lets them mint a bearer token over that contact's mail", err)
+	}
+
+	// The positive control: the same caller, one access level up.
+	grant(t, "write")
+	if err := e.store.db.Tx(shared, func(tx pgx.Tx) error {
+		_, mintErr := e.store.EnsureWithdrawalCredentialTx(shared, tx, WithdrawalMintInput{
+			Address: "shared@example.test", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+		})
+		return mintErr
+	}); err != nil {
+		t.Fatalf("a write-share holder was refused (%v) — the refusal above is about the caller, "+
+			"not about the access level, and holds nothing", err)
+	}
+}
