@@ -15,12 +15,12 @@ import (
 
 // BackfillYields is a completed backfill run's real volume ratios for the
 // previewing connection — how many messages one scan captured and how many
-// people/companies it created. The cost estimator turns these into
+// contacts/companies it created. The cost estimator turns these into
 // expected units for a wider window.
 type BackfillYields struct {
 	Scanned          int64
 	Captured         int64
-	PeopleCreated    int64
+	ContactsCreated  int64
 	CompaniesCreated int64
 }
 
@@ -47,12 +47,12 @@ func (r *Registry) BackfillYields(ctx context.Context, provider string, userID i
 		}
 		err = tx.QueryRow(
 			ctx, `
-			SELECT scanned, captured, people_created, companies_created
+			SELECT scanned, captured, contacts_created, companies_created
 			FROM capture_backfill
 			WHERE connection_id = $1 AND status = 'done'
 			ORDER BY window_months DESC, created_at DESC
 			LIMIT 1`, connID,
-		).Scan(&y.Scanned, &y.Captured, &y.PeopleCreated, &y.CompaniesCreated)
+		).Scan(&y.Scanned, &y.Captured, &y.ContactsCreated, &y.CompaniesCreated)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// No completed run yet — the zero value routes to the floor.
 			y = BackfillYields{}

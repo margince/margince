@@ -62,7 +62,7 @@ func agentCtx() context.Context {
 
 var someLead = ids.From[ids.LeadKind](ids.MustParse("019fe7ae-0000-7000-8000-000000000001"))
 
-// Drafting spends the workspace's model budget on prose for a person to send
+// Drafting spends the workspace's model budget on prose for a contact to send
 // under their own name, so an agent is refused — and refused before the lead is
 // read, not after.
 func TestAnAgentIsRefusedBeforeAnythingIsRead(t *testing.T) {
@@ -116,7 +116,7 @@ func TestAnEmptyAddressIsTheSameAsNone(t *testing.T) {
 
 // A terminal lead is not a record to open a new conversation from. Both
 // closures archive the row — disqualified, and promoted to a contact — and the
-// promoted one's correspondence belongs to the person it became.
+// promoted one's correspondence belongs to the contact it became.
 func TestATerminalLeadIsNotDraftedTo(t *testing.T) {
 	t.Parallel()
 	leads := &leadReader{lead: lead(nil)}
@@ -149,7 +149,7 @@ func TestALeadTheCallerCannotSeeRefuses(t *testing.T) {
 	}
 }
 
-// With no model lane the draft still arrives, from persondraft's deterministic
+// With no model lane the draft still arrives, from contactdraft's deterministic
 // floor. A rep who pressed the button on a deployment running no model gets a
 // short opener to edit rather than a refusal.
 func TestWithNoModelLaneTheFloorWrites(t *testing.T) {

@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -45,7 +45,7 @@ func (refusingCatalog) ActiveColumns(context.Context, string) ([]fieldcatalog.Co
 }
 
 func refusingCatalogService() *Service {
-	store := people.NewStore(database.BindTo(nil, ids.From[ids.WorkspaceKind](ids.NewV7()))).
+	store := contacts.NewStore(database.BindTo(nil, ids.From[ids.WorkspaceKind](ids.NewV7()))).
 		WithFieldCatalog(refusingCatalog{})
 	return NewService(nil, store, nil, nil, nil, func() time.Time { return time.Unix(0, 0).UTC() })
 }

@@ -65,7 +65,7 @@ func TestARecordIsNotStampedWithAFingerprintThatCannotBeMade(t *testing.T) {
 	// that has nothing to do with fingerprinting, and this test would pass
 	// while never reaching the arm it names.
 	m := overlay.ObjectMapping{
-		Source: objectClassContacts, Target: "person", ExternalKey: propHSObjectID,
+		Source: objectClassContacts, Target: "contact", ExternalKey: propHSObjectID,
 		Baseline: baselineHSLastModifiedDate,
 		Const:    map[string]any{"unencodable": make(chan int)},
 	}

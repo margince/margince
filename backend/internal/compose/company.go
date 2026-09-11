@@ -12,7 +12,7 @@ package compose
 //
 // This file owns only the transport: decode, validate the submission's shape,
 // and map the store's view onto the wire. The write shape lives in
-// people.Store.SaveCompany.
+// contacts.Store.SaveCompany.
 
 import (
 	"net/http"
@@ -22,7 +22,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -59,7 +59,7 @@ const (
 )
 
 type companyHandlers struct {
-	store *people.Store
+	store *contacts.Store
 	// Where an uploaded company mark's bytes live. Nil in a role that stores no
 	// objects, which is what makes the upload route answer 501 rather than
 	// accepting an image nothing could serve back.
@@ -146,7 +146,7 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	company, err := h.store.SaveCompany(r.Context(), people.SaveCompanyInput{
+	company, err := h.store.SaveCompany(r.Context(), contacts.SaveCompanyInput{
 		DisplayName: strings.TrimSpace(req.DisplayName),
 		Website:     website,
 		Fields: map[string]*string{
@@ -198,15 +198,15 @@ func (h companyHandlers) GetAnchorCompanyContext(w http.ResponseWriter, r *http.
 	httperr.WriteJSON(w, http.StatusOK, toContractCompanyContext(companyContext))
 }
 
-func parseCompanyContextScopes(w http.ResponseWriter, r *http.Request, raw *string) ([]people.CompanyContextScope, bool) {
+func parseCompanyContextScopes(w http.ResponseWriter, r *http.Request, raw *string) ([]contacts.CompanyContextScope, bool) {
 	if raw == nil || strings.TrimSpace(*raw) == "" {
 		return nil, true
 	}
 	parts := strings.Split(*raw, ",")
-	scopes := make([]people.CompanyContextScope, 0, len(parts))
+	scopes := make([]contacts.CompanyContextScope, 0, len(parts))
 	for _, part := range parts {
 		name := strings.TrimSpace(part)
-		scope, valid := people.ParseCompanyContextScope(name)
+		scope, valid := contacts.ParseCompanyContextScope(name)
 		if !valid {
 			httperr.Write(w, r, httperr.Validation("scopes", "invalid", "unknown company-context scope: "+name))
 			return nil, false
@@ -245,7 +245,7 @@ func parseableWebsite(website string) bool {
 // toContractCompany maps the store's view onto the wire shape. A field nobody
 // has filled is absent, never an empty string — the form renders a blank, not
 // a value someone chose.
-func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
+func toContractCompany(c contacts.Company) crmcontracts.CompanyProfile {
 	out := crmcontracts.CompanyProfile{
 		CompanyId:   openapi_types.UUID(c.CompanyID.UUID),
 		DisplayName: c.DisplayName,
@@ -254,11 +254,11 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 		// shell draws the installation's mark from this profile and the record
 		// screens draw it from Company.logo_url, and a company with two
 		// faces is a company nobody recognises.
-		LogoUrl: people.LogoURL(c.CompanyID.UUID, c.LogoObjectKey, people.LogoWide),
+		LogoUrl: contacts.LogoURL(c.CompanyID.UUID, c.LogoObjectKey, contacts.LogoWide),
 		// The square badge the collapsed sidebar draws, absent until somebody
 		// uploads one — which is what makes the rail fall back to the wide mark
 		// for every installation that has not.
-		LogoIconUrl: people.LogoURL(c.CompanyID.UUID, c.LogoIconObjectKey, people.LogoIcon),
+		LogoIconUrl: contacts.LogoURL(c.CompanyID.UUID, c.LogoIconObjectKey, contacts.LogoIcon),
 		UpdatedAt:   &c.UpdatedAt,
 	}
 	profileFields := make([]crmcontracts.CompanyProfileField, 0, len(c.ProfileFields))
@@ -311,7 +311,7 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 	return out
 }
 
-func toContractCompanyContext(c people.CompanyContext) crmcontracts.CompanyContext {
+func toContractCompanyContext(c contacts.CompanyContext) crmcontracts.CompanyContext {
 	scopes := make([]crmcontracts.CompanyContextScope, 0, len(c.Scopes))
 	for _, section := range c.Scopes {
 		items := make([]crmcontracts.CompanyContextItem, 0, len(section.Items))

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -24,11 +24,11 @@ import (
 // repeats the text beside the span, hands the instructions to whoever wrote the
 // mail.
 func TestSignatureEnrichRequestFencesEveryUntrustedFieldUnderTheMarkerItDeclares(t *testing.T) {
-	cand := people.SignatureCandidate{
-		FullName:   "Bob Person",
+	cand := contacts.SignatureCandidate{
+		FullName:   "Bob Contact",
 		Email:      "bob@acme.example",
 		ActivityID: ids.NewV7(),
-		Body:       "Thanks!\nBest,\nBob Person\nCTO, Acme GmbH\n+49 30 1234567",
+		Body:       "Thanks!\nBest,\nBob Contact\nCTO, Acme GmbH\n+49 30 1234567",
 	}
 	lines := signatureBlock(cand.Body)
 
@@ -48,7 +48,7 @@ func TestSignatureEnrichRequestFencesEveryUntrustedFieldUnderTheMarkerItDeclares
 		t.Errorf("the signature window is not opened under the declared marker keyed by its activity:\n%s", content)
 	}
 	if !strings.Contains(content, openTag+"Name: "+cand.FullName+"\nEmail: "+cand.Email+closeTag) {
-		t.Errorf("the person's own name and address are not inside the boundary:\n%s", content)
+		t.Errorf("the contact's own name and address are not inside the boundary:\n%s", content)
 	}
 	// Containment is not a question of membership: a prompt that keeps the fence
 	// and ALSO repeats the text beside it puts that copy in the instruction region
@@ -88,7 +88,7 @@ func outsideEverySpan(content, marker string) string {
 // they can spell, so reusing one would give away the only thing they cannot
 // forge.
 func TestSignatureEnrichRequestMintsAFreshBoundaryPerCall(t *testing.T) {
-	cand := people.SignatureCandidate{FullName: "Bob Person", ActivityID: ids.NewV7()}
+	cand := contacts.SignatureCandidate{FullName: "Bob Contact", ActivityID: ids.NewV7()}
 
 	first, declared := promptfence.MarkerIn(signatureEnrichRequest(cand, "CTO, Acme GmbH").System)
 	if !declared {
@@ -105,7 +105,7 @@ func TestSignatureEnrichRequestMintsAFreshBoundaryPerCall(t *testing.T) {
 
 func TestSignatureBlockWindow(t *testing.T) {
 	t.Run("quoted history is excluded", func(t *testing.T) {
-		body := "Thanks!\n> On Tue, Alice wrote:\n> old text\nBest,\nBob Person\nCTO, Acme GmbH\n+49 30 1234567"
+		body := "Thanks!\n> On Tue, Alice wrote:\n> old text\nBest,\nBob Contact\nCTO, Acme GmbH\n+49 30 1234567"
 		got := signatureBlock(body)
 		if strings.Contains(got, "old text") {
 			t.Fatalf("quoted history leaked into the window: %q", got)
@@ -155,16 +155,16 @@ func TestSignatureShapeValidationDoesNotEchoUnboundedModelText(t *testing.T) {
 
 func TestASignatureNamingSomebodyElseIsNotReadAsTheirs(t *testing.T) {
 	t.Parallel()
-	ann := people.SignatureCandidate{FullName: "Ann Smith", Email: "ann@example.test"}
+	ann := contacts.SignatureCandidate{FullName: "Ann Smith", Email: "ann@example.test"}
 	for name, block := range map[string]string{
 		// The substring trap: "joanne" contains "ann", so a match that is not
 		// word-bounded reads Joanne's title onto Ann.
 		"a longer name containing theirs": "Viele Grüße\nJoanne Brown\nCEO",
-		"a different person entirely":     "Best\nMarcus Greven\nPartner Manager",
+		"a different contact entirely":    "Best\nMarcus Greven\nPartner Manager",
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if signatureNamesPerson(block, ann) {
+			if signatureNamesContact(block, ann) {
 				t.Errorf("a block naming somebody else was read as %q's own: %q", ann.FullName, block)
 			}
 		})
@@ -174,13 +174,13 @@ func TestASignatureNamingSomebodyElseIsNotReadAsTheirs(t *testing.T) {
 func TestAShortNameStillNamesItsOwnSignature(t *testing.T) {
 	t.Parallel()
 	// Every token under three characters. A minimum length would lock this
-	// person out of enrichment for ever, whatever they sign.
-	li := people.SignatureCandidate{FullName: "Li Bo"}
-	if !signatureNamesPerson("Regards\nLi Bo\nCEO", li) {
-		t.Error("a person whose name is short cannot prove their own signature is theirs")
+	// contact out of enrichment for ever, whatever they sign.
+	li := contacts.SignatureCandidate{FullName: "Li Bo"}
+	if !signatureNamesContact("Regards\nLi Bo\nCEO", li) {
+		t.Error("a contact whose name is short cannot prove their own signature is theirs")
 	}
 	// And the whole-word rule still holds for them.
-	if signatureNamesPerson("Regards\nLiam Bosch\nCEO", li) {
+	if signatureNamesContact("Regards\nLiam Bosch\nCEO", li) {
 		t.Error("a longer name containing theirs was read as their own signature")
 	}
 }
@@ -189,12 +189,12 @@ func TestTheirOwnSignatureIsRead(t *testing.T) {
 	t.Parallel()
 	// The positive control: without it, a build refusing everybody would pass
 	// both tests above.
-	cand := people.SignatureCandidate{FullName: "Judith Andresen", Email: "judith@example.test"}
-	if !signatureNamesPerson("Viele Grüße\nJudith Andresen\nGeschäftsführerin", cand) {
-		t.Error("a person's own signature was refused")
+	cand := contacts.SignatureCandidate{FullName: "Judith Andresen", Email: "judith@example.test"}
+	if !signatureNamesContact("Viele Grüße\nJudith Andresen\nGeschäftsführerin", cand) {
+		t.Error("a contact's own signature was refused")
 	}
 	// By address alone, for a signature that prints the mail and not the name.
-	if !signatureNamesPerson("Viele Grüße\njudith@example.test", cand) {
+	if !signatureNamesContact("Viele Grüße\njudith@example.test", cand) {
 		t.Error("a signature carrying only their address was refused")
 	}
 }

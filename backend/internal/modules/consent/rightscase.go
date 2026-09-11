@@ -6,7 +6,7 @@ package consent
 // A proposal sent through a confirm link becomes a case somebody owns.
 //
 // What the subject sends is already recorded: stageSubmission files it in
-// person_confirm_submission with an audit row. That table answers "what did
+// contact_confirm_submission with an audit row. That table answers "what did
 // this contact send us" and nothing more. It has no deadline, it is not in the
 // queue the DPO works through, and it hands the subject no reference to quote.
 //
@@ -15,7 +15,7 @@ package consent
 // from: a case without its submission names work whose evidence is missing,
 // and a submission without its case is the defect this file closes.
 //
-// NOT A WRITE TO THE PERSON. Opening a case records that somebody asked. What
+// NOT A WRITE TO THE CONTACT. Opening a case records that somebody asked. What
 // the record should now say is a human's decision, made through the queue —
 // the subject holds a bearer token and sits outside every row-scope probe, so
 // their say-so is evidence of a request and never an edit.
@@ -121,7 +121,7 @@ func mintReceiptReference() (string, error) {
 //
 // NO AUTH GATE, and that is the point rather than an omission. The caller is
 // the public confirm edge running as system:public_confirm, which holds no
-// person grant and must not: a bearer token proving a mailbox is exactly the
+// contact grant and must not: a bearer token proving a mailbox is exactly the
 // authority to say "this is what I am asking for", and nothing more. What
 // bounds this call is that it is reachable only from inside SubmitConfirmation,
 // after spendConfirmTokenTx consumed the link that proves the mailbox.
@@ -131,7 +131,7 @@ func mintReceiptReference() (string, error) {
 // cases for one request would queue the same work twice and give the subject
 // two references for one answer. The unique index decides it; ON CONFLICT reads
 // the standing case back so the replay answers the receipt it already earned.
-func openRightsCaseTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+func openRightsCaseTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	submissionID ids.UUID, submissionKind string, receivedAt time.Time,
 ) (string, error) {
 	kind, ok := caseKindFor(submissionKind)
@@ -150,7 +150,7 @@ func openRightsCaseTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	// transaction: without one the retry runs against a transaction Postgres has
 	// already given up on, and every attempt after the first fails identically.
 	for attempt := range receiptAttempts {
-		caseID, stored, created, err := attemptRightsCase(ctx, tx, kind, personID,
+		caseID, stored, created, err := attemptRightsCase(ctx, tx, kind, contactID,
 			submissionID, receivedAt)
 		if err == nil {
 			return finishRightsCase(ctx, tx, caseID, stored, created, kind, submissionID)
@@ -181,7 +181,7 @@ var errSavepointPoisoned = errors.New("consent: the rights-case savepoint could 
 const receiptAttempts = 3
 
 // attemptRightsCase makes one attempt at the insert, inside its own savepoint.
-func attemptRightsCase(ctx context.Context, tx pgx.Tx, kind string, personID ids.PersonID,
+func attemptRightsCase(ctx context.Context, tx pgx.Tx, kind string, contactID ids.ContactID,
 	submissionID ids.UUID, receivedAt time.Time,
 ) (caseID ids.UUID, stored string, created bool, err error) {
 	receipt, err := mintReceiptReference()
@@ -199,13 +199,13 @@ func attemptRightsCase(ctx context.Context, tx pgx.Tx, kind string, personID ids
 	// exists to make the row returnable, not to change it.
 	err = nested.QueryRow(ctx, `
 		INSERT INTO data_subject_request
-		  (kind, subject_ref, person_id, received_at, channel, due_at,
+		  (kind, subject_ref, contact_id, received_at, channel, due_at,
 		   source_submission_id, receipt_reference)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (source_submission_id) WHERE source_submission_id IS NOT NULL
 		  DO UPDATE SET source_submission_id = EXCLUDED.source_submission_id
 		RETURNING id, receipt_reference, (xmax = 0)`,
-		kind, personID.String(), personID.UUID, receivedAt, channelConfirmLink,
+		kind, contactID.String(), contactID.UUID, receivedAt, channelConfirmLink,
 		oneCalendarMonthAfter(receivedAt), submissionID, receipt,
 	).Scan(&caseID, &stored, &created)
 	if err != nil {
@@ -248,9 +248,9 @@ func finishRightsCase(ctx context.Context, tx pgx.Tx, caseID ids.UUID, stored st
 	if !created {
 		return stored, nil
 	}
-	// Audited against the CASE, not the person: this row is the work, and a
+	// Audited against the CASE, not the contact: this row is the work, and a
 	// reader asking why the queue holds it wants the act that opened it. The
-	// person is named on the row itself.
+	// contact is named on the row itself.
 	//
 	// AuditEvent rather than Audit, for stageSubmission's reason — a case being
 	// opened is an occurrence with no prior state, and an update audit would

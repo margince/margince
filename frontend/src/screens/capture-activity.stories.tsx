@@ -47,7 +47,7 @@ const ENTRIES = [
     activity_id: "01930000-0000-7000-8000-0000000000a3",
     resolution: {
       status: "real",
-      kind: "person",
+      kind: "contact",
       resolved_at: "2026-08-15T09:30:00Z",
     },
     counterparty: null,

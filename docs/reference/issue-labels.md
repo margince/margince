@@ -92,7 +92,7 @@ that says who is working rather than what the work is.
 `enhancement`, `security`, `capability-gap` (a missing capability, not a defect),
 `fast-track-debt` (shipped fast under time pressure with the gap recorded
 deliberately), and `margince-qc` (found by the `margince-qc` UAT acceptance-test
-repo while building or running a scenario, rather than by a person working in
+repo while building or running a scenario, rather than by a contact working in
 this repo directly). These record *why the issue exists*, which is the one
 thing nobody can reconstruct later — prefer keeping them over tidying them
 away.

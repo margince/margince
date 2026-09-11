@@ -3,7 +3,7 @@
 
 package aiactivity
 
-// One person's view of what the AI is doing for them.
+// One contact's view of what the AI is doing for them.
 //
 // It reads ONE table. The vocabulary of "what kinds of AI work exist" lives at
 // the emitters, not here — a new kind adds a publisher and this read does not
@@ -20,14 +20,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// recentBound caps what settled today. An unbounded per-person history is the
-// per-person activity ledger this installation deliberately does not keep, so
+// recentBound caps what settled today. An unbounded per-contact history is the
+// per-contact activity ledger this installation deliberately does not keep, so
 // this is a requirement rather than a page size.
 const recentBound = 10
 
 // liveBound caps what is reported as in flight.
 //
-// The live set is not bounded by anything a person controls: one rep can press
+// The live set is not bounded by anything a contact controls: one rep can press
 // "read this document" on twenty attachments, and every live row ships to every
 // open tab on every poll. Higher than recentBound because a live occurrence is
 // the thing the reader is actually waiting on, and cutting one is worse than
@@ -38,7 +38,7 @@ const liveBound = 25
 //
 // Its own number rather than recentBound's, because it answers a different
 // question: recentBound is "how much history does this installation keep on a
-// person", and this is "how many broken runs can a reader be asked to deal with
+// contact", and this is "how many broken runs can a reader be asked to deal with
 // before the list stops helping". Higher than recentBound so that a day whose
 // every settled run failed still delivers every one of them — the arm exists so
 // success cannot evict a fault, and a bound below the settled one would let a
@@ -72,7 +72,7 @@ const (
 	armFault   = "fault"
 )
 
-// Feed is one person's view of the AI's work: what is in flight, what settled
+// Feed is one contact's view of the AI's work: what is in flight, what settled
 // today, and what went wrong today.
 //
 // Faults are NOT a subset of Settled, which is the whole point of carrying
@@ -104,8 +104,8 @@ type Item struct {
 	// SubjectType and SubjectID identify the record the label names, so the
 	// rail can make the name a way to reach it. Forwarded as stored, on the
 	// same ground as the label: the source emitted them only where the actor
-	// is the person that record was already displayed to. They are NOT a
-	// filter — the read stays keyed on the person alone, and a subject-scoped
+	// is the contact that record was already displayed to. They are NOT a
+	// filter — the read stays keyed on the contact alone, and a subject-scoped
 	// read is a different authorization this package declines to hold.
 	SubjectType *string
 	SubjectID   *ids.UUID
@@ -133,7 +133,7 @@ const StateStalled = "stalled"
 // its own bound, and because each matches one of the table's partial indexes:
 //
 //	live     queued IS live — an occurrence waiting for a worker is work in
-//	         progress to the person who asked — and ai_task_run_live indexes
+//	         progress to the contact who asked — and ai_task_run_live indexes
 //	         exactly this predicate. `stalled` is decided here, in SQL, against
 //	         the DATABASE clock: stale_after was computed from timestamps the
 //	         database stamped, and comparing them to a reader's host clock
@@ -207,20 +207,20 @@ UNION ALL
 // Mine is what the AI is doing for THE CALLER now, and what it finished for
 // them today.
 //
-// The person is taken from the bound principal and is NOT a parameter, which is
+// The contact is taken from the bound principal and is NOT a parameter, which is
 // the whole of the authorization. A store method that accepted a user id would
 // let any in-process caller ask for somebody else's feed, and the only thing
 // standing between that and a leak would be every caller remembering to pass
 // its own — the shape this repo gates against everywhere else. Here there is
-// nothing to remember: another person's feed cannot be expressed.
+// nothing to remember: another seat's feed cannot be expressed.
 // kinds narrows both arrays before the bounds. Nil means every kind — the
 // complete record — and that is deliberately what an omitted filter gives:
 // every AI task reports here, so the server's answer is complete unless a
 // client says which part of it that client draws.
 func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string) (Feed, error) {
-	person, personErr := personalReader(ctx)
-	if personErr != nil {
-		return Feed{}, personErr
+	contact, contactErr := personalReader(ctx)
+	if contactErr != nil {
+		return Feed{}, contactErr
 	}
 	// An EMPTY slice is not an absent one and must not collapse into it: a
 	// caller that asked for no kinds gets no rows, where nil asks for all of
@@ -233,7 +233,7 @@ func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string
 	feed := Feed{Live: []Item{}, Settled: []Item{}, Faults: []Item{}}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, txErr := tx.Query(ctx, feedSQL,
-			person, startOfToday, recentBound, DegradeReasonBound, SummaryBound, liveBound, filter,
+			contact, startOfToday, recentBound, DegradeReasonBound, SummaryBound, liveBound, filter,
 			SubjectLabelBound, faultBound, SubjectTypeBound)
 		if txErr != nil {
 			return txErr

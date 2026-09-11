@@ -44,7 +44,7 @@ export const Dotted: Story = {
 };
 
 /**
- * A CONTACT's line: each fact is a separate handle on the person rather than a
+ * A CONTACT's line: each fact is a separate handle on the contact rather than a
  * clause about them, so whitespace tells them apart instead of a dot.
  */
 export const Spaced: Story = {

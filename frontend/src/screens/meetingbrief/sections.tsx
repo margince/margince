@@ -96,7 +96,7 @@ export function GoalPanel({
   const byModel = brief.generated_by === "model";
   return (
     <Panel
-      title={t("person.meeting.goal")}
+      title={t("contact.meeting.goal")}
       titleLevel={3}
       tone={byModel ? "ai" : "accent"}
       // The disclosure rides the LEAD's band and nowhere else. The panels under
@@ -149,7 +149,7 @@ export function RisksPanel({
   }
   return (
     <Panel
-      title={t("person.meeting.risks")}
+      title={t("contact.meeting.risks")}
       titleLevel={3}
       tone={brief.generated_by === "model" ? "ai" : "warn"}
     >
@@ -186,7 +186,7 @@ export function BodyPanels({
         return (
           <Panel
             key={kind}
-            title={t(`person.meeting.${kind}`)}
+            title={t(`contact.meeting.${kind}`)}
             titleLevel={3}
             // The same writer wrote these as wrote the lead above, so they
             // carry the same claim. Untinted rather than accent-tinted for a
@@ -231,7 +231,7 @@ export function Background({
     return null;
   }
   return (
-    <Disclosure summary={t("person.meeting.background")}>
+    <Disclosure summary={t("contact.meeting.background")}>
       <div className="mb-background">
         {context && (
           <SentenceList
@@ -242,12 +242,12 @@ export function Background({
         )}
         {omitted.map((omission) => (
           <SurfaceState
-            loadingLabel={t("person.meeting.omittedSource")}
+            loadingLabel={t("contact.meeting.omittedSource")}
             key={omission.source}
             state="withheld"
             labelLevel="h4"
-            label={t("person.meeting.omittedSource")}
-            emptyLabel={t("person.meeting.empty")}
+            label={t("contact.meeting.omittedSource")}
+            emptyLabel={t("contact.meeting.empty")}
             detail={{ withheldReason: omission.reason }}
           >
             {null}

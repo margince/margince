@@ -28,7 +28,7 @@ fixture:
     > Thomas Weber
 expect:
   outcome: accepted
-  answer: person
+  answer: contact
   rubric: >
     The guard on the quoted-history rule that spam_02 forced. spam_02 says a
     thread of the sender chasing their own unanswered mail is not a
@@ -36,7 +36,7 @@ expect:
     The quoted block is written by somebody at THIS business, and the sender is
     answering it: a delivery time was asked and given, accepted, and an order
     follows. That is the ordinary correspondence a CRM exists to file.
-    A verdict of "person" scores high. "spam" scores zero, and it is the costly
+    A verdict of "contact" scores high. "spam" scores zero, and it is the costly
     direction — a spam verdict suppresses the sender's whole domain
     workspace-wide, so reading a genuine customer reply as a pitch would hide
     an active supplier relationship from every colleague.

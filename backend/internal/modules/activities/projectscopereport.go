@@ -59,7 +59,7 @@ func (r ProjectScopeReport) Wire() crmcontracts.ProjectScope {
 // ReadProjectScope reads the report for one project over one anchor.
 //
 // anchor renders the predicate that ties an activity (alias `a`) to the read's
-// anchor — the company walk or the person link — registering its binds
+// anchor — the company walk or the contact link — registering its binds
 // through arg. The caller has already run RequireProjectScope, which is why
 // the project row is read here without a gate of its own: a project that is
 // not live or not visible never reaches this.

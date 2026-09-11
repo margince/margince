@@ -27,7 +27,7 @@ import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid } from "./companyraildetails";
 import {
   contactRole,
-  peopleSlice,
+  contactsSlice,
   SectionSummary,
   sectionAnswered,
   wholeCount,
@@ -47,7 +47,7 @@ import "./company360.css";
 // rather than the narrower `aside` share a right-hand column would get.
 //
 // Drawn as SIX separate panels, each answering one question about the
-// account — its open deals, its people, its facts, its lists and tags — in
+// account — its open deals, its contacts, its facts, its lists and tags — in
 // the order a reader works down the column, rather than the disclosures the
 // rail used to fold into one card: a hairline inside a panel reads as one
 // story about that panel's own subject, and a panel's own edge is what tells
@@ -85,7 +85,7 @@ export function CompanyRail({
   company?: Company;
   view?: Company360;
   // The composite read `view` comes off is still in flight. Threaded to the
-  // sections that read `view` straight (Deals, People, Tags) so their
+  // sections that read `view` straight (Deals, Contacts, Tags) so their
   // `sectionState` calls can tell "still loading" apart from "the read
   // failed" — both hand a section an undefined `view`, and without this flag
   // every one of them reads the failed state for as long as the read runs,
@@ -108,7 +108,7 @@ export function CompanyRail({
     // A plain div: the shell's own <aside> is the landmark around this, and a
     // second labelled region inside it would give a reader two names for one
     // column. Inside it ONE pane of named sections (DESIGN.md §6): the
-    // account's fields, its deals, its people, the hold, its tags — each a
+    // account's fields, its deals, its contacts, the hold, its tags — each a
     // disclosure with its own summary, so the column reads as one object with
     // five slices rather than five cards a reader has to assemble.
     <div className="co-rail">
@@ -139,7 +139,7 @@ export function CompanyRail({
             each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
             tab is not a duplicate of it, a full copy would be. */}
         <DealsSection view={view} loading={loading} onTab={onTab} />
-        <PeopleSection view={view} loading={loading} onTab={onTab} />
+        <ContactsSection view={view} loading={loading} onTab={onTab} />
         <CompanyHoldSection company={view?.company ?? company} />
         <Disclosure
           className="co-sect"
@@ -184,7 +184,7 @@ function CompanyHoldSection({
     >
       <PanelBody>
         {/* The row takes an ADDRESS and derives the domain from it, which is
-            what every person page hands it. An account has only the domain, so
+            what every contact page hands it. An account has only the domain, so
             it is handed a bare address at that domain — the same value the
             row's own domain verb would compute. */}
         <CounterpartyHoldRow email={`x@${host}`} />
@@ -420,12 +420,12 @@ function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
 }
 
 /**
- * PeopleSection is a glance at the roster: who is here, how they have
+ * ContactsSection is a glance at the roster: who is here, how they have
  * answered, and, where the graph read supports it, the colleagues already in
  * contact with them. The set-role and route-in verbs stay on the Contacts tab's
  * own roster rather than being rebuilt here a second time.
  */
-function PeopleSection({
+function ContactsSection({
   view,
   loading,
   onTab,
@@ -436,12 +436,12 @@ function PeopleSection({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // Already ranked. The server orders the people section by engagement, then
-  // relationship strength, then id (people.RankContacts) BEFORE it cuts to
+  // Already ranked. The server orders the contacts section by engagement, then
+  // relationship strength, then id (contacts.RankContacts) BEFORE it cuts to
   // twenty-five, so re-sorting here would be a second spelling of that rule —
   // and the copy that drifts, since only one of the two is what chose which
   // twenty-five arrived.
-  const { contacts, count, state } = peopleSlice(view, loading);
+  const { contacts, count, state } = contactsSlice(view, loading);
   const answered = sectionAnswered(state);
   return (
     <Disclosure
@@ -449,7 +449,7 @@ function PeopleSection({
       open
       summary={
         <SectionSummary
-          title={t("co.rail.people.title")}
+          title={t("co.rail.contacts.title")}
           count={answered ? count : undefined}
         />
       }
@@ -459,8 +459,8 @@ function PeopleSection({
         // on the account, and the Contacts tab is the full roster.
         <ul className="record-card-list">
           {contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
-            <li key={contact.person_id}>
-              <PersonCard contact={contact} />
+            <li key={contact.contact_id}>
+              <ContactCard contact={contact} />
             </li>
           ))}
         </ul>
@@ -468,8 +468,8 @@ function PeopleSection({
         <PanelBody>
           <SurfaceState
             state={state}
-            emptyLabel={t("co.rail.people.empty")}
-            loadingLabel={t("co.rail.people.title")}
+            emptyLabel={t("co.rail.contacts.empty")}
+            loadingLabel={t("co.rail.contacts.title")}
           >
             {null}
           </SurfaceState>
@@ -479,7 +479,7 @@ function PeopleSection({
           {state === "empty" && (
             <div className="card-actions">
               <Button small variant="ghost" onClick={() => onTab("contacts")}>
-                {t("co.rail.people.add")}
+                {t("co.rail.contacts.add")}
               </Button>
             </div>
           )}
@@ -498,15 +498,15 @@ function PeopleSection({
   );
 }
 
-function PersonCard({ contact }: Readonly<{ contact: Contact }>) {
+function ContactCard({ contact }: Readonly<{ contact: Contact }>) {
   const t = useT();
   const colleagues = contact.routes?.top ?? [];
   return (
     <RecordCard
-      kind="person"
+      kind="contact"
       name={contact.full_name}
-      identity={contact.person_id}
-      href={routeHash({ screen: "contacts", id: contact.person_id })}
+      identity={contact.contact_id}
+      href={routeHash({ screen: "contacts", id: contact.contact_id })}
       position={contactRole(contact)}
       email={contact.primary_email ?? undefined}
       aside={
@@ -516,10 +516,10 @@ function PersonCard({ contact }: Readonly<{ contact: Contact }>) {
 
              A bare monogram is a mark only its owner recognises, so the stack
              opens to the sentence it stands for: which colleagues are already
-             in touch with this person. Hover for a passing reader, click and
+             in touch with this contact. Hover for a passing reader, click and
              focus for everyone a hover never reaches; the sr-only names
              double as the trigger's accessible name. */
-          <span className="co-person-routes">
+          <span className="co-contact-routes">
             <Popover
               onHover
               label={
@@ -528,15 +528,15 @@ function PersonCard({ contact }: Readonly<{ contact: Contact }>) {
                     {colleagues.map((route) => route.display_name).join(", ")}
                   </span>
                   <AvatarStack
-                    people={colleagues.map((route) => ({
+                    contacts={colleagues.map((route) => ({
                       name: route.display_name,
                     }))}
                   />
                 </>
               }
             >
-              <p className="t-caption">{t("co.rail.people.inTouch")}</p>
-              <ul className="co-person-routes-list">
+              <p className="t-caption">{t("co.rail.contacts.inTouch")}</p>
+              <ul className="co-contact-routes-list">
                 {colleagues.map((route) => (
                   // Keyed on the id, not the name: two colleagues can share a
                   // display name, and a name key would fold their rows.
@@ -655,7 +655,7 @@ export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
               </span>
               {/* A signal ABOUT one of the account's projects sends the
                   reader to that project: the summary names it, the link
-                  opens it. An account- or person-subject signal already
+                  opens it. An account- or contact-subject signal already
                   sits on the page it is about. */}
               {signal.entity_type === "project" && signal.entity_id && (
                 <a

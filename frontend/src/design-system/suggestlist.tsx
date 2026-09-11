@@ -50,7 +50,7 @@ export type Suggestion = Readonly<{
  * A substring rather than a prefix because both vocabularies are namespaced in
  * their own way — `mistralai/mistral-small` is found by typing `mistral`, and
  * `dana@nordwand.example` by typing `nordwand`. Matching the label too is what
- * lets a reader find an address by the person's name, which is the only half of
+ * lets a reader find an address by the contact's name, which is the only half of
  * a recipient they actually remember.
  *
  * A value that EXACTLY matches a row shows the whole list rather than filtering
@@ -281,7 +281,7 @@ export function useSuggestList({
  *
  * `face` is the typeface the VALUE is drawn in and the only thing that varies
  * between the two hosts: a model id is a machine name and reads as one, an
- * address and a person's name are words. It is not a density or a variant — the
+ * address and a contact's name are words. It is not a density or a variant — the
  * geometry is stated once, so two lists cannot come to look like two controls.
  */
 export function SuggestPopup({

@@ -249,7 +249,7 @@ func TestCustomFieldSetOptions_BusyTableAnswersRetryableConflict(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	created, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: "Procurement route", Type: customfieldsmod.TypePicklist,
+		Object: "contact", Label: "Procurement route", Type: customfieldsmod.TypePicklist,
 		Options: []string{"direct", "reseller"}, Source: "ui",
 	})
 	if err != nil {
@@ -262,7 +262,7 @@ func TestCustomFieldSetOptions_BusyTableAnswersRetryableConflict(t *testing.T) {
 		t.Fatal(err)
 	}
 	var rows int
-	if err := blockTx.QueryRow(context.Background(), `SELECT count(*) FROM person`).Scan(&rows); err != nil {
+	if err := blockTx.QueryRow(context.Background(), `SELECT count(*) FROM contact`).Scan(&rows); err != nil {
 		t.Fatal(err)
 	}
 

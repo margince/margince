@@ -15,7 +15,7 @@ package comms
 // It reads parked_at, not the parked STATUS: the status is also worn by a send
 // parked after its message went out, and by one an erasure or a restriction
 // stopped. Neither is a failure the sender must answer for, and both would put
-// a card on a queue that promises everything on it needs a person.
+// a card on a queue that promises everything on it needs a contact.
 
 import (
 	"context"
@@ -32,15 +32,15 @@ const parkReasonColumn = "reason"
 
 // ParkedSend is one send of the caller's that was given up on: what it was
 // about, why it was abandoned in the dispatcher's own words, when that was
-// decided, and the person the send's activity is filed under — zero when it is
+// decided, and the contact the send's activity is filed under — zero when it is
 // filed under none, and the card then names the send by its subject line
 // alone.
 type ParkedSend struct {
-	ID       ids.UUID
-	Subject  string
-	Reason   string
-	ParkedAt time.Time
-	PersonID ids.UUID
+	ID        ids.UUID
+	Subject   string
+	Reason    string
+	ParkedAt  time.Time
+	ContactID ids.UUID
 }
 
 // undeliveredLane is the lane's three words: the dispatcher's own reason, the
@@ -64,7 +64,7 @@ var undeliveredLane = sendLane{
 	only: "o.channel_user_id IS NULL AND o.parked_at IS NOT NULL",
 }
 
-// ParkedSendsFor answers the calling person's own abandoned sends since
+// ParkedSendsFor answers the calling contact's own abandoned sends since
 // `since`, newest first, bounded.
 func (s *Store) ParkedSendsFor(ctx context.Context, since time.Time, limit int) ([]ParkedSend, error) {
 	sends, err := s.readSendLane(ctx, undeliveredLane, "undelivered sends", since, limit)
@@ -75,7 +75,7 @@ func (s *Store) ParkedSendsFor(ctx context.Context, since time.Time, limit int) 
 	for _, send := range sends {
 		parked = append(parked, ParkedSend{
 			ID: send.ID, Subject: send.Subject, Reason: send.Reason,
-			ParkedAt: send.At, PersonID: send.PersonID,
+			ParkedAt: send.At, ContactID: send.ContactID,
 		})
 	}
 	return parked, nil

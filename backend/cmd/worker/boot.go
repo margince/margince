@@ -21,8 +21,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -157,7 +157,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	backfillConnectorCredentials(laneCtx, pool, vault, stdout, logger)
 	// Automatic enrichment on create, which needs BOTH halves the run lanes
 	// need: an adapter to call and the vault that unseals its credential.
-	if err := startPersonDataEnrich(laneCtx, pool, rdb, providers, vault, lanes.background, logger, stdout); err != nil {
+	if err := startContactDataEnrich(laneCtx, pool, rdb, providers, vault, lanes.background, logger, stdout); err != nil {
 		return lanes, err
 	}
 
@@ -408,14 +408,14 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// The LinkedIn ghost matcher (ADR-0078 §8b): a ghost attaches the moment
 	// its contact exists, whoever created them. Deterministic like the edge
 	// projection above, so it runs on every worker.
-	matcher := compose.NewLinkedInMatchGen(pool, people.NewStore(compose.InstallationDB(pool)), identity.NewService(pool), logger)
+	matcher := compose.NewLinkedInMatchGen(pool, contacts.NewStore(compose.InstallationDB(pool)), identity.NewService(pool), logger)
 	_, _ = fmt.Fprintln(stdout, "worker matching LinkedIn connections as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:linkedin-match", matcher.HandleEvent, logger, 0) })
 
-	// A person's captured mail finds them however late they arrive: the ensure
+	// A contact's captured mail finds them however late they arrive: the ensure
 	// links only the message it ran for, so every message captured before the
-	// person existed needs the cohort repair this consumer runs.
-	cohort := compose.NewCohortPromoteGen(pool, people.NewStore(compose.InstallationDB(pool)), logger)
+	// contact existed needs the cohort repair this consumer runs.
+	cohort := compose.NewCohortPromoteGen(pool, contacts.NewStore(compose.InstallationDB(pool)), logger)
 	_, _ = fmt.Fprintln(stdout, "worker repairing captured cohorts as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:cohort-promote", cohort.HandleEvent, logger, 0) })
 
@@ -427,7 +427,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)
 
-	// What the AI is doing for one person, projected into the table the UI
+	// What the AI is doing for one contact, projected into the table the UI
 	// reads. Deterministic like the projections above, so it runs on every
 	// worker: an installation whose lane is not running has a rail that is not
 	// wrong so much as frozen, and a frozen rail reads as an idle one.
@@ -443,7 +443,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// from public search metadata when a provider is bound. Same trigger as the
 	// matcher above and the same reason: matching only at write time means every
 	// later arrival is a match nobody will ever make.
-	startPersonAutoEnrich(ctx, pool, rdb, background, logger, stdout)
+	startContactAutoEnrich(ctx, pool, rdb, background, logger, stdout)
 }
 
 // startWebhookLane starts the cg:webhooks delivery consumer, whose deliverer is

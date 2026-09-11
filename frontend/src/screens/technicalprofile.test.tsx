@@ -168,7 +168,7 @@ describe("which facts belong to the technical profile", () => {
     ).toBe(false);
   });
 
-  // A person correcting a machine-read value rewrites the row's source to
+  // A contact correcting a machine-read value rewrites the row's source to
   // `human`. Partitioning by source would drop exactly the rows somebody cared
   // enough to fix.
   it("keeps a corrected row on the technical card", () => {

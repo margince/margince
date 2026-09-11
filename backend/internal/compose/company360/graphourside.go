@@ -4,7 +4,7 @@
 package company360
 
 // Our side of the account: the colleague who owns it, and the colleagues who
-// have actually dealt with its people. Kept apart from the account-side reads
+// have actually dealt with its contacts. Kept apart from the account-side reads
 // in graphreads.go because it answers the mirror-image question — not who
 // works there, but who here already has a way in — and because it is the one
 // group whose candidates depend on which contacts the card ended up drawing.
@@ -26,12 +26,12 @@ import (
 
 // readOurSide reads who on OUR side is connected to the account: the member
 // who owns it, and the colleagues who have actually been in touch with its
-// people. Without it the card answers "who works there" and leaves out the
+// contacts. Without it the card answers "who works there" and leaves out the
 // half a rep opens it for — which of us already has a way in.
 //
 // It carries BOTH its gates itself, and asks for them up front rather than per
 // edge, because the group is one answer: an interaction edge names one of the
-// account's contacts, so the group is a person read, and every one of those
+// account's contacts, so the group is a contact read, and every one of those
 // edges is derived from an activity, so it is an activity read too. The owner
 // edge names the company the caller is already reading and a colleague
 // from the workspace roster, so it needs neither grant of its own — it is held
@@ -42,7 +42,7 @@ import (
 // a group list reordered for any reason must not be able to turn a gated read
 // into an ungated one.
 func (g *graphAssembly) readOurSide() error {
-	if err := auth.Require(g.ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(g.ctx, "contact", principal.ActionRead); err != nil {
 		return err
 	}
 	if err := auth.Require(g.ctx, "activity", principal.ActionRead); err != nil {
@@ -61,14 +61,14 @@ func (g *graphAssembly) readOurSide() error {
 // Correlating on already-placed rows is what keeps the graph one hop: an
 // interaction with someone who does not work at this account is not a
 // connection INTO it. It is also what keeps our_side and its dropped_count
-// describing the people the card actually shows. Correlating against the
+// describing the contacts the card actually shows. Correlating against the
 // contacts merely READ would let a colleague whose only contact the contact cap
 // dropped take a user slot, be discarded again at placement for having no
 // surviving edge, and push a colleague of a displayed contact out of the graph.
 func (g *graphAssembly) drawnContactIDs() []ids.UUID {
 	var out []ids.UUID
 	for _, node := range g.out.Nodes {
-		if node.Kind == crmcontracts.CompanyGraphNodeKindPerson {
+		if node.Kind == crmcontracts.CompanyGraphNodeKindContact {
 			out = append(out, ids.UUID(node.Id))
 		}
 	}
@@ -113,7 +113,7 @@ func (g *graphAssembly) readAccountOwner() error {
 }
 
 // readInContactWith reads which colleagues have REAL recorded contact with the
-// account's people, and with whom.
+// account's contacts, and with whom.
 //
 // It reads the interaction projection (CG-DDL-1), which is folded from the
 // participant rows capture stamps — who was actually IN each conversation.
@@ -134,11 +134,11 @@ func (g *graphAssembly) readAccountOwner() error {
 // in a two-way thread instead of a role filter removing them.
 //
 // On gating: the contacts passed in are the ones the card has already PLACED,
-// which means they have already passed the person row-scope gate — and capture
+// which means they have already passed the contact row-scope gate — and capture
 // privacy with it, so an unpromoted contact cannot appear here. The old query
 // additionally carried the activity scope clause; it is subsumed rather than
 // dropped. An activity's visibility derives from its links, so an activity
-// linked to a person the caller can see is one the caller can read under the
+// linked to a contact the caller can see is one the caller can read under the
 // same any-link rule the timeline uses. There is no edge here whose underlying
 // activity the caller could not open.
 //
@@ -153,21 +153,21 @@ func (g *graphAssembly) readInContactWith(contactIDs []ids.UUID) error {
 	}
 	rows, err := g.tx.Query(g.ctx, fmt.Sprintf(`
 		WITH touch AS (
-			SELECT u.id AS user_id, u.display_name, e.person_id, e.last_at,
+			SELECT u.id AS user_id, u.display_name, e.contact_id, e.last_at,
 			       e.count_90d, e.in_count_90d, e.out_count_90d
 			FROM graph_interaction_edge e
 			JOIN app_user u ON u.id = e.user_id AND `+liveMemberWhere+`
-			WHERE e.person_id = ANY($1)
+			WHERE e.contact_id = ANY($1)
 		), colleagues AS (
 			SELECT user_id, max(last_at) AS last_touch FROM touch GROUP BY user_id
 		), chosen AS (
 			SELECT user_id FROM colleagues ORDER BY last_touch DESC, user_id LIMIT %d
 		)
-		SELECT touch.user_id, touch.display_name, touch.person_id,
+		SELECT touch.user_id, touch.display_name, touch.contact_id,
 		       touch.last_at, touch.count_90d, touch.in_count_90d, touch.out_count_90d,
 		       (SELECT count(*) FROM colleagues)
 		FROM touch JOIN chosen ON chosen.user_id = touch.user_id
-		ORDER BY touch.user_id, touch.person_id`, graphUserCap), contactIDs)
+		ORDER BY touch.user_id, touch.contact_id`, graphUserCap), contactIDs)
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func (g *graphAssembly) readInContactWith(contactIDs []ids.UUID) error {
 		var lastAt time.Time
 		// Every row carries the same total; they agree because they come from
 		// one statement.
-		if err := row.Scan(&edge.user.userID, &edge.user.displayName, &edge.personID,
+		if err := row.Scan(&edge.user.userID, &edge.user.displayName, &edge.contactID,
 			&lastAt, &in.Count90d, &in.Inbound90d, &in.Outbound90d, &g.ourSideTotal); err != nil {
 			return edge, err
 		}
@@ -195,9 +195,9 @@ func (g *graphAssembly) readInContactWith(contactIDs []ids.UUID) error {
 // edges the warm room would rank as ways in. It asks the signals module for
 // the candidates rather than gathering them here: the warm/cold join owns
 // what "anchors this account" means, and a second spelling would let the
-// card and the warm room propose different people to ask for an intro.
+// card and the warm room propose different contacts to ask for an intro.
 //
-// The intro path names a person, so it needs the person grant as well as the
+// The intro path names a contact, so it needs the contact grant as well as the
 // signal one. Both are asked here, not inferred from whether the contacts
 // group happened to run first — a group list reordered for any reason must not
-// be able to name a contact to a caller who may not read people.
+// be able to name a contact to a caller who may not read contacts.

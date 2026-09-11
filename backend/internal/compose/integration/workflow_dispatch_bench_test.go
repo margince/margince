@@ -67,7 +67,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -87,7 +87,7 @@ const workflowDispatchBudget = 200 * time.Millisecond
 // before the gate trips. That is the difference between "this dispatch got
 // unlucky once" and "this dispatch has a tail", and only the second is the
 // regression AC-W2 exists to catch. On the contended lane runner even that was
-// not enough, which is why this suite is by hand; on a machine a person is
+// not enough, which is why this suite is by hand; on a machine a contact is
 // watching, it is what makes the number worth reading.
 const dispatchSampleSize = 200
 
@@ -144,14 +144,14 @@ func leadCreatedEnvelope(leadID ids.UUID) kevents.Envelope {
 }
 
 // seedTriggerLeads creates n leads through the real domain write path
-// (people.Store.CreateLead), which stages "lead.created" via storekit.Emit in
+// (contacts.Store.CreateLead), which stages "lead.created" via storekit.Emit in
 // the same transaction as the row — an honest trigger entity for
 // Match/Plan/Apply to work against, never a hand-built stand-in.
 func seedTriggerLeads(t *testing.T, e *Env, n int) (leadIDs []ids.UUID) {
 	t.Helper()
 	for i := range n {
 		name := fmt.Sprintf("Dispatch Perf Lead %d", i)
-		lead, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{FullName: &name, Source: "manual"})
+		lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &name, Source: "manual"})
 		if err != nil {
 			t.Fatalf("seeding trigger lead %d: %v", i, err)
 		}

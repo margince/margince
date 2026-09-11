@@ -42,7 +42,7 @@ const (
 )
 
 const (
-	objPerson   = "person"
+	objContact  = "contact"
 	objActivity = "activity"
 	objDeal     = "deal"
 	objCompany  = "company"
@@ -68,7 +68,7 @@ var (
 	RepPerms = principal.Permissions{
 		RoleKeys: []string{roleRep},
 		Objects: map[string]principal.ObjectGrant{
-			objPerson:          {Create: true, Read: true, Update: true},
+			objContact:         {Create: true, Read: true, Update: true},
 			objDeal:            {Create: true, Read: true, Update: true},
 			objPipeline:        {Read: true},
 			objRelationship:    {Create: true, Read: true, Update: true},
@@ -96,7 +96,7 @@ var (
 		RowScope: principal.RowScopeTeam,
 	}
 	// AccountRepPerms is the rep the account sections are read by: the
-	// company itself, its people and deals, its activities, and the tag/list
+	// company itself, its contacts and deals, its activities, and the tag/list
 	// chips. It is a fixture in its own right rather than RepPerms plus a delta —
 	// RepPerms stays narrow because several suites read it as a rep who CANNOT
 	// see a company, and widening it would make those pass while proving
@@ -106,7 +106,7 @@ var (
 		RoleKeys: []string{roleRep},
 		Objects: map[string]principal.ObjectGrant{
 			objCompany:         {Read: true},
-			objPerson:          {Create: true, Read: true, Update: true},
+			objContact:         {Create: true, Read: true, Update: true},
 			objDeal:            {Create: true, Read: true, Update: true},
 			objActivity:        {Create: true, Read: true, Update: true},
 			objPipeline:        {Read: true},
@@ -120,7 +120,7 @@ var (
 	ReadOnlyPerms = principal.Permissions{
 		RoleKeys: []string{roleReadOnly},
 		Objects: map[string]principal.ObjectGrant{
-			objPerson: {Read: true}, objDeal: {Read: true}, objPipeline: {Read: true},
+			objContact: {Read: true}, objDeal: {Read: true}, objPipeline: {Read: true},
 			objRelationship:    {Read: true},
 			objInstallSettings: {Read: true},
 		},
@@ -157,7 +157,7 @@ var (
 	AdminPerms       = principal.Permissions{
 		RoleKeys: []string{roleAdmin},
 		Objects: map[string]principal.ObjectGrant{
-			objPerson:  {Create: true, Read: true, Update: true, Delete: true},
+			objContact: {Create: true, Read: true, Update: true, Delete: true},
 			objCompany: {Create: true, Read: true, Update: true, Delete: true},
 			objDeal:    {Create: true, Read: true, Update: true, Delete: true},
 			// The admin role holds contracts in full (identity/internal/policy.go),
@@ -269,7 +269,7 @@ func withoutGovernance(objects map[string]principal.ObjectGrant) map[string]prin
 	// Two objects ops holds NARROWER rather than not at all, so they are
 	// overwritten instead of deleted.
 	//
-	// role_admin is read: an operator answering "why can this person not see
+	// role_admin is read: an operator answering "why can this contact not see
 	// that" needs the policy in front of them, and changing it stays with admin.
 	// authentication_policy is read for the same shape of reason — ops sees which
 	// sign-in providers the installation offers; deciding who may enter it is

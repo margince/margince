@@ -39,7 +39,7 @@ export type RestoreInputs = Readonly<{
   /** The OAuth return deep link (#/onboarding/connect/...) lands mid-journey
    * and must reopen the connect act, exactly like the classic coordinator. */
   routeConnect: boolean;
-  /** The recap entries below are sentences a person reads, and the counts in
+  /** The recap entries below are sentences a reader reads, and the counts in
    * them are rendered here rather than at the renderer — a ThreadEntry's
    * params hold already-formatted strings. */
   locale: Locale;

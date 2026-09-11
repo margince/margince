@@ -5,10 +5,10 @@
 
 package company360
 
-// Why the account's work in flight needs a person, against a real database.
+// Why the account's work in flight needs a contact, against a real database.
 //
 // The unit lane cannot see any of what these pin: the row-scope predicates on
-// people and activities are SQL, the DISTINCT ON ordering that decides WHICH
+// contacts and activities are SQL, the DISTINCT ON ordering that decides WHICH
 // fact wins is SQL, and the fold from "the caller has no activity grant" to
 // "rows without reasons, and the payload says so" only happens once a real
 // gate refuses.
@@ -21,8 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -99,11 +99,11 @@ func TestCompany360_AProjectCarriesTheOpenCommitmentTheyMade(t *testing.T) {
 		t.Fatalf("creating the project: %v", err)
 	}
 	projectID := ids.UUID(project.Id)
-	personID := e.SeedPerson(t, "Ida Keller", nil)
+	contactID := e.SeedContact(t, "Ida Keller", nil)
 	// Through the real writer, so the claim carries the evidence and the
 	// fingerprint a hand-inserted row would not have.
 	body := "we'll confirm the depot slot once facilities sign off"
-	recordClaim(t, e, personID, projectID, body, "open", false)
+	recordClaim(t, e, contactID, projectID, body, "open", false)
 
 	view := assemble(t, e, companyID)
 	attention := projectAttention(t, view, projectID)
@@ -130,13 +130,13 @@ func TestCompany360_ADisputedOrSettledCommitmentIsNotStatedAsFact(t *testing.T) 
 		t.Fatalf("creating the project: %v", err)
 	}
 	projectID := ids.UUID(project.Id)
-	personID := e.SeedPerson(t, "Ida Keller", nil)
+	contactID := e.SeedContact(t, "Ida Keller", nil)
 	// Newest first, and both must lose: a settled claim is no longer owed,
 	// and needs_review means the extractor found contradicting evidence — the
 	// claim contract calls newest-wins no resolution, so presenting either as
 	// "they owe us this" states a contested thing as a fact.
-	recordClaim(t, e, personID, projectID, "already delivered", "done", false)
-	recordClaim(t, e, personID, projectID, "contradicted by a later mail", "open", true)
+	recordClaim(t, e, contactID, projectID, "already delivered", "done", false)
+	recordClaim(t, e, contactID, projectID, "contradicted by a later mail", "open", true)
 
 	view := assemble(t, e, companyID)
 	if row := findProject(t, view, projectID); row.Attention != nil {
@@ -218,7 +218,7 @@ func logTaskUnder(
 // recordClaim writes one commitment through the real writer, grounded in a
 // message filed under the project — the shape the extractor produces.
 func recordClaim(
-	t *testing.T, e *integration.Env, personID, projectID ids.UUID,
+	t *testing.T, e *integration.Env, contactID, projectID ids.UUID,
 	body, status string, needsReview bool,
 ) {
 	t.Helper()
@@ -226,15 +226,15 @@ func recordClaim(
 	message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Direction: ptrTo("inbound"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
-			{EntityType: "person", EntityID: personID},
+			{EntityType: "contact", EntityID: contactID},
 			{EntityType: "project", EntityID: projectID},
 		},
 	})
 	if err != nil {
 		t.Fatalf("logging the evidence: %v", err)
 	}
-	claim, err := people.NewStore(e.DB()).RecordConversationClaim(e.Admin(), people.ClaimInput{
-		PersonID: ids.From[ids.PersonKind](personID), Kind: "commitment_theirs",
+	claim, err := contacts.NewStore(e.DB()).RecordConversationClaim(e.Admin(), contacts.ClaimInput{
+		ContactID: ids.From[ids.ContactKind](contactID), Kind: "commitment_theirs",
 		Body: body, ActivityID: ids.UUID(message.Id), Quote: body, Source: "manual",
 	})
 	if err != nil {
@@ -295,9 +295,9 @@ func projectAttention(t *testing.T, view crmcontracts.Company360, projectID ids.
 	return *row.Attention
 }
 
-func TestCompany360_ACommitmentNeedsThePersonGrantAndNotOnlyTheRowScope(t *testing.T) {
+func TestCompany360_ACommitmentNeedsTheContactGrantAndNotOnlyTheRowScope(t *testing.T) {
 	e := integration.Setup(t)
-	companyID := e.SeedCompany(t, "Person-blind Account", nil)
+	companyID := e.SeedCompany(t, "Contact-blind Account", nil)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
 		Name: "Depot fit-out", CompanyID: ids.From[ids.CompanyKind](companyID), Source: "manual",
 	})
@@ -305,31 +305,31 @@ func TestCompany360_ACommitmentNeedsThePersonGrantAndNotOnlyTheRowScope(t *testi
 		t.Fatalf("creating the project: %v", err)
 	}
 	projectID := ids.UUID(project.Id)
-	personID := e.SeedPerson(t, "Ida Keller", nil)
+	contactID := e.SeedContact(t, "Ida Keller", nil)
 	body := "we'll confirm the depot slot once facilities sign off"
-	recordClaim(t, e, personID, projectID, body, "open", false)
+	recordClaim(t, e, contactID, projectID, body, "open", false)
 
-	// The claim names a PERSON and its row carries their name and what they
-	// said. Row scope alone admits nobody to people — it narrows a set the
+	// The claim names a CONTACT and its row carries their name and what they
+	// said. Row scope alone admits nobody to contacts — it narrows a set the
 	// object grant has already opened, and for an unbounded actor it is no
-	// predicate at all — so a reader without person:read must be refused
+	// predicate at all — so a reader without contact:read must be refused
 	// rather than handed both.
 	view, err := company360Service(e).Assemble(
-		e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoPersonPerms),
+		e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoContactPerms),
 		ids.From[ids.CompanyKind](companyID))
 	if err != nil {
 		t.Fatalf("assembling the 360: %v", err)
 	}
 	row := findProject(t, view, projectID)
 	if row.Attention != nil {
-		t.Fatalf("a reader without person:read got %q", row.Attention.Title)
+		t.Fatalf("a reader without contact:read got %q", row.Attention.Title)
 	}
 	if view.AttentionWithheld == nil || !*view.AttentionWithheld {
 		t.Fatal("the payload does not say the reasons were withheld")
 	}
 }
 
-func TestCompany360_ACommitmentByAnInvisiblePersonIsReportedRatherThanDropped(t *testing.T) {
+func TestCompany360_ACommitmentByAnInvisibleContactIsReportedRatherThanDropped(t *testing.T) {
 	e := integration.Setup(t)
 	companyID := e.SeedCompany(t, "Scoped Account", nil)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
@@ -341,12 +341,12 @@ func TestCompany360_ACommitmentByAnInvisiblePersonIsReportedRatherThanDropped(t 
 	projectID := ids.UUID(project.Id)
 	// Captured PRIVATELY by somebody else. Customer identity is otherwise
 	// workspace-readable, so capture privacy is the thing that actually hides
-	// a person from a colleague — an owner change alone does not.
+	// a contact from a colleague — an owner change alone does not.
 	other := e.Rep3
-	personID := e.SeedPerson(t, "Ida Keller", &other)
-	recordClaim(t, e, personID, projectID,
+	contactID := e.SeedContact(t, "Ida Keller", &other)
+	recordClaim(t, e, contactID, projectID,
 		"we'll confirm the depot slot once facilities sign off", "open", false)
-	e.WsExec(t, `UPDATE person SET visibility = 'owner' WHERE id = $1`, personID)
+	e.WsExec(t, `UPDATE contact SET visibility = 'owner' WHERE id = $1`, contactID)
 
 	view, err := company360Service(e).Assemble(
 		e.As(e.Rep1, []ids.UUID{e.Team1}, company360OwnScopePerms),
@@ -359,16 +359,16 @@ func TestCompany360_ACommitmentByAnInvisiblePersonIsReportedRatherThanDropped(t 
 	// prevent. Present and unexplained beats absent and misread.
 	row := findProject(t, view, projectID)
 	if row.Attention != nil {
-		t.Fatalf("an out-of-scope person's claim reached the page as %q", row.Attention.Title)
+		t.Fatalf("an out-of-scope contact's claim reached the page as %q", row.Attention.Title)
 	}
 	if view.AttentionWithheld == nil || !*view.AttentionWithheld {
 		t.Fatal("a claim was dropped for row scope and the payload does not say so")
 	}
 }
 
-// company360NoPersonPerms may read the account, its projects and its activities,
-// and may not read people at all.
-var company360NoPersonPerms = principal.Permissions{
+// company360NoContactPerms may read the account, its projects and its activities,
+// and may not read contacts at all.
+var company360NoContactPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"company":               {Read: true},
@@ -387,7 +387,7 @@ var company360OwnScopePerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"company":               {Read: true},
-		"person":                {Read: true},
+		"contact":               {Read: true},
 		"project":               {Read: true},
 		"deal":                  {Read: true},
 		"activity":              {Read: true},

@@ -16,7 +16,7 @@ package gates
 // change nobody has touched, reporting a supersession that never happened.
 //
 // That is not a cosmetic failure. Automatic application is allowed to change
-// records without asking precisely because a person can put the change back, so
+// records without asking precisely because a contact can put the change back, so
 // a kind whose Undo always refuses breaks the bargain the feature rests on. It
 // is also invisible: nothing errors, the refusal is a plausible sentence, and
 // the field simply becomes permanently un-undoable.
@@ -46,7 +46,7 @@ var dateColumnLine = regexp.MustCompile(`^public\.([a-z_]+)\.([a-z_0-9]+) date(?
 // Asserted rather than derived, and the test below holds it against the source
 // so a seventh record type cannot quietly escape this gate.
 var tablesUndoReads = []string{
-	"person", "company", "deal", "lead", "project", "activity", "relationship",
+	"contact", "company", "deal", "lead", "project", "activity", "relationship",
 }
 
 // dateColumnFloor is what the schema holds today. Under-recognition is the one

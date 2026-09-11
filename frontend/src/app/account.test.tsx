@@ -79,7 +79,7 @@ const row = (name: string) => screen.getByRole("menuitem", { name });
 const choice = (name: string) => screen.getByRole("menuitemradio", { name });
 
 describe("AccountMenu", () => {
-  // The rail's chip and the settings page's chip are the SAME person, so they
+  // The rail's chip and the settings page's chip are the SAME contact, so they
   // are the same colour — and they stay that colour when the display name
   // changes, because the tint is keyed on the address rather than on the name.
   it("keys the chip's tone on the address, not the display name", () => {
@@ -91,11 +91,11 @@ describe("AccountMenu", () => {
     const tone = toneOf(named);
     expect(tone).toBeTruthy();
     cleanup();
-    const { container: renamed } = renderNamed("Renamed Person");
+    const { container: renamed } = renderNamed("Renamed Contact");
     expect(toneOf(renamed)).toBe(tone);
   });
 
-  // WCAG 2.5.3: the row prints the person's name, so a voice user who says the
+  // WCAG 2.5.3: the row prints the contact's name, so a voice user who says the
   // word they can read has to reach this control.
   it("opens on the trigger and closes on it again", async () => {
     const user = userEvent.setup();

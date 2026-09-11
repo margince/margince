@@ -117,7 +117,7 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 //
 // Without the mark the row is unreachable: it is not pending, so the decision
 // lane skips it, and it names a human decider, so the receipts lane does too. A
-// person approved something, was told it was approved, and the work never
+// contact approved something, was told it was approved, and the work never
 // happened — with the only trace an error on one request nobody may have read.
 //
 // The stored sentence is written HERE rather than from the executor's error,

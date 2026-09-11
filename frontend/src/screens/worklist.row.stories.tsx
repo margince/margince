@@ -130,18 +130,18 @@ export const AMeetingWithItsStartTime: Story = {
       // The way into the brief, in the shape the server actually sends it.
       //
       // The subject stays the ACTIVITY — the row is about the appointment —
-      // and the person rides separately, because the brief is not a page of
+      // and the contact rides separately, because the brief is not a page of
       // its own: it opens as `?prep=<activity>` on somebody's record. Writing
-      // this fixture with a person SUBJECT instead would draw no control at
-      // all, since moveHref reads `with_person` and returns nothing without
+      // this fixture with a contact SUBJECT instead would draw no control at
+      // all, since moveHref reads `with_contact` and returns nothing without
       // it, and the story would look identical to its sibling below while
       // claiming to show the opposite.
       subject: { type: "activity", id: "m1" },
-      with_person: "0199f5c0-0000-7000-8000-0000000009a1",
+      with_contact: "0199f5c0-0000-7000-8000-0000000009a1",
       move: {
         action: "open_meeting_brief",
         activity_id: "m1",
-        arguments: { person_id: "0199f5c0-0000-7000-8000-0000000009a1" },
+        arguments: { contact_id: "0199f5c0-0000-7000-8000-0000000009a1" },
       },
     },
   },
@@ -155,7 +155,7 @@ export const AMeetingWithItsStartTime: Story = {
 // colleagues, or one whose attendee links this reader may not see.
 //
 // It sits beside its sibling because the two must LOOK different. The brief
-// opens on a person's page, so a meeting naming none has nowhere to send the
+// opens on a contact's page, so a meeting naming none has nowhere to send the
 // reader, and the honest row is the clock with no control under it. A story
 // that showed only the happy row would let a wrong destination ship looking
 // exactly like a right one — and the two states are one absent field apart.
@@ -369,7 +369,7 @@ export const APromiseWithItsEvidence: Story = {
       because: [],
       actions: ["open"],
       subject: {
-        type: "person",
+        type: "contact",
         id: "01a05500-0000-7000-8000-0000000000aa",
         label: "Kirsten Vogel",
       },
@@ -395,7 +395,7 @@ export const AQuietContactToSetAside: Story = {
       because: [],
       actions: ["open", "dismiss"],
       subject: {
-        type: "person",
+        type: "contact",
         id: "01a05500-0000-7000-8000-0000000000aa",
         label: "Kirsten Vogel",
       },
@@ -407,7 +407,7 @@ export const AQuietContactToSetAside: Story = {
   },
 };
 
-// Work a person approved that then did not run. It names what was released
+// Work a human approved that then did not run. It names what was released
 // rather than what was decided: the decision stands, the effect did not.
 export const AnApprovedThingThatDidNotRun: Story = {
   args: {
@@ -422,7 +422,7 @@ export const AnApprovedThingThatDidNotRun: Story = {
       because: [],
       actions: ["open"],
       subject: {
-        type: "person",
+        type: "contact",
         id: "01a05500-0000-7000-8000-0000000000aa",
         label: "Kirsten Vogel",
       },
@@ -508,15 +508,15 @@ export const APrivacyRequestOnItsClock: Story = {
   },
 };
 
-// A disclosure this person is owed and has not had. Same clock as the row
+// A disclosure this contact is owed and has not had. Same clock as the row
 // above, drawn differently in the one way that matters: this row NAMES the
-// person and offers `open`, because a notice case has no screen of its own and
-// the disclosure is sent from that person's page.
+// contact and offers `open`, because a notice case has no screen of its own and
+// the disclosure is sent from that contact's page.
 //
 // The title names the ARTICLE rather than the case state, which is what a
 // reader needs to decide anything: an Art. 14 duty means the subject does not
 // know we hold their data at all.
-export const ADisclosureThisPersonIsOwed: Story = {
+export const ADisclosureThisContactIsOwed: Story = {
   args: {
     ...baseArgs,
     item: {
@@ -526,7 +526,7 @@ export const ADisclosureThisPersonIsOwed: Story = {
       level: 1,
       consequence: "legal_deadline_missed",
       title: "An Art. 14 disclosure is due",
-      subject: { type: "person", id: "01a05500-0000-7000-8000-0000000000d1" },
+      subject: { type: "contact", id: "01a05500-0000-7000-8000-0000000000d1" },
       because: [{ kind: "legal_deadline" }],
       actions: ["open"],
     },
@@ -629,7 +629,7 @@ export const AWaitingBuyerOnAPhone: Story = {
 // The same row where the reader may see LESS of it.
 //
 // Two limits at once, and they are different limits. The message is on a
-// thread limited to named people, which the access badge says and which leaves
+// thread limited to named contacts, which the access badge says and which leaves
 // the words readable; the deal it is filed against arrives with no `label`,
 // because the caller may not read that record — so the row names the message
 // and says nothing about the account, rather than inventing a name for it.
@@ -695,7 +695,7 @@ export const ADecisionToAnswerOnTheRow: Story = {
       because: [{ kind: "blocks_customer_work" }],
       actions: ["decide"],
       subject: {
-        type: "person",
+        type: "contact",
         id: "01a05500-0000-7000-8000-0000000000aa",
         label: "Kirsten Vogel",
       },

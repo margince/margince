@@ -445,7 +445,7 @@ var crossPackageKinds = map[string]string{
 // until somebody adds it here rather than silently skipped.
 func isPackageQualifier(name string) bool {
 	switch name {
-	case "approvals", "deals", "people", "activities", "agents":
+	case "approvals", "deals", "contacts", "activities", "agents":
 		return true
 	}
 	return false

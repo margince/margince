@@ -21,8 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // addBriefGenerateJobs registers the overnight Morning-Brief assembly. Its own
@@ -35,7 +35,7 @@ import (
 // what the api role adds on a rep's explicit refresh.
 func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, mail BriefMailConfig) {
 	addDeclaredWorker[BriefGenerateArgs](reg, &briefGenerateWorker{
-		engine: briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool))),
+		engine: briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool))),
 		pool:   pool,
 		users:  identity.NewService(pool),
 		now:    time.Now,

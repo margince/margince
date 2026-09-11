@@ -30,14 +30,14 @@ type stagedEnvelope struct {
 	env    events.Envelope
 }
 
-// stagedPersonCreated reads the person.created rows out of the outbox,
+// stagedContactCreated reads the contact.created rows out of the outbox,
 // asserting the single HTTP mutation staged exactly one. Bootstrap
 // itself stages config events (pipeline.created from the C5 seed); the
-// write-shape assertion is about the PERSON mutation alone.
-func stagedPersonCreated(t *testing.T, owner *pgx.Conn) stagedEnvelope {
+// write-shape assertion is about the CONTACT mutation alone.
+func stagedContactCreated(t *testing.T, owner *pgx.Conn) stagedEnvelope {
 	t.Helper()
 	rows, err := owner.Query(t.Context(),
-		`SELECT stream, envelope FROM event_outbox WHERE envelope->>'type' = 'person.created' ORDER BY seq`)
+		`SELECT stream, envelope FROM event_outbox WHERE envelope->>'type' = 'contact.created' ORDER BY seq`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func stagedPersonCreated(t *testing.T, owner *pgx.Conn) stagedEnvelope {
 		t.Fatal(err)
 	}
 	if len(all) != 1 {
-		t.Fatalf("one mutation staged %d person.created rows, want exactly 1", len(all))
+		t.Fatalf("one mutation staged %d contact.created rows, want exactly 1", len(all))
 	}
 	return all[0]
 }
@@ -67,12 +67,12 @@ func TestWriteStagesOneCompleteEnvelope(t *testing.T) {
 		t.Fatalf("/me status = %d", status)
 	}
 
-	var person AnyMap
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	var contact AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Grace Hopper",
 		"emails":    []AnyMap{{"email": "grace@example.com"}},
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person status = %d, body %v", status, person)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact status = %d, body %v", status, contact)
 	}
 
 	owner, err := pgx.Connect(t.Context(), os.Getenv("MARGINCE_TEST_DSN"))
@@ -85,19 +85,19 @@ func TestWriteStagesOneCompleteEnvelope(t *testing.T) {
 		}
 	})
 
-	got := stagedPersonCreated(t, owner)
-	if got.stream != "gw:events:crm:person" {
-		t.Errorf("staged on %s, want gw:events:crm:person", got.stream)
+	got := stagedContactCreated(t, owner)
+	if got.stream != "gw:events:crm:contact" {
+		t.Errorf("staged on %s, want gw:events:crm:contact", got.stream)
 	}
 	if err := got.env.Validate(); err != nil {
 		t.Errorf("staged envelope fails its own contract: %v", err)
 	}
-	if got.env.Type != "person.created" || got.env.Version != 1 {
-		t.Errorf("type/version = %s/%d, want person.created/1", got.env.Type, got.env.Version)
+	if got.env.Type != "contact.created" || got.env.Version != 1 {
+		t.Errorf("type/version = %s/%d, want contact.created/1", got.env.Type, got.env.Version)
 	}
-	personID, _ := person["id"].(string)
-	if got.env.Entity.Type != "person" || got.env.Entity.ID.String() != personID {
-		t.Errorf("entity ref %+v does not name the created person %v", got.env.Entity, personID)
+	contactID, _ := contact["id"].(string)
+	if got.env.Entity.Type != "contact" || got.env.Entity.ID.String() != contactID {
+		t.Errorf("entity ref %+v does not name the created contact %v", got.env.Entity, contactID)
 	}
 	adminID, _ := me["user"].(map[string]any)["id"].(string)
 	if got.env.Actor.Type != "human" || got.env.Actor.ID != "human:"+adminID {
@@ -115,8 +115,8 @@ func TestWriteStagesOneCompleteEnvelope(t *testing.T) {
 	if err != nil {
 		t.Fatalf("trace.audit_log_id %s resolves to no audit row: %v", got.env.Trace.AuditLogID, err)
 	}
-	if auditAction != "create" || auditEntity != "person" {
-		t.Errorf("linked audit row is %s/%s, want create/person", auditAction, auditEntity)
+	if auditAction != "create" || auditEntity != "contact" {
+		t.Errorf("linked audit row is %s/%s, want create/contact", auditAction, auditEntity)
 	}
 }
 

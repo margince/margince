@@ -77,15 +77,15 @@ func createdRecord(t *testing.T, e *apptest.AppEnv, path string, body AnyMap) st
 	return created.ID
 }
 
-func TestThePersonListNarrowsByTagOnTheWire(t *testing.T) {
+func TestTheContactListNarrowsByTagOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	tagged := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Tagged Person"})
-	createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Untagged Person"})
+	tagged := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Tagged Contact"})
+	createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Untagged Contact"})
 	tag := createdRecord(t, e, "/v1/tags", AnyMap{"name": "VIP"})
 	if status := e.Call(t, "POST", "/v1/tags/"+tag+"/apply", AnyMap{
-		"entity_type": "person", "entity_id": tagged,
+		"entity_type": "contact", "entity_id": tagged,
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("applying the tag = %d, want 201", status)
 	}
@@ -94,21 +94,21 @@ func TestThePersonListNarrowsByTagOnTheWire(t *testing.T) {
 	// tested a NAME parameter that no longer exists: a saved view holding a
 	// name started selecting a different slice the day an admin corrected a
 	// spelling, so the wire takes ids.
-	onlyRecord(t, e, "/v1/people?tag_id="+tag, tagged, "the tagged person")
+	onlyRecord(t, e, "/v1/contacts?tag_id="+tag, tagged, "the tagged contact")
 
 	// The mode reaches the store too, not only the ids: `none` has to answer
-	// with the person who does NOT carry the tag.
+	// with the contact who does NOT carry the tag.
 	var page struct {
 		Data []struct {
 			ID       string `json:"id"`
 			FullName string `json:"full_name"`
 		} `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/people?tag_id="+tag+"&tag_mode=none", nil, nil, &page); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/contacts?tag_id="+tag+"&tag_mode=none", nil, nil, &page); status != http.StatusOK {
 		t.Fatalf("listing with tag_mode=none = %d, want 200", status)
 	}
-	if len(page.Data) != 1 || page.Data[0].FullName != "Untagged Person" {
-		t.Fatalf("tag_mode=none returned %+v, want only the untagged person", page.Data)
+	if len(page.Data) != 1 || page.Data[0].FullName != "Untagged Contact" {
+		t.Fatalf("tag_mode=none returned %+v, want only the untagged contact", page.Data)
 	}
 }
 
@@ -149,7 +149,7 @@ func TestTheActivityListNarrowsByAssigneeOnTheWire(t *testing.T) {
 	nobodys := createdRecord(t, e, "/v1/activities", AnyMap{"kind": "task", "subject": "Nobody's"})
 	nullOverDB(t, e, "activity", "assignee_id", nobodys)
 
-	onlyRecord(t, e, "/v1/activities?assignee_id="+me.User.ID, mine, "the open task that person holds")
+	onlyRecord(t, e, "/v1/activities?assignee_id="+me.User.ID, mine, "the open task that contact holds")
 }
 
 func TestThePipelineListAnswersIncludeArchivedOnTheWire(t *testing.T) {
@@ -206,19 +206,19 @@ func callerUserID(t *testing.T, e *apptest.AppEnv) string {
 	return me.User.ID
 }
 
-func TestThePersonListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
+func TestTheContactListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	owner := callerUserID(t, e)
 
-	createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Owned Person", "owner_id": owner})
-	unowned := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Unowned Person"})
-	nullOverDB(t, e, "person", "owner_id", unowned)
+	createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Owned Contact", "owner_id": owner})
+	unowned := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Unowned Contact"})
+	nullOverDB(t, e, "contact", "owner_id", unowned)
 
 	// Unassigned is a fact with its own queue, not an absence: a list that
 	// answered every row here would send somebody to claim records that are
 	// already claimed.
-	onlyRecord(t, e, "/v1/people?unassigned=true", unowned, "the unowned person")
+	onlyRecord(t, e, "/v1/contacts?unassigned=true", unowned, "the unowned contact")
 }
 
 func TestTheLeadListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
@@ -230,7 +230,7 @@ func TestTheLeadListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
 	unowned := createdRecord(t, e, "/v1/leads", AnyMap{"full_name": "Unowned Lead", "email": "unowned@lead.test"})
 	nullOverDB(t, e, "lead", "owner_id", unowned)
 
-	// The same dial the person and company lists answer (DM-VOCAB-OWN-1): a
+	// The same dial the contact and company lists answer (DM-VOCAB-OWN-1): a
 	// lead queue nobody has claimed is the first thing a rep asks a lead list.
 	onlyRecord(t, e, "/v1/leads?unassigned=true", unowned, "the unowned lead")
 }
@@ -243,14 +243,14 @@ func TestTheOwnerDialsRefuseEachOtherOnTheWire(t *testing.T) {
 	// owner_id AND unassigned can only ever match nothing. Answering an empty
 	// page would be indistinguishable from an honest one, so the request is
 	// refused instead.
-	path := "/v1/people?owner_id=" + owner + "&unassigned=true"
+	path := "/v1/contacts?owner_id=" + owner + "&unassigned=true"
 	if status := e.Call(t, "GET", path, nil, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("GET %s = %d, want 422 — two owner dials name two different sets", path, status)
 	}
 }
 
 // The project scope on the timeline list, over the wire. Three activities on
-// one person — filed under the asked-for project, filed under another, filed
+// one contact — filed under the asked-for project, filed under another, filed
 // under none — and the scoped page must be exactly the first and the third: a
 // handler that drops `project_id` answers all three with the right shape.
 func TestTheActivityListNarrowsByProjectOnTheWire(t *testing.T) {
@@ -258,7 +258,7 @@ func TestTheActivityListNarrowsByProjectOnTheWire(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	company := createdRecord(t, e, "/v1/companies", AnyMap{"display_name": "Acme"})
-	person := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Dana Buyer"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Dana Buyer"})
 	project := func(name string) string {
 		return createdRecord(t, e, "/v1/projects", AnyMap{
 			"name": name, "company_id": company, "source": "manual",
@@ -267,7 +267,7 @@ func TestTheActivityListNarrowsByProjectOnTheWire(t *testing.T) {
 	erp, migration := project("ERP rollout"), project("Datacentre migration")
 
 	mail := func(subject string, within string) string {
-		links := []AnyMap{{"entity_type": "person", "entity_id": person}}
+		links := []AnyMap{{"entity_type": "contact", "entity_id": contact}}
 		if within != "" {
 			links = append(links, AnyMap{"entity_type": "project", "entity_id": within})
 		}
@@ -280,7 +280,7 @@ func TestTheActivityListNarrowsByProjectOnTheWire(t *testing.T) {
 	unfiled := mail("Invoice question", "")
 
 	var page listedIDs
-	path := "/v1/activities?entity_type=person&entity_id=" + person + "&project_id=" + erp
+	path := "/v1/activities?entity_type=contact&entity_id=" + contact + "&project_id=" + erp
 	if status := e.Call(t, "GET", path, nil, nil, &page); status != http.StatusOK {
 		t.Fatalf("GET %s = %d, want 200", path, status)
 	}
@@ -304,11 +304,11 @@ func TestTheActivityListNarrowsByDateRangeOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	person := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Dana Buyer"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Dana Buyer"})
 	mail := func(subject, occurredAt string) string {
 		return createdRecord(t, e, "/v1/activities", AnyMap{
 			"kind": "email", "subject": subject, "direction": "inbound", "occurred_at": occurredAt,
-			"links": []AnyMap{{"entity_type": "person", "entity_id": person}},
+			"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
 		})
 	}
 	day1 := mail("Monday", "2026-03-02T10:00:00Z")
@@ -317,7 +317,7 @@ func TestTheActivityListNarrowsByDateRangeOnTheWire(t *testing.T) {
 
 	list := func(query string) map[string]bool {
 		var page listedIDs
-		path := "/v1/activities?entity_type=person&entity_id=" + person + query
+		path := "/v1/activities?entity_type=contact&entity_id=" + contact + query
 		if status := e.Call(t, "GET", path, nil, nil, &page); status != http.StatusOK {
 			t.Fatalf("GET %s = %d, want 200", path, status)
 		}
@@ -352,17 +352,17 @@ func TestTheActivityListNarrowsByDateRangeOnTheWire(t *testing.T) {
 // cursor through GET /activities. So the two must agree on the edge: the
 // list's page after that cursor starts exactly where the section stopped, and
 // nothing is shown twice or skipped. 27 mails, a 25-row section.
-func TestThePerson360TimelineCursorContinuesIntoTheActivityList(t *testing.T) {
+func TestTheContact360TimelineCursorContinuesIntoTheActivityList(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	person := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Dana Buyer"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Dana Buyer"})
 	const total = 27
 	for i := range total {
 		id := createdRecord(t, e, "/v1/activities", AnyMap{
 			"kind": "email", "subject": fmt.Sprintf("Mail %02d", i), "direction": "inbound",
 			"occurred_at": fmt.Sprintf("2026-03-%02dT10:00:00Z", i+1),
-			"links":       []AnyMap{{"entity_type": "person", "entity_id": person}},
+			"links":       []AnyMap{{"entity_type": "contact", "entity_id": contact}},
 		})
 		// The thread key is capture's to write, never the API's, so it is
 		// stamped the way capture leaves it.
@@ -386,7 +386,7 @@ func TestThePerson360TimelineCursorContinuesIntoTheActivityList(t *testing.T) {
 			} `json:"page"`
 		} `json:"activities"`
 	}
-	path := "/v1/people/" + person + "/360"
+	path := "/v1/contacts/" + contact + "/360"
 	if status := e.Call(t, "GET", path, nil, nil, &view); status != http.StatusOK {
 		t.Fatalf("GET %s = %d, want 200", path, status)
 	}
@@ -400,7 +400,7 @@ func TestThePerson360TimelineCursorContinuesIntoTheActivityList(t *testing.T) {
 	}
 
 	var rest listedIDs
-	path = "/v1/activities?entity_type=person&entity_id=" + person + "&cursor=" + *section.Page.NextCursor
+	path = "/v1/activities?entity_type=contact&entity_id=" + contact + "&cursor=" + *section.Page.NextCursor
 	if status := e.Call(t, "GET", path, nil, nil, &rest); status != http.StatusOK {
 		t.Fatalf("GET %s = %d, want 200", path, status)
 	}

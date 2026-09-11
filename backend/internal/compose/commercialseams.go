@@ -7,7 +7,7 @@ package compose
 //
 // Both are assembled HERE because both cross modules: an open promise is an
 // activity row, a handover is a project plus the deals rolled up to it plus
-// the people attached to it plus those same promises — and a module never
+// the contacts attached to it plus those same promises — and a module never
 // imports a sibling (ADR-0054 §9). Every read below is a module's own gated
 // store path, so object RBAC and row scope apply exactly as they do on the
 // HTTP surface; there is no raw SQL here and no second spelling of a filter.
@@ -29,9 +29,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -49,20 +49,20 @@ import (
 // seam and the tool withholds the claims a bounded read cannot support.
 const handoffScanLimit = 50
 
-// commitmentAboutPerson is the entity type a promise's "about" row carries when
+// commitmentAboutContact is the entity type a promise's "about" row carries when
 // the record it names is a contact.
 //
-// Its own constant rather than flipsource.go's flipObjectPerson: that one names
+// Its own constant rather than flipsource.go's flipObjectContact: that one names
 // an object in the system-of-record FLIP, and borrowing it here would tie two
 // vocabularies together that are free to move apart.
-const commitmentAboutPerson = "person"
+const commitmentAboutContact = "contact"
 
 // commitmentLister serves the open-promise set from the activities module's
 // own gated read.
 func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 	db := InstallationDB(pool)
 	tasks := activities.NewStore(db)
-	claims := people.NewStore(db)
+	claims := contacts.NewStore(db)
 	return func(ctx context.Context, in agents.CommitmentQuery) (agents.CommitmentSweep, error) {
 		now := clockNow()
 		// ONE bound for the merged answer, resolved here rather than left to
@@ -102,19 +102,19 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 // the caller narrowed to something a claim cannot answer.
 //
 // A CLAIM CARRIES NO ASSIGNEE and no project. It records what was SAID, in a
-// message filed against a person — so "this owner's promises" and "this
+// message filed against a contact — so "this owner's promises" and "this
 // project's promises" are questions the claim table cannot answer, and a claim
 // admitted under either filter would be a row the caller did not ask for.
 // Returning none is the honest answer; the tool's own copy says the narrowed
 // answer covers recorded tasks alone.
 func extractedCommitments(
-	ctx context.Context, pool *pgxpool.Pool, store *people.Store,
+	ctx context.Context, pool *pgxpool.Pool, store *contacts.Store,
 	in agents.CommitmentQuery, limit int,
-) ([]people.CompanyCommitment, bool, error) {
+) ([]contacts.CompanyCommitment, bool, error) {
 	if in.AssigneeID != nil || in.WithinProjectID != nil {
 		return nil, false, nil
 	}
-	var out []people.CompanyCommitment
+	var out []contacts.CompanyCommitment
 	var more bool
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
@@ -164,7 +164,7 @@ func rankPromises(now time.Time, filed, said []agents.OpenCommitment, limit int)
 // asExtracted carries the claim rows across the seam. A rename and nothing
 // else: the store decided which rows, and the tool decides what state each is
 // in.
-func asExtracted(claims []people.CompanyCommitment) []agents.OpenCommitment {
+func asExtracted(claims []contacts.CompanyCommitment) []agents.OpenCommitment {
 	out := make([]agents.OpenCommitment, 0, len(claims))
 	for _, claim := range claims {
 		claimID, activityID := claim.ID, claim.ActivityID
@@ -172,13 +172,13 @@ func asExtracted(claims []people.CompanyCommitment) []agents.OpenCommitment {
 			Source: agents.CommitmentFromConversation,
 			// A claim names no owner: it records what was said, not who was
 			// handed it, so the answer says nobody owns it rather than naming
-			// the person it was promised TO as though they owed it.
+			// the contact it was promised TO as though they owed it.
 			ClaimID: &claimID, SourceActivityID: &activityID,
 			Quote: claim.SourceQuote, Subject: claim.Body, DueAt: claim.DueAt,
 			FiledAt: claim.OccurredAt,
 			About: []agents.CommitmentAbout{{
-				EntityType: commitmentAboutPerson,
-				EntityID:   claim.PersonID.UUID, Name: claim.PersonName,
+				EntityType: commitmentAboutContact,
+				EntityID:   claim.ContactID.UUID, Name: claim.ContactName,
 			}},
 		})
 	}
@@ -230,7 +230,7 @@ func asCommitments(tasks []activities.OpenTask) []agents.OpenCommitment {
 func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 	dealStore := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	projectStore := ProjectsStore(pool)
-	peopleStore := people.NewStore(InstallationDB(pool))
+	contactsStore := contacts.NewStore(InstallationDB(pool))
 	taskStore := activities.NewStore(InstallationDB(pool))
 	seats := identity.NewService(pool)
 	return func(ctx context.Context, projectID ids.UUID) (agents.HandoffFacts, error) {
@@ -243,7 +243,7 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 		// The receiving side, named. "Who owns this work now" answered as a
 		// UUID restates the question — and unlike a stakeholder, the owner is a
 		// SEAT rather than a record, so it is named through identity's own read
-		// rather than the people store's.
+		// rather than the contacts store's.
 		if facts.Project.OwnerID != nil {
 			named, err := seats.SeatNames(ctx, []ids.UserID{ids.From[ids.UserKind](*facts.Project.OwnerID)})
 			if err != nil {
@@ -254,7 +254,7 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 		if facts.Deals, facts.DealsTruncated, err = handoffDeals(ctx, dealStore, projectID); err != nil {
 			return agents.HandoffFacts{}, err
 		}
-		if facts.Stakeholders, facts.StakeholdersTruncated, err = handoffStakeholders(ctx, peopleStore, projectID); err != nil {
+		if facts.Stakeholders, facts.StakeholdersTruncated, err = handoffStakeholders(ctx, contactsStore, projectID); err != nil {
 			return agents.HandoffFacts{}, err
 		}
 		projectType := string(datasource.RecordProject)
@@ -316,41 +316,41 @@ func handoffDeals(ctx context.Context, store *deals.Store, projectID ids.UUID) (
 	return out, page.HasMore, nil
 }
 
-// handoffStakeholders reads the people attached to the project, through the
+// handoffStakeholders reads the contacts attached to the project, through the
 // generic relationship list so the edge's own visibility rules apply.
 //
 // A seat is an id and a role, with no name — the same shape account_coverage
 // answers a deal's stakeholder seats in. Naming them would need a gated
-// person read per seat, and the caller already has read_record for the one
+// contact read per seat, and the caller already has read_record for the one
 // they want to reach; the field a handover is judged on is the role, and that
 // is here.
-func handoffStakeholders(ctx context.Context, store *people.Store, projectID ids.UUID) ([]agents.HandoffStakeholder, bool, error) {
+func handoffStakeholders(ctx context.Context, store *contacts.Store, projectID ids.UUID) ([]agents.HandoffStakeholder, bool, error) {
 	limit := handoffScanLimit
 	project := ids.From[ids.ProjectKind](projectID)
-	kind := people.ProjectStakeholderKind
-	edges, page, err := store.ListRelationships(ctx, people.ListRelationshipsInput{
+	kind := contacts.ProjectStakeholderKind
+	edges, page, err := store.ListRelationships(ctx, contacts.ListRelationshipsInput{
 		Kind: &kind, ProjectID: &project, Limit: &limit,
 	})
 	if err != nil {
 		return nil, false, err
 	}
-	seated := make([]ids.PersonID, 0, len(edges))
+	seated := make([]ids.ContactID, 0, len(edges))
 	for _, e := range edges {
-		if e.PersonID != nil {
-			seated = append(seated, *e.PersonID)
+		if e.ContactID != nil {
+			seated = append(seated, *e.ContactID)
 		}
 	}
-	names, err := store.PersonNames(ctx, seated)
+	names, err := store.ContactNames(ctx, seated)
 	if err != nil {
 		return nil, false, err
 	}
 	out := make([]agents.HandoffStakeholder, 0, len(edges))
 	for _, e := range edges {
-		if e.PersonID == nil {
+		if e.ContactID == nil {
 			continue
 		}
 		stakeholder := agents.HandoffStakeholder{
-			PersonID: e.PersonID.UUID, Name: names[e.PersonID.UUID],
+			ContactID: e.ContactID.UUID, Name: names[e.ContactID.UUID],
 		}
 		if e.Role != nil {
 			stakeholder.Role = *e.Role

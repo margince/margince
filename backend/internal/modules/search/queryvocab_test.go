@@ -357,13 +357,13 @@ func TestACatalogFaultRefusesTheResolveRatherThanNarrowingIt(t *testing.T) {
 // Collections and free-form blobs carry no single value, so no operator here
 // could mean anything against them.
 func TestCollectionsAndBlobsAreNotAskable(t *testing.T) {
-	vocab, err := NewVocabularyResolver().Resolve(readerFor("person"), "person")
+	vocab, err := NewVocabularyResolver().Resolve(readerFor("contact"), "contact")
 	if err != nil {
 		t.Fatal(err)
 	}
-	person, _ := vocab.Target("person")
+	contact, _ := vocab.Target("contact")
 	for _, name := range []string{"emails", "phones", "raw", "social", "consent"} {
-		if _, ok := person.Field(name); ok {
+		if _, ok := contact.Field(name); ok {
 			t.Errorf("%q is askable, but it carries a collection or a free-form blob rather than a value", name)
 		}
 	}

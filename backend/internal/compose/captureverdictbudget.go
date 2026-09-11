@@ -11,7 +11,7 @@ package compose
 // which was the exception.
 //
 // The asymmetric floor made the re-ask ordinary. A creating answer now needs
-// verdictCreateFloor, so a `person` or `advisor` between the two floors is
+// verdictCreateFloor, so a `contact` or `advisor` between the two floors is
 // re-asked — and borderline creating answers are the common case on a mailbox
 // full of first-time senders. A pass sized for 200 calls could make 400, run
 // past its wall, and be retried whole by River, with review staging and the

@@ -1,6 +1,6 @@
 /* Brief — the morning handover.
  *
- * Three registers, in the order they decay: what is WAITING on a person (it
+ * Three registers, in the order they decay: what is WAITING on a contact (it
  * expires), what is PLANNED for today (it is a ranking), and the CONTEXT the
  * two are read against (it just is). The first two are the work and sit in the
  * main column; the third is the rail beside them.

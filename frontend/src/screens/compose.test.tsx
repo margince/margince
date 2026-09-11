@@ -231,7 +231,7 @@ describe("RelinkModal", () => {
       <RelinkModal
         activityId="act-1"
         activityVersion={4}
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -278,7 +278,7 @@ describe("RelinkModal", () => {
       <RelinkModal
         activityId="act-1"
         activityVersion={null}
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -353,7 +353,7 @@ describe("RelinkModal", () => {
         activityId="act-1"
         activityVersion={4}
         threadKey="thread:abc"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -395,7 +395,7 @@ describe("RelinkModal", () => {
       <RelinkModal
         activityId="act-1"
         activityVersion={4}
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -414,7 +414,7 @@ describe("RelinkModal", () => {
         jsonResponse({
           data: [
             { type: "activity", id: "a-x", title: "Some email" },
-            { type: "person", id: "pp-1", title: "Jane Doe" },
+            { type: "contact", id: "pp-1", title: "Jane Doe" },
           ],
           page: { has_more: false },
         }),
@@ -438,7 +438,7 @@ describe("RelinkModal", () => {
   });
 });
 
-// The two purposes as the rep READS them: a pick names what a person would
+// The two purposes as the rep READS them: a pick names what a contact would
 // click, while the ConsentPurpose.key each label stands for is the wire value,
 // asserted on the request body wherever a send is under study.
 // What a rep answers when the composer asks why they are writing. These are
@@ -490,7 +490,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -527,7 +527,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -562,7 +562,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -591,7 +591,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -624,7 +624,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -655,7 +655,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -685,7 +685,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -722,7 +722,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -744,7 +744,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -768,7 +768,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -808,7 +808,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -854,9 +854,9 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
         open
         onClose={onClose}
       />,
@@ -879,7 +879,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -904,7 +904,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -932,7 +932,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -985,7 +985,7 @@ function renderComposer(onClose = vi.fn()) {
   render(
     <ComposeModal
       activityId="act-1"
-      entityType="person"
+      entityType="contact"
       entityId="p-1"
       open
       onClose={onClose}
@@ -1648,7 +1648,7 @@ describe("ComposeModal — channel reply", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         kind="message"
         open
@@ -1680,7 +1680,7 @@ describe("ComposeModal — channel reply", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         kind="message"
         open
@@ -1705,7 +1705,7 @@ describe("ComposeModal — channel reply", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         kind="message"
         open
@@ -1729,7 +1729,7 @@ describe("ComposeModal — channel reply", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         kind="message"
         open
@@ -1759,9 +1759,9 @@ describe("ComposeModal — channel reply", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
         kind="message"
         open
         onClose={vi.fn()}
@@ -1831,7 +1831,7 @@ describe("TimelineActions", () => {
     expect(await screen.findByText("Draft email")).toBeTruthy();
   });
 
-  it("offers no reply when the person is unreachable", async () => {
+  it("offers no reply when the contact is unreachable", async () => {
     // A blocked (or never-established) Telegram identity means a reply box
     // here would only fail once the rep has already written the message —
     // worse than never offering it (design §9.3).
@@ -1842,7 +1842,7 @@ describe("TimelineActions", () => {
       channel_provider: "telegram",
     };
     stubRoutes({
-      "GET /people/p-1": () =>
+      "GET /contacts/p-1": () =>
         jsonResponse({
           id: "p-1",
           full_name: "Jane Doe",
@@ -1861,9 +1861,9 @@ describe("TimelineActions", () => {
     render(
       <TimelineActions
         activity={telegram}
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
       />,
     );
 
@@ -1893,7 +1893,7 @@ describe("TimelineActions", () => {
     // Reachable, or the action renders nothing and the case would pass over an
     // empty tree — the button being absent is a different answer entirely.
     stubRoutes({
-      "GET /people/p-1": () =>
+      "GET /contacts/p-1": () =>
         jsonResponse({
           id: "p-1",
           full_name: "Jane Doe",
@@ -1914,9 +1914,9 @@ describe("TimelineActions", () => {
         activityId="a9"
         kind="message"
         channelProvider="telegram"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
         contentWithheld
       />,
     );
@@ -2070,7 +2070,7 @@ describe("TimelineActions", () => {
   // `selected` is the API's third audience and the dialog offered two, because
   // choosing it without a way to name anybody is a choice the reader cannot
   // complete. These are the claims that closed that.
-  it("names the people a message is limited to and submits them as one set", async () => {
+  it("names the contacts a message is limited to and submits them as one set", async () => {
     const roster = {
       "GET /users": () =>
         jsonResponse({
@@ -2081,7 +2081,7 @@ describe("TimelineActions", () => {
               email: "lena@demo.test",
             },
             // An agent seat, which the picker must not offer: a message is
-            // limited to people and teams, never to an agent.
+            // limited to contacts and teams, never to an agent.
             {
               id: "u-9",
               display_name: "Margince",
@@ -2331,10 +2331,10 @@ describe("ComposeModal started from an account", () => {
             updated_at: "2026-08-01T00:00:00Z",
           },
           sections_omitted: [],
-          people: {
+          contacts: {
             data: [
               {
-                person_id: "p-1",
+                contact_id: "p-1",
                 full_name: "Sarah Cole",
                 strength: {
                   score: 40,
@@ -2350,7 +2350,7 @@ describe("ComposeModal started from an account", () => {
                 consent: {},
               },
               {
-                person_id: "p-2",
+                contact_id: "p-2",
                 full_name: "Mark Hughes",
                 strength: {
                   score: 20,
@@ -2437,7 +2437,7 @@ describe("ComposeModal started from an account", () => {
             updated_at: "2026-08-01T00:00:00Z",
           },
           sections_omitted: [],
-          people: { data: [], page: { has_more: false } },
+          contacts: { data: [], page: { has_more: false } },
           projects: [
             {
               project_id: "pr-1",
@@ -2504,7 +2504,7 @@ describe("ComposeModal started from an account", () => {
             updated_at: "2026-08-01T00:00:00Z",
           },
           sections_omitted: [],
-          people: { data: [], page: { next_cursor: null } },
+          contacts: { data: [], page: { next_cursor: null } },
           deals: { data: [], page: { next_cursor: null } },
           projects: projects.map((one) => ({
             ...one,
@@ -2746,7 +2746,7 @@ describe("what the composer says it is answering", () => {
   });
 
   // Who this is going to, on the line, once it is known. The composer used to
-  // make the reader pick the person, and picking them is what made the consent
+  // make the reader pick the contact, and picking them is what made the consent
   // purpose an attestation about a named human. The thread supplies the
   // address now, so the reader has to SEE it before they attest anything.
   it("names the recipient once the draft has filled it", async () => {
@@ -2842,7 +2842,7 @@ describe("what the composer says it is answering", () => {
   // The draft and the SEND must agree on what is being answered. Split, the
   // draft answers a thread and writes "Re: …" while the send takes the account
   // path: the message files under the links the body names rather than the
-  // anchor's own, so the person it was actually with gets none of it, and it
+  // anchor's own, so the contact it was actually with gets none of it, and it
   // leaves as a new RFC chain — an orphan, to a reader who was shown a reply.
   it("sends against the same message it drafted against", async () => {
     const sent = stubRoutes({
@@ -2940,7 +2940,7 @@ describe("what the composer says it is answering", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -2970,7 +2970,7 @@ describe("what the composer says this message is", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -2995,7 +2995,7 @@ describe("what the composer says this message is", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -3052,7 +3052,7 @@ describe("what the composer says this message is", () => {
           </button>
           <ComposeModal
             activityId={anchored ? "act-1" : undefined}
-            entityType="person"
+            entityType="contact"
             entityId="p-1"
             open
             onClose={vi.fn()}
@@ -3092,7 +3092,7 @@ describe("what the composer says this message is", () => {
     });
     render(
       <ComposeModal
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -3127,7 +3127,7 @@ describe("what the composer says this message is", () => {
     });
     render(
       <ComposeModal
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}

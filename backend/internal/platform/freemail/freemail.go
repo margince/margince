@@ -3,11 +3,11 @@
 
 // Package freemail answers one question: is this mail domain a consumer
 // mailbox provider rather than a company's own domain? A yes means no
-// company may be derived from it — alice@gmail.com is a person, "Gmail" is
+// company may be derived from it — alice@gmail.com is a contact, "Gmail" is
 // not her employer.
 //
 // Two modules need the same answer from opposite ends of the capture path:
-// capture's tier ladder gates ingestion, and people's counterparty ensure is the
+// capture's tier ladder gates ingestion, and contacts's counterparty ensure is the
 // chokepoint every creation route enters. Neither may import the other, and a
 // second spelling of the list would be a second answer.
 //

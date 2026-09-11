@@ -34,8 +34,8 @@ func TestTheCompositeArchivesWhatItsModulesArchive(t *testing.T) {
 	}
 
 	want := []datasource.EntityType{
-		datasource.EntityActivity, datasource.EntityCompany, datasource.EntityDeal,
-		datasource.EntityPerson, datasource.EntityProject, datasource.EntityRelationship,
+		datasource.EntityActivity, datasource.EntityCompany, datasource.EntityContact,
+		datasource.EntityDeal, datasource.EntityProject, datasource.EntityRelationship,
 	}
 	if !slices.Equal(types, want) {
 		t.Errorf("the composite archives %v, want %v — a staging refusal is built from this list, so a "+
@@ -78,7 +78,7 @@ func TestATypeNoModuleArchivesIsRefusedOnEveryQuestion(t *testing.T) {
 func TestEveryTypeRoutesToTheModuleThatClaimsIt(t *testing.T) {
 	p := NewProvider(nil)
 	ctx := context.Background()
-	for _, module := range []datasource.RecordArchiverV2{p.people, p.deals, p.activities} {
+	for _, module := range []datasource.RecordArchiverV2{p.contacts, p.deals, p.activities} {
 		claimed, err := module.ArchivableTypes(ctx)
 		if err != nil {
 			t.Fatalf("asking a module what it archives answered %v", err)

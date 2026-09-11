@@ -2,7 +2,7 @@
 // isolation so the screen's derivations (immutable API key, the pending DDL
 // preview, and the structural-word refusal) are proven independently.
 
-export type CfObject = "deal" | "company" | "person" | "lead";
+export type CfObject = "deal" | "company" | "contact" | "lead";
 export type CfType =
   | "text"
   | "number"
@@ -23,7 +23,7 @@ export type CfType =
 export const CF_OBJECTS: readonly CfObject[] = [
   "deal",
   "company",
-  "person",
+  "contact",
   "lead",
 ];
 

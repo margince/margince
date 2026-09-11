@@ -4,7 +4,7 @@
 package privacy
 
 // The consent half of an Art. 17 erasure: the live capabilities over the
-// subject's consent record, which are secrets other people hold rather than
+// subject's consent record, which are secrets other contacts hold rather than
 // data the record stores. Its own file beside erasure_attachments.go and
 // erasure_channels.go, because the package splits an erasure by the kind of
 // thing being destroyed and this is a kind of its own.
@@ -30,13 +30,13 @@ import (
 // every RBAC gate downstream passes.
 //
 // Anonymize-in-place is why erasure reaches them here rather than leaning on
-// the schema: the person row survives, so 0048's ON DELETE CASCADE never
-// fires, and an erased subject would keep accruing person_consent,
+// the schema: the contact row survives, so 0048's ON DELETE CASCADE never
+// fires, and an erased subject would keep accruing contact_consent,
 // consent_event, audit and outbox rows through the exact capabilities this
 // erasure certifies destroyed. That a grant is refused elsewhere is one probe,
 // not a reason to leave the credential standing. Deleted rather than revoked,
 // like the address and phone rows beside it — a revoked row still holds the
-// person link.
+// contact link.
 //
 // TWO statements rather than one loop over a table list, and the difference is
 // not style. This tree's coverage gates read SQL string LITERALS —
@@ -45,25 +45,25 @@ import (
 // name arriving through a variable is invisible to both, so the tidier loop
 // turns two proven writes into two unproven ones and the gates go quietly
 // green. A third capability is added here as a third statement.
-func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string) error {
-	if _, err := tx.Exec(ctx, `DELETE FROM preference_token WHERE person_id = $1`, personID); err != nil {
+func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM preference_token WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's preference-center token: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM consent_doi_token WHERE person_id = $1`, personID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM consent_doi_token WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's double-opt-in token: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM confirm_token WHERE person_id = $1`, personID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM confirm_token WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's confirm-details link: %w", err)
 	}
 	// DELETED, not revoked, and that distinction matters here more than on the
 	// three above: the row carries the ADDRESS the link was written to, which
-	// outlives the person_id an anonymize-in-place erasure nulls. Revoking
+	// outlives the contact_id an anonymize-in-place erasure nulls. Revoking
 	// would leave that address standing in a table nothing else scrubs.
 	//
 	// It is also the longest-lived capability the subject holds — 24 months,
 	// where the preference token is 30 days — so a missed one is a working
-	// bearer credential for an erased person for the better part of two years.
-	if _, err := tx.Exec(ctx, `DELETE FROM withdrawal_credential WHERE person_id = $1`, personID); err != nil {
+	// bearer credential for an erased contact for the better part of two years.
+	if _, err := tx.Exec(ctx, `DELETE FROM withdrawal_credential WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's withdrawal link: %w", err)
 	}
 
@@ -71,19 +71,19 @@ func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, personID ids.Pers
 	// correction, in their own name and address. Deleted rather than kept as
 	// evidence, because an unaccepted proposal is data the workspace was asked
 	// to hold and never agreed anything about.
-	if _, err := tx.Exec(ctx, `DELETE FROM person_confirm_submission WHERE person_id = $1`, personID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM contact_confirm_submission WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's confirm-page submissions: %w", err)
 	}
 
 	// The authorization record, and the one place here where DELETE would be
 	// the wrong verb.
 	//
-	// communication_decision says why each message to this person was
+	// communication_decision says why each message to this contact was
 	// permitted. That is the controller's own accountability record under
 	// Art. 5(2), and destroying it would erase the evidence that the sending
 	// was lawful — leaving the installation unable to answer for messages it
 	// has already sent. What must go is the part that identifies the subject:
-	// the address it went to, and the link back to the person row.
+	// the address it went to, and the link back to the contact row.
 	//
 	// So the address is tombstoned and the subject link cut, in place. The
 	// verdict, the category, the reason and the ruleset survive as an
@@ -92,7 +92,7 @@ func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, personID ids.Pers
 		UPDATE communication_decision
 		   SET recipient_address = 'erased+' || id || '@example.invalid',
 		       subject_id = NULL, subject_kind = NULL
-		 WHERE subject_id = $1`, personID); err != nil {
+		 WHERE subject_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: retiring the subject's authorization decisions: %w", err)
 	}
 
@@ -109,27 +109,27 @@ func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, personID ids.Pers
 	// work may still be in front of a human, and a row vanishing under them
 	// leaves a queue pointing at nothing. What is left says a send was refused
 	// and no longer says who for.
-	if err := clearRefusedSendReviews(ctx, tx, personID.UUID, emails); err != nil {
+	if err := clearRefusedSendReviews(ctx, tx, contactID.UUID, emails); err != nil {
 		return err
 	}
-	if err := tombstoneExceptionExplanations(ctx, tx, personID.UUID, emails); err != nil {
+	if err := tombstoneExceptionExplanations(ctx, tx, contactID.UUID, emails); err != nil {
 		return err
 	}
 
 	// A basis and a suppression are the opposite case: both exist only to say
-	// something about THIS person, so neither has a life after them. Deleted,
+	// something about THIS contact, so neither has a life after them. Deleted,
 	// like the address rows beside them.
-	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE person_id = $1`, personID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's communication bases: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE person_id = $1`, personID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's suppressions: %w", err)
 	}
 	return nil
 }
 
 // lowerAll folds the subject's addresses for comparison, because a refusal
-// records the address as the caller typed it and a person who writes their own
+// records the address as the caller typed it and a contact who writes their own
 // mail in mixed case must still be erased from it.
 func lowerAll(values []string) []string {
 	out := make([]string, 0, len(values))
@@ -156,10 +156,10 @@ func lowerAll(values []string) []string {
 // a human, and a row vanishing under them leaves a queue pointing at nothing.
 //
 // BY ADDRESS AS WELL AS BY SUBJECT. A recipient the engine could not resolve to
-// a person — two records on one address, or none — is refused with the address
+// a contact — two records on one address, or none — is refused with the address
 // recorded and no subject id, which is precisely the row a subject-keyed sweep
-// would walk past and leave holding an erased person's mailbox.
-func clearRefusedSendReviews(ctx context.Context, tx pgx.Tx, personID ids.UUID, addresses []string) error {
+// would walk past and leave holding an erased contact's mailbox.
+func clearRefusedSendReviews(ctx context.Context, tx pgx.Tx, contactID ids.UUID, addresses []string) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE communication_review
 		   SET refusals = '[]'::jsonb
@@ -167,7 +167,7 @@ func clearRefusedSendReviews(ctx context.Context, tx pgx.Tx, personID ids.UUID, 
 		         SELECT 1 FROM jsonb_array_elements(refusals) AS refusal
 		          WHERE refusal->>'subject_id' = $1
 		             OR lower(refusal->>'address') = ANY($2))`,
-		personID.String(), lowerAll(addresses)); err != nil {
+		contactID.String(), lowerAll(addresses)); err != nil {
 		return fmt.Errorf("privacy: clearing the subject from refused-send reviews: %w", err)
 	}
 	return nil
@@ -176,7 +176,7 @@ func clearRefusedSendReviews(ctx context.Context, tx pgx.Tx, personID ids.UUID, 
 // tombstoneExceptionExplanations scrubs what a director WROTE about a subject
 // while keeping the fact that they decided.
 //
-// The explanation is a rep's own sentence about a named person — "she asked for
+// The explanation is a rep's own sentence about a named contact — "she asked for
 // this on the call" — so it is personal data an erasure destroys. What must
 // survive is the accountable half: that somebody overrode a refusal, who they
 // were, when, and under which reason code. None of that names the subject.
@@ -187,7 +187,7 @@ func clearRefusedSendReviews(ctx context.Context, tx pgx.Tx, personID ids.UUID, 
 //
 // Reached through the REVIEW, because an instruction names no subject directly
 // — it answers a review, and the review is what named the recipients.
-func tombstoneExceptionExplanations(ctx context.Context, tx pgx.Tx, personID ids.UUID, addresses []string) error {
+func tombstoneExceptionExplanations(ctx context.Context, tx pgx.Tx, contactID ids.UUID, addresses []string) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE communication_instruction
 		   SET explanation = '[erased]'
@@ -198,7 +198,7 @@ func tombstoneExceptionExplanations(ctx context.Context, tx pgx.Tx, personID ids
 		                  SELECT 1 FROM jsonb_array_elements(r.refusals) AS refusal
 		                   WHERE refusal->>'subject_id' = $1
 		                      OR lower(refusal->>'address') = ANY($2)))`,
-		personID.String(), lowerAll(addresses)); err != nil {
+		contactID.String(), lowerAll(addresses)); err != nil {
 		return fmt.Errorf("privacy: scrubbing what a director wrote about the subject: %w", err)
 	}
 	return nil

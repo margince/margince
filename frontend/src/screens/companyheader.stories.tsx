@@ -66,7 +66,7 @@ const withWayIn = {
     score: 71,
     bucket: "strong",
     contact_count: 2,
-    contributor_person_id: "p-1",
+    contributor_contact_id: "p-1",
     factors: { recency: 0.9, frequency: 0.6, reciprocity: 0.8, direction: 0.8 },
   },
   last_inbound_at: "2026-05-28T10:00:00Z",
@@ -82,7 +82,7 @@ const noWayIn = {
     score: 0,
     bucket: "none",
     contact_count: 0,
-    contributor_person_id: null,
+    contributor_contact_id: null,
     factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
   },
 } as unknown as View;
@@ -114,7 +114,7 @@ function Header({
       activity: ["create"],
     }),
     "GET /users": () => jsonResponse({ data: roster, page }),
-    "GET /people/p-1": () =>
+    "GET /contacts/p-1": () =>
       jsonResponse({ id: "p-1", full_name: "Dana Buyer" }),
   });
   return (

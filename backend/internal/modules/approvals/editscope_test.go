@@ -29,8 +29,8 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 	}{
 		{
 			name:     "editing the content a human is meant to correct is allowed",
-			original: `{"company_id":"` + mine + `","proposed_name":"Acme","persons":["` + alice + `"]}`,
-			edited:   `{"company_id":"` + mine + `","proposed_name":"Acme GmbH","persons":["` + alice + `"]}`,
+			original: `{"company_id":"` + mine + `","proposed_name":"Acme","contacts":["` + alice + `"]}`,
+			edited:   `{"company_id":"` + mine + `","proposed_name":"Acme GmbH","contacts":["` + alice + `"]}`,
 		},
 		{
 			name:     "a payload naming no record at all is entirely editable",
@@ -57,9 +57,9 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 		},
 		{
 			name:        "a reference nested in a list is pinned like a top-level one",
-			original:    `{"persons":["` + alice + `"]}`,
-			edited:      `{"persons":["` + theirs + `"]}`,
-			wantChanged: []string{"/persons/[0]"},
+			original:    `{"contacts":["` + alice + `"]}`,
+			edited:      `{"contacts":["` + theirs + `"]}`,
+			wantChanged: []string{"/contacts/[0]"},
 		},
 		{
 			name:        "a reference nested in an object is pinned like a top-level one",
@@ -91,9 +91,9 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 		},
 		{
 			name:        "an object key spelling an array index does not collide with it",
-			original:    `{"persons":["` + alice + `"]}`,
-			edited:      `{"persons":{"[0]":"` + alice + `"}}`,
-			wantChanged: []string{"/persons/[0]", "/persons/~20]"},
+			original:    `{"contacts":["` + alice + `"]}`,
+			edited:      `{"contacts":{"[0]":"` + alice + `"}}`,
+			wantChanged: []string{"/contacts/[0]", "/contacts/~20]"},
 		},
 	}
 

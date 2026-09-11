@@ -53,7 +53,7 @@ func TestAFinishedDispositionNeverExceedsTheRowsRead(t *testing.T) {
 		t.Errorf("created = %d, want 1 — the commit's own outcome is the one that happened",
 			report.Disposition.Created)
 	}
-	// The issue survives even though the count does not: a person is still owed
+	// The issue survives even though the count does not: a contact is still owed
 	// the reason the preview gave.
 	if len(report.Issues) != 1 {
 		t.Errorf("%d issue(s), want 1 — dropping the entry hides why the preview said what it said",

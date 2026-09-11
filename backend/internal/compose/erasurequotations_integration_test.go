@@ -14,8 +14,8 @@ package compose
 // scrub reaches only through the activity.
 //
 // Nothing else in this package can find it. A proposal read from a meeting is
-// filed against the ACTIVITY, never the person, so the target arms of
-// subjectApprovalMatch cannot fire; and people are quoted in meetings by NAME,
+// filed against the ACTIVITY, never the contact, so the target arms of
+// subjectApprovalMatch cannot fire; and contacts are quoted in meetings by NAME,
 // so the address patterns usually cannot either.
 //
 // The two directions are tested apart, because they are different obligations
@@ -50,25 +50,25 @@ const quotedTranscriptLine = "Mara Kessler: I will send the revised quote over t
 // in, the reading of it, and one staged proposal quoting a line of it.
 //
 // Linked to the subject and to nobody else on purpose: that is what makes the
-// transcript the subject's to erase. A meeting shared with a second person is
-// another person's record too, and the cascade leaves it alone — which is the
+// transcript the subject's to erase. A meeting shared with a second contact is
+// another contact's record too, and the cascade leaves it alone — which is the
 // case TestErasureLeavesTheQuotationOfAMeetingItMayNotDestroy covers.
-func transcriptSubject(t *testing.T, e *integration.Env) (ids.PersonID, ids.UUID, ids.ApprovalID) {
+func transcriptSubject(t *testing.T, e *integration.Env) (ids.ContactID, ids.UUID, ids.ApprovalID) {
 	t.Helper()
-	person := e.SeedPerson(t, "Mara Kessler", nil)
+	contact := e.SeedContact(t, "Mara Kessler", nil)
 	e.WsExec(t, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		VALUES ($1, 'mara.kessler@example.com', true, 'test', 'human:seed')`, person)
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, 'mara.kessler@example.com', true, 'test', 'human:seed')`, contact)
 
 	activityID := seedTranscript(t, e, "1: Tom: Where did we land on pricing?\n2: "+quotedTranscriptLine)
 	e.WsExec(t, `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, activityID, person)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, activityID, contact)
 	e.WsExec(t, `
 		INSERT INTO transcript_read (id, activity_id, status, line_count, requested_by, started_at, finished_at)
 		VALUES ($1, $2, 'done', 2, 'human:seed', now(), now())`, ids.NewV7(), activityID)
 
-	return ids.From[ids.PersonKind](person), activityID, stageProposalQuoting(t, e, activityID, quotedTranscriptLine)
+	return ids.From[ids.ContactKind](contact), activityID, stageProposalQuoting(t, e, activityID, quotedTranscriptLine)
 }
 
 // seedTranscript writes a meeting transcript whose stored body IS the text the
@@ -142,8 +142,8 @@ func TestErasureEmptiesTheQuotationAProposalWasReadFrom(t *testing.T) {
 	if n := countQuoting(t, e, quotedTranscriptLine); n != 1 {
 		t.Fatalf("the seeded proposal does not quote the transcript (%d rows) — the test proves nothing", n)
 	}
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject.UUID, "subject request"); err != nil {
-		t.Fatalf("ErasePerson → %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+		t.Fatalf("EraseContact → %v", err)
 	}
 
 	if n := countQuoting(t, e, quotedTranscriptLine); n != 0 {
@@ -156,7 +156,7 @@ func TestErasureEmptiesTheQuotationAProposalWasReadFrom(t *testing.T) {
 		t.Error("a proposal whose evidence was erased was still approvable")
 	}
 	// Withdrawn under its own reason, so the inbox can say why this card went:
-	// the meeting it was read from is gone, not the person who asked to be.
+	// the meeting it was read from is gone, not the contact who asked to be.
 	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND decision_reason = $2`,
 		approvalID, privacy.ErasedSourceWithdrawal); n != 1 {
 		t.Error("the withdrawal does not say the record it was read from was erased")
@@ -170,8 +170,8 @@ func TestErasureDropsTheReadingOfTheTranscriptItErased(t *testing.T) {
 	e := integration.Setup(t)
 	subject, activityID, _ := transcriptSubject(t, e)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject.UUID, "subject request"); err != nil {
-		t.Fatalf("ErasePerson → %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+		t.Fatalf("EraseContact → %v", err)
 	}
 
 	if n := e.WsCount(t, `SELECT count(*) FROM transcript_read WHERE activity_id = $1`, activityID); n != 0 {
@@ -181,7 +181,7 @@ func TestErasureDropsTheReadingOfTheTranscriptItErased(t *testing.T) {
 
 // The opposite obligation, and the one an over-eager text match breaks.
 //
-// A meeting shared with a second person is that person's record too, so the
+// A meeting shared with a second contact is that contact's record too, so the
 // cascade leaves its body standing — deliberately, under the same rule that
 // shields a legal hold and the statutory floor. A proposal read out of it must
 // therefore survive as well: destroying it would take a colleague's live work
@@ -190,24 +190,24 @@ func TestErasureDropsTheReadingOfTheTranscriptItErased(t *testing.T) {
 // from.
 func TestErasureLeavesTheQuotationOfAMeetingItMayNotDestroy(t *testing.T) {
 	e := integration.Setup(t)
-	subject := e.SeedPerson(t, "Mara Kessler", nil)
+	subject := e.SeedContact(t, "Mara Kessler", nil)
 	const addr = "mara.kessler@example.com"
 	e.WsExec(t, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 		VALUES ($1, $2, true, 'test', 'human:seed')`, subject, addr)
-	colleague := e.SeedPerson(t, "Bob Ferrer", nil)
+	colleague := e.SeedContact(t, "Bob Ferrer", nil)
 
 	quote := "Tom: loop in " + addr + " on the renewal."
 	shared := seedTranscript(t, e, "1: "+quote)
 	for _, participant := range []any{subject, colleague} {
 		e.WsExec(t, `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, shared, participant)
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, shared, participant)
 	}
 	approvalID := stageQuotingProposal(t, e, shared, quote, "Loop in the renewal contact")
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), ids.From[ids.PersonKind](subject).UUID, "subject request"); err != nil {
-		t.Fatalf("ErasePerson → %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.From[ids.ContactKind](subject).UUID, "subject request"); err != nil {
+		t.Fatalf("EraseContact → %v", err)
 	}
 
 	// The premise: the cascade kept the meeting, because it is not the
@@ -217,7 +217,7 @@ func TestErasureLeavesTheQuotationOfAMeetingItMayNotDestroy(t *testing.T) {
 		t.Fatalf("the shared meeting was redacted after all — this test can no longer tell over-deletion from correct deletion")
 	}
 	if n := countQuoting(t, e, quote); n != 1 {
-		t.Error("the erasure destroyed a proposal read out of a meeting it deliberately left standing — another person's pending work, on a request that was never about their record, while the quoted address survives in the meeting anyway")
+		t.Error("the erasure destroyed a proposal read out of a meeting it deliberately left standing — another contact's pending work, on a request that was never about their record, while the quoted address survives in the meeting anyway")
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND status = 'pending'`, approvalID); n != 1 {
 		t.Error("the erasure withdrew a colleague's proposal about a meeting it kept")
@@ -253,7 +253,7 @@ func TestRetentionErasingATranscriptEmptiesTheProposalQuotingIt(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM transcript_read WHERE activity_id = $1`, overAge); n != 0 {
 		t.Error("the reading outlived the transcript that aged out")
 	}
-	// A policy ending the material and a person asking for it to be destroyed
+	// A policy ending the material and a contact asking for it to be destroyed
 	// are different answers to "why did this card go", and the inbox shows the
 	// reason it is given.
 	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND decision_reason = $2`,
@@ -318,7 +318,7 @@ func TestAControllerReleasingARestrictionSaysSoOnTheCardsItWithdrew(t *testing.T
 
 // releaseControllerCtx is a named administrator holding the retention
 // authority, which both overrides require. A SEEDED user, because a decision is
-// attributed to a person the installation can name and an id with no app_user
+// attributed to a contact the installation can name and an id with no app_user
 // row behind it is refused by design.
 func releaseControllerCtx(e *integration.Env) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -357,21 +357,21 @@ func TestSubjectAccessHandsBackTheQuotationHeldAboutThem(t *testing.T) {
 // quotation is not composed text. It is a raw line lifted out of some record,
 // so the ones handed over are reduced to the ones that are the subject's to
 // see. Otherwise an address appearing in a summary would disclose a verbatim
-// sentence out of a meeting they were never part of, about people they have no
+// sentence out of a meeting they were never part of, about contacts they have no
 // relationship to.
 func TestSubjectAccessWithholdsAQuotationFromARecordTheSubjectHasNoPartIn(t *testing.T) {
 	e := integration.Setup(t)
-	subject := e.SeedPerson(t, "Mara Kessler", nil)
+	subject := e.SeedContact(t, "Mara Kessler", nil)
 	const addr = "mara.kessler@example.com"
 	e.WsExec(t, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 		VALUES ($1, $2, true, 'test', 'human:seed')`, subject, addr)
 
 	const theirsAlone = "Tom: Bob, hold the line at list price - Contoso got thirty percent and nobody is to know."
 	elsewhere := seedTranscript(t, e, "1: "+theirsAlone)
 	stageQuotingProposal(t, e, elsewhere, theirsAlone, "Send the pricing sheet to "+addr)
 
-	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.PersonKind](subject))
+	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.ContactKind](subject))
 	if err != nil {
 		t.Fatalf("AssembleSAR → %v", err)
 	}

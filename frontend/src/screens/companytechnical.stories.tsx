@@ -215,7 +215,7 @@ export const TheSiteDeclined: Story = {
 
 /** A human corrected a machine-read value. The row stays on this card — it is
  * still a technical field — and loses its evidence mark, because a value a
- * person typed is not a claim the product is making. */
+ * contact typed is not a claim the product is making. */
 export const AfterAHumanCorrection: Story = {
   render: () => {
     const corrected = READ_FACTS.map((row) =>

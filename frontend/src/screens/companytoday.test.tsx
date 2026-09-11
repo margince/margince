@@ -36,7 +36,7 @@ function show(
   opts: {
     loading?: boolean;
     failed?: boolean;
-    onDraftTo?: (personId: string) => void;
+    onDraftTo?: (contactId: string) => void;
     onPrepareMeeting?: (activityId: string) => void;
     scan?: AccountScan;
   } = {},
@@ -61,7 +61,7 @@ function show(
   );
 }
 
-describe("what needs a person on this account today", () => {
+describe("what needs a contact on this account today", () => {
   it("says nothing about a meeting when none is booked", () => {
     // Absent AND not named in sections_omitted means "none scheduled". Writing
     // a line about it would be missing data dressed as a recommendation — only
@@ -125,14 +125,14 @@ describe("what needs a person on this account today", () => {
     );
   });
 
-  // The best-route tile reads `people`. A caller scoped away from the
+  // The best-route tile reads `contacts`. A caller scoped away from the
   // roster must be told the reading is missing, not shown a brief that
   // silently never names a way in.
   it("names the contacts when the reader may not see who is here", () => {
-    show({ ...BASE, sections_omitted: ["people"] });
+    show({ ...BASE, sections_omitted: ["contacts"] });
 
     expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      en["today.source.people"],
+      en["today.source.contacts"],
     );
   });
 
@@ -179,7 +179,7 @@ describe("the day's call, and which record it is read from", () => {
   // the wire sends.
   const FACTORS = { recency: 0, frequency: 0, reciprocity: 0, direction: 0 };
   const CONTACT = {
-    person_id: "p-1",
+    contact_id: "p-1",
     full_name: "Sarah Cole",
     strength: { score: 40, bucket: "moderate" as const, factors: FACTORS },
     deal_roles: [],
@@ -271,7 +271,7 @@ describe("the day's call, and which record it is read from", () => {
     expect(screen.queryByText(/no answer in/)).toBeNull();
   });
 
-  // The button names the recipient it will write to, and hands that person to
+  // The button names the recipient it will write to, and hands that contact to
   // the composer: an account-started message has no thread to anchor on, so
   // the recipient is what grounds it.
   it("hands the named recipient to the composer", () => {
@@ -279,7 +279,7 @@ describe("the day's call, and which record it is read from", () => {
     show(
       {
         ...BASE,
-        people: {
+        contacts: {
           data: [
             {
               ...CONTACT,
@@ -302,7 +302,7 @@ describe("the day's call, and which record it is read from", () => {
       { onDraftTo: drafted },
     );
     fireEvent.click(screen.getByRole("button", { name: "Draft" }));
-    expect(drafted).toHaveBeenCalledWith(CONTACT.person_id);
+    expect(drafted).toHaveBeenCalledWith(CONTACT.contact_id);
   });
 
   // The MOVES half of the merged brief: a booked meeting's own verb renders
@@ -317,7 +317,7 @@ describe("the day's call, and which record it is read from", () => {
           activity_id: "a-1",
           starts_at: "2026-08-12T09:00:00Z",
           subject: "Renewal review",
-          participants: [{ person_id: "p-1", display_name: "Dana Buyer" }],
+          participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
         },
       },
       { onPrepareMeeting: prepared },
@@ -599,12 +599,12 @@ describe("the account scan on the needs list", () => {
 // The account offers ONE way to write to somebody, not two that disagree.
 //
 // The generic row picks the account's strongest contact; a `draft_reply`
-// suggestion names the person actually waiting on an answer. On the demo
-// account those are two different people, so drawing both told a rep to write
+// suggestion names the contact actually waiting on an answer. On the demo
+// account those are two different contacts, so drawing both told a rep to write
 // to Sarah while the advice above said to answer Frédéric.
 describe("the generic draft row", () => {
   const RECIPIENT = {
-    person_id: "p-strongest",
+    contact_id: "p-strongest",
     full_name: "Sarah Cole",
     strength: {
       score: 40,
@@ -616,7 +616,7 @@ describe("the generic draft row", () => {
   };
   const withRecipient = {
     ...BASE,
-    people: {
+    contacts: {
       data: [RECIPIENT],
       page: { has_more: false, next_cursor: null },
     },

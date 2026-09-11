@@ -45,8 +45,8 @@ import (
 )
 
 // The audit actions a write-back records, spelled the same way the native
-// module stores spell them (people/person.go, deals/deal.go) so one audit
-// query answers "who changed this person" across both systems of record.
+// module stores spell them (contacts/contact.go, deals/deal.go) so one audit
+// query answers "who changed this contact" across both systems of record.
 const (
 	auditActionUpdate  = "update"
 	auditActionArchive = "archive"
@@ -58,7 +58,7 @@ const (
 //
 // before/after carry the record's field images restricted to the fields
 // this write actually touched — the same discipline the native update path
-// keeps (people/lead_update.go's patch Before()/After()), and the reason a
+// keeps (contacts/lead_update.go's patch Before()/After()), and the reason a
 // write-back audit row does not become a full copy of an incumbent record
 // in audit_log. Both images are narrowed by minimizeAuditImage first.
 // externalID travels as evidence rather than in those images: it is context
@@ -83,7 +83,7 @@ func auditWriteBack(ctx context.Context, tx pgx.Tx, action string, ref datasourc
 // emitWriteBack stages the record's own public event for a write-back —
 // the SAME event type the native path emits for the same verb, because a
 // subscriber must not have to know which system of record served the write
-// to recognize that a person changed.
+// to recognize that a contact changed.
 //
 // A verb/type pair with no case here is a programming error rather than a
 // silent no-op: the write verbs refuse everything SupportsWrite does not
@@ -107,8 +107,8 @@ func emitWriteBack(ctx context.Context, tx pgx.Tx, auditID ids.UUID, action stri
 // Archive supports (archivableTypes).
 func emitWriteBackArchived(ctx context.Context, tx pgx.Tx, auditID ids.UUID, ref datasource.EntityRef) error {
 	switch ref.Type {
-	case datasource.EntityPerson:
-		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventPersonArchived{})
+	case datasource.EntityContact:
+		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventContactArchived{})
 	case datasource.EntityCompany:
 		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventCompanyArchived{})
 	case datasource.EntityDeal:
@@ -124,8 +124,8 @@ func emitWriteBackUpdated(ctx context.Context, tx pgx.Tx, auditID ids.UUID,
 	ref datasource.EntityRef, after map[string]any,
 ) error {
 	switch ref.Type {
-	case datasource.EntityPerson:
-		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventPersonUpdated{ChangedFields: after})
+	case datasource.EntityContact:
+		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventContactUpdated{ChangedFields: after})
 	case datasource.EntityCompany:
 		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventCompanyUpdated{ChangedFields: after})
 	case datasource.EntityDeal:
@@ -144,7 +144,7 @@ func emitWriteBackUpdated(ctx context.Context, tx pgx.Tx, auditID ids.UUID,
 }
 
 // activityChangedFields projects an activity patch onto activity.updated's
-// BOUNDED delta. Unlike person/company/deal/lead.updated — whose
+// BOUNDED delta. Unlike contact/company/deal/lead.updated — whose
 // changed_fields is a genuinely open map — this event's key set is fixed and
 // typed, so the patch has to be narrowed rather than passed through.
 //
@@ -287,7 +287,7 @@ func (p *Provider) commitArchiveWriteBack(ctx context.Context, del Deletion, ref
 			return purgeErr
 		}
 		// before/after stay nil, matching the native archive audit rows
-		// (people/person.go, deals/deal.go): an archive changes no field
+		// (contacts/contact.go, deals/deal.go): an archive changes no field
 		// values, it retires the record.
 		return auditWriteBack(ctx, tx, auditActionArchive, ref, del.ExternalID, nil, nil)
 	})

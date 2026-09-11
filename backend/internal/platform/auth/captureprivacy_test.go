@@ -3,7 +3,7 @@
 
 package auth
 
-// Capture privacy as the predicate SPELLS it. A connector-created person or
+// Capture privacy as the predicate SPELLS it. A connector-created contact or
 // company is written visibility='owner' (ADR-0063 §7) and belongs to
 // the user whose mailbox produced it until a human promotes it. These tests
 // pin the two properties that make that true:
@@ -38,11 +38,11 @@ func human(scope principal.RowScope) principal.Principal {
 }
 
 func TestCapturePrivacyIsReadOnEveryTableThatCarriesIt(t *testing.T) {
-	// The defect this pins: person and company have carried a
+	// The defect this pins: contact and company have carried a
 	// visibility column since migration 0095, and the predicate never
 	// consulted it — so under team scope an owner-private captured contact
 	// was readable by the whole team.
-	for _, table := range []string{"person", "company"} {
+	for _, table := range []string{"contact", "company"} {
 		for _, scope := range []principal.RowScope{
 			principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll,
 		} {
@@ -64,16 +64,16 @@ func TestRowScopeAllDoesNotClearCapturePrivacy(t *testing.T) {
 	// the founder decision is the importing user ONLY, not even Admin.
 	admin := human(principal.RowScopeAll)
 
-	if UnboundedFor(admin, "person") {
-		t.Error("UnboundedFor(admin, person) = true: an admin would skip the " +
+	if UnboundedFor(admin, "contact") {
+		t.Error("UnboundedFor(admin, contact) = true: an admin would skip the " +
 			"clause entirely and read every colleague's unpromoted contacts")
 	}
 	if !UnboundedFor(admin, "deal") {
 		t.Error("UnboundedFor(admin, deal) = false: deal carries no visibility " +
 			"column, so an admin still reads it unfiltered")
 	}
-	if UnboundedFor(human(principal.RowScopeTeam), "person") {
-		t.Error("UnboundedFor(rep, person) = true: a rep would skip the clause and " +
+	if UnboundedFor(human(principal.RowScopeTeam), "contact") {
+		t.Error("UnboundedFor(rep, contact) = true: a rep would skip the clause and " +
 			"read a colleague's unpromoted captured contacts")
 	}
 	// Unbounded itself is an admission test several engines gate on and
@@ -90,12 +90,12 @@ func TestOnlyTheSystemPrincipalReadsCapturePrivateTablesUnfiltered(t *testing.T)
 		Type: principal.PrincipalSystem, ID: "system",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	}
-	if !UnboundedFor(system, "person", "company") {
+	if !UnboundedFor(system, "contact", "company") {
 		t.Fatal("the system principal is filtered by capture privacy; " +
 			"provisioning and the relay cannot see the rows they maintain")
 	}
-	if sql := rendered(system, "person"); sql != "TRUE" {
-		t.Errorf("system person predicate = %q, want TRUE", sql)
+	if sql := rendered(system, "contact"); sql != "TRUE" {
+		t.Errorf("system contact predicate = %q, want TRUE", sql)
 	}
 }
 
@@ -104,9 +104,9 @@ func TestAnExplicitShareStillWidensAnOwnerPrivateRow(t *testing.T) {
 	// the row — the same human act promotion is. Scope never widens an
 	// owner-private row; an explicit grant does, or the owner would share a
 	// record the grantee then cannot see.
-	sql := rendered(human(principal.RowScopeTeam), "person")
+	sql := rendered(human(principal.RowScopeTeam), "contact")
 	if !strings.Contains(sql, "record_grant") {
-		t.Fatalf("the grant arm is gone from the person predicate: %s", sql)
+		t.Fatalf("the grant arm is gone from the contact predicate: %s", sql)
 	}
 	// The grant arm must sit OUTSIDE the capture-privacy arm, or a share of
 	// an owner-private row would be conjoined away.
@@ -148,15 +148,15 @@ func TestTheOwnerPredicateIsTotal(t *testing.T) {
 func TestSubjectRightsPredicateDropsOnlyTheCapturePrivacyArm(t *testing.T) {
 	// Art. 15 and Art. 17 owe the subject everything the controller holds,
 	// including an unpromoted capture. The crossing lifts capture privacy
-	// and nothing else: a person is workspace-readable anyway (tableclass.go),
+	// and nothing else: a contact is workspace-readable anyway (tableclass.go),
 	// so the subject-rights read renders TRUE, while a table outside that read
 	// class keeps the caller's own/team scope. Erasure's WRITE arm is the
 	// write-authority probe, which still binds (writescope.go).
 	p := human(principal.RowScopeTeam)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	if sql := predicateFor(p, "person", arg, withoutCapturePrivacy, asClassified)("t"); sql != "TRUE" {
-		t.Errorf("the subject-rights person predicate = %q, want TRUE: it either still "+
+	if sql := predicateFor(p, "contact", arg, withoutCapturePrivacy, asClassified)("t"); sql != "TRUE" {
+		t.Errorf("the subject-rights contact predicate = %q, want TRUE: it either still "+
 			"applies capture privacy (a SAR would omit an unpromoted capture) or narrows "+
 			"a workspace-readable record", sql)
 	}

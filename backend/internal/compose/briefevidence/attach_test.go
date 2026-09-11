@@ -56,7 +56,7 @@ func cited(kind crmcontracts.CompanyBriefEvidenceEntityType, id openapi_types.UU
 const (
 	activity     = crmcontracts.CompanyBriefEvidenceEntityTypeActivity
 	deal         = crmcontracts.CompanyBriefEvidenceEntityTypeDeal
-	person       = crmcontracts.CompanyBriefEvidenceEntityTypePerson
+	contact      = crmcontracts.CompanyBriefEvidenceEntityTypeContact
 	factEvidence = crmcontracts.CompanyBriefEvidenceEntityTypeFact
 )
 
@@ -104,7 +104,7 @@ func TestEvidenceWithNoActivityReadsNothing(t *testing.T) {
 		Text: "The deal is open and the champion is named.",
 		Evidence: []crmcontracts.CompanyBriefEvidence{
 			cited(deal, uuid(t, 2)),
-			cited(person, uuid(t, 3)),
+			cited(contact, uuid(t, 3)),
 			cited(factEvidence, uuid(t, 4)),
 		},
 	}}

@@ -41,7 +41,7 @@ package compose
 // (--microsoft-signin-tenant) is an operator's explicit decision and wins
 // whenever it is set. Without one, a stored app pinned to a directory names
 // that directory — the admin who pinned it said whose mailboxes may connect,
-// and that is the same company whose people sign in — while a stored app
+// and that is the same company whose contacts sign in — while a stored app
 // left on `common` names nothing and cannot sign anyone in, for the reason
 // above.
 
@@ -107,7 +107,7 @@ type MicrosoftSignInConfig struct {
 	ClientID     string
 	ClientSecret string
 	// Tenant is the Entra DIRECTORY IDS (GUIDs, comma-separated) this
-	// installation's people sign in from. Deliberately not the authority aliases
+	// installation's contacts sign in from. Deliberately not the authority aliases
 	// Microsoft also accepts in this position (`common`, `companies`,
 	// `consumers`) and not a domain name: the value is compared against the
 	// token's `tid` claim, which is always a GUID, so anything else would be a
@@ -209,7 +209,7 @@ func (cfg MicrosoftSignInConfig) MissingFields() []string {
 	}.missingSignInFields()
 	// EVERY entry. A list with a bad id is refused whole rather than quietly
 	// served by its good half: an operator who mistyped one directory would
-	// otherwise get a working sign-in that silently turns away the people that
+	// otherwise get a working sign-in that silently turns away the contacts that
 	// entry was for. An EMPTY list is not refused: it leaves the directory to
 	// the stored app's pin, and the boot log says what that means for the
 	// environment's own pair.
@@ -284,7 +284,7 @@ func microsoftIssuer(tenants []string) func(oidcClaims) error {
 		}
 		if !slices.ContainsFunc(tenants, func(id string) bool { return strings.EqualFold(c.Tid, id) }) {
 			// The consumer tenant keeps its own sentence. Somebody who signed
-			// in with their private account by mistake is a different person
+			// in with their private account by mistake is a different contact
 			// from somebody whose employer is not listed, and "not one of this
 			// installation's directories" sends the first one to ask for an
 			// allowlist entry they do not want.

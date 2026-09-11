@@ -44,17 +44,17 @@ func TestAScheduledMessageCarryingAnUnsubscribeLinkStillFires(t *testing.T) {
 	// correspondence send derives its basis from. The purpose matters here only
 	// because business_correspondence CARRIES a one-click unsubscribe link,
 	// which is the whole subject: the link is what needs an origin to point at.
-	var person struct {
+	var contact struct {
 		Data []struct {
 			ID string `json:"id"`
 		} `json:"data"`
 	}
-	if status := p.Call(t, "GET", "/v1/people?q=linked@preflight.test", nil, nil, &person); status != http.StatusOK || len(person.Data) == 0 {
-		t.Fatalf("finding the seeded recipient → %d (%d rows)", status, len(person.Data))
+	if status := p.Call(t, "GET", "/v1/contacts?q=linked@preflight.test", nil, nil, &contact); status != http.StatusOK || len(contact.Data) == 0 {
+		t.Fatalf("finding the seeded recipient → %d (%d rows)", status, len(contact.Data))
 	}
 	if status := p.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Inbound question", "direction": "inbound",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": person.Data[0].ID}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact.Data[0].ID}},
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("logging the inbound the reply answers → %d", status)
 	}

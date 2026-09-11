@@ -71,9 +71,9 @@ const unnumberedUpdate = `{"message":{"message_id":4,"chat":{"id":880004,"type":
 
 // A group chat is refused BEFORE the transaction opens. Refusing it later — in
 // the worker that normalizes the payload — leaves behind a verbatim raw_capture
-// row holding the sender's id, handle, names and message text that no Person,
+// row holding the sender's id, handle, names and message text that no Contact,
 // erasure, SAR or retention lane can reach, because every one of them drives off
-// person_channel_identity and a refused record creates none. That is strictly
+// contact_channel_identity and a refused record creates none. That is strictly
 // worse than not filtering at all, which is why this classification is a pure
 // function taken before any row is written.
 func TestAPollRefusesAGroupChatBeforeAnythingIsPersisted(t *testing.T) {

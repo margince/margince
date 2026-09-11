@@ -173,7 +173,7 @@ export function SetupClaimScreen({
         onClaimed();
         return;
       }
-      // Each refusal means something different to the person reading it, and
+      // Each refusal means something different to the reader reading it, and
       // each implies a different next action: find the right token, sign in
       // instead, fix a field, or wait and try again. Collapsing them would
       // leave three of the four telling someone to correct a form that is

@@ -23,8 +23,8 @@ function model(over: Partial<RelationshipMapModel> = {}): RelationshipMapModel {
       { id: "u-2", kind: "user", label: "Lars Meyer" },
       { id: "o-1", kind: "company", label: "Brandt GmbH" },
       { id: "d-1", kind: "deal", label: "Retrofit 2026" },
-      { id: "p-1", kind: "person", label: "Philipp Königs" },
-      { id: "p-2", kind: "person", label: "Ute Sommer" },
+      { id: "p-1", kind: "contact", label: "Philipp Königs" },
+      { id: "p-2", kind: "contact", label: "Ute Sommer" },
     ],
     lanes: [
       {
@@ -98,11 +98,11 @@ test("puts each column where the constants say", () => {
 });
 
 // A lane longer than the cap draws what fits and offers the rest, rather than
-// growing without limit or silently dropping people.
+// growing without limit or silently dropping contacts.
 test("caps a long lane and offers the remainder", () => {
   const many = Array.from({ length: LANE_CAP + 6 }, (_, i) => `p-${i}`);
   const long = model({
-    nodes: many.map((id) => ({ id, kind: "person" as const, label: id })),
+    nodes: many.map((id) => ({ id, kind: "contact" as const, label: id })),
     lanes: [
       {
         id: "influencer",
@@ -114,14 +114,14 @@ test("caps a long lane and offers the remainder", () => {
     edges: [],
   });
   const capped = layout(long);
-  expect(capped.placed.filter((n) => n.kind === "person")).toHaveLength(
+  expect(capped.placed.filter((n) => n.kind === "contact")).toHaveLength(
     LANE_CAP,
   );
   expect(capped.placed.some((n) => n.id === "more:influencer")).toBe(true);
   expect(capped.heads.find((h) => h.id === "influencer")?.hidden).toBe(6);
 
   const opened = layout(long, new Set(["influencer"]));
-  expect(opened.placed.filter((n) => n.kind === "person")).toHaveLength(
+  expect(opened.placed.filter((n) => n.kind === "contact")).toHaveLength(
     LANE_CAP + 6,
   );
   expect(opened.placed.some((n) => n.id === "more:influencer")).toBe(false);
@@ -131,7 +131,7 @@ test("stacks a lane by each node's own height", () => {
   const placed = layout(model()).placed;
   const first = placed.find((n) => n.id === "p-1");
   const second = placed.find((n) => n.id === "p-2");
-  expect((second?.y ?? 0) - (first?.y ?? 0)).toBe(NODE_H.person + 8);
+  expect((second?.y ?? 0) - (first?.y ?? 0)).toBe(NODE_H.contact + 8);
 });
 
 // The strongest band wins, even when a weaker edge is more recent — a reader
@@ -233,7 +233,7 @@ test("mirrors the walk when a colleague is focused", () => {
 
 // A contact nobody has a route to still focuses: the map fades the rest and
 // the panel says there is no route, which is the honest answer.
-test("focuses a person with no route without inventing one", () => {
+test("focuses a contact with no route without inventing one", () => {
   const alone = model({ edges: [] });
   const { related, route } = routeFor(alone, "p-1");
   expect(route).toBeNull();

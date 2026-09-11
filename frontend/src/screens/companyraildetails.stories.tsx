@@ -167,7 +167,7 @@ export const Archived: Story = {
 // registry-address rows draw their own invitations. This is the state the two
 // rows exist for — before them a rep who knew the number had nowhere to put it,
 // and the VAT consultation a written number queues was unreachable for exactly
-// the companies a person would want to check.
+// the companies a contact would want to check.
 export const LegalIdentityUnstated: Story = {
   render: () => <Details company={company} profileFields={[]} />,
 };

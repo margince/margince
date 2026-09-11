@@ -3,7 +3,7 @@
 
 package company360
 
-// Why the account's work in flight needs a person.
+// Why the account's work in flight needs a contact.
 //
 // The company page used to open with a written account brief: one narrative
 // over every deal and every project at once. On an account carrying several
@@ -32,8 +32,8 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -62,7 +62,7 @@ type overdueTask struct {
 // from a reader who may read it.
 //
 // Two shapes of incompleteness reach this flag today. A refused activity
-// grant is the loud one. The quiet one is a claim made by a person outside
+// grant is the loud one. The quiet one is a claim made by a contact outside
 // the caller's row scope: the store drops that row and says so, because a
 // project silently missing its commitment reads as a project with nothing
 // outstanding — which is the one thing this card must never say by accident.
@@ -72,7 +72,7 @@ type overdueTask struct {
 // auth.ActivityContentClause inside the queries below, which report only
 // their rows and not what they filtered. Such a row reads as a piece of work
 // with nothing outstanding. Closing it means those queries reporting their
-// own drops, the same way the person scope already does.
+// own drops, the same way the contact scope already does.
 func (a *assembly) readWorkAttention() error {
 	dealIDs, projects := attentionTargets(a.out)
 	if len(dealIDs) == 0 && len(projects) == 0 {
@@ -106,7 +106,7 @@ func (a *assembly) decorateWorkAttention(dealIDs []ids.UUID, projects []ids.Proj
 	if err != nil {
 		return false, err
 	}
-	commitments, complete, err := a.svc.people.CommitmentsTheirsForProjects(a.ctx, a.tx, projects, a.now)
+	commitments, complete, err := a.svc.contacts.CommitmentsTheirsForProjects(a.ctx, a.tx, projects, a.now)
 	if err != nil {
 		return false, err
 	}
@@ -144,7 +144,7 @@ func attentionTargets(out *crmcontracts.Company360) ([]ids.UUID, []ids.ProjectID
 	var projects []ids.ProjectID
 	if out.Projects != nil {
 		for _, row := range *out.Projects {
-			// A closed project is history, and "why does this need a person"
+			// A closed project is history, and "why does this need a contact"
 			// is not a question about history. It is also what the card shows,
 			// so decorating one would be a fact nothing renders.
 			if row.Phase == crmcontracts.Company360ProjectPhaseClosed {
@@ -259,7 +259,7 @@ func taskAttention(task overdueTask) *crmcontracts.Company360WorkAttention {
 // same conversation as the citation every other grounded row on the page uses,
 // which is what lets one renderer decide whether it can be opened — and an
 // email among them then opens as the message rather than as a bare link.
-func commitmentAttention(commitment people.ProjectCommitment) *crmcontracts.Company360WorkAttention {
+func commitmentAttention(commitment contacts.ProjectCommitment) *crmcontracts.Company360WorkAttention {
 	if commitment.Body == "" {
 		return nil
 	}

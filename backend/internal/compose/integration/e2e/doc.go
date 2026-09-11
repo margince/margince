@@ -18,7 +18,7 @@
 // custom-field resolver. Each asks whether one part of the product is correct.
 //
 // A suite belongs HERE instead when it asks whether a JOURNEY works — several
-// subsystems in sequence, in the order and by the route a person actually
+// subsystems in sequence, in the order and by the route a contact actually
 // meets them, with the assertions written from what the user was promised
 // rather than from what a package exports. The distinction is the direction
 // the test is written from, not how many packages it touches.

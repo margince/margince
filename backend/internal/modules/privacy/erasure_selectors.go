@@ -3,8 +3,8 @@
 
 package privacy
 
-// The activity-selection SQL the Art. 17 person-erase cascade walks: which
-// timeline rows are the subject's alone, which of those a person-erase may
+// The activity-selection SQL the Art. 17 contact-erase cascade walks: which
+// timeline rows are the subject's alone, which of those a contact-erase may
 // actually destroy (the statutory floor shields the rest), and the unlinked
 // mail — captured and sent alike — the link-walk cannot see. Kept in one file
 // so the selectors read as one concept.
@@ -27,9 +27,9 @@ package privacy
 // that set from the committed schema, so the next table to gain the column
 // fails the test until its arm exists.
 //
-// The held-person arm is deliberately absent: a person-linked activity shared
+// The held-contact arm is deliberately absent: a contact-linked activity shared
 // with another subject is already outside every selector below, and the erased
-// subject itself is proven unheld before the cascade runs (ErasePerson's
+// subject itself is proven unheld before the cascade runs (EraseContact's
 // own-hold check).
 func notTransitivelyHeld(activityID string) string {
 	return `
@@ -45,24 +45,24 @@ func notTransitivelyHeld(activityID string) string {
 }
 
 // subjectOnlyActivities selects timeline rows linked to the erased
-// person and to no OTHER person — the emails, call notes and meeting
+// contact and to no OTHER contact — the emails, call notes and meeting
 // bodies whose free text is about the subject alone. Rows shared with
-// another person on the thread are excluded on purpose: redacting them
+// another contact on the thread are excluded on purpose: redacting them
 // would erase a different subject's record.
 var subjectOnlyActivities = `
 	SELECT l.activity_id FROM activity_link l
-	WHERE l.person_id = $1
+	WHERE l.contact_id = $1
 	  AND NOT EXISTS (
 	    SELECT 1 FROM activity_link o
 	    WHERE o.activity_id = l.activity_id
-	      AND o.person_id IS NOT NULL AND o.person_id <> $1)` +
+	      AND o.contact_id IS NOT NULL AND o.contact_id <> $1)` +
 	notTransitivelyHeld("l.activity_id")
 
 // subjectOnlyDestroyable narrows subjectOnlyActivities to the rows a
-// person-erase may actually destroy: subject-only AND not shielded by the
-// statutory correspondence floor. $1 is the person; $2/$3 are the floor's
+// contact-erase may actually destroy: subject-only AND not shielded by the
+// statutory correspondence floor. $1 is the contact; $2/$3 are the floor's
 // interval and calendar-year-end anchor — the SAME pins the retention
-// activity selectors pass — so the person-erase cascade can never destroy a
+// activity selectors pass — so the contact-erase cascade can never destroy a
 // Handelsbrief younger than the floor the nightly evaluator refuses to touch
 // (a GoBD floor bypass, F-012). With no jurisdiction floor compiled in the
 // predicate reduces to a no-op, so a non-DE install erases exactly as before.
@@ -72,11 +72,11 @@ var subjectOnlyDestroyable = `
 	  ` + correspondenceFloorPredicate(2, 3)
 
 // unlinkedSubjectMail selects mail that is ABOUT the subject by address and
-// linked to no OTHER person — the class the link-walk above cannot see, under
+// linked to no OTHER contact — the class the link-walk above cannot see, under
 // the same exclusion it uses.
 //
 // It exists because ADR-0072 stopped creating a counterparty for every captured
-// message. Under ADR-0063 every mail ensured a person, so a link always
+// message. Every mail once ensured a contact (ADR-0063), so a link always
 // existed and walking links covered everything; a deferred, noise-dispositioned
 // or still-unsure sender now produces activities with no link at all. Erasure
 // that only walks links would leave that mail — the address, the subject line
@@ -85,7 +85,7 @@ var subjectOnlyDestroyable = `
 // It reaches mail in BOTH directions, and the symmetry is the point. Outbound
 // mail this installation SENT reaches the subject the same way: the send path
 // gives its activity only the links the anchor already had, so a reply anchored
-// on a company- or deal-linked thread — or on one with no person link at
+// on a company- or deal-linked thread — or on one with no contact link at
 // all — records the recipient's address and the whole message body while being
 // linked to nobody. A direction test would have left exactly the mail we wrote
 // to the subject behind, along with the delivery row behind it.
@@ -112,10 +112,10 @@ var subjectOnlyDestroyable = `
 // correspondence floor the caller applies, so a delivery can never be scrubbed
 // while the activity it belongs to is shielded.
 //
-// Mail also linked to someone else belongs to that person's record too, and
+// Mail also linked to someone else belongs to that contact's record too, and
 // redacting it would erase a different subject's history.
-// $1 is the person; $2 the subject's addresses, already lowercased by the
-// person_email normalization CHECK. The `m` alias keeps this
+// $1 is the contact; $2 the subject's addresses, already lowercased by the
+// contact_email normalization CHECK. The `m` alias keeps this
 // selector distinct from the `a`-aliased activity the correspondence floor
 // filters when redactSubjectTimeline wraps both id sets in one UPDATE — so
 // commercial correspondence younger than the statutory floor is shielded here
@@ -123,10 +123,10 @@ var subjectOnlyDestroyable = `
 //
 // The legal-hold exclusion matters MORE on this arm than on the link-walk one:
 // a send inherits its anchor's company and deal links, so mail on a held
-// deal's thread is the ordinary shape of an activity with no person link at
+// deal's thread is the ordinary shape of an activity with no contact link at
 // all — precisely the position a litigation hold protects.
 // unlinkedSubjectChannel is the channel twin of unlinkedSubjectMail, and it
-// exists for a sharper reason than symmetry: a channel activity's person link is
+// exists for a sharper reason than symmetry: a channel activity's contact link is
 // written by a SEPARATE transaction after the capture commits, so an erasure
 // landing in that gap leaves an activity linked to nobody.
 //
@@ -149,7 +149,7 @@ var subjectOnlyDestroyable = `
 // elsewhere (an untyped id match is why ai_call_payload has no channel arm).
 //
 // The same NOT EXISTS exclusion as the mail arm applies: a row shared with
-// another person stays, because redacting it would erase a different subject's
+// another contact stays, because redacting it would erase a different subject's
 // record.
 var unlinkedSubjectChannel = `
 	SELECT c.id FROM activity c
@@ -159,7 +159,7 @@ var unlinkedSubjectChannel = `
 	  AND NOT EXISTS (
 	    SELECT 1 FROM activity_link o
 	    WHERE o.activity_id = c.id
-	      AND o.person_id IS NOT NULL AND o.person_id <> $1)` +
+	      AND o.contact_id IS NOT NULL AND o.contact_id <> $1)` +
 	notTransitivelyHeld("c.id")
 
 var unlinkedSubjectMail = `
@@ -175,5 +175,5 @@ var unlinkedSubjectMail = `
 	  AND NOT EXISTS (
 	    SELECT 1 FROM activity_link o
 	    WHERE o.activity_id = m.id
-	      AND o.person_id IS NOT NULL AND o.person_id <> $1)` +
+	      AND o.contact_id IS NOT NULL AND o.contact_id <> $1)` +
 	notTransitivelyHeld("m.id")

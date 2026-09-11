@@ -22,7 +22,7 @@ import (
 // disagree about the envelope (`data` vs `models`), about the id (Gemini
 // namespaces it `models/…`, Ollama tags it `:latest`), and about whether they
 // say what a model is FOR at all. Split across five adapter files, the next
-// person adding a vendor would have to find four precedents to match.
+// contact adding a vendor would have to find four precedents to match.
 //
 // None of them publishes a price on this endpoint except a broker, and every
 // one of these five ListModels methods drops it where it does: reading a

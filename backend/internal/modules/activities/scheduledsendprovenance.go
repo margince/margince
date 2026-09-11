@@ -20,7 +20,7 @@ import (
 // frozen at schedule time.
 //
 // The human's id is already in `scheduled_by` and is not enough: two agents, or
-// two passports, acting for the same person are the same human and different
+// two passports, acting for the same contact are the same human and different
 // actors, and an audit trail has to tell them apart. Rebuilding an agent
 // identity from the human's id at fire invents an actor that never existed,
 // which is the attribution chain ADR-0055 rests on.
@@ -45,7 +45,7 @@ type agentProvenance struct {
 // identity mints the principal from one field (AgentIdentity.Principal sets
 // UserID and OnBehalfOf from the same a.OnBehalfOf). The rule is not about
 // today's callers though. An agent principal whose UserID names the AGENT's own
-// app_user row rather than a person is a shape this tree has carried before, and
+// app_user row rather than a contact is a shape this tree has carried before, and
 // copying that into a column meaning "the human behind this" would write an
 // agent's id where a human's belongs. The fire path then hands it to
 // actor.OnBehalfOf, which auth.Admit reads to derive seat and RBAC: a fabricated

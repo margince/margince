@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 
-// An address is text a person edits. Everything here is about what happens
+// An address is text a human edits. Everything here is about what happens
 // when what arrives is not what this code wrote.
 
 describe("the tag filter's address", () => {

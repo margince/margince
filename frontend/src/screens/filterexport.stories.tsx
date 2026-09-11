@@ -37,7 +37,7 @@ type Story = StoryObj<typeof ExportFilterMenu>;
 export const Offered: Story = {
   render: () => {
     installFetchStub({});
-    return <ExportFilterMenu resource="person" tree={COMPLETE} />;
+    return <ExportFilterMenu resource="contact" tree={COMPLETE} />;
   },
 };
 
@@ -49,7 +49,7 @@ export const WithheldForAnIncompleteFilter: Story = {
     installFetchStub({});
     return (
       <ExportFilterMenu
-        resource="person"
+        resource="contact"
         tree={newGroup("and", [newLeaf("city", "eq", "")])}
       />
     );
@@ -73,7 +73,7 @@ export const Refused: Story = {
           403,
         ),
     });
-    return <ExportFilterMenu resource="person" tree={COMPLETE} />;
+    return <ExportFilterMenu resource="contact" tree={COMPLETE} />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

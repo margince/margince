@@ -3,7 +3,7 @@
 
 package consent
 
-// What the engine answers about a recipient who is a LEAD rather than a person.
+// What the engine answers about a recipient who is a LEAD rather than a contact.
 //
 // Its own file because authorizetransmit.go had reached the size cap, and
 // because this is one concept: a lead is a subject the engine can identify, and
@@ -25,12 +25,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// The two columns person_consent keys a subject on. Compile-time literals, and
+// The two columns contact_consent keys a subject on. Compile-time literals, and
 // the only values recordedStateFor's caller may pass — nothing off a request
 // reaches the format below.
 const (
-	subjectColumnPerson = "person_id"
-	subjectColumnLead   = "lead_id"
+	subjectColumnContact = "contact_id"
+	subjectColumnLead    = "lead_id"
 )
 
 // recordedStateFor is the same read for either subject arm.
@@ -50,7 +50,7 @@ func recordedStateFor(ctx context.Context, tx pgx.Tx, subjectColumn, subjectID, 
 		         WHERE ce.%[1]s = pc.%[1]s AND ce.purpose_id = pc.purpose_id
 		           AND ce.new_state = 'granted' AND ce.double_opt_in_confirmed_at IS NOT NULL
 		           AND ce.issuance_trigger IS NOT NULL))
-		FROM person_consent pc
+		FROM contact_consent pc
 		WHERE pc.%[1]s = $1 AND pc.purpose_id = $2`, subjectColumn),
 		subjectID, purposeID, requiresDOI).Scan(&state, &granted)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -63,7 +63,7 @@ func recordedStateFor(ctx context.Context, tx pgx.Tx, subjectColumn, subjectID, 
 }
 
 // entityLead is the subject kind a decision records for an unpromoted lead,
-// the sibling of entityPerson.
+// the sibling of entityContact.
 const entityLead = "lead"
 
 // purposeRowFor reads the live purpose a delivery was staged under, or nil when
@@ -91,20 +91,20 @@ func purposeRowFor(ctx context.Context, tx pgx.Tx, purposeKey string) (PurposeRo
 	return purpose, true, nil
 }
 
-// decideLead answers about a recipient who is a lead rather than a person.
+// decideLead answers about a recipient who is a lead rather than a contact.
 //
 // EVIDENCE FIRST, GRANT SECOND, and the order is the whole point. A lead who
-// wrote to us has initiated the correspondence exactly as a person who wrote to
+// wrote to us has initiated the correspondence exactly as a contact who wrote to
 // us has, and refusing to answer their mail until somebody records a consent row
 // inverts the rule: it is stricter than the law and stricter than what we do for
 // the same human once they are promoted. So a lead reaches resolveCategory on
-// the same evidence a person does — the thread arm and the recent-inbound arm
+// the same evidence a contact does — the thread arm and the recent-inbound arm
 // both already read a lead, because a lead's activity_participant row carries no
-// person_id and matches the bare-address arm of authorIsTheSubject.
+// contact_id and matches the bare-address arm of authorIsTheSubject.
 //
 // When no evidence supports a category, the legacy grant still answers, through
-// grantedForLead rather than VerdictForPerson: the two ask about different
-// columns, and legacyVerdictFor would compare a lead id against person_id and
+// grantedForLead rather than VerdictForContact: the two ask about different
+// columns, and legacyVerdictFor would compare a lead id against contact_id and
 // find nothing.
 //
 // A lead nothing resolves to stays `review` with no subject: that is the
@@ -127,7 +127,7 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 	}
 	d.SubjectKind, d.SubjectID = entityLead, parsed
 
-	// A suppression binds a lead exactly as it binds a person: the row may
+	// A suppression binds a lead exactly as it binds a contact: the row may
 	// name a lead_id or bare address, and liveSuppression already reads both.
 	kinds, err := liveSuppression(ctx, tx, leadID, r)
 	if err != nil {
@@ -141,7 +141,7 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 	}
 
 	// ONE EXIT for the suppression, so the rule is applied in one place rather
-	// than at each arm below. The person arm has the same shape in decideOne;
+	// than at each arm below. The contact arm has the same shape in decideOne;
 	// an earlier version applied it at three separate returns and the third was
 	// a hand-inlined partial copy that set Suppression without consulting the
 	// rule.
@@ -161,10 +161,10 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	purposeKey := req.LegacyPurposeKey
 
 	// The evidence arms, before any purpose key is consulted, through the same
-	// helper the person arm uses so the basis is recorded the same way.
+	// helper the contact arm uses so the basis is recorded the same way.
 	//
-	// NOT decideResolved: its unsupported fallthrough asks VerdictForPerson,
-	// which would compare a lead id against person_id. That is not merely a
+	// NOT decideResolved: its unsupported fallthrough asks VerdictForContact,
+	// which would compare a lead id against contact_id. That is not merely a
 	// miss — ClassTransactional returns an unconditional allow without reading
 	// any grant, so a lead would take authority from a purpose row nobody
 	// checked against lead grants.
@@ -177,8 +177,8 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		return commsauthz.Decision{}, err
 	}
 	if res.Supported {
-		// The same question the person arm asks: the evidence arms never read
-		// person_consent, so a lead who withdrew would be sent the very message
+		// The same question the contact arm asks: the evidence arms never read
+		// contact_consent, so a lead who withdrew would be sent the very message
 		// they stopped.
 		stopped, err := withdrawalCovers(ctx, tx,
 			subjectRef{
@@ -226,7 +226,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 }
 
 // leadRefusalReason names WHY a lead's send was refused, in the same vocabulary
-// the person arm uses.
+// the contact arm uses.
 //
 // A withdrawal and an absence are different things that happened — Art. 7(3)
 // against default-deny — and the reason code is what a subject is shown when
@@ -260,7 +260,7 @@ func leadRefusalReason(ctx context.Context, tx pgx.Tx, leadID string, purpose Pu
 // recipient with no single subject.
 func resolveLead(ctx context.Context, tx pgx.Tx, r connector.Recipient) (string, bool, error) {
 	if r.Channel != nil {
-		// A channel identity binds a Person and nothing else, so there is no
+		// A channel identity binds a Contact and nothing else, so there is no
 		// lead behind one.
 		return "", false, nil
 	}

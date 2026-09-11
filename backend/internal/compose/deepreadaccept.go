@@ -19,16 +19,16 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // deepReadAcceptEffect builds the approvals.ApprovedEffect compose
 // injects for kind "deepread".
-func deepReadAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
+func deepReadAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		proposal, err := people.UnmarshalDeepRead(proposedChange)
+		proposal, err := contacts.UnmarshalDeepRead(proposedChange)
 		if err != nil {
 			return err
 		}

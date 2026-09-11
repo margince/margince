@@ -65,14 +65,14 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	}
 	workspaceID := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Draft Reader",
 		"emails":    []AnyMap{{"email": "reader@buyer.test"}},
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 	// A purpose of the installation's own making, non-DOI: it carries an
 	// unsubscribe surface (only `transactional` is locked), which is what puts
@@ -85,7 +85,7 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	}, nil, &purpose); status != http.StatusCreated {
 		t.Fatalf("create consent purpose → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts/"+contact.ID+"/consent", AnyMap{
 		"purpose_id": purpose.ID, "new_state": "granted", "lawful_basis": "consent",
 		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
@@ -96,7 +96,7 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Pricing question", "direction": "inbound",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact.ID}},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}

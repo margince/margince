@@ -7,7 +7,7 @@ import { jsonResponse, StoryProviders } from "./story-utils";
 import { TeamBoard } from "./worklist.board";
 
 // WHO ON THE TEAM IS CARRYING WHAT — counts, not rows, because the queue below
-// ranks one person's day and cannot answer "who is drowning".
+// ranks one contact's day and cannot answer "who is drowning".
 //
 // An open titled panel, the same shape as the blocks either side of it on both
 // surfaces that draw it, which is why every frame below shows the heading and
@@ -78,7 +78,7 @@ type Story = StoryObj<typeof TeamBoard>;
 /** A team with somebody carrying more than the rest, and a pile nobody owns
  *  under them — the unowned work rides as a row rather than beside the table,
  *  because it is the same question asked of the one holder who is not a
- *  person. */
+ *  contact. */
 export const ALoadedTeam: Story = {
   render: () => frame(async () => jsonResponse(aLoadedTeam)),
 };

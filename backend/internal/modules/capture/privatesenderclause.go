@@ -6,13 +6,13 @@
 // Rendered here rather than in the lane that asks, because this module owns
 // capture_pending_counterparty and a module never imports a sibling. The caller
 // takes it as a hole in its own statement, the way it takes the dismissal rule
-// from people.
+// from contacts.
 
 package capture
 
 import "fmt"
 
-// PrivateSenderClause excludes a person THIS reader's own sender verdict called
+// PrivateSenderClause excludes a contact THIS reader's own sender verdict called
 // anything but a business counterparty.
 //
 // A reconnect lane is the case it exists for. `personal` and `advisor` are the
@@ -24,27 +24,27 @@ import "fmt"
 // THE READER'S OWN, and that is the half that is easy to leave out. The ledger
 // is per mailbox owner: the same address can be one rep's personal adviser and
 // another's live customer. Read unscoped, the first rep's private verdict
-// silently suppresses the second rep's reconnect — one person's privacy
-// decision deciding another person's pipeline.
+// silently suppresses the second rep's reconnect — one contact's privacy
+// decision deciding another contact's pipeline.
 //
 // The owner's OWN correction outranks the machine, both ways. `business`
 // readmits a sender the classifier called noise; `keep_out` withdraws one it
 // called real. Reading the kind alone leaves a corrected contact excluded
 // forever and shows one the owner has asked to be rid of.
 //
-// alias names the row carrying `person_id`, and readerPos the placeholder
+// alias names the row carrying `contact_id`, and readerPos the placeholder
 // holding the reader's own id. The kinds are spelled here rather than derived
 // from the Kind constants deliberately: this is a statement about which of them
 // are NOT business, and a new kind must be judged rather than silently
 // inherited — TestEveryVerdictKindIsJudgedByTheReconnectLane holds it.
 func PrivateSenderClause(alias, readerPos string) string {
 	return fmt.Sprintf(`NOT EXISTS (
-		SELECT 1 FROM person_email pe
+		SELECT 1 FROM contact_email pe
 		  LEFT JOIN capture_pending_counterparty cp
 		         ON cp.email = lower(pe.email) AND cp.owner_id = %[2]s
 		  LEFT JOIN capture_sender_override so
 		         ON so.address = lower(pe.email) AND so.user_id = %[2]s
-		 WHERE pe.person_id = %[1]s.person_id
+		 WHERE pe.contact_id = %[1]s.contact_id
 		   AND pe.archived_at IS NULL
 		   AND (so.decision = '%[4]s'
 		     OR (so.decision IS DISTINCT FROM '%[3]s'

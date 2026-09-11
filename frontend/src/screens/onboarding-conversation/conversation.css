@@ -424,7 +424,7 @@
 }
 
 /* The team act: the settings invite form on a plate of its own, held to a
-   form's measure rather than the scene's, and the people it has invited so
+   form's measure rather than the scene's, and the contacts it has invited so
    far listed under it. */
 .ob-scene.ob-team-scene {
   max-width: 58rem;
@@ -2009,7 +2009,7 @@
 }
 
 /* The tail: crawl provenance, not a finding — what the read covered and
-   what it skipped. People and facts both moved onto the board itself as
+   what it skipped. Contacts and facts both moved onto the board itself as
    findings in their own right, so this is the one thing left under a
    heading of its own. */
 .ob-triage-rest-head {
@@ -2468,7 +2468,7 @@
   block-size: 14px;
 }
 
-/* What the crawl found (People, Facts), not what still needs the human —
+/* What the crawl found (Contacts, Facts), not what still needs the human —
    no pill, no background: borrowing the blocking/advisory badge's shape
    would say a find is an obstacle, which it never is. */
 .ob-triage-nav-quantity {
@@ -2853,15 +2853,15 @@
   color: var(--dangerText);
 }
 
-/* The people section: a plain statement when the read found no one, or a
-   row per person with the same quiet weight the field rows carry — no
+/* The contacts section: a plain statement when the read found no one, or a
+   row per contact with the same quiet weight the field rows carry — no
    confidence band, because there is nothing here for a human to grade. */
-.ob-triage-people-empty {
+.ob-triage-contacts-empty {
   margin: 0;
   padding: var(--space-3);
 }
 
-.ob-triage-people-rows {
+.ob-triage-contacts-rows {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -2876,7 +2876,7 @@
    the name/role text beside it, so the row centres on whichever child is
    tallest instead of aligning everyone to a text baseline the chip has none
    of. */
-.ob-triage-person {
+.ob-triage-contact {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2887,7 +2887,7 @@
   background: var(--bgElevated);
 }
 
-.ob-triage-person-name {
+.ob-triage-contact-name {
   color: var(--textPrimary);
   font-family: var(--f-body);
   font-size: var(--fs-sm);
@@ -2895,9 +2895,9 @@
 }
 
 /* The URL alone takes the mono face. A profile address is a machine string and
-   reads as one; the person's e-mail beside it is words somebody wrote down, and
+   reads as one; the contact's e-mail beside it is words somebody wrote down, and
    set in mono a name and a domain read as an identifier. */
-.ob-triage-person-url {
+.ob-triage-contact-url {
   font-family: var(--f-mono);
 }
 
@@ -3008,7 +3008,7 @@
   list-style: none;
 }
 
-/* One finding, one line: the same card shell the field and person rows
+/* One finding, one line: the same card shell the field and contact rows
    use, sized to what a fact actually needs — a value, its confidence, the
    source, and the save toggle. A hundred of these still reads as a list,
    not a hundred field-sized cards. Centred, not baseline: the source chip

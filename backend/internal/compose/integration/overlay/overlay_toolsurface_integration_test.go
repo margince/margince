@@ -47,7 +47,7 @@ import (
 // context intents, the pipeline-risk scan and its draft sibling, the two
 // relationship-graph reads, the pipeline configuration read, the query-plan
 // executor — and one WRITE,
-// disqualify_lead and demote_lead, whose tools call the people store directly and so miss the
+// disqualify_lead and demote_lead, whose tools call the contacts store directly and so miss the
 // REST-only write guard that refuses the same verbs for a mirrored type. None
 // has a mirror projection to serve, so each owes an honest refusal in overlay
 // mode.
@@ -67,8 +67,8 @@ func nativeOnlyAgentTools(anchor ids.UUID) map[string]string {
 		// The typed analytics engine reads the same native tables run_report
 		// does; a well-formed plan is enough, the guard lands first.
 		"run_analytics_query":      `{"entity":"deals-by-stage","measures":[{"fn":"count"}]}`,
-		"catch_me_up_on":           fmt.Sprintf(`{"record_type":"person","record_id":%q}`, anchor),
-		"prep_for_meeting":         fmt.Sprintf(`{"record_type":"person","record_id":%q}`, anchor),
+		"catch_me_up_on":           fmt.Sprintf(`{"record_type":"contact","record_id":%q}`, anchor),
+		"prep_for_meeting":         fmt.Sprintf(`{"record_type":"contact","record_id":%q}`, anchor),
 		"whats_slipping_this_week": `{}`,
 		"draft_follow_ups_for":     `{"segment":"slipping"}`,
 		"intro_path_to":            fmt.Sprintf(`{"company_id":%q}`, anchor),
@@ -102,7 +102,7 @@ func nativeOnlyAgentTools(anchor ids.UUID) map[string]string {
 		// `unresolved` is the one decision that tells a caller creating a record
 		// is safe, so a ladder run against empty native tables would turn the
 		// duplicate guard into a duplicate factory.
-		"resolve_entities": `{"candidates":[{"kind":"person","name":"Anna Weber"}]}`,
+		"resolve_entities": `{"candidates":[{"kind":"contact","name":"Anna Weber"}]}`,
 		// The morning brief, ranked out of the rep's own open deals in the
 		// native tables. It takes no arguments: the queue a caller may read is
 		// the one belonging to the human they act for.
@@ -145,7 +145,7 @@ func nativeOnlyAgentTools(anchor ids.UUID) map[string]string {
 func providerRefusedRecordWrites(anchor ids.UUID) map[string]string {
 	return map[string]string{
 		"promote_lead":  fmt.Sprintf(`{"lead_id":%q,"trigger":"inbound_reply"}`, anchor),
-		"merge_records": fmt.Sprintf(`{"record_type":"person","source_id":%q,"target_id":%q}`, anchor, ids.NewV7()),
+		"merge_records": fmt.Sprintf(`{"record_type":"contact","source_id":%q,"target_id":%q}`, anchor, ids.NewV7()),
 		"advance_deal":  fmt.Sprintf(`{"deal_id":%q,"to_stage_id":%q}`, anchor, anchor),
 	}
 }
@@ -153,8 +153,8 @@ func providerRefusedRecordWrites(anchor ids.UUID) map[string]string {
 // nativeToolReaderPerms is overlayReaderPerms plus the objects the guarded set
 // needs beyond reading records. list_pipelines rides the deals module's own
 // config read, RBAC-gated on `pipeline`; the four record writes need the grants
-// their own stores demand (`lead:delete` for disqualify, `lead`+`person` for
-// promote, `person:update` for merge, `deal:update` for advance). Without them
+// their own stores demand (`lead:delete` for disqualify, `lead`+`contact` for
+// promote, `contact:update` for merge, `deal:update` for advance). Without them
 // the tool is refused for a reason that has nothing to do with system-of-record
 // mode, and both halves of this suite would assert the wrong thing — the
 // overlay half would pass on a permission denial that proves no guard exists.
@@ -175,9 +175,9 @@ func nativeToolReaderPerms() principal.Permissions {
 	lead := objects["lead"]
 	lead.Read, lead.Update, lead.Delete = true, true, true
 	objects["lead"] = lead
-	person := objects["person"]
-	person.Read, person.Create, person.Update = true, true, true
-	objects["person"] = person
+	contact := objects["contact"]
+	contact.Read, contact.Create, contact.Update = true, true, true
+	objects["contact"] = contact
 	deal := objects["deal"]
 	deal.Read, deal.Update = true, true
 	objects["deal"] = deal
@@ -228,7 +228,7 @@ func TestOverlayUpdateRecordRefusesAnAgentRatherThanWritingBack(t *testing.T) {
 		t.Fatalf("mapping the acting user to owner-1: %v", err)
 	}
 	if err := mirror.Ingest(ctx, overlaymod.Record{
-		ObjectClass:     "person",
+		ObjectClass:     "contact",
 		ExternalID:      "100214862042",
 		Fields:          map[string]any{"firstname": "Ada", "lastname": "Overlay", "jobtitle": "Analyst"},
 		ModifiedAt:      time.Now().UTC(),
@@ -241,16 +241,16 @@ func TestOverlayUpdateRecordRefusesAnAgentRatherThanWritingBack(t *testing.T) {
 	// resolve it the way an agent would rather than minting one.
 	d := compose.NewDispatcher(compose.NewProvider(e.Pool), compose.NewOverlayProviderFor(e.DBFor(overlayWS), overlaybudget.New(nil, nil), nil), e.Pool)
 	found, err := d.Search(ctx, datasource.SearchQuery{
-		EntityTypes: []datasource.EntityType{datasource.EntityPerson},
+		EntityTypes: []datasource.EntityType{datasource.EntityContact},
 		Limit:       10,
 	})
 	if err != nil || len(found.Records) != 1 {
-		t.Fatalf("resolving the mirrored person: err=%v records=%d", err, len(found.Records))
+		t.Fatalf("resolving the mirrored contact: err=%v records=%d", err, len(found.Records))
 	}
 	target := found.Records[0].Ref.ID
 
 	registry := compose.NewRegistryFor(e.DBFor(overlayWS), compose.SendPath{})
-	args := fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"title":"Principal Analyst"}}`, target)
+	args := fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"title":"Principal Analyst"}}`, target)
 
 	_, err = registry.Invoke(agentActorCtx(t, overlayWS, actorID), "update_record", json.RawMessage(args))
 
@@ -273,7 +273,7 @@ func TestOverlayUpdateRecordRefusesAnAgentRatherThanWritingBack(t *testing.T) {
 	// pushed outward.
 	unchanged, err := d.Read(ctx, found.Records[0].Ref)
 	if err != nil {
-		t.Fatalf("re-reading the mirrored person: %v", err)
+		t.Fatalf("re-reading the mirrored contact: %v", err)
 	}
 	if !bytes.Contains(unchanged.Fields, []byte("Analyst")) || bytes.Contains(unchanged.Fields, []byte("Principal Analyst")) {
 		t.Errorf("mirror fields = %s — the unapproved patch was applied", unchanged.Fields)
@@ -281,7 +281,7 @@ func TestOverlayUpdateRecordRefusesAnAgentRatherThanWritingBack(t *testing.T) {
 }
 
 // The seam backstop, proven where it actually sits. update_record is not the
-// only way an agent reaches a write: the REST twin (PATCH /v1/people/{id}
+// only way an agent reaches a write: the REST twin (PATCH /v1/contacts/{id}
 // under an agent passport) runs the same per-field split, which finds nothing
 // human-owned on a mirrored record, and qualify_lead writes through the
 // provider with no gate of its own. Both — and any write tool added later —
@@ -298,7 +298,7 @@ func TestOverlayWritesRefuseAnUnreleasedAgentAtTheSeam(t *testing.T) {
 		t.Fatalf("mapping the acting user to owner-1: %v", err)
 	}
 	if err := mirror.Ingest(ctx, overlaymod.Record{
-		ObjectClass: "person", ExternalID: "100214862044",
+		ObjectClass: "contact", ExternalID: "100214862044",
 		Fields:     map[string]any{"firstname": "Seam", "lastname": "Backstop"},
 		ModifiedAt: time.Now().UTC(), OwnerExternalID: "owner-1",
 	}); err != nil {
@@ -307,10 +307,10 @@ func TestOverlayWritesRefuseAnUnreleasedAgentAtTheSeam(t *testing.T) {
 
 	d := compose.NewDispatcher(compose.NewProvider(e.Pool), compose.NewOverlayProviderFor(e.DBFor(ws), overlaybudget.New(nil, nil), nil), e.Pool)
 	found, err := d.Search(ctx, datasource.SearchQuery{
-		EntityTypes: []datasource.EntityType{datasource.EntityPerson}, Limit: 10,
+		EntityTypes: []datasource.EntityType{datasource.EntityContact}, Limit: 10,
 	})
 	if err != nil || len(found.Records) != 1 {
-		t.Fatalf("resolving the mirrored person: err=%v records=%d", err, len(found.Records))
+		t.Fatalf("resolving the mirrored contact: err=%v records=%d", err, len(found.Records))
 	}
 	ref := found.Records[0].Ref
 	patch := datasource.UpdateInput{Ref: ref, Patch: json.RawMessage(`{"title":"Principal"}`), Source: "tool"}
@@ -338,7 +338,7 @@ func agentActorCtx(t *testing.T, ws, user ids.UUID) context.Context {
 	t.Helper()
 	perms := overlayReaderPerms
 	perms.Objects = map[string]principal.ObjectGrant{
-		"person": {Read: true, Update: true, Delete: true},
+		"contact": {Read: true, Update: true, Delete: true},
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -389,7 +389,7 @@ func TestOverlayUpdateRecordEgressGateIgnoresAStaleNativeModeCache(t *testing.T)
 	// Warm this process's mode cache while the workspace is still native, by
 	// making the same read an ordinary request would.
 	if _, err := registry.Invoke(ctx, "search_records",
-		json.RawMessage(`{"q":"anything","record_type":"person"}`)); err != nil {
+		json.RawMessage(`{"q":"anything","record_type":"contact"}`)); err != nil {
 		t.Fatalf("warming the mode cache with a native-mode read: %v", err)
 	}
 
@@ -405,7 +405,7 @@ func TestOverlayUpdateRecordEgressGateIgnoresAStaleNativeModeCache(t *testing.T)
 		t.Fatalf("mapping the acting user to owner-1: %v", err)
 	}
 	if err := mirror.Ingest(ctx, overlaymod.Record{
-		ObjectClass:     "person",
+		ObjectClass:     "contact",
 		ExternalID:      "100214862043",
 		Fields:          map[string]any{"firstname": "Grace", "lastname": "Stale", "jobtitle": "Analyst"},
 		ModifiedAt:      time.Now().UTC(),
@@ -416,14 +416,14 @@ func TestOverlayUpdateRecordEgressGateIgnoresAStaleNativeModeCache(t *testing.T)
 
 	d := compose.NewDispatcher(compose.NewProvider(e.Pool), compose.NewOverlayProviderFor(e.DBFor(ws), overlaybudget.New(nil, nil), nil), e.Pool)
 	found, err := d.Search(ctx, datasource.SearchQuery{
-		EntityTypes: []datasource.EntityType{datasource.EntityPerson},
+		EntityTypes: []datasource.EntityType{datasource.EntityContact},
 		Limit:       10,
 	})
 	if err != nil || len(found.Records) != 1 {
-		t.Fatalf("resolving the mirrored person: err=%v records=%d", err, len(found.Records))
+		t.Fatalf("resolving the mirrored contact: err=%v records=%d", err, len(found.Records))
 	}
 
-	args := fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"title":"Principal Analyst"}}`, found.Records[0].Ref.ID)
+	args := fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"title":"Principal Analyst"}}`, found.Records[0].Ref.ID)
 	_, err = registry.Invoke(agentActorCtx(t, ws, actorID), "update_record", json.RawMessage(args))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
@@ -538,7 +538,7 @@ func TestOverlayListRecordsRefusesAFilterAndServesAnEnumeration(t *testing.T) {
 	ctx := overlayActorCtxWith(ws, user, nativeToolReaderPerms())
 
 	_, err := registry.Invoke(ctx, "list_records",
-		json.RawMessage(fmt.Sprintf(`{"record_type":"person","filters":{"owner_id":%q}}`, ids.NewV7())))
+		json.RawMessage(fmt.Sprintf(`{"record_type":"contact","filters":{"owner_id":%q}}`, ids.NewV7())))
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("a filtered list of a mirrored workspace: err = %v, want ErrUnsupportedBySoR — "+
 			"a dropped filter answers a wider question in the shape of the right answer", err)
@@ -551,7 +551,7 @@ func TestOverlayListRecordsRefusesAFilterAndServesAnEnumeration(t *testing.T) {
 		t.Fatalf("mapping the acting user to owner-1: %v", err)
 	}
 	if err := mirror.Ingest(ctx, overlaymod.Record{
-		ObjectClass: "person", ExternalID: "100214862044",
+		ObjectClass: "contact", ExternalID: "100214862044",
 		Fields: map[string]any{"firstname": "Enumerated", "lastname": "Mirror"},
 		// A fixed instant: the row's age decides nothing here, and a test that
 		// reads the wall clock is a test whose fixture changes under it.
@@ -560,7 +560,7 @@ func TestOverlayListRecordsRefusesAFilterAndServesAnEnumeration(t *testing.T) {
 		t.Fatalf("ingesting the overlay fixture record: %v", err)
 	}
 
-	out, err := registry.Invoke(ctx, "list_records", json.RawMessage(`{"record_type":"person"}`))
+	out, err := registry.Invoke(ctx, "list_records", json.RawMessage(`{"record_type":"contact"}`))
 	if err != nil {
 		t.Fatalf("an unfiltered list of a mirrored workspace: err = %v, want it served from the mirror", err)
 	}

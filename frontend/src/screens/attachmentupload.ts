@@ -20,7 +20,7 @@ type Attachment = components["schemas"]["Attachment"];
  * rather than keeping a private list that can fall behind it.
  */
 export type AttachmentParent = Readonly<{
-  entityType: "company" | "person" | "deal" | "lead" | "project";
+  entityType: "company" | "contact" | "deal" | "lead" | "project";
   entityId: string;
 }>;
 

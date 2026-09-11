@@ -75,7 +75,7 @@ func (retention) Classes() []jurisdiction.RetentionClass {
 //
 // Similarity is checked PER MESSAGE. A customer who bought one product has not
 // opened the door to everything the seller sells, and an exception evaluated
-// once per person rather than once per message is the shape that turns one
+// once per contact rather than once per message is the shape that turns one
 // purchase into a permanent mailing list.
 //
 // THE WINDOWS are the core defaults, restated here so this pack says what it

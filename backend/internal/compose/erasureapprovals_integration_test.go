@@ -31,15 +31,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// erasureSubject seeds a person with an address and one staged approval that
+// erasureSubject seeds a contact with an address and one staged approval that
 // names them in its payload, the way a held draft does.
-func erasureSubject(t *testing.T, e *integration.Env) (ids.PersonID, ids.ApprovalID) {
+func erasureSubject(t *testing.T, e *integration.Env) (ids.ContactID, ids.ApprovalID) {
 	t.Helper()
-	person := e.SeedPerson(t, "Anna Weber", nil)
+	contact := e.SeedContact(t, "Anna Weber", nil)
 	const addr = "anna.erasure@example.com"
 	e.WsExec(t, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		VALUES ($1, $2, true, 'test', 'human:seed')`, person, addr)
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'test', 'human:seed')`, contact, addr)
 
 	id, err := approvals.NewService(e.DB()).Stage(e.Admin(), approvals.StageInput{
 		Kind: "held_draft",
@@ -52,15 +52,15 @@ func erasureSubject(t *testing.T, e *integration.Env) (ids.PersonID, ids.Approva
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ids.From[ids.PersonKind](person), id
+	return ids.From[ids.ContactKind](contact), id
 }
 
 func TestErasureEmptiesAStagedDraftAndMakesItUnapprovable(t *testing.T) {
 	e := integration.Setup(t)
 	subject, approvalID := erasureSubject(t, e)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject.UUID, "subject request"); err != nil {
-		t.Fatalf("ErasePerson → %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+		t.Fatalf("EraseContact → %v", err)
 	}
 
 	// The body and the addressee are gone.
@@ -93,7 +93,7 @@ func TestErasureKeepsTheVerdictOnAnAlreadyDecidedApproval(t *testing.T) {
 	subject, approvalID := erasureSubject(t, e)
 	e.WsExec(t, `UPDATE approval SET status = 'rejected', decided_at = now() WHERE id = $1`, approvalID)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -120,7 +120,7 @@ func TestErasureEmptiesTheAutomationRunThatComposedTheDraft(t *testing.T) {
 		[]byte(`{"actions":[{"Kind":"draft_email"}]}`),
 		[]byte(`[{"Kind":"draft_email","Args":{"draft_body":"Hi Anna - anna.erasure@example.com"}}]`))
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM workflow_run
@@ -173,8 +173,8 @@ func TestErasureBlocksTheRunWaitingOnTheApprovalItWithdraws(t *testing.T) {
 		VALUES ($1, $2, $3, '[]'::jsonb, 'requires_approval', jsonb_build_object('approval_id', $4::text))`,
 		handler, handler+":1", ids.NewV7(), approvalID.String())
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject.UUID, "subject request"); err != nil {
-		t.Fatalf("ErasePerson → %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+		t.Fatalf("EraseContact → %v", err)
 	}
 
 	if n := e.WsCount(t, `SELECT count(*) FROM workflow_run
@@ -192,13 +192,13 @@ func TestErasureBlocksTheRunWaitingOnTheApprovalItWithdraws(t *testing.T) {
 // `_` is legal and common in a local part, and unescaped in a LIKE it matches
 // any single character. Erasing t_m@ would then blank and withdraw the staged
 // message written to tim@ — destroying a colleague's pending work on a request
-// that was never about them, and putting their message in the wrong person's
+// that was never about them, and putting their message in the wrong contact's
 // Art. 15 export.
 func TestErasureLeavesALookalikeAddressAlone(t *testing.T) {
 	e := integration.Setup(t)
-	subject := e.SeedPerson(t, "Pattern Subject", nil)
+	subject := e.SeedContact(t, "Pattern Subject", nil)
 	e.WsExec(t, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 		VALUES ($1, 't_m@example.com', true, 'test', 'human:seed')`, subject)
 
 	bystander, err := approvals.NewService(e.DB()).Stage(e.Admin(), approvals.StageInput{
@@ -211,8 +211,8 @@ func TestErasureLeavesALookalikeAddressAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(),
-		ids.From[ids.PersonKind](subject).UUID, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(),
+		ids.From[ids.ContactKind](subject).UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -236,9 +236,9 @@ func TestErasureLeavesALookalikeAddressAlone(t *testing.T) {
 // case, and they fail for different reasons.
 func TestErasureLeavesAnAddressThatMerelyContainsTheSubjectsAlone(t *testing.T) {
 	e := integration.Setup(t)
-	subject := e.SeedPerson(t, "Suffix Subject", nil)
+	subject := e.SeedContact(t, "Suffix Subject", nil)
 	e.WsExec(t, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 		VALUES ($1, 'm@example.com', true, 'test', 'human:seed')`, subject)
 
 	bystander, err := approvals.NewService(e.DB()).Stage(e.Admin(), approvals.StageInput{
@@ -251,8 +251,8 @@ func TestErasureLeavesAnAddressThatMerelyContainsTheSubjectsAlone(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(),
-		ids.From[ids.PersonKind](subject).UUID, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(),
+		ids.From[ids.ContactKind](subject).UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -270,7 +270,7 @@ func TestErasureStillReachesTheSubjectsOwnStagedMessage(t *testing.T) {
 	e := integration.Setup(t)
 	subject, approvalID := erasureSubject(t, e)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM approval
@@ -286,7 +286,7 @@ func TestErasureStillReachesTheSubjectsOwnStagedMessage(t *testing.T) {
 // point: the limitation should be discovered here rather than by a regulator.
 func TestAnAutomationRunIsReachedByAddressAndNothingElse(t *testing.T) {
 	e := integration.Setup(t)
-	subject := e.SeedPerson(t, "No Address At All", nil)
+	subject := e.SeedContact(t, "No Address At All", nil)
 	handler := "wf_noaddr_" + ids.NewV7().String()
 	e.WsExec(t, `
 		INSERT INTO workflow_run (handler, idempotency_key, trigger_event, planned, status)
@@ -294,8 +294,8 @@ func TestAnAutomationRunIsReachedByAddressAndNothingElse(t *testing.T) {
 		handler, handler+":1", ids.NewV7(),
 		[]byte(`[{"Kind":"draft_email","Args":{"note":"about No Address At All"}}]`))
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(),
-		ids.From[ids.PersonKind](subject).UUID, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(),
+		ids.From[ids.ContactKind](subject).UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM workflow_run
@@ -326,7 +326,7 @@ func TestErasureSpendsTheTokenOnAnApprovedButUnredeemedStaging(t *testing.T) {
 		   SET status = 'approved', decided_at = now(), passport_id = $2, consumed_at = NULL
 		 WHERE id = $1`, approvalID, passport)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 

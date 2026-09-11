@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// KnownColleague is one of our people's relationship with one contact, as the
+// KnownColleague is one of our contacts's relationship with one contact, as the
 // seam reports it: who, how warm, and the counts that ground the warmth.
 type KnownColleague struct {
 	UserID      ids.UUID `json:"user_id"`
@@ -45,7 +45,7 @@ type KnownColleague struct {
 // The bool is truncation, spelled the way IntroPathLister spells it: the walk is
 // capped, and a capped list a model is handed with nothing marking it is one it
 // will report as the whole network.
-type WhoKnowsLister func(ctx context.Context, personID ids.UUID) (colleagues []KnownColleague, truncated bool, err error)
+type WhoKnowsLister func(ctx context.Context, contactID ids.UUID) (colleagues []KnownColleague, truncated bool, err error)
 
 // CoverageReader answers "how is this deal covered, and what is wrong with
 // it". Compose implements it over compose/network.
@@ -55,7 +55,7 @@ type CoverageReader func(ctx context.Context, dealID ids.UUID) (DealCoverageAnsw
 // contact, warmest first. An empty list is a real answer — it says the contact
 // is cold — so it is never an error and never null.
 type WhoKnowsAnswer struct {
-	PersonID   ids.UUID         `json:"person_id"`
+	ContactID  ids.UUID         `json:"contact_id"`
 	Colleagues []KnownColleague `json:"colleagues"`
 }
 
@@ -91,16 +91,16 @@ type DealCoverageAnswer struct {
 
 // CoverageSeat is one stakeholder and whether the seat is a relationship.
 type CoverageSeat struct {
-	PersonID ids.UUID `json:"person_id"`
-	// PersonName is who holds the seat. The whole question this tool answers
+	ContactID ids.UUID `json:"contact_id"`
+	// ContactName is who holds the seat. The whole question this tool answers
 	// is WHICH NAMED HUMAN is missing from a deal, and a seat that says
 	// "economic_buyer, not engaged" against a bare uuid has not answered it —
 	// a model cannot tell a rep who to bring into the room. The sibling field
 	// on KnownColleague makes the same argument for our side, and the REST
-	// payload has carried `person_name` since this read existed.
+	// payload has carried `contact_name` since this read existed.
 	//
-	// Empty in practice means the workspace holds no name for that person, not
-	// that one was withheld. A caller who may not read people gets no SEATS at
+	// Empty in practice means the workspace holds no name for that contact, not
+	// that one was withheld. A caller who may not read contacts gets no SEATS at
 	// all rather than nameless ones: the seats are an edge, "knowing a deal
 	// does not license learning who sits on it", and deals.Stakeholders
 	// refuses before a row is read. Row scope removes a seat the same way,
@@ -109,52 +109,52 @@ type CoverageSeat struct {
 	// So there is no state where a seat exists and its name was denied — the
 	// two travel together, and an earlier draft of this comment claiming
 	// otherwise was wrong. Held by
-	// TestCoverageWithoutPersonReadIsRefusedRatherThanUnnamed.
-	PersonName string `json:"person_name,omitempty"`
-	Role       string `json:"role"`
-	Engaged    bool   `json:"engaged"`
+	// TestCoverageWithoutContactReadIsRefusedRatherThanUnnamed.
+	ContactName string `json:"contact_name,omitempty"`
+	Role        string `json:"role"`
+	Engaged     bool   `json:"engaged"`
 }
 
 // CoverageRisk is one finding. Kind names the RULE, so a model explaining the
 // flag quotes a definition rather than inventing a rationale for it.
 type CoverageRisk struct {
-	Kind      string     `json:"kind"`
-	Summary   string     `json:"summary"`
-	PersonIDs []ids.UUID `json:"person_ids,omitempty"`
-	// People names the people this finding is about, each id carrying its own
+	Kind       string     `json:"kind"`
+	Summary    string     `json:"summary"`
+	ContactIDs []ids.UUID `json:"contact_ids,omitempty"`
+	// Contacts names the contacts this finding is about, each id carrying its own
 	// name, and is the half a model can put in a sentence. A finding that says
 	// "the deal rests on one relationship" and lists a uuid makes the rep go
 	// look the name up, which is the work the tool exists to save.
 	//
-	// PAIRED IN ONE OBJECT rather than as a second array beside PersonIDs.
-	// Two arrays can diverge — a caller with deal:read and no person:read has
-	// ids and no names, and the transaction is Read Committed, so a person
+	// PAIRED IN ONE OBJECT rather than as a second array beside ContactIDs.
+	// Two arrays can diverge — a caller with deal:read and no contact:read has
+	// ids and no names, and the transaction is Read Committed, so a contact
 	// archived between the coverage read and the name read leaves one list
 	// shorter. A consumer indexing across them would then attach the wrong
-	// name to the wrong person, silently, in a sentence a rep repeats. An
+	// name to the wrong contact, silently, in a sentence a rep repeats. An
 	// object cannot be misaligned, so the failure is structurally impossible
 	// rather than merely documented.
 	//
-	// PersonIDs is kept beside it unchanged: it is the existing handle, and
+	// ContactIDs is kept beside it unchanged: it is the existing handle, and
 	// removing it would break every caller that already follows those ids.
-	People  []FindingPerson `json:"people,omitempty"`
-	UserIDs []ids.UUID      `json:"user_ids,omitempty"`
+	Contacts []FindingContact `json:"contacts,omitempty"`
+	UserIDs  []ids.UUID       `json:"user_ids,omitempty"`
 	// DaysSinceTouch is set on going-cold and absent elsewhere. A pointer
 	// rather than a plain int because a zero would read as "touched today" on
 	// every finding that says nothing about recency.
 	DaysSinceTouch *int `json:"days_since_touch,omitempty"`
 }
 
-// FindingPerson is one person a finding names, with their id, so a reader can
+// FindingContact is one contact a finding names, with their id, so a reader can
 // both say who it is and read them back.
 //
-// Name is never empty: a person whose name did not resolve is left out of the
+// Name is never empty: a contact whose name did not resolve is left out of the
 // list entirely rather than shipped as an id with a blank name, which would
-// read as a person with no name rather than as one this caller may not see.
-// The ids stay complete on CoverageRisk.PersonIDs either way.
-type FindingPerson struct {
-	PersonID ids.UUID `json:"person_id"`
-	Name     string   `json:"name"`
+// read as a contact with no name rather than as one this caller may not see.
+// The ids stay complete on CoverageRisk.ContactIDs either way.
+type FindingContact struct {
+	ContactID ids.UUID `json:"contact_id"`
+	Name      string   `json:"name"`
 }
 
 // IntroRoute is one warm way into an account: a colleague, the contact they
@@ -162,11 +162,11 @@ type FindingPerson struct {
 type IntroRoute struct {
 	UserID      ids.UUID `json:"user_id"`
 	DisplayName string   `json:"display_name"`
-	// PersonID and PersonName are the CONTACT the route goes through. An intro
+	// ContactID and ContactName are the CONTACT the route goes through. An intro
 	// suggestion that named only the colleague would leave a rep to ask "an
 	// intro to whom" — the pair is the answer, not the colleague alone.
-	PersonID        ids.UUID `json:"person_id"`
-	PersonName      string   `json:"person_name"`
+	ContactID       ids.UUID `json:"contact_id"`
+	ContactName     string   `json:"contact_name"`
 	Strength        *int     `json:"strength,omitempty"`
 	StrengthBucket  string   `json:"strength_bucket"`
 	Interactions90d int      `json:"interactions_90d"`
@@ -239,10 +239,10 @@ func (t whoKnowsTool) Spec() mcp.ToolSpec {
 		Name: "who_knows", Title: "Who knows this contact", Version: toolVersionV1,
 		Description:   whoKnowsCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getPersonNetwork",
+		OpenAPIOp: "getContactNetwork",
 		InputSchema: schema(`{"type":"object","properties":{
-			"person_id":{"type":"string","format":"uuid","description":"The contact to ask about"}},
-			"required":["person_id"],"additionalProperties":false}`),
+			"contact_id":{"type":"string","format":"uuid","description":"The contact to ask about"}},
+			"required":["contact_id"],"additionalProperties":false}`),
 		OutputSchema: schemaFor[WhoKnowsAnswer](),
 		// The view renders this tool's own answer as a ranked list. What it buys
 		// over the text is the band and the interaction count side by side —
@@ -267,12 +267,12 @@ const whoKnowsTruncatedMessage = "More colleagues know this contact than are lis
 
 func (t whoKnowsTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		PersonID ids.UUID `json:"person_id"`
+		ContactID ids.UUID `json:"contact_id"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	colleagues, truncated, err := t.list(ctx, args.PersonID)
+	colleagues, truncated, err := t.list(ctx, args.ContactID)
 	if err != nil {
 		return nil, err
 	}
@@ -286,11 +286,11 @@ func (t whoKnowsTool) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	// answer that says the account is cold — and turning it into a failure
 	// would make the model narrate a problem instead of a fact.
 	noteDerivedContent(ctx)
-	noteEvidence(ctx, datasource.EntityPerson, args.PersonID)
+	noteEvidence(ctx, datasource.EntityContact, args.ContactID)
 	if truncated {
 		noteWarning(ctx, warningSweepTruncated, whoKnowsTruncatedMessage)
 	}
-	return json.Marshal(WhoKnowsAnswer{PersonID: args.PersonID, Colleagues: colleagues})
+	return json.Marshal(WhoKnowsAnswer{ContactID: args.ContactID, Colleagues: colleagues})
 }
 
 // --- account_coverage (🟢 read) ---
@@ -348,7 +348,7 @@ func (t accountCoverageTool) Handle(ctx context.Context, in json.RawMessage) (js
 	noteDerivedContent(ctx)
 	noteEvidence(ctx, datasource.EntityDeal, args.DealID)
 	for _, seat := range answer.Stakeholders {
-		noteEvidence(ctx, datasource.EntityPerson, seat.PersonID)
+		noteEvidence(ctx, datasource.EntityContact, seat.ContactID)
 	}
 	return json.Marshal(answer)
 }
@@ -397,7 +397,7 @@ func (t introPathTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	noteDerivedContent(ctx)
 	noteEvidence(ctx, datasource.EntityCompany, args.CompanyID)
 	for _, route := range routes {
-		noteEvidence(ctx, datasource.EntityPerson, route.PersonID)
+		noteEvidence(ctx, datasource.EntityContact, route.ContactID)
 	}
 	if truncated {
 		noteWarning(ctx, warningSweepTruncated, introPathTruncatedMessage)
@@ -473,12 +473,12 @@ func (t atRiskTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 			report.Deals[i].Risks = []CoverageRisk{}
 		}
 		noteEvidence(ctx, datasource.EntityDeal, report.Deals[i].DealID)
-		// The people a finding names, not only the deal it hangs on: a risk
+		// The contacts a finding names, not only the deal it hangs on: a risk
 		// reading "the only contact has gone quiet" is checkable only against
 		// the contact, and evidence a caller cannot follow grounds nothing.
 		for _, risk := range report.Deals[i].Risks {
-			for _, person := range risk.PersonIDs {
-				noteEvidence(ctx, datasource.EntityPerson, person)
+			for _, contact := range risk.ContactIDs {
+				noteEvidence(ctx, datasource.EntityContact, contact)
 			}
 		}
 	}

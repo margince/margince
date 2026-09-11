@@ -48,7 +48,7 @@ func (r *Runner) degradeFromCause(acc Result, job Job, reason string, cause erro
 }
 
 // DegradeDetail is the fullest account of why a run stopped, for an operator
-// surface — the certification report, a diagnostic. Anything a PERSON reads
+// surface — the certification report, a diagnostic. Anything a CONTACT reads
 // takes DegradeReason instead: the cause is what must not reach a browser.
 func (r Result) DegradeDetail() string {
 	if r.DegradeCause == "" {
@@ -111,7 +111,7 @@ const (
 	FailureEditedApprovalCarriedNoChange FailureReason = "the approval was edited but the decision " +
 		"carries no edited version of the action, so there was nothing safe to re-present; ask for the action again"
 	FailurePassportNoLongerValid FailureReason = "the authority this run was acting under is no longer " +
-		"valid — the passport was revoked or expired, or the person it acts for was deactivated; " +
+		"valid — the passport was revoked or expired, or the contact it acts for was deactivated; " +
 		"grant it again and the next occurrence will run"
 	FailureSpecLeftTheCatalog FailureReason = "this scheduled agent was removed while the run waited " +
 		"for an answer, so there is no goal left to resume; nothing further is needed"

@@ -15,7 +15,7 @@ import (
 )
 
 // An exclusion keeps a message out of the CRM before anything is stored: no
-// raw capture, no activity, no person — only a breadcrumb and a trace that
+// raw capture, no activity, no contact — only a breadcrumb and a trace that
 // name the kind of rule, never the address it matched. A workspace rule binds
 // every connection; a user's own rule binds the connections that user
 // granted, and a colleague's mailbox goes on capturing the same sender.
@@ -57,9 +57,9 @@ func TestAnExclusionKeepsAMessageOutBeforeAnythingIsStored(t *testing.T) {
 		t.Errorf("the ordinary message beside the excluded ones did not land (%d rows)", n)
 	}
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email IN ('partner@home.example', 'hr@mail.payroll.example')`); n != 0 {
-		t.Error("an excluded sender became a person")
+		t.Error("an excluded sender became a contact")
 	}
 	// The trace says a rule fired and which kind; it does not repeat the
 	// address or the domain that matched.
@@ -165,7 +165,7 @@ func TestAContainerRuleKeepsOutMailFiledWhereTheOwnerRulesOut(t *testing.T) {
 	}
 }
 
-// A container belongs to one mailbox, so a container rule is one person's.
+// A container belongs to one mailbox, so a container rule is one contact's.
 // The database refuses a workspace one too; this is the refusal a human gets,
 // which names the field and says why rather than answering 500.
 func TestAContainerRuleIsTheMailboxOwnersAlone(t *testing.T) {

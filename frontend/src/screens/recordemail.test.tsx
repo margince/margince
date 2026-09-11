@@ -14,7 +14,7 @@ import { RecordEmailAside } from "./recordemail";
 // the record has nothing to answer. A caller that already knows its reply
 // target (dealemail.tsx) passes `replyTo` directly, so the first tests below
 // drive it through the prop the same way. `detectWaitingReply` is the other
-// path — a person or lead page with no status card of its own — and is
+// path — a contact or lead page with no status card of its own — and is
 // covered separately further down, mocked at the fetch boundary the way
 // compose.test.tsx mocks its own served activities.
 
@@ -30,7 +30,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const PERSON = "01a03000-0000-7000-8000-000000000002";
+const CONTACT = "01a03000-0000-7000-8000-000000000002";
 const MAIL = "01a03000-0000-7000-8000-0000000000bb";
 
 function renderBox(replyTo?: string) {
@@ -42,8 +42,8 @@ function renderBox(replyTo?: string) {
     >
       <LocaleProvider initial="en">
         <RecordEmailAside
-          entityType="person"
-          entityId={PERSON}
+          entityType="contact"
+          entityId={CONTACT}
           replyTo={replyTo}
         />
       </LocaleProvider>
@@ -77,7 +77,7 @@ describe("the record's email box", () => {
         <LocaleProvider initial="en">
           <RecordEmailAside
             entityType="deal"
-            entityId={PERSON}
+            entityId={CONTACT}
             strings={{
               title: "dealmail.title",
               subReply: "dealmail.sub.reply",
@@ -94,7 +94,7 @@ describe("the record's email box", () => {
 });
 
 // `detectWaitingReply` is the box's OWN read of the same question DealEmailAside
-// already answers from the deal status card — the path a person or lead page
+// already answers from the deal status card — the path a contact or lead page
 // takes because it has none. These mock the server at the fetch boundary
 // rather than the prop, so they cover the read itself and not just its wiring.
 describe("the record's own waiting-reply read", () => {
@@ -107,8 +107,8 @@ describe("the record's own waiting-reply read", () => {
       >
         <LocaleProvider initial="en">
           <RecordEmailAside
-            entityType="person"
-            entityId={PERSON}
+            entityType="contact"
+            entityId={CONTACT}
             detectWaitingReply
           />
         </LocaleProvider>

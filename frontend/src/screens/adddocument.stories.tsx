@@ -57,16 +57,16 @@ const deals = [
 
 function Dialog({
   seat = "full",
-  onPerson = false,
+  onContact = false,
   dealsFail = false,
 }: Readonly<{
   seat?: "full" | "read";
-  onPerson?: boolean;
+  onContact?: boolean;
   dealsFail?: boolean;
 }>) {
   installFetchStub({
     "GET /me": meRoute(
-      { deal: ["update"], company: ["update"], person: ["update"] },
+      { deal: ["update"], company: ["update"], contact: ["update"] },
       { seat },
     ),
     "GET /deals": () =>
@@ -74,8 +74,8 @@ function Dialog({
         ? jsonResponse({ title: "Server error", status: 500 }, 500)
         : jsonResponse({ data: deals, page }),
   });
-  const anchor = onPerson
-    ? ({ record: "person", id: "p-1" } as const)
+  const anchor = onContact
+    ? ({ record: "contact", id: "p-1" } as const)
     : ({ record: "company", id: "o-1" } as const);
   return (
     <StoryProviders>
@@ -116,7 +116,7 @@ export const FilingAgainstADeal: Story = {
  * question: a deal hangs off a company, and nothing on a contact's page names
  * one — so the file is filed against the contact and the form asks nothing it
  * has no second answer for. */
-export const OnAContact: Story = { render: () => <Dialog onPerson /> };
+export const OnAContact: Story = { render: () => <Dialog onContact /> };
 
 /** A read seat holding the same grants. The refusal changes from "choose a
  * file" to "you may not add documents here", which is a different sentence

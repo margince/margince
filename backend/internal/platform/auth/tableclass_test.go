@@ -16,7 +16,7 @@ func TestEveryShareableTableIsWorkspaceReadable(t *testing.T) {
 	// A record type that arrives scoped-read must say so here rather than land
 	// silently: the write arm, not the read arm, is what keeps a row its
 	// owner's. A table free of capture privacy renders the predicate away
-	// entirely; person and company keep an owner arm because an
+	// entirely; contact and company keep an owner arm because an
 	// owner-private capture still answers to its owner alone.
 	rep := human(principal.RowScopeOwn)
 	for table := range shareableTables {
@@ -47,7 +47,7 @@ func TestEveryShareableTableIsWorkspaceReadable(t *testing.T) {
 
 func TestIdentityTablesAreReadByEverySeat(t *testing.T) {
 	// A rep on own scope reads a colleague's deal and lead whole — the
-	// predicate collapses to TRUE — and reads a colleague's person and
+	// predicate collapses to TRUE — and reads a colleague's contact and
 	// company unless capture privacy still holds the row.
 	rep := human(principal.RowScopeOwn)
 	for _, table := range []string{"deal", "lead"} {
@@ -58,7 +58,7 @@ func TestIdentityTablesAreReadByEverySeat(t *testing.T) {
 			t.Errorf("UnboundedFor(rep, %s) = false; list paths would still render a clause", table)
 		}
 	}
-	for _, table := range []string{"person", "company"} {
+	for _, table := range []string{"contact", "company"} {
 		sql := rendered(rep, table)
 		if strings.Contains(sql, "t.owner_id IS NULL OR t.owner_id = $") {
 			t.Errorf("%s predicate for a rep still carries the own-scope arm: %s", table, sql)
@@ -140,7 +140,7 @@ func TestTheContentGateIsTheDiscoverGateNarrowedByAudience(t *testing.T) {
 	// `audience = 'workspace'` is a statement about the audience, so admitting it
 	// would make every workspace-audience row discoverable to a reader whose row
 	// scope reaches none of the records behind it; captured_by names one seat's
-	// provenance; audience_member names people somebody added to a list.
+	// provenance; audience_member names contacts somebody added to a list.
 	for _, arm := range []string{"a.audience = 'workspace'", "a.captured_by LIKE $", "activity_audience_member am"} {
 		if strings.Contains(discover, arm) {
 			t.Errorf("the discover gate carries the audience arm %q; a last-touch marker would hide a limited mail: %s", arm, discover)

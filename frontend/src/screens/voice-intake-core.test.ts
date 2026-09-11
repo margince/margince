@@ -145,7 +145,7 @@ describe("what a previewed source honestly is", () => {
 
   it("refuses a transcript nobody can be attributed in", () => {
     // Nothing in it can be proven the owner's own words, and a transcript is
-    // refused whole rather than ingested as if one person wrote it.
+    // refused whole rather than ingested as if one contact wrote it.
     expect(
       routePreview("meeting.srt", preview({ ingestible_as_transcript: false })),
     ).toBe("refuse");

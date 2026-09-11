@@ -57,11 +57,11 @@ type writeMapping struct {
 //craft:ignore naked-any fields is the JSON-decoded canonical bag from the frozen datasource seam; the any is inherent to the decoded shape
 func mapWrite(canonicalClass string, fields map[string]any, forUpdate bool) (writeMapping, error) {
 	switch canonicalClass {
-	case personTarget:
-		props, err := copyDirect(fields, personWriteFields, forUpdate)
+	case contactTarget:
+		props, err := copyDirect(fields, contactWriteFields, forUpdate)
 		return writeMapping{
 			ObjectClass: objectClassContacts, Props: props,
-			Dropped: droppedFields(fields, deferredPersonWrites),
+			Dropped: droppedFields(fields, deferredContactWrites),
 		}, err
 	case companyTarget:
 		props, err := copyDirect(fields, companyWriteFields, forUpdate)
@@ -97,22 +97,22 @@ type directWriteField struct {
 	HSProp    string
 }
 
-// personWriteFields — OVA-MAP-W1. full_name is the assembled display field
+// contactWriteFields — OVA-MAP-W1. full_name is the assembled display field
 // (OVA-MAP-3) and is NOT here: splitting a display string into first/last is
 // ambiguous and lossy, so it is read-only. emails, address, and owner_id are
 // V1 write-back deferrals (the emails child, the structured-address
 // assembler, and the reverse owner user-map resolution have no simple 1:1
 // inverse yet) — read-only for now, surfaced honestly rather than guessed,
 // the same "flag, don't invent" posture the read mapping takes for phone/social.
-var personWriteFields = []directWriteField{
+var contactWriteFields = []directWriteField{
 	{Canonical: "first_name", HSProp: propFirstname},
 	{Canonical: "last_name", HSProp: propLastname},
 	{Canonical: "title", HSProp: "jobtitle"},
 }
 
-// deferredPersonWrites — the same obligation as deferredCompanyWrites, for
-// the fields updatePerson lets a caller send.
-var deferredPersonWrites = map[string]string{
+// deferredContactWrites — the same obligation as deferredCompanyWrites, for
+// the fields updateContact lets a caller send.
+var deferredContactWrites = map[string]string{
 	"full_name": "the assembled display field (OVA-MAP-3): splitting a display string back into " +
 		"first/last is ambiguous and lossy, and first_name/last_name above already carry the parts",
 	"emails":         "a 1:N child collection, not a contact property — the inverse needs the child writer",
@@ -145,7 +145,7 @@ var companyWriteFields = []directWriteField{
 // Held by: TestEveryOverlayWritableFieldProjectsOrSaysWhyNot
 // (backend/gates/overlaywritecoverage_test.go) — a field the contract lets a
 // caller write is either here or in the projection above, and the same rule
-// answers for person and lead.
+// answers for contact and lead.
 var deferredCompanyWrites = map[string]string{
 	"size_band": "read-only: numberofemployees→size_band is a lossy band bucketing " +
 		"(employees_to_size_band) with no unambiguous inverse — writing back the band's floor would " +

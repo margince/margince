@@ -44,13 +44,13 @@ const FACT_SUSPECT_LABELS: Record<FactSuspectReason, MessageKey> = {
   not_a_size: "co.factSuspect.notASize",
 };
 
-// What a person may state, category by category. Taken from the contract's own
+// What a contact may state, category by category. Taken from the contract's own
 // enum rather than respelled, so a field added upstream appears here and a
 // field removed there fails the build rather than offering the reader a choice
 // the server refuses.
 //
 // The technical fields are absent on purpose: they are read from DNS and
-// certificates rather than from anything a person knows, TechnicalProfilePanel
+// certificates rather than from anything a contact knows, TechnicalProfilePanel
 // owns them, and a hand-stated "hosting provider" would contradict the lookup
 // the next site read runs.
 const STATEABLE: Readonly<Record<FactCategory, readonly FactField[]>> = {
@@ -82,8 +82,8 @@ export function factsKey(companyId: string) {
 const FACT_PREVIEW = 5;
 
 /**
- * CompanyFactsPanel: what a machine read about this company, and what a person
- * states about it, in one list a person can add to and take from.
+ * CompanyFactsPanel: what a machine read about this company, and what a contact
+ * states about it, in one list a contact can add to and take from.
  *
  * EVERY STORED ROW IS DRAWN, which is the difference from the card this
  * replaces. That card collapsed duplicate spellings of one offering into the

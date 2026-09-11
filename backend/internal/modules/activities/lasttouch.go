@@ -6,7 +6,7 @@ package activities
 // The one read the automation module's clock scan needs (Task 14a,
 // automation/seams.go's ActivityScan): which linked entities have gone
 // quiet. Sourced from this module's OWN tables (activity + activity_link)
-// rather than the schema-maintained last_activity_at columns (deal, person,
+// rather than the schema-maintained last_activity_at columns (deal, contact,
 // company; migration 1787032690's triggers), because this scan asks a
 // narrower question those columns do not — it excludes automation-engine
 // writes and wants live-work eligibility — and a module
@@ -98,8 +98,8 @@ func lastTouchCandidateQuery() string {
 			           AND o.archived_at IS NULL
 			           AND o.created_at < $2))
 			   OR (q.entity_type = '%[4]s' AND EXISTS (
-			         SELECT 1 FROM person p
-			         JOIN relationship r ON r.person_id = p.id
+			         SELECT 1 FROM contact p
+			         JOIN relationship r ON r.contact_id = p.id
 			                    AND r.kind = 'deal_stakeholder'
 			                    AND r.ended_at IS NULL AND r.archived_at IS NULL
 			         JOIN deal d ON d.id = r.deal_id
@@ -116,7 +116,7 @@ func lastTouchCandidateQuery() string {
 			LIMIT $3`,
 		linkIDCoalesceQualified("al"),
 		datasource.RecordDeal, datasource.RecordCompany,
-		datasource.RecordPerson, datasource.RecordLead,
+		datasource.RecordContact, datasource.RecordLead,
 		CompanyReachSet())
 }
 
@@ -155,7 +155,7 @@ func lastTouchCandidateQuery() string {
 //
 // An account's last touch is read through the three-arm walk (CompanyReachSet)
 // rather than off its own links, and that is the difference between this
-// trigger working and not. Capture files mail against the PERSON it was with,
+// trigger working and not. Capture files mail against the CONTACT it was with,
 // so on a real workspace an account's correspondence carries no direct
 // company link at all: counting only direct links, an account whose reps
 // mailed a contact yesterday looked untouched and earned a reminder about a
@@ -168,7 +168,7 @@ func lastTouchCandidateQuery() string {
 // being worked stop being. Eligibility is unchanged — an account still needs an
 // open unarchived deal — so the batch is spent on accounts somebody is working
 // rather than on ones nobody is.
-//   - person — they hold a live deal_stakeholder seat on an open deal.
+//   - contact — they hold a live deal_stakeholder seat on an open deal.
 //     Deliberately NOT "their employer has an open deal": that would mint
 //     one reminder per employee of every busy account, each one a
 //     duplicate of the single company reminder that account already

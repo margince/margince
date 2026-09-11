@@ -43,19 +43,19 @@ func (e *SearchEnv) seedDealFixtures(t *testing.T, n int, owner *ids.UUID) {
 }
 
 // A deal is readable by every seat holding the deal grant, so the specimen
-// for a count that must not out-see the lists is a capture-private person:
-// the row a person row scope still hides from everyone but its captor.
+// for a count that must not out-see the lists is a capture-private contact:
+// the row a contact row scope still hides from everyone but its captor.
 func TestAdHocReportPlanCountsUnderRowScope(t *testing.T) {
 	e := SetupSearch(t)
 	for i := 0; i < 3; i++ {
-		e.SeedID(t, fmt.Sprintf(`INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+		e.SeedID(t, fmt.Sprintf(`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 			VALUES ($1, 'Private %d', $2, 'owner', 'manual', 'human:x')`, i), e.Rep3)
 	}
 	provider := compose.NewProvider(e.Pool)
 
 	// The captor counts all three.
 	res, err := provider.RunReport(e.AsTeamRep(e.Rep3, e.Team2), datasource.ReportPlan{
-		Entity: datasource.EntityPerson, GroupBy: []string{"source"},
+		Entity: datasource.EntityContact, GroupBy: []string{"source"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -67,7 +67,7 @@ func TestAdHocReportPlanCountsUnderRowScope(t *testing.T) {
 	// A colleague sees none of the private captures — aggregates cannot
 	// leak what the lists hide.
 	res, err = provider.RunReport(e.AsTeamRep(e.Rep1, e.Team1), datasource.ReportPlan{
-		Entity: datasource.EntityPerson, GroupBy: []string{"source"},
+		Entity: datasource.EntityContact, GroupBy: []string{"source"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -202,12 +202,12 @@ func TestAssembleContextFixedDepthWalk(t *testing.T) {
 	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM deal LIMIT 1`).Scan(&dealID); err != nil {
 		t.Fatal(err)
 	}
-	personID := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Graph Contact', 'manual', 'human:x')`)
+	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Graph Contact', 'manual', 'human:x')`)
 	noteID := e.SeedID(t, `INSERT INTO activity (id, kind, subject, source, captured_by) VALUES ($1, 'note', 'Kickoff call', 'manual', 'human:x')`)
 	taskID := e.SeedID(t, `INSERT INTO activity (id, kind, subject, is_done, source, captured_by) VALUES ($1, 'task', 'Send offer', false, 'manual', 'human:x')`)
 	for _, activityID := range []ids.UUID{noteID, taskID} {
 		e.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id) VALUES ($1, $2, 'deal', $3)`, activityID, dealID)
-		e.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`, activityID, personID)
+		e.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`, activityID, contactID)
 	}
 
 	// AssembleContext never calls the embedder (it's Search's seam), but
@@ -237,8 +237,8 @@ func TestAssembleContextFixedDepthWalk(t *testing.T) {
 	if len(sections["open_tasks"]) != 1 || sections["open_tasks"][0].Summary != "Send offer" {
 		t.Fatalf("open tasks wrong: %+v", sections["open_tasks"])
 	}
-	if len(sections["related_people"]) != 1 || sections["related_people"][0].Ref.ID != personID {
-		t.Fatalf("hop-2 people wrong: %+v", sections["related_people"])
+	if len(sections["related_contacts"]) != 1 || sections["related_contacts"][0].Ref.ID != contactID {
+		t.Fatalf("hop-2 contacts wrong: %+v", sections["related_contacts"])
 	}
 	if len(sections["related_companies"]) != 0 {
 		// The company is linked to the deal via FK, not via activity_link —
@@ -248,11 +248,11 @@ func TestAssembleContextFixedDepthWalk(t *testing.T) {
 
 	// An anchor outside the caller's row scope assembles nothing. A deal is
 	// readable by every seat with the grant, so the anchor that can be out of
-	// scope is a colleague's capture-private person.
-	privatePerson := e.SeedID(t, `INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+	// scope is a colleague's capture-private contact.
+	privateContact := e.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 		VALUES ($1, 'Private Contact', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 	if _, err := retriever.AssembleContext(e.AsTeamRep(e.Rep1, e.Team1),
-		datasource.EntityRef{Type: datasource.EntityPerson, ID: privatePerson}, retrieval.AssembleOptions{}); err == nil {
+		datasource.EntityRef{Type: datasource.EntityContact, ID: privateContact}, retrieval.AssembleOptions{}); err == nil {
 		t.Fatal("foreign anchor must be absent, not assembled")
 	}
 }
@@ -269,7 +269,7 @@ func TestAWrongTypedFilterIsTheCallersMistakeNotAServerFault(t *testing.T) {
 	provider := compose.NewProvider(e.Pool)
 
 	_, err := provider.RunReport(e.AsTeamRep(e.Rep1, e.Team1), datasource.ReportPlan{
-		Entity:  datasource.EntityPerson,
+		Entity:  datasource.EntityContact,
 		GroupBy: []string{"source"},
 		Filter:  map[string]string{"owner_id": "not-a-uuid"},
 	})

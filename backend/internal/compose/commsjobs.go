@@ -400,7 +400,7 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPa
 // A role with no relay gets the dispatcher unchanged, and a controller delivery
 // it picks up parks with a reason naming the missing relay. That is the honest
 // outcome: an unconfigured relay is a deployment fact, and retrying it forever
-// would leave a person's confirmation link expiring in a queue nobody watches.
+// would leave a contact's confirmation link expiring in a queue nobody watches.
 func controllerLaneOn(d *comms.Dispatcher, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
 	if relay == nil || vault == nil {
 		return d

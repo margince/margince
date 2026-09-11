@@ -449,7 +449,7 @@ func TestCrawlClassifiesPageKinds(t *testing.T) {
 	site := &fakeSite{pages: seedOnly("/karriere")}
 	for path, text := range map[string]string{
 		"/impressum": "Acme GmbH, HRB 12345",
-		"/team":      "The people",
+		"/team":      "The contacts",
 		"/kontakt":   "Reach us",
 		"/services":  "What we do",
 		"/karriere":  "Open roles", // discovered link, no kind keyword → other
@@ -796,7 +796,7 @@ func TestAutomaticReadsCarryTheirOwnPageCeiling(t *testing.T) {
 }
 
 // Only a human requester can be a human owner. A system namespace that happened
-// to name a uuid would otherwise be attributed to a person who never asked for
+// to name a uuid would otherwise be attributed to a contact who never asked for
 // the read — the provenance mistake this path exists to avoid.
 func TestOnlyAHumanNamespaceYieldsAnOwner(t *testing.T) {
 	human := ids.NewV7()
@@ -804,7 +804,7 @@ func TestOnlyAHumanNamespaceYieldsAnOwner(t *testing.T) {
 		t.Errorf("human requester = %v, want %v", got, human)
 	}
 	for _, requestedBy := range []string{
-		"system:" + ids.NewV7().String(), // a system uuid is not a person
+		"system:" + ids.NewV7().String(), // a system uuid is not a contact
 		systemAutoEnrichActor,
 		"agent:" + ids.NewV7().String(),
 		human.String(), // no namespace at all

@@ -31,7 +31,7 @@ import (
 )
 
 // SeatNamer resolves user ids to display names. An owner is a SEAT rather than
-// a record, so it is named through identity's read and not the people store's
+// a record, so it is named through identity's read and not the contacts store's
 // — and this module may not import identity, so compose injects it.
 //
 // Batch, because a page of rows shares owners: twenty companies owned by three
@@ -53,7 +53,7 @@ type RecordOwner struct {
 	// unowned.
 	Name string `json:"name,omitempty"`
 	// IsYou answers for the HUMAN the call is made as — the caller themselves,
-	// or the person whose authority an agent is acting under. An assistant
+	// or the contact whose authority an agent is acting under. An assistant
 	// reading a page on your behalf must see your own accounts as yours; an
 	// agent that marked them as somebody else's would send you to check with
 	// yourself and bury the colleague-owned rows in the same noise.
@@ -87,7 +87,7 @@ func ownerIDOf(fields json.RawMessage) (ids.UUID, bool) {
 }
 
 // callerSeat is the human a call is made AS: the caller themselves, or the
-// person whose authority an agent or connector is acting under.
+// contact whose authority an agent or connector is acting under.
 //
 // This is identity's actingHuman rule, and it has to be the same rule. A
 // passport carries its represented human in UserID and OnBehalfOf both, so

@@ -59,7 +59,7 @@ catalog gate keeps it findable; the grep is still yours.
 ### Indigo is a claim about provenance
 
 `--ai` / `--aiLight` / `--aiMed` / `--aiText` mark **information or an action
-proposed by an agent rather than by a person** — decision cards, staged values,
+proposed by an agent rather than by a contact** — decision cards, staged values,
 the orb and the lit margin included. One colour, one meaning: it is never
 decoration, and tinting a card indigo because it looked good tells every reader
 something false about who decided. `1.5px dashed var(--aiMed)` means staged and
@@ -169,4 +169,4 @@ component in `src/design-system/` or a screen surface:
   about CI, not permission to skip it.
 - `src/design-system/README.md` is the catalog and the prose that goes with it.
   A new control, a new variant, or a changed prop contract updates that file too.
-  It is what the next person reads instead of hand-rolling a second dropdown.
+  It is what the next contact reads instead of hand-rolling a second dropdown.

@@ -803,7 +803,7 @@ describe("where today's marker sits on the axis", () => {
 // who it was with, and that is the half of "what happened" only a name
 // resolves.
 describe("who a conversation was with", () => {
-  it("names the person a conversation's links resolve to", () => {
+  it("names the contact a conversation's links resolve to", () => {
     draw(
       view({
         last_outbound_at: SPOKE,
@@ -813,12 +813,12 @@ describe("who a conversation was with", () => {
             kind: "email",
             subject: "Renewal terms",
             at: SPOKE,
-            links: [{ entity_type: "person", entity_id: "p-dana" }],
+            links: [{ entity_type: "contact", entity_id: "p-dana" }],
           },
         ]),
       }),
       (entityType, entityId) =>
-        entityType === "person" && entityId === "p-dana"
+        entityType === "contact" && entityId === "p-dana"
           ? "Dana Otieno"
           : undefined,
     );
@@ -826,7 +826,7 @@ describe("who a conversation was with", () => {
     expect(screen.getByText(/Dana Otieno/)).toBeTruthy();
   });
 
-  it("drops a person link the resolver cannot name, rather than printing its id", () => {
+  it("drops a contact link the resolver cannot name, rather than printing its id", () => {
     draw(
       view({
         last_outbound_at: SPOKE,
@@ -836,7 +836,7 @@ describe("who a conversation was with", () => {
             kind: "email",
             subject: "Renewal terms",
             at: SPOKE,
-            links: [{ entity_type: "person", entity_id: "p-unknown" }],
+            links: [{ entity_type: "contact", entity_id: "p-unknown" }],
           },
         ]),
       }),
@@ -849,7 +849,7 @@ describe("who a conversation was with", () => {
     expect(screen.getByText("Renewal terms")).toBeTruthy();
   });
 
-  it("names the first two people on a conversation and counts the rest", () => {
+  it("names the first two contacts on a conversation and counts the rest", () => {
     draw(
       view({
         last_outbound_at: SPOKE,
@@ -860,10 +860,10 @@ describe("who a conversation was with", () => {
             subject: "Quarterly review",
             at: SPOKE,
             links: [
-              { entity_type: "person", entity_id: "p-1" },
-              { entity_type: "person", entity_id: "p-2" },
-              { entity_type: "person", entity_id: "p-3" },
-              { entity_type: "person", entity_id: "p-4" },
+              { entity_type: "contact", entity_id: "p-1" },
+              { entity_type: "contact", entity_id: "p-2" },
+              { entity_type: "contact", entity_id: "p-3" },
+              { entity_type: "contact", entity_id: "p-4" },
             ],
           },
         ]),
@@ -905,14 +905,14 @@ describe("who a conversation was with", () => {
             kind: "email",
             subject: "Second",
             at: "2026-07-20T09:00:00Z",
-            links: [{ entity_type: "person", entity_id: "p-early" }],
+            links: [{ entity_type: "contact", entity_id: "p-early" }],
           },
           {
             id: "e-1",
             kind: "email",
             subject: "First",
             at: "2026-07-01T09:00:00Z",
-            links: [{ entity_type: "person", entity_id: "p-early" }],
+            links: [{ entity_type: "contact", entity_id: "p-early" }],
           },
         ]),
       }),
@@ -941,13 +941,13 @@ describe("who held a meeting", () => {
             subject: "Quarterly review",
             at: SPOKE,
             host_user_id: "u-lena",
-            links: [{ entity_type: "person", entity_id: "p-dana" }],
+            links: [{ entity_type: "contact", entity_id: "p-dana" }],
           },
         ]),
       }),
       resolver({
         "user:u-lena": "Lena Fischer",
-        "person:p-dana": "Dana Otieno",
+        "contact:p-dana": "Dana Otieno",
       }),
     );
 
@@ -991,12 +991,12 @@ describe("who held a meeting", () => {
             subject: "Quarterly review",
             at: SPOKE,
             host_user_id: "u-unknown",
-            links: [{ entity_type: "person", entity_id: "p-dana" }],
+            links: [{ entity_type: "contact", entity_id: "p-dana" }],
           },
         ]),
       }),
       (entityType, entityId) =>
-        entityType === "person" && entityId === "p-dana"
+        entityType === "contact" && entityId === "p-dana"
           ? "Dana Otieno"
           : undefined,
     );
@@ -1021,13 +1021,13 @@ describe("who held a meeting", () => {
             at: SPOKE,
             host_user_id: "u-lena",
             direction: "outbound",
-            links: [{ entity_type: "person", entity_id: "p-dana" }],
+            links: [{ entity_type: "contact", entity_id: "p-dana" }],
           },
         ]),
       }),
       resolver({
         "user:u-lena": "Lena Fischer",
-        "person:p-dana": "Dana Otieno",
+        "contact:p-dana": "Dana Otieno",
       }),
     );
 

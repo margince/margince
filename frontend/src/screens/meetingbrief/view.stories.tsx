@@ -2,13 +2,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryProviders } from "../story-utils";
 import { briefEmpty, briefReady, meetingFacts, preparedFor } from "./fixtures";
 import { type BriefViewState, MeetingBriefView } from "./view";
-// `.pe-disclosure` in the foot belongs to the person record's sheet, which the
+// `.pe-disclosure` in the foot belongs to the contact record's sheet, which the
 // drawer reaches through the page around it. A story mounting the body alone
 // reaches neither, and the assembled-now line then draws at body size.
-import "../person360.css";
+import "../contact360.css";
 
 // The brief's body as a pure component: state in, prose out, no fetching. The
-// connected drawer's stories (Records/Person record/Meeting brief) cover the
+// connected drawer's stories (Records/Contact record/Meeting brief) cover the
 // read; these cover the four states the body itself can be in, from a fixture.
 //
 // Every date here is fixed rather than relative: the suite runs at +200 days
@@ -16,7 +16,7 @@ import "../person360.css";
 // `formatWhen` returns a constant instead of reading a clock.
 
 const meta: Meta<typeof MeetingBriefView> = {
-  title: "Records/Person record/Meeting brief/Body",
+  title: "Records/Contact record/Meeting brief/Body",
   component: MeetingBriefView,
   parameters: { layout: "fullscreen" },
 };

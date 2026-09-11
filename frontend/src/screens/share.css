@@ -83,14 +83,14 @@
   min-width: 0;
 }
 
-/* The body face, both values: an address is words a person reads and a member
+/* The body face, both values: an address is words a contact reads and a member
    count is a sentence, and the mono face is for a machine name. */
 .share-subject-note {
   font-size: var(--fs-meta);
   color: var(--textTertiary);
 }
 
-/* Person/team affordance: the kind glyph sits inline before the name, in both
+/* Contact/team affordance: the kind glyph sits inline before the name, in both
    the picker rows and the who-has-access list, so a name is never shown without
    a cue to whether it's a human or a team. */
 .share-subject-name,

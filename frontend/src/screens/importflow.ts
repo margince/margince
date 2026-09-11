@@ -69,7 +69,7 @@ const unreadableUpload =
   "the upload answered something this screen cannot read";
 
 function isImportObject(value: unknown): value is ImportObject {
-  return value === "lead" || value === "company" || value === "person";
+  return value === "lead" || value === "company" || value === "contact";
 }
 
 function isMapping(value: unknown): value is Record<string, string> {

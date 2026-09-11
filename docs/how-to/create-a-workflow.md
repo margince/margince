@@ -57,7 +57,7 @@ expect to touch the match-time gate's permission table (`catalog_actions.go`'s `
 4. **Register the handler** in `StarterWorkflows()` (`handlers_event.go`). `compose/workflows.go`
    already ranges over that slice when it builds the engine, so nothing else needs to change to wire
    a new starter into the running binary. (A handler whose engine needs a *sibling module's* store —
-   the way `assign_lead_owner`'s routing logic lives in `people`, not `automation` — is registered
+   the way `assign_lead_owner`'s routing logic lives in `contacts`, not `automation` — is registered
    directly from that module's own compose wiring instead; see `compose/workflows.go`'s own doc for
    why `route_lead` and `assign_lead_owner` are deliberately two different handlers under two
    different names rather than one handler with two meanings.)

@@ -220,7 +220,7 @@ func TestResetPreservesTheMigrationLedger(t *testing.T) {
 func TestResetDropsLeakedCustomFieldColumns(t *testing.T) {
 	ctx := context.Background()
 	owner := ownerConn(t)
-	if _, err := owner.Exec(ctx, `ALTER TABLE person ADD COLUMN cf_reset_probe text`); err != nil {
+	if _, err := owner.Exec(ctx, `ALTER TABLE contact ADD COLUMN cf_reset_probe text`); err != nil {
 		t.Fatalf("adding a cf_ column: %v", err)
 	}
 	if err := Reset(ctx, owner); err != nil {

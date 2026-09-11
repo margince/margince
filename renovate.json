@@ -29,7 +29,7 @@
       "allowedVersions": "<5"
     },
     {
-      "description": "A major needs a human to read the changelog, so it can never satisfy automerge on its own and its branch would otherwise sit open indefinitely — the one shape that pays the rebase cost forever while having no path to merge. `conflicted` above still rebases a lockfile major on every main merge that touches the lockfile (24 of the last 100 did), so majors are pinned to `never`: the branch goes stale, which is the correct state for a change waiting on a person. Whoever picks it up rebases it by ticking the PR's own checkbox.",
+      "description": "A major needs a human to read the changelog, so it can never satisfy automerge on its own and its branch would otherwise sit open indefinitely — the one shape that pays the rebase cost forever while having no path to merge. `conflicted` above still rebases a lockfile major on every main merge that touches the lockfile (24 of the last 100 did), so majors are pinned to `never`: the branch goes stale, which is the correct state for a change waiting on a contact. Whoever picks it up rebases it by ticking the PR's own checkbox.",
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "rebaseWhen": "never"

@@ -187,13 +187,13 @@ function ImportWizard({
       {/* The control carries its own group label, so it needs no Field
           around it — a second label would announce the same words twice. */}
       <SegmentedControl
-        options={["company", "person", "lead"] as const}
+        options={["company", "contact", "lead"] as const}
         value={flow.object}
         onChange={busy ? () => undefined : flow.chooseObject}
         label={t("import.objectLabel")}
         labels={{
           company: t("import.object.company"),
-          person: t("import.object.person"),
+          contact: t("import.object.contact"),
           lead: t("import.object.lead"),
         }}
       />
@@ -774,7 +774,7 @@ export function ImportContextTag({
 
 // LinkCount reports the connections a run makes, apart from the rows it writes.
 //
-// Its own component because it is its own question: one person can arrive as a
+// Its own component because it is its own question: one contact can arrive as a
 // created row AND an applied link, so putting links among the four counts above
 // would make them stop summing to the rows read. Renders nothing when the file
 // asked for no links, which is every import that mapped no company column.

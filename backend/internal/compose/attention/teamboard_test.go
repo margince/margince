@@ -110,7 +110,7 @@ func TestTeamAndAllScopedReadersGetTheBoard(t *testing.T) {
 	}
 }
 
-// Every count is attributed to the person the work names, and the three sources
+// Every count is attributed to the contact the work names, and the three sources
 // land in three different columns of one row.
 func TestEachTeammatesWorkLandsInTheirOwnRow(t *testing.T) {
 	t.Parallel()
@@ -133,7 +133,7 @@ func TestEachTeammatesWorkLandsInTheirOwnRow(t *testing.T) {
 	if len(board.Members) != 2 {
 		t.Fatalf("the board drew %d rows over a team of two", len(board.Members))
 	}
-	// Ordered by display name, so a manager finds a person where they left them.
+	// Ordered by display name, so a manager finds a contact where they left them.
 	if board.Members[0].DisplayName != "Aa Reader" {
 		t.Fatalf("the board led with %q, wanted the alphabetically first member",
 			board.Members[0].DisplayName)
@@ -259,7 +259,7 @@ func TestTheAtRiskLanesOwnCutFlagDecidesRatherThanItsRowCount(t *testing.T) {
 //
 // Both ways of falling short reach the reader as one flag, because what they
 // need to know is the same: the figures in front of them are floors. A board
-// that reported only the COUNT bounds would present a hundred people as the
+// that reported only the COUNT bounds would present a hundred contacts as the
 // whole of a larger team and say nothing.
 func TestATeamLargerThanTheRosterCapIsReportedAsTruncated(t *testing.T) {
 	t.Parallel()
@@ -331,7 +331,7 @@ func TestAnUnboundMembershipReaderRefusesRatherThanDrawingAnEmptyTeam(t *testing
 // set to TRUE, so a task carrying no record link is discoverable by everyone in
 // the installation. A team-scoped reader asking for `team` was handed exactly
 // those rows under a heading that says "my team" — while resolveOwner refuses to
-// open that same person's queue by name.
+// open that same contact's queue by name.
 func TestTheTeamScopeKeepsTheTeamsRowsAndNobodyElses(t *testing.T) {
 	t.Parallel()
 
@@ -359,7 +359,7 @@ func TestTheTeamScopeKeepsTheTeamsRowsAndNobodyElses(t *testing.T) {
 	}
 	if kept["outsider"] {
 		t.Error("a colleague on no team of the reader's arrived on the team queue — the " +
-			"same person resolveOwner refuses to open by name")
+			"same contact resolveOwner refuses to open by name")
 	}
 	if !kept["nobody"] {
 		t.Error("work naming nobody was dropped from the team queue, which is the only " +
@@ -417,11 +417,11 @@ func TestTheBoardCountsPromisesDuePerOwner(t *testing.T) {
 	// The reader owes none, and zero is the answer about them rather than a
 	// gap: the source was asked and said so.
 	if got := board.Members[0].Counts.PromisesDue; got != 0 {
-		t.Fatalf("a person the source did not name read %d, wanted 0", got)
+		t.Fatalf("a contact the source did not name read %d, wanted 0", got)
 	}
 }
 
-// The board asks about the people it is drawing, and nobody else. A reader free
+// The board asks about the contacts it is drawing, and nobody else. A reader free
 // to answer for anyone would fold a stranger's promises into a team's row.
 func TestTheBoardAsksAboutItsOwnRosterAndNoOneElse(t *testing.T) {
 	t.Parallel()

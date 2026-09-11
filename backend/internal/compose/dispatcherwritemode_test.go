@@ -65,11 +65,11 @@ func TestDispatcherWriteVerbsIgnoreAStaleCachedMode(t *testing.T) {
 	wsID := ids.NewV7()
 	d, calls := cachedModeDispatcher(wsID, modeNative)
 	ctx := principal.WithWorkspaceID(context.Background(), wsID)
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 
 	writes := map[string]func() error{
 		"Create": func() error {
-			_, err := d.Create(ctx, datasource.CreateInput{EntityType: datasource.EntityPerson})
+			_, err := d.Create(ctx, datasource.CreateInput{EntityType: datasource.EntityContact})
 			return err
 		},
 		"Update": func() error {
@@ -85,7 +85,7 @@ func TestDispatcherWriteVerbsIgnoreAStaleCachedMode(t *testing.T) {
 			return err
 		},
 		"Merge": func() error {
-			_, err := d.Merge(ctx, datasource.MergeInput{Type: datasource.EntityPerson})
+			_, err := d.Merge(ctx, datasource.MergeInput{Type: datasource.EntityContact})
 			return err
 		},
 		"PromoteLead": func() error {
@@ -117,7 +117,7 @@ func TestOverlayWriteShadowResolvesTheModeOnce(t *testing.T) {
 	wsID := ids.NewV7()
 	d, calls := cachedModeDispatcher(wsID, modeNative)
 	ctx := principal.WithWorkspaceID(context.Background(), wsID)
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 
 	// What the shadow does: resolve once, then dispatch with that answer.
 	ov, err := d.isOverlayUncached(ctx)
@@ -149,10 +149,10 @@ func TestDispatcherReadVerbsStillUseTheCachedMode(t *testing.T) {
 	d, calls := cachedModeDispatcher(wsID, modeOverlay)
 	ctx := principal.WithWorkspaceID(context.Background(), wsID)
 
-	if _, err := d.Read(ctx, datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}); err == nil {
+	if _, err := d.Read(ctx, datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}); err == nil {
 		t.Fatal("Read: want the overlay provider's nil-mirror-store error, got nil")
 	}
-	if _, err := d.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityPerson}}); err == nil {
+	if _, err := d.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityContact}}); err == nil {
 		t.Fatal("Search: want the overlay provider's nil-mirror-store error, got nil")
 	}
 	if *calls != 0 {

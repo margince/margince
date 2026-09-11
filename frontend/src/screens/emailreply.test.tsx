@@ -60,7 +60,7 @@ function presentation(over: Partial<EmailPresentation>): EmailPresentation {
     bcc: [],
     bcc_withheld: false,
     attachments: [],
-    links: [{ entity_type: "person", entity_id: ANA }],
+    links: [{ entity_type: "contact", entity_id: ANA }],
     thread: { members: [], next_cursor: null },
     access: {
       content_state: "available",
@@ -152,7 +152,7 @@ describe("what a reply from the drawer is filed under", () => {
   // The drawer is opened from surfaces that are not a record page — a search
   // hit, the worklist, a brief's citation — so the anchor comes from the
   // message's own filing rather than from where it was opened.
-  const person: ActivityLink = { entity_type: "person", entity_id: ANA };
+  const contact: ActivityLink = { entity_type: "contact", entity_id: ANA };
   const company: ActivityLink = {
     entity_type: "company",
     entity_id: BRANDT,
@@ -162,7 +162,7 @@ describe("what a reply from the drawer is filed under", () => {
   it("prefers the contact, whose timeline reads as the conversation", () => {
     // Order in the list must not decide it: the server sends links in its own
     // order, and a precedence that came out of that would move with it.
-    expect(replyAnchor([company, deal, person])).toEqual(person);
+    expect(replyAnchor([company, deal, contact])).toEqual(contact);
   });
 
   it("takes the work it is about when no contact is named", () => {

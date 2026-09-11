@@ -18,7 +18,7 @@ import (
 
 // Column references shared across the per-entity segment engines below —
 // one spelling each so the archived filter and owner scope stay identical
-// across person/company/deal/lead.
+// across contact/company/deal/lead.
 const (
 	whereArchivedNull = "t.archived_at IS NULL"
 	colOwnerID        = "t.owner_id"
@@ -66,7 +66,7 @@ const ownerIDField = "owner_id"
 // was taggable over REST and unnameable over MCP).
 func TaggableEntityTypes() []string {
 	return []string{
-		string(crmcontracts.TaggableEntityTypePerson),
+		string(crmcontracts.TaggableEntityTypeContact),
 		string(crmcontracts.TaggableEntityTypeCompany),
 		string(crmcontracts.TaggableEntityTypeDeal),
 		string(crmcontracts.TaggableEntityTypeLead),
@@ -117,7 +117,7 @@ const domainFilterField = "domain"
 // predicate, so it can only ever narrow what that predicate already admits.
 //
 // What that means for another team's rows depends on the table, and the loose
-// reading is wrong. On the identity engines — person, company, lead, deal —
+// reading is wrong. On the identity engines — contact, company, lead, deal —
 // customer identity is workspace-readable and auth renders the own/team arm as
 // TRUE (platform/auth: identityTables), so naming a team the caller is not in is
 // an honest selection of that team's records, which is the product's intent
@@ -231,13 +231,13 @@ var (
 )
 
 var segmentEngines = map[string]storekit.Query{
-	"person": {
-		Table:     "person",
+	typeContact: {
+		Table:     typeContact,
 		BaseWhere: whereArchivedNull,
 		Fields: map[string]storekit.Field{
 			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField: ownerTeamField,
-			tagFilterField:   tagLinkFor("person"),
+			tagFilterField:   tagLinkFor(typeContact),
 		},
 	},
 	typeCompany: {
@@ -376,7 +376,7 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 		return merged, true, nil
 	}
 	// Every resource that reaches this point owns a segment engine, and
-	// customfields.FieldObjects admits exactly that same set — person,
+	// customfields.FieldObjects admits exactly that same set — contact,
 	// company, deal, lead, project — so resource IS the catalog's
 	// object key; no separate mapping to maintain or drift out of sync.
 	columns, err := s.catalog.FilterableColumns(ctx, resource)

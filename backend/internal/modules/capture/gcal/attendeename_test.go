@@ -7,7 +7,7 @@ import "testing"
 
 // The name an invitation gives an attendee is the only full name a contact
 // minted from a bare address ever gets. Google sends it as displayName, and
-// this connector dropped it at decode — so a person invited as
+// this connector dropped it at decode — so a contact invited as
 // `chris@example.org` was filed as "Chris" and stayed that way.
 func TestAnAttendeeKeepsTheNameTheInviteGave(t *testing.T) {
 	raw := []byte(`{

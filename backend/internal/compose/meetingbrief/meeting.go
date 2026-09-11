@@ -45,7 +45,7 @@ type meeting struct {
 	// Room is every attendee this caller may see, uncapped. Attendees above is
 	// the DISPLAY list and stops at attendeeCap, so a reader is not scanning
 	// names — but "who was in this room" is a different question from "who do
-	// we name", and history shared only with the ninth person is still this
+	// we name", and history shared only with the ninth contact is still this
 	// room's history.
 	Room []ids.UUID
 }
@@ -74,21 +74,21 @@ type projectRow struct {
 	TargetEndDate *time.Time
 }
 
-// attendeeRow is one person in the room, with what a reader needs to open a
+// attendeeRow is one contact in the room, with what a reader needs to open a
 // conversation with them: what they do, what seat they hold on the deal, and
 // when we last spoke.
 type attendeeRow struct {
-	PersonID ids.UUID `json:"person_id"`
-	FullName string   `json:"full_name"`
-	Title    string   `json:"title"`
-	DealRole string   `json:"deal_role"`
+	ContactID ids.UUID `json:"contact_id"`
+	FullName  string   `json:"full_name"`
+	Title     string   `json:"title"`
+	DealRole  string   `json:"deal_role"`
 	// LastTouch is the newest conversation with this attendee BEFORE this
 	// meeting. Null is the first-time flag: it means nothing was ever captured
 	// with them, which is exactly "you have not met".
 	LastTouch *time.Time `json:"last_touch"`
 }
 
-// firstTime reports whether the reader is meeting this person for the first
+// firstTime reports whether the reader is meeting this contact for the first
 // time. It is derived rather than stored so it cannot disagree with the
 // timestamp printed beside it.
 func (a attendeeRow) firstTime() bool { return a.LastTouch == nil }
@@ -96,7 +96,7 @@ func (a attendeeRow) firstTime() bool { return a.LastTouch == nil }
 // readMeeting loads the meeting and its room.
 //
 // It refuses anything that is not a meeting. The route is reached from a
-// meeting moment on the person page, and a "pre-meeting brief" over an email
+// meeting moment on the contact page, and a "pre-meeting brief" over an email
 // would be a brief about a conversation that has already happened — the reader
 // would prepare for a room nobody booked.
 //
@@ -125,7 +125,7 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	var attendees []byte
 	var project projectRow
 	var projectID *ids.UUID
-	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.person, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos), args...).
+	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos), args...).
 		Scan(&out.ID, &out.StartsAt, &subject,
 			&dealID, &deal.Name, &stage, &deal.AmountMinor, &currency, &deal.CloseDate,
 			&projectID, &project.Name, &project.Key, &project.Phase, &project.TargetEndDate,
@@ -158,7 +158,7 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 		return meeting{}, err
 	}
 	for _, attendee := range full {
-		out.Room = append(out.Room, attendee.PersonID)
+		out.Room = append(out.Room, attendee.ContactID)
 	}
 	out.Attendees = full
 	if len(out.Attendees) > attendeeCap {
@@ -167,7 +167,7 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	return out, nil
 }
 
-// meetingQuery reads the room in one statement. The %s are the deal, person and
+// meetingQuery reads the room in one statement. The %s are the deal, contact and
 // last-touch row-scope clauses, which decide what the caller is allowed to be
 // told about rather than filtering it afterwards, plus the seat edge's own
 // admission on the LEFT JOIN that carries the deal role.
@@ -181,14 +181,14 @@ const meetingQuery = `
 	       pr.id, COALESCE(pr.name, ''), COALESCE(pr.key, ''), COALESCE(pr.phase, ''), pr.target_end_date,
 	       COALESCE((
 	         SELECT json_agg(json_build_object(
-	                  'person_id', p.id,
+	                  'contact_id', p.id,
 	                  'full_name', p.full_name,
 	                  'title', COALESCE(p.title, ''),
 	                  'deal_role', COALESCE(r.role, ''),
 	                  'last_touch', (
 	                    SELECT max(pa.occurred_at) FROM activity pa
 	                    JOIN activity_participant pp ON pp.activity_id = pa.id
-	                    WHERE pp.person_id = p.id AND pa.archived_at IS NULL
+	                    WHERE pp.contact_id = p.id AND pa.archived_at IS NULL
 	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at
 	                      AND pa.audience = 'workspace'
 	                      AND %[4]s
@@ -219,10 +219,10 @@ const meetingQuery = `
 	                            WHERE tf.activity_id = pa.id AND tf.project_id IS NOT NULL))
 	                  ))
 	                ORDER BY p.full_name, p.id)
-	         FROM (SELECT DISTINCT ap.person_id FROM activity_participant ap
-	                WHERE ap.activity_id = a.id AND ap.person_id IS NOT NULL) parts
-	         JOIN person p ON p.id = parts.person_id AND p.archived_at IS NULL
-	         LEFT JOIN relationship r ON r.person_id = p.id AND r.deal_id = d.id
+	         FROM (SELECT DISTINCT ap.contact_id FROM activity_participant ap
+	                WHERE ap.activity_id = a.id AND ap.contact_id IS NOT NULL) parts
+	         JOIN contact p ON p.id = parts.contact_id AND p.archived_at IS NULL
+	         LEFT JOIN relationship r ON r.contact_id = p.id AND r.deal_id = d.id
 	              AND r.kind = 'deal_stakeholder' AND r.archived_at IS NULL
 	              AND %[5]s
 	         WHERE %[2]s
@@ -255,7 +255,7 @@ const meetingQuery = `
 // roomScopes is every row-scope clause the meeting statement composes, each
 // deciding what the caller may be TOLD rather than filtering afterwards.
 type roomScopes struct {
-	deal, person, project, touch, seat string
+	deal, contact, project, touch, seat string
 }
 
 // roomClauses renders the five clauses in bind order.
@@ -278,7 +278,7 @@ func roomClauses(ctx context.Context, arg func(any) int) (roomScopes, error) {
 	if out.deal, err = scopeFor(ctx, "deal", "dd", arg); err != nil {
 		return roomScopes{}, err
 	}
-	if out.person, err = scopeFor(ctx, "person", "p", arg); err != nil {
+	if out.contact, err = scopeFor(ctx, "contact", "p", arg); err != nil {
 		return roomScopes{}, err
 	}
 	if out.project, err = projectJoinPredicate(ctx, "prj", arg); err != nil {
@@ -312,7 +312,7 @@ func nullableProject(requested *ids.ProjectID) *ids.UUID {
 // A refusal becomes `false` rather than an error because this edge decorates a
 // row it does not select. The alternative shapes are both worse: failing the
 // read would deny a meeting brief the caller may otherwise see in full, and
-// dropping the attendee would make a withheld ROLE look like an absent PERSON.
+// dropping the attendee would make a withheld ROLE look like an absent CONTACT.
 func seatJoinPredicate(ctx context.Context, alias string, arg func(any) int) (string, error) {
 	clause, err := auth.EdgeReadScope(ctx, alias, arg)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {

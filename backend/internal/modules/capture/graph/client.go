@@ -100,7 +100,7 @@ type Authorizer interface {
 	Refresh(ctx context.Context, refreshToken string, granted []string) (oauthflow.TokenRefresh, error)
 }
 
-// OAuth is the full handshake surface: an Authorizer that can also send a person
+// OAuth is the full handshake surface: an Authorizer that can also send a contact
 // to Microsoft's consent screen. The transport holds this; a connector holds the
 // narrower half.
 type OAuth interface {

@@ -53,12 +53,12 @@ func rowFor(page []crmcontracts.Activity, id ids.UUID) *crmcontracts.EmailSummar
 func TestAListRowCarriesItsRealAttachmentCount(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "The signed contract", "Attached, as agreed."
 	withFiles, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -66,7 +66,7 @@ func TestAListRowCarriesItsRealAttachmentCount(t *testing.T) {
 	bare := "Just a note"
 	noFiles, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &bare, Body: &body, Direction: strPtr("inbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -75,7 +75,7 @@ func TestAListRowCarriesItsRealAttachmentCount(t *testing.T) {
 	seedAttachment(t, ids.UUID(withFiles.Id), "annex.pdf")
 
 	page, _, err := e.Activities.ListActivities(author, activities.ListActivitiesInput{
-		EntityType: strPtr("person"), EntityID: &contact,
+		EntityType: strPtr("contact"), EntityID: &contact,
 	})
 	if err != nil {
 		t.Fatalf("listing the timeline: %v", err)
@@ -107,12 +107,12 @@ func TestAWithheldRowReportsNoAttachments(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "Severance agreement", "The signed copy is attached."
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -124,7 +124,7 @@ func TestAWithheldRowReportsNoAttachments(t *testing.T) {
 	// Admitted first, so the zero below is the audience's doing rather than a
 	// count that never worked.
 	open, _, err := e.Activities.ListActivities(colleague, activities.ListActivitiesInput{
-		EntityType: strPtr("person"), EntityID: &contact,
+		EntityType: strPtr("contact"), EntityID: &contact,
 	})
 	if err != nil {
 		t.Fatalf("colleague listing before limiting: %v", err)
@@ -140,7 +140,7 @@ func TestAWithheldRowReportsNoAttachments(t *testing.T) {
 	}
 
 	after, _, err := e.Activities.ListActivities(colleague, activities.ListActivitiesInput{
-		EntityType: strPtr("person"), EntityID: &contact,
+		EntityType: strPtr("contact"), EntityID: &contact,
 	})
 	if err != nil {
 		t.Fatalf("colleague listing after limiting: %v", err)
@@ -159,7 +159,7 @@ func TestAWithheldRowReportsNoAttachments(t *testing.T) {
 
 	// The author is in the audience and still sees what they sent.
 	mine, _, err := e.Activities.ListActivities(author, activities.ListActivitiesInput{
-		EntityType: strPtr("person"), EntityID: &contact,
+		EntityType: strPtr("contact"), EntityID: &contact,
 	})
 	if err != nil {
 		t.Fatalf("author listing: %v", err)
@@ -175,12 +175,12 @@ func TestAWithheldRowReportsNoAttachments(t *testing.T) {
 func TestTheSingleReadAgreesWithTheListAboutAttachments(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "The signed contract", "Attached, as agreed."
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)

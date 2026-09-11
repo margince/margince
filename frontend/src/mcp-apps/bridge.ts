@@ -10,7 +10,7 @@
 // WHAT THIS FILE REFUSES TO DO, and why each refusal is load-bearing:
 //
 //   It never builds DOM from a string. Everything a view displays arrives in
-//   `structuredContent`, which is customer data — a person's name, a note
+//   `structuredContent`, which is customer data — a contact's name, a note
 //   someone pasted, the subject line of an ingested email. That is untrusted
 //   text by this system's own reckoning, and the view runs inside a sandbox
 //   whose whole job is to contain it. Assigning that text as MARKUP would hand

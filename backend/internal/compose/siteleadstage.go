@@ -3,7 +3,7 @@
 
 package compose
 
-// Staging the people ONE act published as decisions. The gate upstream decided
+// Staging the contacts ONE act published as decisions. The gate upstream decided
 // whether the site published someone contactable; this decides whether the
 // workspace needs to ASK about them, what question it asks, and — because they
 // were asked by one act — that they arrive in the inbox together.
@@ -19,15 +19,15 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// stageSiteLeads records the published people of ONE act as thin "site_lead"
-// proposals: exactly what the site printed, nothing enriched. Each person is
+// stageSiteLeads records the published contacts of ONE act as thin "site_lead"
+// proposals: exactly what the site printed, nothing enriched. Each contact is
 // decided on their own — accepting the CTO does not accept the whole roster —
 // but they are ASKED together, under one bundle.
 //
@@ -37,7 +37,7 @@ import (
 // answered while the rest of it is still being written — and a worker that dies
 // halfway leaves a permanently partial set. Neither is reachable when the
 // members become visible at once.
-func (w *siteDeepReadWorker) stageSiteLeads(ctx context.Context, readID ids.UUID, claim people.SiteReadClaim, found []sitePerson, bundleID ids.UUID) ([]ids.UUID, error) {
+func (w *siteDeepReadWorker) stageSiteLeads(ctx context.Context, readID ids.UUID, claim contacts.SiteReadClaim, found []siteContact, bundleID ids.UUID) ([]ids.UUID, error) {
 	var proposalIDs []ids.UUID
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
@@ -56,7 +56,7 @@ func (w *siteDeepReadWorker) stageSiteLeads(ctx context.Context, readID ids.UUID
 // previous read's bundle walks those same rows in (created_at, id). One shared
 // set locked in two orders deadlocks, and the loser gets a 500 on a re-read that
 // was otherwise fine.
-func (w *siteDeepReadWorker) stageSiteLeadsInTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, claim people.SiteReadClaim, found []sitePerson, bundleID ids.UUID) ([]ids.UUID, error) {
+func (w *siteDeepReadWorker) stageSiteLeadsInTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, claim contacts.SiteReadClaim, found []siteContact, bundleID ids.UUID) ([]ids.UUID, error) {
 	// Nothing to stage means no group to lock. The pre-lock is account-wide, so
 	// holding every pending lead of an account for a loop that will propose none
 	// of them blocks decisions for no reason — and it keeps a read that
@@ -71,10 +71,10 @@ func (w *siteDeepReadWorker) stageSiteLeadsInTx(ctx context.Context, tx pgx.Tx, 
 		return nil, err
 	}
 	var proposalIDs []ids.UUID
-	for _, person := range found {
-		approvalID, staged, err := w.stageSiteLead(ctx, tx, readID, claim, person, bundleID)
+	for _, contact := range found {
+		approvalID, staged, err := w.stageSiteLead(ctx, tx, readID, claim, contact, bundleID)
 		if err != nil {
-			return nil, fmt.Errorf("staging the %s lead: %w", person.Name, err)
+			return nil, fmt.Errorf("staging the %s lead: %w", contact.Name, err)
 		}
 		if !staged {
 			continue
@@ -84,13 +84,13 @@ func (w *siteDeepReadWorker) stageSiteLeadsInTx(ctx context.Context, tx pgx.Tx, 
 	return proposalIDs, nil
 }
 
-// stageSiteLead records ONE published person as a thin "site_lead" proposal.
+// stageSiteLead records ONE published contact as a thin "site_lead" proposal.
 //
-// It reports whether anything was staged. A person the workspace already
+// It reports whether anything was staged. A contact the workspace already
 // knows is not a decision: they reached us by email long before a crawler
 // read their name off the about page, and re-proposing them spends the
 // queue on a confirmation that would land on the row that is already there.
-func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, readID ids.UUID, claim people.SiteReadClaim, person sitePerson, bundleID ids.UUID) (ids.ApprovalID, bool, error) {
+func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, readID ids.UUID, claim contacts.SiteReadClaim, contact siteContact, bundleID ids.UUID) (ids.ApprovalID, bool, error) {
 	if claim.CompanyID == nil {
 		return ids.ApprovalID{}, false, errors.New("site deep read: an unbound onboarding draft cannot stage a lead proposal")
 	}
@@ -98,8 +98,8 @@ func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, readI
 	if err != nil {
 		return ids.ApprovalID{}, false, err
 	}
-	known, err := w.people.EmailAlreadyOnFileTx(probeCtx, tx, person.PublishedEmail)
-	// A requester who may not read people cannot be told, on their own
+	known, err := w.contacts.EmailAlreadyOnFileTx(probeCtx, tx, contact.PublishedEmail)
+	// A requester who may not read contacts cannot be told, on their own
 	// authority, that this one is already known — so they are told nothing and
 	// simply get the proposal. Suppressing it on the WORKER's authority is the
 	// disclosure probeCtx exists to prevent, and failing the whole read over a
@@ -108,18 +108,18 @@ func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, readI
 		known, err = false, nil
 	}
 	if err != nil {
-		return ids.ApprovalID{}, false, fmt.Errorf("checking whether %s is already on file: %w", person.Name, err)
+		return ids.ApprovalID{}, false, fmt.Errorf("checking whether %s is already on file: %w", contact.Name, err)
 	}
 	if known {
 		// The skip is log-only. It is not an extraction drop — the gate already
-		// passed this person — so it has no place in the dossier's drop report,
-		// but it still says why a published person produced no question.
-		w.log.InfoContext(ctx, "published person not proposed",
-			"lane", lanePeople, "reason", dropAlreadyOnFile,
-			"read", readID.String(), "url", person.SourceURL)
+		// passed this contact — so it has no place in the dossier's drop report,
+		// but it still says why a published contact produced no question.
+		w.log.InfoContext(ctx, "published contact not proposed",
+			"lane", laneContacts, "reason", dropAlreadyOnFile,
+			"read", readID.String(), "url", contact.SourceURL)
 		return ids.ApprovalID{}, false, nil
 	}
-	in, err := siteLeadStageInput(readID, *claim.CompanyID, claim.SeedURL, person, bundleID)
+	in, err := siteLeadStageInput(readID, *claim.CompanyID, claim.SeedURL, contact, bundleID)
 	if err != nil {
 		return ids.ApprovalID{}, false, err
 	}
@@ -135,7 +135,7 @@ func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, readI
 //
 // The worker itself is a system principal: it writes on the requester's behalf
 // and sees every row in the workspace, which is right for writing and wrong
-// for asking. Whether a person is already on file decides whether a proposal
+// for asking. Whether a contact is already on file decides whether a proposal
 // appears in that human's inbox, so answering it workspace-wide turns the
 // inbox into an existence oracle — a rep points a read at a page listing
 // addresses they want to test, and every name that yields NO proposal is one
@@ -179,29 +179,29 @@ func (w *siteDeepReadWorker) probeCtx(ctx context.Context) (context.Context, err
 	}), nil
 }
 
-// siteLeadStageInput builds the staging for one published person, INCLUDING
+// siteLeadStageInput builds the staging for one published contact, INCLUDING
 // the logical identity that makes a re-read of the same site supersede its own
 // last undecided proposal instead of stacking beside it.
 //
 // The identity has to be the natural key, not the printed name. A page that
 // reflows "Anna Muster" to "  anna   MUSTER " would slip past a raw-name
-// identity and stack a second question about the same person; two genuinely
-// different people who share a name would collapse into one, and staging the
+// identity and stack a second question about the same contact; two genuinely
+// different contacts who share a name would collapse into one, and staging the
 // second would expire the first's still-undecided approval. The natural key
 // normalizes the name and carries the published email, so it separates exactly
-// the people the accept path keeps separate.
-func siteLeadStageInput(readID, companyID ids.UUID, seedURL string, person sitePerson, bundleID ids.UUID) (approvals.StageInput, error) {
-	naturalKey := siteLeadSourceID(companyID, person.Name, person.PublishedEmail)
+// the contacts the accept path keeps separate.
+func siteLeadStageInput(readID, companyID ids.UUID, seedURL string, contact siteContact, bundleID ids.UUID) (approvals.StageInput, error) {
+	naturalKey := siteLeadSourceID(companyID, contact.Name, contact.PublishedEmail)
 	proposedChange, err := json.Marshal(siteLeadProposal{
 		CompanyID:       companyID,
 		SiteReadID:      readID,
 		NaturalKey:      naturalKey,
-		Name:            person.Name,
-		Role:            person.Role,
-		PublishedEmail:  person.PublishedEmail,
-		LinkedinURL:     person.LinkedinURL,
-		EvidenceSnippet: person.EvidenceSnippet,
-		SourceURL:       person.SourceURL,
+		Name:            contact.Name,
+		Role:            contact.Role,
+		PublishedEmail:  contact.PublishedEmail,
+		LinkedinURL:     contact.LinkedinURL,
+		EvidenceSnippet: contact.EvidenceSnippet,
+		SourceURL:       contact.SourceURL,
 	})
 	if err != nil {
 		return approvals.StageInput{}, err
@@ -220,6 +220,6 @@ func siteLeadStageInput(readID, companyID ids.UUID, seedURL string, person siteP
 		Identity:       identity,
 		JoinPending:    true,
 		BundleID:       bundleID,
-		Summary:        fmt.Sprintf("Lead from %s: %s — %s", seedURL, person.Name, person.Role),
+		Summary:        fmt.Sprintf("Lead from %s: %s — %s", seedURL, contact.Name, contact.Role),
 	}, nil
 }

@@ -10,7 +10,7 @@ package consent
 // The evidence is a live confirm_token, and these cases pin both halves of that:
 // a message carrying one is supported, and the claim on its own supports
 // nothing. The second half is what keeps the lane from becoming a way to reach
-// a person who has objected — the five subject-serving categories pass a hard
+// a contact who has objected — the five subject-serving categories pass a hard
 // suppression, so a category that could be claimed without evidence would be a
 // route around every refusal the engine makes.
 
@@ -40,7 +40,7 @@ func TestAConfirmationRestsOnALiveLink(t *testing.T) {
 	// owes them, so it cannot rest on a permission they have not given.
 	if got.Basis != commsauthz.BasisLegalObligation {
 		t.Errorf("basis %q, want legal_obligation: a confirmation that rested on consent could "+
-			"never be sent to the person who has not consented yet", got.Basis)
+			"never be sent to the contact who has not consented yet", got.Basis)
 	}
 }
 

@@ -1293,7 +1293,7 @@ function MyOutcomesView({
 
   if (self == null) {
     // A hand-typed address under a manager lens: the numbers this view could
-    // fetch would measure the default population, not the person. `withheld`
+    // fetch would measure the default population, not the contact. `withheld`
     // and not `empty`, which would claim they have no outcomes.
     return (
       <SurfaceState

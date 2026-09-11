@@ -140,7 +140,7 @@ function rowInHand(
   // highlight that means nothing and never clears.
   //
   // The FIRST such row rather than the first row: a day led by a deal still has
-  // a person further down whose context is worth standing open, and skipping to
+  // a contact further down whose context is worth standing open, and skipping to
   // it keeps the pane useful without moving the queue's own order.
   return queue.find(hasPane);
 }
@@ -530,7 +530,7 @@ function WorklistBody({
 
           Answering it FOR a colleague is a different feature needing a
           different endpoint. Until that exists, saying nothing beats saying the
-          wrong person's number under their name. */}
+          wrong contact's number under their name. */}
       {owner === "" && scope === "mine" && (
         <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
       )}
@@ -623,7 +623,7 @@ export function WorklistScreen({
   opensOn,
 }: Readonly<{
   // What the address asked for, from `#/worklist/<segment>`: a user id opens
-  // that person's queue, and the literal "unassigned" opens the unowned pile.
+  // that contact's queue, and the literal "unassigned" opens the unowned pile.
   // Both are doors a team board row needs — a row that could only reach this
   // page would ask the reader to pick the same thing a second time.
   //

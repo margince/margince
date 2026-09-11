@@ -212,7 +212,7 @@ func TestDispatchChecksAuthorityBeforeConsent(t *testing.T) {
 
 // THE Cc one: a delivery stores its To and Cc apart because the wire needs
 // them apart, and the authoritative gate is owed EVERY addressee. Asking about
-// the To list alone leaves a cc'd person with no suppression at all — their
+// the To list alone leaves a cc'd contact with no suppression at all — their
 // one-click unsubscribe lands in the hours a paced batch sits staged and
 // changes nothing about the message they receive.
 func TestDispatchAsksConsentAboutEveryAddresseeIncludingCc(t *testing.T) {

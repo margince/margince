@@ -75,9 +75,9 @@ func noteFromModel(
 	return parseIntroNote(res.Text, facts)
 }
 
-const noteSystem = `You write one short note that a person will FORWARD to somebody they know, introducing a colleague of theirs.
+const noteSystem = `You write one short note that a contact will FORWARD to somebody they know, introducing a colleague of theirs.
 
-The reader is the recipient — a customer or a prospect, not a teammate. You are writing in the voice of the person who will send it: they know the recipient, and they are passing along an introduction.
+The reader is the recipient — a customer or a prospect, not a teammate. You are writing in the voice of the contact who will send it: they know the recipient, and they are passing along an introduction.
 
 Rules you must not break:
 - Write TO the recipient, and address them by name: open with their first name. Never mention that anybody was asked to make this introduction, and never refer to an internal request.
@@ -92,7 +92,7 @@ Rules you must not break:
 // noteRequest builds the model call.
 //
 // Every fact is fenced, including the ones this server minted: a contact's name
-// and a colleague's were both typed by a person, and the rep's own
+// and a colleague's were both typed by a contact, and the rep's own
 // value_for_target is free text straight off a request body — the most obvious
 // injection surface on this call.
 func noteRequest(facts noteFacts) model.Request {
@@ -198,7 +198,7 @@ var noteTable = map[textlang.Lang]noteWording{
 		intro:     "I wanted to put you in touch with %s.",
 		viaKnown:  "We have been in touch (%s, last around %s), so I thought the introduction was worth making.",
 		viaUntold: "I thought the introduction was worth making.",
-		through:   "%s suggested you would be the right person.",
+		through:   "%s suggested you would be the right contact.",
 		why:       "%s",
 		ask:       "Happy to step out of the way if it is useful — I will leave the two of you to it.",
 		sign:      "Best,",
@@ -209,7 +209,7 @@ var noteTable = map[textlang.Lang]noteWording{
 		intro:     "ich wollte Sie mit %s bekannt machen.",
 		viaKnown:  "Wir stehen in Kontakt (%s, zuletzt etwa %s), deshalb hielt ich die Vorstellung für sinnvoll.",
 		viaUntold: "Ich hielt die Vorstellung für sinnvoll.",
-		through:   "%s meinte, Sie wären die richtige Ansprechperson.",
+		through:   "%s meinte, Sie wären die richtige Ansprechcontact.",
 		why:       "%s",
 		ask:       "Ich halte mich gerne raus und überlasse das Weitere Ihnen beiden.",
 		sign:      "Viele Grüße",
@@ -230,7 +230,7 @@ var noteTable = map[textlang.Lang]noteWording{
 // noteFloor writes the note from a template.
 //
 // Every value goes in through draftfloor.Fill rather than fmt.Sprintf: a
-// company or a person with a % in their name would otherwise be read as a
+// company or a contact with a % in their name would otherwise be read as a
 // format directive, and the reader would find a mangled sentence in a message
 // about to reach a customer.
 func noteFloor(facts noteFacts) introNote {
@@ -288,7 +288,7 @@ func noteRelationship(wording noteWording, facts noteFacts) string {
 // wireIntroNote puts the note on the wire with its provenance.
 //
 // generated_by travels because the colleague reading it decides whether to send
-// it under their own name, and "a person wrote this" is a different decision
+// it under their own name, and "a contact wrote this" is a different decision
 // from "a model proposed this".
 //
 // ai_generated and ai_disclosure are the Art. 50 pair, and they are not
@@ -375,12 +375,12 @@ func noteRelationshipLabel(facts noteFacts) string {
 // correspondence, because this endpoint does not read one — see Band and the
 // note on language in IntroNoteFactsFor.
 type IntroNoteFixture struct {
-	// Colleague is the person who will forward the note; it goes out in their
+	// Colleague is the contact who will forward the note; it goes out in their
 	// voice, so they are the sender rather than the subject.
 	Colleague string `json:"colleague"`
 	// Contact is the customer or prospect who reads it.
 	Contact string `json:"contact"`
-	// Requester is the rep being introduced — the person the note is about.
+	// Requester is the rep being introduced — the contact the note is about.
 	Requester string `json:"requester"`
 	// Through names the intermediary on an indirect route, and is empty on a
 	// direct one.
@@ -411,20 +411,20 @@ type IntroNoteFixture struct {
 // certified a prompt the product cannot send. Going through the assembler makes
 // that class of divergence unrepresentable rather than merely absent today.
 func IntroNoteFactsFor(fixture IntroNoteFixture) (noteFacts, error) {
-	bucket := crmcontracts.PersonGraphRouteCandidateStrengthBucket(fixture.Band)
+	bucket := crmcontracts.ContactGraphRouteCandidateStrengthBucket(fixture.Band)
 	if fixture.Band != "" && !bucket.Valid() {
 		return noteFacts{}, fmt.Errorf(
 			"network: %q is not a route strength bucket this endpoint can be handed — the route "+
 				"vocabulary is none/weak/moderate/strong, and the company page's "+
 				"cold/developing/strong belongs to a different contract", fixture.Band)
 	}
-	graph := &crmcontracts.PersonGraph{
-		Nodes: []crmcontracts.PersonGraphNode{{
-			Group: crmcontracts.PersonGraphNodeGroupAnchor,
+	graph := &crmcontracts.ContactGraph{
+		Nodes: []crmcontracts.ContactGraphNode{{
+			Group: crmcontracts.ContactGraphNodeGroupAnchor,
 			Label: fixture.Contact,
 		}},
 	}
-	route := crmcontracts.PersonGraphRouteCandidate{ViaDisplayName: fixture.Colleague}
+	route := crmcontracts.ContactGraphRouteCandidate{ViaDisplayName: fixture.Colleague}
 	if fixture.Band != "" {
 		route.StrengthBucket = &bucket
 	}

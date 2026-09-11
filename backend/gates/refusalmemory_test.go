@@ -48,10 +48,10 @@ var plainStageCall = regexp.MustCompile(`\b\w+\.Stage\(ctx, approvals\.StageInpu
 // presses it" is a trigger shape, and the two entries that rest on that say so
 // plainly instead of implying a guard they do not have.
 var stageWithoutMemory = gatekit.Waive(map[string]string{
-	"internal/compose/coldstart.go": "the only trigger is a person pasting text and pressing the button; " +
+	"internal/compose/coldstart.go": "the only trigger is a contact pasting text and pressing the button; " +
 		"re-submitting after a rejection is them deliberately asking again, and refusing that would be the bug",
 
-	"internal/compose/scrape.go": "the triggers are a person clicking read-this-website and the enrich tool at " +
+	"internal/compose/scrape.go": "the triggers are a contact clicking read-this-website and the enrich tool at " +
 		"page depth; both are a deliberate ask about one named company",
 
 	"internal/compose/workflows.go": "automation claims its run first — workflow_run's " +

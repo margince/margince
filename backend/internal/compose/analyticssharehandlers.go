@@ -318,9 +318,9 @@ func (h analyticsShareHandlers) ExportForecastShare(
 // Spelled out here rather than borrowed from the field constants elsewhere in
 // this package. Those name a request field or a database column; these name a
 // column of an exported file, and tying the two together would mean renaming a
-// field silently changed a file people have saved.
+// field silently changed a file contacts have saved.
 //
-//nolint:goconst // these are COLUMN HEADINGS of an exported file, and the constants goconst points at name other concepts that spell the same word — a request field, a database column. Hiding these behind them would assert a correspondence that does not hold: renaming one of those would silently change a file people have already saved formulas against
+//nolint:goconst // these are COLUMN HEADINGS of an exported file, and the constants goconst points at name other concepts that spell the same word — a request field, a database column. Hiding these behind them would assert a correspondence that does not hold: renaming one of those would silently change a file contacts have already saved formulas against
 var shareExportColumns = []string{
 	"deal_id", "deal_name", "owner_id", "amount_minor", "currency",
 	"base_minor", "effective_close_date", "category",

@@ -25,8 +25,8 @@ const MAI = "01a02be9-2293-75d2-9dd2-3027d9b63dc2";
 
 type Seats = {
   relationship_id: string;
-  person_id: string;
-  person_name: string | null;
+  contact_id: string;
+  contact_name: string | null;
   role: string | null;
 }[];
 
@@ -46,8 +46,8 @@ function withheldView() {
 const mai: Seats = [
   {
     relationship_id: "rel-1",
-    person_id: MAI,
-    person_name: "Mai Trần",
+    contact_id: MAI,
+    contact_name: "Mai Trần",
     role: "sponsor",
   },
 ];
@@ -68,7 +68,7 @@ function renderCard(
   );
 }
 
-// Every request the card makes, with the people search answering one name so a
+// Every request the card makes, with the contacts search answering one name so a
 // pick is reachable without a real transport.
 function stubFetch(
   onWrite: (call: { method: string; url: string; body: unknown }) => void,
@@ -85,7 +85,7 @@ function stubFetch(
         });
         return new Response(null, { status: 204 });
       }
-      if (url.includes("/people")) {
+      if (url.includes("/contacts")) {
         return new Response(
           JSON.stringify({
             data: [{ id: MAI, full_name: "Mai Trần" }],
@@ -135,7 +135,7 @@ afterEach(() => {
 });
 
 describe("the stakeholders on a project", () => {
-  it("seats a person in the role the reader picked", async () => {
+  it("seats a contact in the role the reader picked", async () => {
     const user = setup();
     const writes: { method: string; url: string; body: unknown }[] = [];
     stubFetch((call) => writes.push(call));
@@ -143,7 +143,7 @@ describe("the stakeholders on a project", () => {
 
     await user.click(screen.getByTestId("add-project-stakeholder"));
     // Scoped to the dialog: the card's own row carries a button with this
-    // person's name too, and picking the row navigates away instead.
+    // contact's name too, and picking the row navigates away instead.
     const dialog = within(screen.getByRole("dialog"));
     await user.type(
       dialog.getByPlaceholderText("Search contacts by name"),
@@ -163,12 +163,12 @@ describe("the stakeholders on a project", () => {
     expect(writes[0].method).toBe("PUT");
     expect(writes[0].url).toContain(`/projects/${PROJECT}/stakeholders`);
     expect(writes[0].body).toEqual({
-      person_id: MAI,
+      contact_id: MAI,
       role: "delivery_lead",
     });
   });
 
-  it("takes a person off the project by their own id, behind a confirm", async () => {
+  it("takes a contact off the project by their own id, behind a confirm", async () => {
     const user = setup();
     const writes: { method: string; url: string; body: unknown }[] = [];
     stubFetch((call) => writes.push(call));
@@ -238,7 +238,7 @@ describe("the stakeholders on a project", () => {
             JSON.stringify({
               type: "about:blank",
               title: "Unprocessable Entity",
-              detail: "this person is archived",
+              detail: "this contact is archived",
             }),
             {
               status: 422,
@@ -260,7 +260,7 @@ describe("the stakeholders on a project", () => {
     await user.click(screen.getByTestId("remove-project-stakeholder"));
     await user.click(screen.getByRole("button", { name: "Remove" }));
 
-    expect(await screen.findByText(/this person is archived/)).toBeTruthy();
+    expect(await screen.findByText(/this contact is archived/)).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
@@ -269,7 +269,7 @@ describe("the stakeholders on a project", () => {
     const writes: { method: string; url: string; body: unknown }[] = [];
     stubFetch((call) => {
       writes.push(call);
-      throw new Error("this person is not on any company here");
+      throw new Error("this contact is not on any company here");
     });
     renderCard();
 
@@ -296,7 +296,7 @@ describe("the stakeholders on a project", () => {
     ).toBeDisabled();
   });
 
-  // The empty card is where a person seats the FIRST stakeholder, so the verb
+  // The empty card is where a contact seats the FIRST stakeholder, so the verb
   // has to survive an empty list — the state that reads most like "nothing to
   // do here".
   it("offers the add verb on a project with nobody on it yet", () => {

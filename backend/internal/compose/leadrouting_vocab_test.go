@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/automation"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // The routable-lead-field vocabulary lives in two modules that cannot
-// import each other: the people engine matches routing rules on it, and
+// import each other: the contacts engine matches routing rules on it, and
 // the automation catalog mirrors it as the editor's params-schema enum. If
 // they drift, a config the editor accepts silently never matches (the
 // engine's field lookup returns "" for an unknown key), or the editor
@@ -20,8 +20,8 @@ import (
 // are visible, so the binding lives here — derive the obligation, don't
 // maintain two hand-synced lists.
 func TestRoutableLeadFieldVocabularyIsSingleSourced(t *testing.T) {
-	if !slices.Equal(people.RoutableLeadFields, automation.RoutableLeadFields) {
-		t.Fatalf("routable-lead-field vocabularies drifted:\n  people: %v\n  automation: %v",
-			people.RoutableLeadFields, automation.RoutableLeadFields)
+	if !slices.Equal(contacts.RoutableLeadFields, automation.RoutableLeadFields) {
+		t.Fatalf("routable-lead-field vocabularies drifted:\n  contacts: %v\n  automation: %v",
+			contacts.RoutableLeadFields, automation.RoutableLeadFields)
 	}
 }

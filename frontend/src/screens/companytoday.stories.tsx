@@ -17,7 +17,7 @@ import { StoryProviders } from "./story-utils";
 //
 // The withheld story is the one no seeded demo account can reach: every one
 // grants the viewer full RBAC, so `state_strip` (whose move, the open risk)
-// and `people` (the best route in) are never omitted on a live session. A
+// and `contacts` (the best route in) are never omitted on a live session. A
 // role scoped away from either still reads the rest of the brief; it just
 // says so for the two it cannot answer, rather than silently dropping them.
 
@@ -59,10 +59,10 @@ const populated = {
       headline: "Depot pilot has had no activity in 18 days.",
     },
   },
-  people: {
+  contacts: {
     data: [
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         deal_roles: [],
@@ -70,7 +70,7 @@ const populated = {
         routes: {
           top: [
             {
-              person_id: "u-1",
+              contact_id: "u-1",
               display_name: "Mira Voss",
               strength_bucket: "strong",
             },
@@ -95,7 +95,7 @@ const populated = {
     activity_id: "a-1",
     starts_at: "2026-07-14T09:00:00Z",
     subject: "Renewal review",
-    participants: [{ person_id: "p-1", display_name: "Dana Buyer" }],
+    participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
   },
   suggestions: [
     {
@@ -145,15 +145,15 @@ const rated = {
   },
 } as unknown as View;
 
-// state_strip and people withheld — the two readings no seeded demo account
+// state_strip and contacts withheld — the two readings no seeded demo account
 // ever omits, so this is the only place the brief's own withheld path for
 // either one renders.
 const withheld = {
   ...populated,
   state_strip: undefined,
-  people: undefined,
+  contacts: undefined,
   next_meeting: undefined,
-  sections_omitted: ["state_strip", "people", "next_meeting"],
+  sections_omitted: ["state_strip", "contacts", "next_meeting"],
 } as unknown as View;
 
 function Brief({

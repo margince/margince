@@ -88,7 +88,7 @@ func enrichRetry(companyID, approvalID string) string {
 // one passport's approval never offered to another — is what the tests using
 // this are about, and it needs some confirm-first verb to exercise. It used to
 // be send_message, until a passport stopped needing a second confirmation from
-// the person who granted it. `enrich` stays confirm-first for a different
+// the contact who granted it. `enrich` stays confirm-first for a different
 // reason (the model names the URL the server fetches), which makes it the verb
 // that still puts a call in front of a human.
 func (c *channelSendEnv) enrichInvoker(t *testing.T, agentToken string) func(args string) (string, error) {
@@ -130,7 +130,7 @@ func (c *channelSendEnv) verbInvoker(t *testing.T, agentToken, verb string) func
 //
 // It used to stage first, and the staging half is what changed: a passport
 // carries the granting human's own seat and row scope, and `send` is a cap that
-// human chose to lend, so a second confirmation from the same person bought
+// human chose to lend, so a second confirmation from the same contact bought
 // nothing. What still bounds the call is the cap — a passport never granted
 // `send` cannot reach this at all (TestSendMessageRefusesAPassportWithoutTheSendCap).
 func TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres(t *testing.T) {

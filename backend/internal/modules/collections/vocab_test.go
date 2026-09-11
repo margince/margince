@@ -45,7 +45,7 @@ func TestEveryTaggableTypeCanBeFilteredByTag(t *testing.T) {
 }
 
 // The ownership dial is ONE dial, so an engine that offers half of it offers a
-// broken one: a saved view can say "owned by this person" and a manager's view
+// broken one: a saved view can say "owned by this contact" and a manager's view
 // — "owned by my team" — is the form that actually gets saved.
 //
 // Derived from the engines themselves rather than from a written-out list of
@@ -56,7 +56,7 @@ func TestEveryEngineWithAnOwnerAlsoFiltersByTeam(t *testing.T) {
 	for resource, engine := range segmentEngines {
 		_, owned := engine.Fields[ownerIDField]
 		team, teamed := engine.Fields[ownerTeamIDField]
-		// Both directions. An engine offering the team half without the person
+		// Both directions. An engine offering the team half without the contact
 		// half is equally half a dial, and asserting only the one direction would
 		// let that ship.
 		if owned && !teamed {
@@ -227,13 +227,13 @@ func TestEveryCorePicklistOffersItsValues(t *testing.T) {
 // A custom picklist's values come from the catalogue, not from this file.
 func TestACustomPicklistOffersTheCataloguesValues(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {{
+		"contact": {{
 			Name:    "cf_tier",
 			Type:    fieldcatalog.TypePicklist,
 			Options: []string{"gold", "silver"},
 		}},
 	}})
-	engine, ok, err := store.SegmentEngine(context.Background(), "person")
+	engine, ok, err := store.SegmentEngine(context.Background(), "contact")
 	if err != nil || !ok {
 		t.Fatalf("segmentEngine: ok=%v err=%v", ok, err)
 	}
@@ -371,9 +371,9 @@ func (s stubFilterable) ActiveColumns(_ context.Context, object string) ([]field
 
 func TestSegmentEngineMergesCustomColumnsWithCoreFields(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {{Name: "cf_qa_owner", Type: fieldcatalog.TypeText}},
+		"contact": {{Name: "cf_qa_owner", Type: fieldcatalog.TypeText}},
 	}})
-	engine, ok, err := store.SegmentEngine(context.Background(), "person")
+	engine, ok, err := store.SegmentEngine(context.Background(), "contact")
 	if err != nil || !ok {
 		t.Fatalf("segmentEngine: ok=%v err=%v", ok, err)
 	}
@@ -396,17 +396,17 @@ func TestSegmentEngineMergesCustomColumnsWithCoreFields(t *testing.T) {
 // place would leak one workspace's custom vocabulary into every later request —
 // including requests from other installations of the same binary.
 func TestSegmentEngineDoesNotMutateTheStaticVocabulary(t *testing.T) {
-	before := len(segmentEngines["person"].Fields)
+	before := len(segmentEngines["contact"].Fields)
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {{Name: "cf_leaked", Type: fieldcatalog.TypeText}},
+		"contact": {{Name: "cf_leaked", Type: fieldcatalog.TypeText}},
 	}})
-	if _, _, err := store.SegmentEngine(context.Background(), "person"); err != nil {
+	if _, _, err := store.SegmentEngine(context.Background(), "contact"); err != nil {
 		t.Fatalf("segmentEngine: %v", err)
 	}
-	if got := len(segmentEngines["person"].Fields); got != before {
+	if got := len(segmentEngines["contact"].Fields); got != before {
 		t.Fatalf("the static vocabulary grew from %d to %d fields", before, got)
 	}
-	if _, leaked := segmentEngines["person"].Fields["cf_leaked"]; leaked {
+	if _, leaked := segmentEngines["contact"].Fields["cf_leaked"]; leaked {
 		t.Error("a request's custom column landed in the process-wide vocabulary")
 	}
 }
@@ -415,7 +415,7 @@ func TestSegmentEngineDoesNotMutateTheStaticVocabulary(t *testing.T) {
 // deployment that never mounted the module, and every unit test, filters on core
 // fields exactly as before.
 func TestSegmentEngineWithoutACatalogServesCoreFields(t *testing.T) {
-	engine, ok, err := (&Store{}).SegmentEngine(context.Background(), "person")
+	engine, ok, err := (&Store{}).SegmentEngine(context.Background(), "contact")
 	if err != nil || !ok {
 		t.Fatalf("segmentEngine: ok=%v err=%v", ok, err)
 	}
@@ -430,7 +430,7 @@ func TestSegmentEngineWithoutACatalogServesCoreFields(t *testing.T) {
 func TestSegmentEngineReportsACatalogFailureAsItsOwn(t *testing.T) {
 	boom := errors.New("catalog unreachable")
 	store := (&Store{}).WithFieldCatalog(stubFilterable{err: boom})
-	_, _, err := store.SegmentEngine(context.Background(), "person")
+	_, _, err := store.SegmentEngine(context.Background(), "contact")
 	if !errors.Is(err, boom) {
 		t.Fatalf("err = %v, want the catalog's own error", err)
 	}
@@ -456,14 +456,14 @@ func TestSegmentEngineHasNoEngineForAnUnknownResource(t *testing.T) {
 // A catalogue row named after a core column is a Go-side convention violation
 // (cf_ prefixing), not a DDL impossibility — the merge has to survive one
 // without retyping the core field underneath it. owner_id is a real core
-// field on "person" (storekit.FieldID); a colliding catalogue entry typed
+// field on "contact" (storekit.FieldID); a colliding catalogue entry typed
 // text would otherwise replace it, admitting a substring operator against a
 // uuid column.
 func TestSegmentEngineCoreFieldWinsACatalogNameCollision(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {{Name: "owner_id", Type: fieldcatalog.TypeText}},
+		"contact": {{Name: "owner_id", Type: fieldcatalog.TypeText}},
 	}})
-	engine, ok, err := store.SegmentEngine(context.Background(), "person")
+	engine, ok, err := store.SegmentEngine(context.Background(), "contact")
 	if err != nil || !ok {
 		t.Fatalf("segmentEngine: ok=%v err=%v", ok, err)
 	}
@@ -524,13 +524,13 @@ func TestEveryCustomFieldTypeIsFilterable(t *testing.T) {
 // never name the field.
 func TestAnUnmappableCustomColumnCostsOnlyItself(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {
+		"contact": {
 			{Name: "cf_known", Type: fieldcatalog.TypeText},
 			{Name: "cf_from_the_future", Type: "geo"},
 		},
 	}})
 
-	engine, ok, err := store.SegmentEngine(context.Background(), "person")
+	engine, ok, err := store.SegmentEngine(context.Background(), "contact")
 
 	if err != nil || !ok {
 		t.Fatalf("one unmappable column broke the whole resolution: ok=%v err=%v", ok, err)
@@ -551,9 +551,9 @@ func TestAnUnmappableCustomColumnCostsOnlyItself(t *testing.T) {
 // says so, rather than quietly matching a different set of rows.
 func TestAPredicateOnAnOmittedColumnIsRefusedByName(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {{Name: "cf_from_the_future", Type: "geo"}},
+		"contact": {{Name: "cf_from_the_future", Type: "geo"}},
 	}})
-	engine, _, err := store.SegmentEngine(context.Background(), "person")
+	engine, _, err := store.SegmentEngine(context.Background(), "contact")
 	if err != nil {
 		t.Fatalf("segmentEngine: %v", err)
 	}
@@ -624,7 +624,7 @@ func TestStoringASegmentRefusesAPicklistValueTheFieldDoesNotHave(t *testing.T) {
 // stays permissive.
 func TestStoringASegmentRefusesAValueOutsideACustomPicklist(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {{
+		"contact": {{
 			Name: "cf_region", Type: fieldcatalog.TypePicklist,
 			Options: []string{"emea", "amer"},
 		}},
@@ -633,13 +633,13 @@ func TestStoringASegmentRefusesAValueOutsideACustomPicklist(t *testing.T) {
 		return map[string]any{"field": "cf_region", "op": "eq", "value": value}
 	}
 
-	err := store.validateSegmentDefinition(context.Background(), "person", definition("APAC"))
+	err := store.validateSegmentDefinition(context.Background(), "contact", definition("APAC"))
 	var refusal *storekit.PredicateError
 	if !errors.As(err, &refusal) || refusal.Code != "filter_value_invalid" {
 		t.Fatalf("storing a value outside a custom picklist = %v, want filter_value_invalid", err)
 	}
 	if err := store.validateSegmentDefinition(
-		context.Background(), "person", definition("emea")); err != nil {
+		context.Background(), "contact", definition("emea")); err != nil {
 		t.Errorf("storing one of the custom field's own values was refused: %v", err)
 	}
 }

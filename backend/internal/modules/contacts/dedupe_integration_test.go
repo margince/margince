@@ -1,0 +1,394 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package contacts
+
+// PO-F-1/PO-F-2 over a real migrated Postgres: the exact tier finds a
+// claimed email or company domain deterministically; the fuzzy tier scores
+// the spec's own worked examples to the decimal and lands them on the
+// right side of DEDUPE_REVIEW_THRESHOLD; a nameless candidate never
+// fuzzy-matches; and the trigram candidate restriction still admits the
+// pairs the formula must see.
+
+import (
+	"context"
+	"os"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+type dedupeEnv struct {
+	store *Store
+	ws    ids.UUID
+	rep   ids.UUID
+	// otherRep is a second human in the same workspace, seeded on first use by
+	// other(). Zero until a test asks for a colleague.
+	otherRep ids.UUID
+}
+
+func setupDedupe(t *testing.T) *dedupeEnv {
+	t.Helper()
+	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
+	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
+	if ownerDSN == "" || appDSN == "" {
+		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	}
+	ctx := context.Background()
+	owner, err := pgx.Connect(ctx, ownerDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing owner connection: %v", err)
+		}
+	})
+	// To head before anything else touches this database: testdb.Pool refuses
+	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
+	// cannot prove the database is a fresh lane clone — so a seed written
+	// before it would be dropped rather than reset.
+	if err := testdb.EnsureSchema(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
+	// Every test in this package seeds its own workspace into ONE database, so
+	// the separation between them has to be real: reset before seeding, as
+	// compose/integration's harness does.
+	if err := testdb.Reset(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
+
+	e := &dedupeEnv{ws: ids.NewV7(), rep: ids.NewV7()}
+	if _, err := owner.Exec(ctx,
+		`INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := owner.Exec(ctx,
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, e.rep, "rep-"+e.rep.String()+"@dd.test"); err != nil {
+		t.Fatal(err)
+	}
+	// A second human in the same workspace. Seeded here rather than on demand:
+	// a lazy insert would open a transaction inside whichever one the test was
+	// already running, and answer "conn busy".
+	e.otherRep = ids.NewV7()
+	if _, err := owner.Exec(ctx,
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Colleague')`, e.otherRep, "other-"+e.otherRep.String()+"@dd.test"); err != nil {
+		t.Fatal(err)
+	}
+
+	pool, err := testdb.Pool(ctx, appDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Registered where the pool is handed out, before the test adds any cleanup
+	// of its own, so it runs last and sees a package that has genuinely stopped.
+	// The pool outlives the test now, so a goroutine still holding a connection
+	// would go on writing into the database the NEXT test just reset.
+	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
+	return e
+}
+
+func (e *dedupeEnv) as() context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects: map[string]principal.ObjectGrant{
+				"contact":      {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true, Update: true},
+				"lead":         {Create: true, Read: true, Update: true},
+				"relationship": {Create: true, Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// seedEmployedContact creates a contact with the given email employed at a
+// fresh company that owns domain — the incumbent every case probes against.
+// openSignatureSource is a real inbound message for the apply path to read the
+// audience of.
+//
+// ApplySignatureFields re-tests its source at write time and fails closed on a
+// source it cannot find, because the fields it writes were read OUT of that
+// message: a missing one means writing content from a message that is gone onto
+// a contact every seat can read. A fixture handing it a fabricated id is
+// therefore describing a refusal, not the apply — so the fixtures seed the
+// message the production caller always has.
+func (e *dedupeEnv) openSignatureSource(ctx context.Context, t *testing.T) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, body, direction, occurred_at, source, captured_by, audience)
+			VALUES ($1, 'email', 'Regards, Dana | VP Finance', 'inbound', now(), 'gmail:seed', 'connector:gmail', 'workspace')`,
+			id)
+		return err
+	}); err != nil {
+		t.Fatalf("seed the signature source: %v", err)
+	}
+	return id
+}
+
+// agedSignatureSource is the same message dated a year back — a re-delivery, or
+// mail a connector backfilled long after it was sent. What it states is older
+// than what the record holds, so the pass must leave the record alone.
+func (e *dedupeEnv) agedSignatureSource(ctx context.Context, t *testing.T) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, body, direction, occurred_at, source, captured_by, audience)
+			VALUES ($1, 'email', 'Regards, Dana | VP Finance', 'inbound', now() - interval '365 days',
+			        'gmail:seed', 'connector:gmail', 'workspace')`,
+			id)
+		return err
+	}); err != nil {
+		t.Fatalf("seed the aged signature source: %v", err)
+	}
+	return id
+}
+
+func (e *dedupeEnv) seedEmployedContact(ctx context.Context, t *testing.T, name, email, companyName, domain string) (ids.ContactID, ids.CompanyID) {
+	t.Helper()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: companyName, Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: domain, IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("seed company %s: %v", companyName, err)
+	}
+	contact, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: name, Source: "manual",
+		Emails: []ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("seed contact %s: %v", name, err)
+	}
+	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	// Stated, not left to the store's own rule: this seed is about the contact
+	// HAVING a current employer, so it says so rather than relying on a
+	// derivation another test could change.
+	primary := true
+	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
+		IsCurrentPrimary: &primary, Source: "manual",
+	}); err != nil {
+		t.Fatalf("seed employment: %v", err)
+	}
+	return contactID, companyID
+}
+
+// dedupeInTx runs the resolver inside one workspace transaction, the way
+// every create-path caller will.
+func (e *dedupeEnv) dedupeInTx(ctx context.Context, t *testing.T, c ContactCandidate) ContactResolution {
+	t.Helper()
+	var m ContactResolution
+	err := e.store.tx(ctx, func(tx pgx.Tx) (err error) {
+		m, err = DedupeContact(ctx, tx, c)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("DedupeContact: %v", err)
+	}
+	return m
+}
+
+func (e *dedupeEnv) dedupeCompanyInTx(ctx context.Context, t *testing.T, c CompanyCandidate) CompanyMatch {
+	t.Helper()
+	var m CompanyMatch
+	err := e.store.tx(ctx, func(tx pgx.Tx) (err error) {
+		m, err = DedupeCompany(ctx, tx, c)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("DedupeCompany: %v", err)
+	}
+	return m
+}
+
+func TestDedupeContactExactTierFindsAClaimedEmail(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	janeID, _ := e.seedEmployedContact(ctx, t, "Jane Doe", "jane.doe@acme.test", "Acme GmbH", "acme.test")
+
+	// The spec's first worked example: a live email row already holds the
+	// address → EXACT_COLLISION + the existing id. No scoring runs, so the
+	// name being wildly different must not matter.
+	m := e.dedupeInTx(ctx, t, ContactCandidate{
+		FullName: "Completely Different", Emails: []string{"JANE.DOE@ACME.TEST"},
+	})
+	if m.Decision != DecisionExactCollision {
+		t.Fatalf("decision = %s, want exact_collision", m.Decision)
+	}
+	if m.ContactID != janeID {
+		t.Fatalf("matched %s, want the incumbent %s", m.ContactID, janeID)
+	}
+}
+
+func TestDedupeContactFuzzyTierReproducesTheSpecWorkedExamples(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	johnID, acmeID := e.seedEmployedContact(ctx, t, "John Doe", "john.doe@acme.test", "Acme GmbH", "acme.test")
+
+	t.Run("same employer queues for review at 0.982", func(t *testing.T) {
+		m := e.dedupeInTx(ctx, t, ContactCandidate{
+			FullName: "Jon Doe", Emails: []string{"j.doe@other.test"},
+			CurrentPrimaryCompanyID: &acmeID,
+		})
+		if m.Decision != DecisionFuzzyReview {
+			t.Fatalf("decision = %s (confidence %.4f), want fuzzy_review", m.Decision, m.Confidence)
+		}
+		if m.ContactID != johnID {
+			t.Fatalf("matched %s, want %s", m.ContactID, johnID)
+		}
+		if !closeToPrinted(m.Confidence, 0.982) {
+			t.Fatalf("confidence = %.4f, spec pins 0.982", m.Confidence)
+		}
+	})
+
+	t.Run("shared email domain scores the 0.8 tier and still queues", func(t *testing.T) {
+		// No employer known for the candidate, but the address sits on
+		// acme.test, which the incumbent's company owns:
+		// 0.55·0.9667 + 0.45·0.8 = 0.8917 ≥ 0.72.
+		m := e.dedupeInTx(ctx, t, ContactCandidate{
+			FullName: "Jon Doe", Emails: []string{"jon@acme.test"},
+		})
+		if m.Decision != DecisionFuzzyReview {
+			t.Fatalf("decision = %s (confidence %.4f), want fuzzy_review", m.Decision, m.Confidence)
+		}
+		if !closeToPrinted(m.Confidence, 0.8917) {
+			t.Fatalf("confidence = %.4f, want 0.8917 (name 0.9667 × 0.55 + domain 0.8 × 0.45)", m.Confidence)
+		}
+	})
+
+	t.Run("different employer creates at 0.532", func(t *testing.T) {
+		// The spec's example: Jon Doe at Globex vs John Doe at Acme, and
+		// nobody else at Globex — an employee there would join the
+		// candidate set with the company_match = 1.0 boost and change the case.
+		globex, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+			DisplayName: "Globex AG", Source: "manual",
+			Domains: []CompanyDomainInput{{Domain: "globex.test", IsPrimary: true}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		globexID := ids.From[ids.CompanyKind](ids.UUID(globex.Id))
+		m := e.dedupeInTx(ctx, t, ContactCandidate{
+			FullName: "Jon Doe", Emails: []string{"jon@nowhere.test"},
+			CurrentPrimaryCompanyID: &globexID,
+		})
+		if m.Decision != DecisionNoMatch {
+			t.Fatalf("decision = %s (confidence %.4f), want no_match — the spec creates here", m.Decision, m.Confidence)
+		}
+	})
+}
+
+func TestDedupeContactNamelessCandidateNeverFuzzyMatches(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	_, acmeID := e.seedEmployedContact(ctx, t, "John Doe", "john@nameless.test", "Nameless GmbH", "nameless.test")
+
+	// PO-F-1 edge case: empty name → fuzzy tier skipped, exact-email only.
+	// Sharing the employer must not conjure a match from company_match alone.
+	m := e.dedupeInTx(ctx, t, ContactCandidate{
+		FullName: "  ", Emails: []string{"unknown@elsewhere.test"},
+		CurrentPrimaryCompanyID: &acmeID,
+	})
+	if m.Decision != DecisionNoMatch {
+		t.Fatalf("decision = %s, want no_match — a nameless captured contact never fuzzy-matches", m.Decision)
+	}
+}
+
+func TestDedupeCompanyExactTierFindsAClaimedDomain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Initech GmbH", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "initech.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The capture employer-inference path: a domain hit lands on the
+	// existing company regardless of what the sender calls the company.
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
+		DisplayName: "Some Other Spelling", Domains: []string{"INITECH.TEST"},
+	})
+	if m.Decision != DecisionExactCollision {
+		t.Fatalf("decision = %s, want exact_collision", m.Decision)
+	}
+	if ids.UUID(company.Id) != m.CompanyID.UUID {
+		t.Fatalf("matched %s, want %s", m.CompanyID, company.Id)
+	}
+}
+
+func TestDedupeCompanyFuzzyTierMeetsAcrossLegalSuffixes(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Wayne Enterprises GmbH", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "wayne.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// PO-F-2's worked example shape: same name, different legal suffix,
+	// no shared domain → normalize-equal → 1.0 → 🟡 review, never a merge.
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
+		DisplayName: "Wayne Enterprises Inc", Domains: []string{"wayne-us.test"},
+	})
+	if m.Decision != DecisionFuzzyReview {
+		t.Fatalf("decision = %s (confidence %.4f), want fuzzy_review", m.Decision, m.Confidence)
+	}
+	if ids.UUID(company.Id) != m.CompanyID.UUID {
+		t.Fatalf("matched %s, want %s", m.CompanyID, company.Id)
+	}
+	if m.Confidence != 1 {
+		t.Fatalf("confidence = %.4f, want an exact 1.0 after suffix normalization", m.Confidence)
+	}
+
+	// And a genuinely unrelated name creates.
+	unrelated := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
+		DisplayName: "Zorbatron Heavy Industry", Domains: []string{"zorbatron.test"},
+	})
+	if unrelated.Decision != DecisionNoMatch {
+		t.Fatalf("decision = %s, want no_match", unrelated.Decision)
+	}
+}
+
+// asOther is a SECOND human in the same workspace, with the same grants and the
+// same row scope. It exists for the one thing a single identity cannot show:
+// that owner-private capture holds even against a colleague who may read
+// everything the row scope admits.
+func (e *dedupeEnv) asOther() context.Context {
+	other := e.otherRep
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + other.String(), UserID: other,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects: map[string]principal.ObjectGrant{
+				"contact":      {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true, Update: true},
+				"lead":         {Create: true, Read: true, Update: true},
+				"relationship": {Create: true, Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}

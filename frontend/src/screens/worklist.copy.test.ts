@@ -103,13 +103,13 @@ function replyRow(subject: { type: string; id: string } | undefined) {
 }
 
 describe("moveHref — the draft_reply move", () => {
-  // The composer lives on the person page and drafts to the person. A link
+  // The composer lives on the contact page and drafts to the contact. A link
   // asking for it there is a link that does what its label says.
-  it("opens the composer on a person's record", () => {
-    const href = moveHref(replyRow({ type: "person", id: "p-1" }));
+  it("opens the composer on a contact's record", () => {
+    const href = moveHref(replyRow({ type: "contact", id: "p-1" }));
     expect(href).toContain("#/contacts/p-1");
     expect(href).toContain("compose=reply");
-    expect(moveOpensComposer(replyRow({ type: "person", id: "p-1" }))).toBe(
+    expect(moveOpensComposer(replyRow({ type: "contact", id: "p-1" }))).toBe(
       true,
     );
   });
@@ -125,11 +125,11 @@ describe("moveHref — the draft_reply move", () => {
     }
   });
 
-  // WHICH message, not just which person. A contact reachable two ways would
+  // WHICH message, not just which contact. A contact reachable two ways would
   // otherwise have the reply drafted into whichever they lead with — the reason
   // this link returned a bare record href until the composer could honour it.
   it("names the message the row is about", () => {
-    const href = moveHref(replyRow({ type: "person", id: "p-1" }));
+    const href = moveHref(replyRow({ type: "contact", id: "p-1" }));
     expect(href).toContain("thread=a-1");
   });
 
@@ -138,7 +138,7 @@ describe("moveHref — the draft_reply move", () => {
   // it on something the reader is not answering.
   it("names no thread for a move that opens a conversation", () => {
     const fresh = {
-      ...replyRow({ type: "person", id: "p-1" }),
+      ...replyRow({ type: "contact", id: "p-1" }),
       move: { action: "draft_email" },
     } as unknown as WorklistItem;
     expect(moveHref(fresh)).toContain("compose=reply");
@@ -153,7 +153,7 @@ describe("moveHref — the draft_reply move", () => {
   // pressable with nothing behind it.
   it("offers no move where the row suggests no step", () => {
     const noMove = {
-      ...replyRow({ type: "person", id: "p-1" }),
+      ...replyRow({ type: "contact", id: "p-1" }),
       move: undefined,
     };
     expect(moveHref(noMove as unknown as WorklistItem)).toBeUndefined();
@@ -172,7 +172,7 @@ describe("moveHref — the draft_reply move", () => {
 // names the message it answers — that is what makes it a reply — and the other
 // verbs name whatever their own operand is, or nothing.
 function movingRow(action: string, activityId?: string) {
-  const row = replyRow({ type: "person", id: "p-1" }) as unknown as {
+  const row = replyRow({ type: "contact", id: "p-1" }) as unknown as {
     move: unknown;
   };
   const move =
@@ -184,7 +184,7 @@ function movingRow(action: string, activityId?: string) {
 
 describe("the verbs the row can and cannot take a reader to", () => {
   // A first outreach reaches the same composer a reply does — the composer
-  // picks its own transport from the person, so the address is the same.
+  // picks its own transport from the contact, so the address is the same.
   it("opens the composer for a fresh message too", () => {
     const item = movingRow("draft_email");
     expect(moveHref(item)).toContain("compose=");
@@ -224,7 +224,7 @@ describe("the verbs the row can and cannot take a reader to", () => {
   //
   // `open_meeting_brief` was on this list and no longer is. It reads as a
   // drawer, so it looked unaddressable — but the way IN is an address: the
-  // brief opens as `?prep=<activity>` on a person's record. It is covered by
+  // brief opens as `?prep=<activity>` on a contact's record. It is covered by
   // its own describe block below, including the case where the row names
   // nobody and correctly draws nothing.
   it("draws no link for a verb no address can perform", () => {
@@ -439,10 +439,10 @@ describe("an unavailable source", () => {
 });
 
 // The brief is not a page of its own: it opens as `?prep=<activity>` on a
-// PERSON's record, so the address needs both ids and the row's subject — the
+// CONTACT's record, so the address needs both ids and the row's subject — the
 // meeting — carries only one.
 describe("the open_meeting_brief move", () => {
-  it("opens the brief on the person the meeting names", () => {
+  it("opens the brief on the contact the meeting names", () => {
     const href = moveHref(briefRow("p-9"));
     expect(href).toContain("#/contacts/p-9");
     expect(href).toContain("prep=a-7");
@@ -470,7 +470,7 @@ describe("the open_meeting_brief move", () => {
   });
 });
 
-function briefRow(withPerson: string | undefined) {
+function briefRow(withContact: string | undefined) {
   return {
     id: "m1",
     source: "meeting",
@@ -481,7 +481,7 @@ function briefRow(withPerson: string | undefined) {
     dispositions: [],
     overdue: false,
     subject: { type: "activity", id: "a-7" },
-    with_person: withPerson,
+    with_contact: withContact,
     move: { action: "open_meeting_brief", activity_id: "a-7" },
   } as unknown as WorklistItem;
 }
@@ -499,7 +499,7 @@ describe("moveHref — the reconnect move", () => {
       title: "Marta Feld",
       because: [],
       actions: ["open", "dismiss"],
-      subject: { type: "person", id: "p-9" },
+      subject: { type: "contact", id: "p-9" },
       move: { action: "draft_email" },
     } as unknown as WorklistItem;
 

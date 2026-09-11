@@ -29,13 +29,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// personIncumbentFixture is one plausible HubSpot contact, in the INCUMBENT's
+// contactIncumbentFixture is one plausible HubSpot contact, in the INCUMBENT's
 // own property vocabulary — the only vocabulary this gate hand-writes. Every
-// property a mapped person binding names is present, and each value is
+// property a mapped contact binding names is present, and each value is
 // distinguishable from what the wire assembles for a record that carries
 // nothing, which is what lets a dropped pick be told apart from a fallback
 // standing in for it.
-func personIncumbentFixture() map[string]any {
+func contactIncumbentFixture() map[string]any {
 	return map[string]any{
 		"hs_object_id":     "100214862042",
 		"firstname":        "Ada",
@@ -54,7 +54,7 @@ func personIncumbentFixture() map[string]any {
 	}
 }
 
-// companyIncumbentFixture is personIncumbentFixture's counterpart for a
+// companyIncumbentFixture is contactIncumbentFixture's counterpart for a
 // HubSpot company, held to the same two obligations: every property a mapped
 // company binding names is present, and no value coincides with what the
 // unmirrored assembly produces for that slot ("Unnamed", the mirror's own sync
@@ -76,18 +76,18 @@ func companyIncumbentFixture() map[string]any {
 	}
 }
 
-func TestEveryMappedPersonBindingReachesItsWireSlot(t *testing.T) {
-	entity, ok := overlay.BindingsFor("person")
+func TestEveryMappedContactBindingReachesItsWireSlot(t *testing.T) {
+	entity, ok := overlay.BindingsFor("contact")
 	if !ok {
-		t.Fatal("the registry declares no person bindings; the source this gate derives from has moved")
+		t.Fatal("the registry declares no contact bindings; the source this gate derives from has moved")
 	}
-	incumbent := personIncumbentFixture()
-	canonical := canonicalFromMapping(t, "contacts", "personIncumbentFixture", incumbent)
-	mirrored, unmirrored := wireBodyPair(t, datasource.EntityPerson, canonical, overlayWirePerson)
+	incumbent := contactIncumbentFixture()
+	canonical := canonicalFromMapping(t, "contacts", "contactIncumbentFixture", incumbent)
+	mirrored, unmirrored := wireBodyPair(t, datasource.EntityContact, canonical, overlayWireContact)
 	wireGate{
 		entity:    entity,
-		assembler: "overlayWirePerson",
-		fixture:   "personIncumbentFixture",
+		assembler: "overlayWireContact",
+		fixture:   "contactIncumbentFixture",
 		incumbent: incumbent, canonical: canonical,
 		mirrored: mirrored, unmirrored: unmirrored,
 	}.check(t)
@@ -112,8 +112,8 @@ func TestEveryMappedCompanyBindingReachesItsWireSlot(t *testing.T) {
 
 // wireGate is one entity's inputs to the shared reachability check. The
 // assembler and the fixture are carried by name so that one shared check still
-// fails with the entity's OWN address in the message: a person failure names
-// overlayWirePerson and personIncumbentFixture, never "the wire".
+// fails with the entity's OWN address in the message: a contact failure names
+// overlayWireContact and contactIncumbentFixture, never "the wire".
 type wireGate struct {
 	entity     overlay.EntityBinding
 	assembler  string

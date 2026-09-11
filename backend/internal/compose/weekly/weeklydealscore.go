@@ -117,11 +117,11 @@ const dealScoreSQL = `
 		                  AND task.done_at < $%[2]d))),
 		  (SELECT count(*) FROM open_deals),
 		  (SELECT count(*) FROM open_deals o
-		    WHERE (SELECT count(DISTINCT pl.person_id)
+		    WHERE (SELECT count(DISTINCT pl.contact_id)
 		             FROM activity_link dl
 		             JOIN activity act ON act.id = dl.activity_id
 		             JOIN activity_link pl ON pl.activity_id = dl.activity_id
-		            WHERE dl.deal_id = o.id AND pl.person_id IS NOT NULL
+		            WHERE dl.deal_id = o.id AND pl.contact_id IS NOT NULL
 		              AND act.archived_at IS NULL
 		              -- BOUNDED AT BOTH ENDS. The lower bound is the 30-day
 		              -- coverage window; the upper is the cutoff, without which

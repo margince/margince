@@ -27,7 +27,7 @@ import "./choicelist.css";
  *    and bold. Right for short labels that name a view. Wrong the moment an
  *    option is a sentence.
  *  - **`Switch`** is one thing on or off. An either/or where BOTH sides need
- *    naming is not that: "everyone except the people I leave out" has no
+ *    naming is not that: "everyone except the contacts I leave out" has no
  *    off-state a reader could infer.
  *
  * `description` is part of the LABEL, not a sibling — which is deliberate, and

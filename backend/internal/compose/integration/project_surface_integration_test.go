@@ -7,7 +7,7 @@ package integration
 
 // Projects on the relationship surfaces, and a draft attributed to one at
 // composition. The two record pages list the bodies of work a company
-// carries and a person is part of; a draft that names one is grounded in the
+// carries and a contact is part of; a draft that names one is grounded in the
 // page SCOPED to it, so the other project's correspondence never reaches the
 // model; and the context walk an agent catches up from reports the projects
 // an account's mail is filed under.
@@ -20,12 +20,12 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/company360"
-	"github.com/margince/margince/backend/internal/compose/person360"
-	"github.com/margince/margince/backend/internal/compose/persondraft"
+	"github.com/margince/margince/backend/internal/compose/contact360"
+	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -35,7 +35,7 @@ import (
 )
 
 func companySurfaceService(e *Env) *company360.Service {
-	return company360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()),
+	return company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return roomFixedNow })
 }
 
@@ -55,15 +55,15 @@ func projectKeys(projects *[]crmcontracts.Company360Project) map[string]crmcontr
 }
 
 // employAtAccount makes the fixture's contact a current employee of the
-// fixture's company, which is what puts them on the company page's people
-// section — the drafter's recipient lookup — and gives the person page an
+// fixture's company, which is what puts them on the company page's contacts
+// section — the drafter's recipient lookup — and gives the contact page an
 // employer whose projects are theirs.
 func employAtAccount(t *testing.T, e *Env, f scopeFixture) {
 	t.Helper()
-	personID, companyID := PersonIDOf(f.person), companyIDOf(f.company)
+	contactID, companyID := ContactIDOf(f.contact), companyIDOf(f.company)
 	primary := true
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, CompanyID: &companyID, IsCurrentPrimary: &primary,
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID, IsCurrentPrimary: &primary,
 	}); err != nil {
 		t.Fatalf("employing the contact: %v", err)
 	}
@@ -122,15 +122,15 @@ func TestBothPagesNameTheProjectsSectionWhenTheCallerLacksTheGrant(t *testing.T)
 		t.Errorf("company page sections_omitted = %v, want projects named", companyPage.SectionsOmitted)
 	}
 
-	personPage, err := personRoomService(e).Assemble(noProjectGrant, PersonIDOf(f.person))
+	contactPage, err := contactRoomService(e).Assemble(noProjectGrant, ContactIDOf(f.contact))
 	if err != nil {
-		t.Fatalf("assemble person page: %v", err)
+		t.Fatalf("assemble contact page: %v", err)
 	}
-	if personPage.Projects != nil {
-		t.Error("the person page served projects to a caller with no project grant")
+	if contactPage.Projects != nil {
+		t.Error("the contact page served projects to a caller with no project grant")
 	}
-	if !containsPersonSection(personPage.SectionsOmitted, crmcontracts.Person360SectionsOmittedPerson360SectionsOmittedProjects) {
-		t.Errorf("person page sections_omitted = %v, want projects named", personPage.SectionsOmitted)
+	if !containsContactSection(contactPage.SectionsOmitted, crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedProjects) {
+		t.Errorf("contact page sections_omitted = %v, want projects named", contactPage.SectionsOmitted)
 	}
 }
 
@@ -143,7 +143,7 @@ func containsCompanySection(names []crmcontracts.Company360SectionsOmitted, want
 	return false
 }
 
-func containsPersonSection(names []crmcontracts.Person360SectionsOmitted, want crmcontracts.Person360SectionsOmitted) bool {
+func containsContactSection(names []crmcontracts.Contact360SectionsOmitted, want crmcontracts.Contact360SectionsOmitted) bool {
 	for _, name := range names {
 		if name == want {
 			return true
@@ -152,30 +152,30 @@ func containsPersonSection(names []crmcontracts.Person360SectionsOmitted, want c
 	return false
 }
 
-// A person is part of a project through a seat on it, or through the company
+// A contact is part of a project through a seat on it, or through the company
 // they work for today. The two routes are proved separately: a seat alone
 // names one project, and employment then brings the employer's other one —
 // without a second row for the project both routes reach.
-func TestPerson360ListsTheProjectsAPersonIsPartOf(t *testing.T) {
+func TestContact360ListsTheProjectsAContactIsPartOf(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
-	svc := personRoomService(e)
-	personID := PersonIDOf(f.person)
+	svc := contactRoomService(e)
+	contactID := ContactIDOf(f.contact)
 
-	before, err := svc.Assemble(e.Admin(), personID)
+	before, err := svc.Assemble(e.Admin(), contactID)
 	if err != nil {
 		t.Fatalf("assemble before any tie: %v", err)
 	}
 	if before.Projects == nil || len(*before.Projects) != 0 {
-		t.Fatalf("a person with no seat and no employer lists projects = %v, want an empty section", before.Projects)
+		t.Fatalf("a contact with no seat and no employer lists projects = %v, want an empty section", before.Projects)
 	}
 
-	if _, err := e.People.SetProjectStakeholder(e.Admin(), people.SetProjectStakeholderInput{
-		ProjectID: f.erp, PersonID: personID, Role: "sponsor",
+	if _, err := e.Contacts.SetProjectStakeholder(e.Admin(), contacts.SetProjectStakeholderInput{
+		ProjectID: f.erp, ContactID: contactID, Role: "sponsor",
 	}); err != nil {
 		t.Fatalf("seating the contact on the ERP project: %v", err)
 	}
-	seated, err := svc.Assemble(e.Admin(), personID)
+	seated, err := svc.Assemble(e.Admin(), contactID)
 	if err != nil {
 		t.Fatalf("assemble with a seat: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestPerson360ListsTheProjectsAPersonIsPartOf(t *testing.T) {
 	}
 
 	employAtAccount(t, e, f)
-	employed, err := svc.Assemble(e.Admin(), personID)
+	employed, err := svc.Assemble(e.Admin(), contactID)
 	if err != nil {
 		t.Fatalf("assemble with an employer: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestPerson360ListsTheProjectsAPersonIsPartOf(t *testing.T) {
 	}
 	keys := projectKeys(employed.Projects)
 	if keys[f.otherKey].Name == "" {
-		t.Error("the employer's other project is missing from the person page")
+		t.Error("the employer's other project is missing from the contact page")
 	}
 }
 
@@ -207,7 +207,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 	f := seedTwoEngagementAccount(t, e)
 	employAtAccount(t, e, f)
 	svc := companySurfaceService(e)
-	req := accountdraft.Request{PersonID: f.person.String(), ProjectID: &f.erp}
+	req := accountdraft.Request{ContactID: f.contact.String(), ProjectID: &f.erp}
 
 	scoped, err := svc.AssembleScoped(e.Admin(), companyIDOf(f.company), company360.AssembleOptions{ProjectID: &f.erp})
 	if err != nil {
@@ -238,7 +238,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 	if err != nil {
 		t.Fatalf("assemble unscoped: %v", err)
 	}
-	unscoped, err := accountdraft.FromView(wide, accountdraft.Request{PersonID: f.person.String()})
+	unscoped, err := accountdraft.FromView(wide, accountdraft.Request{ContactID: f.contact.String()})
 	if err != nil {
 		t.Fatalf("fold the unscoped view: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 		t.Fatalf("create the other company's project: %v", err)
 	}
 	foreignID := projectIDOf(ids.UUID(foreign.Id))
-	_, err = draft.Draft(e.Admin(), companyIDOf(f.company), accountdraft.Request{PersonID: f.person.String(), ProjectID: &foreignID})
+	_, err = draft.Draft(e.Admin(), companyIDOf(f.company), accountdraft.Request{ContactID: f.contact.String(), ProjectID: &foreignID})
 	var detailed *httperr.DetailedError
 	if !errors.As(err, &detailed) || detailed.Status != 422 {
 		t.Errorf("draft scoped to another company's project: err = %v, want a 422 naming project_id", err)
@@ -276,19 +276,19 @@ func recentAccountIDs(recent []accountdraft.ActIn) map[string]bool {
 	return out
 }
 
-// The person drafter's mirror of the account case.
-func TestPersonDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
+// The contact drafter's mirror of the account case.
+func TestContactDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	employAtAccount(t, e, f)
-	svc := personRoomService(e)
-	personID := PersonIDOf(f.person)
+	svc := contactRoomService(e)
+	contactID := ContactIDOf(f.contact)
 
-	scoped, err := svc.AssembleScoped(e.Admin(), personID, person360.AssembleOptions{ProjectID: &f.erp})
+	scoped, err := svc.AssembleScoped(e.Admin(), contactID, contact360.AssembleOptions{ProjectID: &f.erp})
 	if err != nil {
 		t.Fatalf("assemble scoped: %v", err)
 	}
-	in := persondraft.FromView(scoped, persondraft.Request{ProjectID: &f.erp})
+	in := contactdraft.FromView(scoped, contactdraft.Request{ProjectID: &f.erp})
 	recent := map[string]bool{}
 	for _, act := range in.Recent {
 		recent[act.ID] = true
@@ -303,20 +303,20 @@ func TestPersonDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 		t.Fatalf("project fact = %+v, want %s folded in", in.Project, f.erpKey)
 	}
 
-	wide, err := svc.Assemble(e.Admin(), personID)
+	wide, err := svc.Assemble(e.Admin(), contactID)
 	if err != nil {
 		t.Fatalf("assemble unscoped: %v", err)
 	}
 	unscopedRecent := map[string]bool{}
-	for _, act := range persondraft.FromView(wide, persondraft.Request{}).Recent {
+	for _, act := range contactdraft.FromView(wide, contactdraft.Request{}).Recent {
 		unscopedRecent[act.ID] = true
 	}
 	if !unscopedRecent[f.onOther] {
 		t.Error("an unscoped fold lost the other engagement's mail, so the scoped absence proves nothing")
 	}
 
-	if _, err := persondraft.NewService(svc, nil).Draft(e.Admin(), personID, persondraft.Request{ProjectID: &f.erp}); err != nil {
-		t.Fatalf("draft scoped to a project the person is part of: %v", err)
+	if _, err := contactdraft.NewService(svc, nil).Draft(e.Admin(), contactID, contactdraft.Request{ProjectID: &f.erp}); err != nil {
+		t.Fatalf("draft scoped to a project the contact is part of: %v", err)
 	}
 }
 
@@ -351,29 +351,29 @@ func TestAssembledContextOnTheAccountReportsRelatedProjects(t *testing.T) {
 	}
 }
 
-// The composer's send path files a message under a person AND a project in
+// The composer's send path files a message under a contact AND a project in
 // one create, and the retention evidence that makes it business
 // correspondence lands in the same transaction.
-func TestLoggingAnActivityWithAPersonAndAProjectLinkWritesBothAndTheEvidence(t *testing.T) {
+func TestLoggingAnActivityWithAContactAndAProjectLinkWritesBothAndTheEvidence(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	subject := "Cutover date confirmed"
 	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "email", Direction: strPtr("outbound"), Subject: &subject,
 		Links: []activities.ActivityLinkInput{
-			{EntityType: "person", EntityID: f.person},
+			{EntityType: "contact", EntityID: f.contact},
 			{EntityType: "project", EntityID: f.erp.UUID},
 		},
 	})
 	if err != nil {
-		t.Fatalf("log with a person and a project link: %v", err)
+		t.Fatalf("log with a contact and a project link: %v", err)
 	}
 	activityID := ids.UUID(logged.Id)
 
-	personLinks := countLinks(t, e, activityID, "person_id", f.person)
+	contactLinks := countLinks(t, e, activityID, "contact_id", f.contact)
 	projectLinks := countLinks(t, e, activityID, "project_id", f.erp.UUID)
-	if personLinks != 1 || projectLinks != 1 {
-		t.Errorf("links: person = %d, project = %d, want one of each", personLinks, projectLinks)
+	if contactLinks != 1 || projectLinks != 1 {
+		t.Errorf("links: contact = %d, project = %d, want one of each", contactLinks, projectLinks)
 	}
 	stamp := readProjectStamp(t, e, activityID)
 	if stamp.evidence != 1 || stamp.class == nil || *stamp.class != "commercial_correspondence" {
@@ -394,16 +394,16 @@ func countLinks(t *testing.T, e *Env, activityID ids.UUID, column string, target
 
 // The employment route is an EDGE read, bounded like the seat route: a rep
 // whose relationship scope excludes the employer's company may not learn that
-// company's projects through the person who works there. The admit case runs
+// company's projects through the contact who works there. The admit case runs
 // first, so the refusal below cannot pass against a read that admits nobody.
-func TestPerson360WithholdsTheEmployersProjectWhenTheEmploymentEdgeIsOutOfScope(t *testing.T) {
+func TestContact360WithholdsTheEmployersProjectWhenTheEmploymentEdgeIsOutOfScope(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	employAtAccount(t, e, f)
-	svc := personRoomService(e)
+	svc := contactRoomService(e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
 
-	admitted, err := svc.Assemble(rep, PersonIDOf(f.person))
+	admitted, err := svc.Assemble(rep, ContactIDOf(f.contact))
 	if err != nil {
 		t.Fatalf("assemble with the employer in scope: %v", err)
 	}
@@ -412,7 +412,7 @@ func TestPerson360WithholdsTheEmployersProjectWhenTheEmploymentEdgeIsOutOfScope(
 	}
 
 	e.MakeCapturePrivate(t, "company", f.company, e.Rep3)
-	withheld, err := svc.Assemble(rep, PersonIDOf(f.person))
+	withheld, err := svc.Assemble(rep, ContactIDOf(f.contact))
 	if err != nil {
 		t.Fatalf("assemble with the employer out of scope: %v", err)
 	}

@@ -44,7 +44,7 @@ type anchorArgs struct {
 }
 
 const anchorSchema = `{"type":"object","required":["record_type","record_id"],"properties":{
-	"record_type":{"type":"string","enum":["person","company","deal","lead","project","activity"]},
+	"record_type":{"type":"string","enum":["contact","company","deal","lead","project","activity"]},
 	"record_id":{"type":"string","format":"uuid"},
 	"max_items":{"type":"integer","minimum":1,"maximum":20},
 	"project_id":{"type":"string","format":"uuid","description":"Keep only what is filed under this project or under none"}},
@@ -92,7 +92,7 @@ func assembledContext(ctx context.Context, assembled retrieval.Context) Assemble
 				RecordType: item.Ref.Type, RecordID: item.Ref.ID,
 				Summary: item.Summary, Evidence: evidence,
 			}
-			// Only for something that HAPPENED. A person has no date, and a
+			// Only for something that HAPPENED. A contact has no date, and a
 			// zero one would read as 0001-01-01 rather than as absent.
 			if !item.OccurredAt.IsZero() {
 				at := item.OccurredAt
@@ -119,7 +119,7 @@ func (t catchMeUpOn) Spec() mcp.ToolSpec {
 		Name: "catch_me_up_on", Title: "Catch me up on a record", Version: toolVersionV1,
 		Description:   catchMeUpOnCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp:    "getPerson/getCompany/getDeal + listActivities",
+		OpenAPIOp:    "getContact/getCompany/getDeal + listActivities",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[AssembledContextResult](),
 	}
@@ -143,7 +143,7 @@ func (t catchMeUpOn) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 
 type prepForMeeting struct {
 	retriever retrieval.Retriever
-	// brief is the person page's own assembler. Nil is a wiring the tool
+	// brief is the contact page's own assembler. Nil is a wiring the tool
 	// survives rather than refuses: an installation without it answers the
 	// assembled picture, which is what this tool has always returned, instead
 	// of losing a read it can still perform.
@@ -155,7 +155,7 @@ func (t prepForMeeting) Spec() mcp.ToolSpec {
 		Name: "prep_for_meeting", Title: "Prepare for a meeting", Version: toolVersionV1,
 		Description:   prepForMeetingCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp:    "getMeetingBrief | getPerson/getCompany/getDeal + listActivities",
+		OpenAPIOp:    "getMeetingBrief | getContact/getCompany/getDeal + listActivities",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[PrepForMeetingResult](),
 	}

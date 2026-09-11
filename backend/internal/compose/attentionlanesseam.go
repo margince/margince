@@ -9,7 +9,7 @@ package compose
 // exists), and its seam stays compiled here for that rebinding.
 //
 // Each is a binding rather than an implementation, which is the point: the
-// promises come from the people module's claim read, the deal risk from the
+// promises come from the contacts module's claim read, the deal risk from the
 // same candidate engine whats_slipping_this_week reads, and the meetings from
 // the activities list every other activity surface reads. A lane that derived
 // its own answer here would be a second opinion the product would have to keep
@@ -30,8 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -41,15 +41,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// attentionCommitments reads the acting rep's own promises through the people
+// attentionCommitments reads the acting rep's own promises through the contacts
 // store.
 //
-// A claim carries no assignee, so ownership rides the person it was made to:
+// A claim carries no assignee, so ownership rides the contact it was made to:
 // the rep who holds the relationship is the one who made the promise in their
 // own captured conversation. A principal with no human behind it has no
 // promises of its own to keep, which is a refusal rather than an empty lane —
 // the feed omits and NAMES the lane instead of reporting a clear day.
-type attentionCommitments struct{ store *people.Store }
+type attentionCommitments struct{ store *contacts.Store }
 
 var _ attention.Commitments = attentionCommitments{}
 
@@ -66,7 +66,7 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 	for _, row := range due {
 		promises = append(promises, attention.Commitment{
 			ID:          row.ID,
-			PersonID:    row.PersonID.UUID,
+			ContactID:   row.ContactID.UUID,
 			Body:        row.Body,
 			Quote:       row.SourceQuote,
 			SourceLabel: row.SourceLabel,
@@ -139,7 +139,7 @@ func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
 // It is a bound on WORK, not a display cap: the projection answers "whose
 // silence is oldest" cheaply over an index, and the §4 derivation that follows
 // costs a pass over each candidate's interactions. Capping between the two is
-// what keeps the lane from becoming the walk over every person that the change
+// what keeps the lane from becoming the walk over every contact that the change
 // engine warns against, and the oldest silences are the ones worth the passes.
 const decayCandidateCap = 40
 
@@ -152,7 +152,7 @@ const decayLaneCap = 5
 //
 // TWO steps, and the order is the design. The projection narrows to the
 // reader's own edges that have been silent past the §4 threshold — one indexed
-// range rather than a sweep. Only then does the people module derive what
+// range rather than a sweep. Only then does the contacts module derive what
 // actually changed about those few, through the SAME engine the contact's own
 // page reads, so the lane and that page cannot come to disagree about when
 // somebody went quiet.
@@ -162,7 +162,7 @@ const decayLaneCap = 5
 // of reporting a clear day. Same rule the commitments lane keeps.
 type attentionDecay struct {
 	pool  *pgxpool.Pool
-	store *people.Store
+	store *contacts.Store
 	now   func() time.Time
 }
 
@@ -182,10 +182,10 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 			now.AddDate(0, 0, -relstrength.QuietDays),
 			decayCandidateCap,
 			// Contacts this reader set aside, removed BEFORE the cap. The
-			// people module owns the rows and renders the predicate; search
+			// contacts module owns the rows and renders the predicate; search
 			// never imports a sibling, so the projection takes it as a hole.
 			func(arg func(any) int) (string, error) {
-				dismissed, err := people.NotDismissedClause(ctx, "e", now, arg)
+				dismissed, err := contacts.NotDismissedClause(ctx, "e", now, arg)
 				if err != nil {
 					return "", err
 				}
@@ -209,11 +209,11 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 		if err != nil {
 			return err
 		}
-		candidates := make([]ids.PersonID, 0, len(quiet))
+		candidates := make([]ids.ContactID, 0, len(quiet))
 		for _, edge := range quiet {
-			candidates = append(candidates, ids.From[ids.PersonKind](edge.PersonID))
+			candidates = append(candidates, ids.From[ids.ContactKind](edge.ContactID))
 		}
-		changed, err := d.store.RelationshipChangesForPeople(ctx, tx, candidates, now)
+		changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now)
 		if err != nil {
 			return err
 		}
@@ -227,7 +227,7 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 		// silence is one fact on that answer, not the answer: failing here
 		// would take a rep's whole decay lane away over a grant that governs
 		// something else. They lose the ranking bump and keep the row.
-		funded, err := deals.OpenDealPeople(ctx, tx, candidates)
+		funded, err := deals.OpenDealContacts(ctx, tx, candidates)
 		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return err
 		}
@@ -254,17 +254,17 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 // contact on top.
 func quietRelationships(
 	quiet []search.InteractionEdge,
-	changed []people.PersonChanges,
+	changed []contacts.ContactChanges,
 	funded map[ids.UUID]bool,
 	now time.Time,
 ) []attention.QuietRelationship {
-	byPerson := make(map[ids.UUID]people.PersonChanges, len(changed))
+	byContact := make(map[ids.UUID]contacts.ContactChanges, len(changed))
 	for _, row := range changed {
-		byPerson[row.PersonID.UUID] = row
+		byContact[row.ContactID.UUID] = row
 	}
 	lapsed := make([]attention.QuietRelationship, 0, len(changed))
 	for _, edge := range quiet {
-		row, ok := byPerson[edge.PersonID]
+		row, ok := byContact[edge.ContactID]
 		if !ok {
 			continue
 		}
@@ -287,12 +287,12 @@ func quietRelationships(
 			// own page answer from the same arithmetic at the same moment,
 			// which is the property §4 is pure for.
 			lapsed = append(lapsed, attention.QuietRelationship{
-				PersonID:    row.PersonID.UUID,
+				ContactID:   row.ContactID.UUID,
 				Name:        row.DisplayName,
 				QuietDays:   change.Days,
 				LastAt:      change.At,
 				Strength:    edge.StrengthOf(now),
-				HasOpenDeal: funded[edge.PersonID],
+				HasOpenDeal: funded[edge.ContactID],
 			})
 			break
 		}

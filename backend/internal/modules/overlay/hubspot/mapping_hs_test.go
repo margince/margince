@@ -66,18 +66,18 @@ func TestHubSpotContactMapping(t *testing.T) {
 		t.Errorf("owner_id = %v, want the raw hubspot_owner_id (resolved downstream)", got)
 	}
 
-	emails, ok := out["person_email"].([]map[string]any)
+	emails, ok := out["contact_email"].([]map[string]any)
 	if !ok {
-		t.Fatalf("person_email = %#v, want a child collection", out["person_email"])
+		t.Fatalf("contact_email = %#v, want a child collection", out["contact_email"])
 	}
 	if len(emails) != 1 {
-		t.Fatalf("person_email has %d rows, want the one work address the contact carries", len(emails))
+		t.Fatalf("contact_email has %d rows, want the one work address the contact carries", len(emails))
 	}
 	if got := emails[0]["email"]; got != "christian.mueller@example.de" {
-		t.Errorf("person_email[0].email = %v, want the lowercased address", got)
+		t.Errorf("contact_email[0].email = %v, want the lowercased address", got)
 	}
 	if emails[0]["email_type"] != "work" || emails[0]["is_primary"] != true {
-		t.Errorf("person_email[0] = %v, want the work/primary attributes the mapping declares", emails[0])
+		t.Errorf("contact_email[0] = %v, want the work/primary attributes the mapping declares", emails[0])
 	}
 
 	address, ok := out["address"].(map[string]any)
@@ -88,25 +88,25 @@ func TestHubSpotContactMapping(t *testing.T) {
 		t.Errorf("address.city = %v, want Munich", got)
 	}
 
-	phones, ok := out["person_phone"].([]map[string]any)
+	phones, ok := out["contact_phone"].([]map[string]any)
 	if !ok {
-		t.Fatalf("person_phone = %#v, want a child collection", out["person_phone"])
+		t.Fatalf("contact_phone = %#v, want a child collection", out["contact_phone"])
 	}
 	// Both declared rows land: the contact's `phone` property is null, so its
 	// work row carries no number (the wire skips a valueless row rather than
 	// publishing a blank one), while mobilephone lands as its own mobile,
 	// non-primary row.
 	if len(phones) != 2 {
-		t.Fatalf("person_phone has %d rows, want the declared work and mobile rows", len(phones))
+		t.Fatalf("contact_phone has %d rows, want the declared work and mobile rows", len(phones))
 	}
 	if phones[0]["phone_type"] != "work" || phones[0]["is_primary"] != true {
-		t.Errorf("person_phone[0] = %v, want the work/primary attributes the mapping declares", phones[0])
+		t.Errorf("contact_phone[0] = %v, want the work/primary attributes the mapping declares", phones[0])
 	}
 	if got := phones[1]["phone"]; got != "49 176 10042069" {
-		t.Errorf("person_phone[1].phone = %v, want the mobilephone value", got)
+		t.Errorf("contact_phone[1].phone = %v, want the mobilephone value", got)
 	}
 	if phones[1]["phone_type"] != "mobile" || phones[1]["is_primary"] != false {
-		t.Errorf("person_phone[1] = %v, want the mobile/non-primary attributes the mapping declares", phones[1])
+		t.Errorf("contact_phone[1] = %v, want the mobile/non-primary attributes the mapping declares", phones[1])
 	}
 
 	// Every property this contact carries has a declared target, so there is
@@ -275,7 +275,7 @@ func TestHubSpotCompanyMapping(t *testing.T) {
 	}
 
 	// domain maps into the company_domain child (the same 1:N child
-	// shape contacts' email → person_email uses), lowercased — so it is
+	// shape contacts' email → contact_email uses), lowercased — so it is
 	// consumed, never left unmapped.
 	domains, ok := out["company_domain"].([]map[string]any)
 	if !ok {
@@ -601,7 +601,7 @@ func TestIncumbentClassesForReverseResolvesEveryMappedTarget(t *testing.T) {
 		canonical string
 		want      []string
 	}{
-		{"person", []string{"contacts"}},
+		{"contact", []string{"contacts"}},
 		{"company", []string{"companies"}},
 		{"deal", []string{"deals"}},
 		{"lead", []string{"leads"}},

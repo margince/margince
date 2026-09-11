@@ -18,8 +18,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -400,7 +400,7 @@ func TestALeadCanBelongToAProject(t *testing.T) {
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
 
-	lead, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: strPtr("Anna Weber"), Source: "manual", ProjectID: &p.ID,
 	})
 	if err != nil {
@@ -417,7 +417,7 @@ func TestALeadCanBelongToAProject(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
+	if _, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: strPtr("Late enquiry"), Source: "manual", ProjectID: &p.ID,
 	}); err != nil {
 		t.Errorf("a closed project refused a new lead: %v — phase is advisory, not a gate", err)
@@ -497,15 +497,15 @@ func TestRelinkReplacesOnlyTheLinksTheCallerCanSee(t *testing.T) {
 	e := Setup(t)
 	theirs := e.SeedCompany(t, "Their private account", &e.Rep1)
 	mine := e.SeedCompany(t, "My account", &e.Rep3)
-	person := e.SeedPerson(t, "Shared Contact", &e.Rep3)
+	contact := e.SeedContact(t, "Shared Contact", &e.Rep3)
 
-	// One activity linked to the other rep's private account and to a person
-	// the attacker owns. The person link is how they reach the activity at all.
+	// One activity linked to the other rep's private account and to a contact
+	// the attacker owns. The contact link is how they reach the activity at all.
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "company", EntityID: theirs},
-			{EntityType: "person", EntityID: person},
+			{EntityType: "contact", EntityID: contact},
 		},
 	})
 	if err != nil {
@@ -520,7 +520,7 @@ func TestRelinkReplacesOnlyTheLinksTheCallerCanSee(t *testing.T) {
 		Objects: map[string]principal.ObjectGrant{
 			"activity":              {Read: true, Update: true},
 			"company":               {Read: true},
-			"person":                {Read: true},
+			"contact":               {Read: true},
 			"installation_settings": {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,
@@ -577,13 +577,13 @@ func TestMovingAnActivityBetweenProjectsReplacesTheLinkItCannotSee(t *testing.T)
 	company := e.SeedCompany(t, "Oracle GmbH", nil)
 	theirs := seedProject(e.Admin(), t, e, "Their delivery", company, &e.Rep1)
 	ours := seedProject(e.Admin(), t, e, "Our pursuit", company, &e.Rep3)
-	person := e.SeedPerson(t, "Reachable Contact", &e.Rep3)
+	contact := e.SeedContact(t, "Reachable Contact", &e.Rep3)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "project", EntityID: theirs.ID.UUID},
-			{EntityType: "person", EntityID: person},
+			{EntityType: "contact", EntityID: contact},
 		},
 	})
 	if err != nil {
@@ -597,7 +597,7 @@ func TestMovingAnActivityBetweenProjectsReplacesTheLinkItCannotSee(t *testing.T)
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Read: true, Update: true},
 			"project":  {Read: true},
-			"person":   {Read: true},
+			"contact":  {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,
 	})
@@ -638,13 +638,13 @@ func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Vocabulary GmbH", nil)
 	project := seedProject(e.Admin(), t, e, "Findable work", company, nil)
-	person := e.SeedPerson(t, "Findable Contact", nil)
+	contact := e.SeedContact(t, "Findable Contact", nil)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "project", EntityID: project.ID.UUID},
-			{EntityType: "person", EntityID: person},
+			{EntityType: "contact", EntityID: contact},
 		},
 	})
 	if err != nil {
@@ -654,7 +654,7 @@ func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 	// Every kind the write took must answer a filter on that same kind.
 	for kind, id := range map[string]ids.UUID{
 		"project": project.ID.UUID,
-		"person":  person,
+		"contact": contact,
 	} {
 		t.Run(kind, func(t *testing.T) {
 			entityType := kind
@@ -711,7 +711,7 @@ func TestTheMintedNumberIsTheLowestFreeOneForItsStem(t *testing.T) {
 }
 
 // A project created without a requested owner belongs to its creator — the
-// same birth default person, company and deal already apply. The
+// same birth default contact, company and deal already apply. The
 // stake is the New-deal form's "New project…" flow: write authority reads an
 // unowned row as nobody's to change, so an ownerless project could never be
 // attached to a deal by the very rep who had just created it.

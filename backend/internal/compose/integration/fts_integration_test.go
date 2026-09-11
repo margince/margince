@@ -15,7 +15,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -25,16 +25,16 @@ func TestSearchFoldsAccentsAndStemsByLanguage(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	mueller, err := e.People.CreatePerson(admin, people.CreatePersonInput{
+	mueller, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
 		FullName: "Jürgen Müller", Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("create person: %v", err)
+		t.Fatalf("create contact: %v", err)
 	}
 
 	// Accent folding: the unaccented spelling must find the umlaut row.
 	searchStore := search.NewStore(e.DB())
-	page, err := searchStore.Search(admin, search.Input{Query: "Muller", Types: []string{"person"}})
+	page, err := searchStore.Search(admin, search.Input{Query: "Muller", Types: []string{"contact"}})
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}
@@ -43,12 +43,12 @@ func TestSearchFoldsAccentsAndStemsByLanguage(t *testing.T) {
 	}
 
 	// Quick-find: a name fragment (no full token) must hit via trigram.
-	persons, _, err := e.People.ListPeople(admin, people.ListPeopleInput{Query: strPtr("Müll")})
+	contacts, _, err := e.Contacts.ListContacts(admin, contacts.ListContactsInput{Query: strPtr("Müll")})
 	if err != nil {
-		t.Fatalf("list people: %v", err)
+		t.Fatalf("list contacts: %v", err)
 	}
 	found := false
-	for _, p := range persons {
+	for _, p := range contacts {
 		if p.Id == mueller.Id {
 			found = true
 		}
@@ -78,18 +78,18 @@ func TestSearchFoldsApostrophesInNames(t *testing.T) {
 
 	// The typographic apostrophe (U+2019) — what pasted text actually
 	// carries; f_unaccent folds it to ASCII ' before the strip.
-	oreilly, err := e.People.CreatePerson(admin, people.CreatePersonInput{
+	oreilly, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
 		FullName: "Tim O’Reilly", Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("create person: %v", err)
+		t.Fatalf("create contact: %v", err)
 	}
 
 	// Global search: the collapsed spelling, the apostrophe spelling,
 	// and the bare surname must all find the row.
 	searchStore := search.NewStore(e.DB())
 	for _, q := range []string{"oreilly", "o'reilly", "o’reilly", "reilly"} {
-		page, err := searchStore.Search(admin, search.Input{Query: q, Types: []string{"person"}})
+		page, err := searchStore.Search(admin, search.Input{Query: q, Types: []string{"contact"}})
 		if err != nil {
 			t.Fatalf("search %q: %v", q, err)
 		}
@@ -99,12 +99,12 @@ func TestSearchFoldsApostrophesInNames(t *testing.T) {
 	}
 
 	// List quick-find: the trigram contains-match must fold the same way.
-	persons, _, err := e.People.ListPeople(admin, people.ListPeopleInput{Query: strPtr("oreil")})
+	contacts, _, err := e.Contacts.ListContacts(admin, contacts.ListContactsInput{Query: strPtr("oreil")})
 	if err != nil {
-		t.Fatalf("list people: %v", err)
+		t.Fatalf("list contacts: %v", err)
 	}
 	found := false
-	for _, p := range persons {
+	for _, p := range contacts {
 		if p.Id == oreilly.Id {
 			found = true
 		}

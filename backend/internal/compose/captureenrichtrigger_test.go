@@ -66,7 +66,7 @@ func quietTrigger() *CaptureEnrichTrigger {
 }
 
 // The three doors, each named by what it is the only notice of. Without the
-// person door a sender's FIRST mail — the one carrying their signature block —
+// contact door a sender's FIRST mail — the one carrying their signature block —
 // is read by nothing until the next day's reconciler, because the contact did
 // not exist when their mail landed and no later event says it now does.
 func TestTheSignaturePassIsQueuedByEveryDoorThatMakesSomebodyReadable(t *testing.T) {
@@ -75,7 +75,7 @@ func TestTheSignaturePassIsQueuedByEveryDoorThatMakesSomebodyReadable(t *testing
 
 	for name, env := range map[string]events.Envelope{
 		"mail landing":           capturedMail(t, "email"),
-		"a contact appearing":    enrichEvent(t, "person.created", "person", noPayload),
+		"a contact appearing":    enrichEvent(t, "contact.created", "contact", noPayload),
 		"a held message opening": audienceChange(t, crmcontracts.Workspace),
 	} {
 		if !g.queues(ctx, env) {
@@ -100,9 +100,9 @@ func TestTheSignaturePassIsNotQueuedByWhatCannotMakeSomebodyReadable(t *testing.
 		"a message narrowed to named seats":            audienceChange(t, crmcontracts.Selected),
 		// An update about something else entirely.
 		"an update naming no audience": enrichEvent(t, "activity.updated", "activity", noPayload),
-		// A person who cannot have become newly readable.
-		"a contact being archived": enrichEvent(t, "person.archived", "person", noPayload),
-		"a contact being updated":  enrichEvent(t, "person.updated", "person", noPayload),
+		// A contact who cannot have become newly readable.
+		"a contact being archived": enrichEvent(t, "contact.archived", "contact", noPayload),
+		"a contact being updated":  enrichEvent(t, "contact.updated", "contact", noPayload),
 		// Streams the group also carries for its sibling consumers.
 		"an unrelated entity's event": enrichEvent(t, "company.created", "company", noPayload),
 	} {
@@ -145,7 +145,7 @@ func TestAStaleEventQueuesNothing(t *testing.T) {
 
 	for name, env := range map[string]events.Envelope{
 		"stale mail":      capturedMail(t, "email"),
-		"a stale contact": enrichEvent(t, "person.created", "person", noPayload),
+		"a stale contact": enrichEvent(t, "contact.created", "contact", noPayload),
 		"a stale opening": audienceChange(t, crmcontracts.Workspace),
 	} {
 		env.OccurredAt = time.Now().UTC().Add(-2 * captureEnrichFreshWindow)

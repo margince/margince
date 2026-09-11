@@ -17,7 +17,7 @@ package meetingbrief
 // surface is caller-scoped on purpose: `readLastSpoke` keys "since you last
 // spoke" on the reader's own id, the history is filtered through the reader's
 // activity scope, and a team-scoped lead reaches rows an own-scoped rep does
-// not. Two people reading one meeting get two briefs, and that was true before
+// not. Two readers reading one meeting get two briefs, and that was true before
 // this file existed. Claiming otherwise would be claiming this layer flattens a
 // difference it does not touch.
 //

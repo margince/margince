@@ -9,7 +9,7 @@ package consent
 // The transmit decision beside this one answers "may this go out now" and is
 // the last word. It cannot be the only word: it runs in a worker, minutes or
 // days later, and its refusal reaches a parked row and an operator's lane
-// rather than the person who typed the message. A staging decision is what
+// rather than the contact who typed the message. A staging decision is what
 // makes a refusal answerable — the rep is still there, and the message has not
 // yet been promised to anybody.
 //

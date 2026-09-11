@@ -27,8 +27,8 @@ import (
 // A limited message takes its whole conversation out of the pass, and it does
 // NOT fall back to the mailbox owner the way a capture-private RECORD does.
 //
-// The two look alike and are not. A record's owner visibility says one person is
-// the reader, so a summary addressed to that person discloses nothing new. A
+// The two look alike and are not. A record's owner visibility says one contact is
+// the reader, so a summary addressed to that contact discloses nothing new. A
 // limited audience says the content is withheld from readers who can still see
 // the records the message is filed against, and an owner-scoped signal is a
 // durable, searchable restatement of that content which outlives the message's
@@ -161,7 +161,7 @@ func TestAHandLoggedLimitedMessageTakesItsThreadOutOfThePass(t *testing.T) {
 		INSERT INTO activity (id, kind, direction, subject, body, thread_key, occurred_at, created_at, source, captured_by, audience)
 		VALUES ($1, 'email', 'outbound', 'Renewal', 'internal note: we are preparing to terminate', 'thread-mixed',
 		        '`+handLoggedAt+`', '`+handLoggedAt+`', 'manual', 'human:someone', 'participants')`)
-	LinkActivity(t, OwnerConn(t), handLogged, "person", contact)
+	LinkActivity(t, OwnerConn(t), handLogged, "contact", contact)
 
 	brain := &scriptedBrain{reply: `{"events": []}`}
 	if raised := extractPass(t, e, brain); raised != 0 {

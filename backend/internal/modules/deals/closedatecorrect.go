@@ -197,7 +197,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 	// a date a customer had given: it counted toward supported forecast claims,
 	// and the rep saw no sign that nobody had confirmed it. Neither path reads
 	// a buyer's message, so neither may call its replacement final — that needs
-	// attributable evidence or a person's answer.
+	// attributable evidence or a contact's answer.
 	//
 	// What still separates the tiers is the AUDIT LABEL, which records the
 	// policy that admitted the deal: auto_apply for a clear-overdue early-stage
@@ -290,7 +290,7 @@ func (c *CloseDateCorrector) downgradeAndReview(
 		// The basis can name a contact and a correspondence date, resolved
 		// under the owner's own permissions on the night it was written. A deal
 		// handed to somebody else later would otherwise show that sentence to a
-		// rep who may hold neither person:read nor activity:read — permissions
+		// rep who may hold neither contact:read nor activity:read — permissions
 		// nothing re-checks, because the text is already stored. The receipt
 		// reader compares this against the deal's owner NOW and withholds the
 		// sentence when they differ.
@@ -307,7 +307,7 @@ func (c *CloseDateCorrector) downgradeAndReview(
 //
 // Asked BEFORE any write, not only before the card. Every tier re-dates the deal
 // first and stages second, so a check living only in ensureStaged would let the
-// sweep rewrite the exact value a person had just undone and merely decline to
+// sweep rewrite the exact value a contact had just undone and merely decline to
 // ask about it — the undo would appear to work and be gone by morning.
 //
 // The downgrade branch asks a different question of the same deal ("is this deal

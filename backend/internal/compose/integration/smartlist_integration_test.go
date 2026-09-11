@@ -24,7 +24,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -52,19 +52,19 @@ func TestDynamicList_membershipIsRowScopedToTheCaller(t *testing.T) {
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 
-	mine := e.SeedPerson(t, "Mine Renewal", &e.Rep1)
-	// A teammate's PRIVATE capture: a person who is merely owned is readable
+	mine := e.SeedContact(t, "Mine Renewal", &e.Rep1)
+	// A teammate's PRIVATE capture: a contact who is merely owned is readable
 	// by every seat with the grant, so capture privacy is what keeps this one
 	// inside Rep2's row scope alone — and Rep2 shares Rep1's team, so the
 	// list itself stays readable to both.
-	private := e.SeedPerson(t, "Private Renewal", &e.Rep2)
-	e.MakeCapturePrivate(t, "person", private, e.Rep2)
+	private := e.SeedContact(t, "Private Renewal", &e.Rep2)
+	e.MakeCapturePrivate(t, "contact", private, e.Rep2)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
 
 	// One filter, matching BOTH owners.
 	created, err := store.CreateList(rep, collections.CreateListInput{
-		Name: "Owned by rep1 or rep2", EntityType: "person", ListType: "dynamic",
+		Name: "Owned by rep1 or rep2", EntityType: "contact", ListType: "dynamic",
 		Definition: map[string]any{
 			"field": "owner_id", "op": "in",
 			"value": []any{e.Rep1.String(), e.Rep2.String()},
@@ -108,7 +108,7 @@ func TestDynamicList_reEvaluatesLiveAsRecordsChange(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
 
 	created, err := store.CreateList(rep, collections.CreateListInput{
-		Name: "Owned by rep1", EntityType: "person", ListType: "dynamic",
+		Name: "Owned by rep1", EntityType: "contact", ListType: "dynamic",
 		Definition: map[string]any{"field": "owner_id", "op": "eq", "value": e.Rep1.String()},
 	})
 	if err != nil {
@@ -128,20 +128,20 @@ func TestDynamicList_reEvaluatesLiveAsRecordsChange(t *testing.T) {
 		return false
 	}
 
-	p1 := e.SeedPerson(t, "P1", &e.Rep1)
+	p1 := e.SeedContact(t, "P1", &e.Rep1)
 	if !has(p1) {
 		t.Fatalf("a matching record is not in the segment without a refresh")
 	}
 
 	// Add a second matching record — it enters the segment live.
-	p2 := e.SeedPerson(t, "P2", &e.Rep1)
+	p2 := e.SeedContact(t, "P2", &e.Rep1)
 	if !has(p2) {
 		t.Errorf("a newly created matching record did not enter the segment")
 	}
 
 	// Reassign p1 so it no longer matches the filter (rep2 is on the same
 	// team, so p1 stays VISIBLE — it leaves by the filter, not the scope).
-	if _, err := e.People.UpdatePerson(e.Admin(), PersonIDOf(p1), people.UpdatePersonInput{OwnerID: userIDPtr(&e.Rep2)}); err != nil {
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ContactIDOf(p1), contacts.UpdateContactInput{OwnerID: userIDPtr(&e.Rep2)}); err != nil {
 		t.Fatalf("reassign p1: %v", err)
 	}
 	if has(p1) {
@@ -160,7 +160,7 @@ func TestDynamicList_rejectsInvalidDefinition(t *testing.T) {
 	assertCode := func(name string, def map[string]any, wantCode string) {
 		t.Helper()
 		_, err := store.CreateList(rep, collections.CreateListInput{
-			Name: name, EntityType: "person", ListType: "dynamic", Definition: def,
+			Name: name, EntityType: "contact", ListType: "dynamic", Definition: def,
 		})
 		var pe *storekit.PredicateError
 		if !errors.As(err, &pe) {
@@ -171,7 +171,7 @@ func TestDynamicList_rejectsInvalidDefinition(t *testing.T) {
 		}
 	}
 
-	// A field outside the person vocabulary is rejected (422).
+	// A field outside the contact vocabulary is rejected (422).
 	assertCode("unknown field",
 		map[string]any{"field": "secret_salary", "op": "eq", "value": "x"},
 		storekit.CodeFilterFieldNotAllowed)
@@ -195,7 +195,7 @@ func TestSavedView_roundTripsAndIsPerUser(t *testing.T) {
 		"filter":  map[string]any{"field": "owner_id", "op": "eq", "value": e.Rep1.String()},
 	}
 	created, err := store.CreateSavedView(rep, collections.CreateSavedViewInput{
-		Resource: "people", Name: "My people", Query: query,
+		Resource: "contacts", Name: "My contacts", Query: query,
 	})
 	if err != nil {
 		t.Fatalf("create saved view: %v", err)
@@ -225,7 +225,7 @@ func TestSavedView_roundTripsAndIsPerUser(t *testing.T) {
 	}
 
 	// Update round-trips a new name under the optimistic-concurrency version.
-	newName := "My renamed people"
+	newName := "My renamed contacts"
 	v := created.Version
 	updated, err := store.UpdateSavedView(rep, created.ID, collections.UpdateSavedViewInput{
 		Name: &newName, IfVersion: &v,
@@ -301,13 +301,13 @@ func TestSavedView_filterIsValidatedWhenWrittenNotWhenExported(t *testing.T) {
 	}
 
 	_, err := store.CreateSavedView(rep, collections.CreateSavedViewInput{
-		Resource: "people", Name: "Overpaid", Query: map[string]any{"filter": unfilterable},
+		Resource: "contacts", Name: "Overpaid", Query: map[string]any{"filter": unfilterable},
 	})
 	assertRefused("create", err)
 
 	// A view saved with a good filter cannot be PATCHed onto a bad one.
 	good, err := store.CreateSavedView(rep, collections.CreateSavedViewInput{
-		Resource: "people", Name: "Mine",
+		Resource: "contacts", Name: "Mine",
 		Query: map[string]any{"filter": map[string]any{"field": "owner_id", "op": "eq", "value": e.Rep1.String()}},
 	})
 	if err != nil {
@@ -339,7 +339,7 @@ func TestSavedView_anArchivedViewIsNotFoundBeforeItsFilterIsJudged(t *testing.T)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
 
 	view, err := store.CreateSavedView(rep, collections.CreateSavedViewInput{
-		Resource: "people", Name: "Retired",
+		Resource: "contacts", Name: "Retired",
 		Query: map[string]any{"filter": map[string]any{"field": "owner_id", "op": "eq", "value": e.Rep1.String()}},
 	})
 	if err != nil {
@@ -384,12 +384,12 @@ func TestListAndSavedViewShapeRefusalsNameTheirOwnField(t *testing.T) {
 	// A dynamic list IS its definition, and a static one must not carry one —
 	// the pair is what rules out a half-and-half list.
 	_, err := store.CreateList(rep, collections.CreateListInput{
-		Name: "Dynamic with nothing to evaluate", EntityType: "person", ListType: "dynamic",
+		Name: "Dynamic with nothing to evaluate", EntityType: "contact", ListType: "dynamic",
 	})
 	assertField("a dynamic list with no definition", err, "definition")
 
 	_, err = store.CreateList(rep, collections.CreateListInput{
-		Name: "Static carrying a filter", EntityType: "person", ListType: "static",
+		Name: "Static carrying a filter", EntityType: "contact", ListType: "static",
 		Definition: filter,
 	})
 	assertField("a static list carrying a definition", err, "definition")
@@ -397,7 +397,7 @@ func TestListAndSavedViewShapeRefusalsNameTheirOwnField(t *testing.T) {
 	// A view's query is the whole view; null is not the same as an empty object,
 	// which is a legitimate view with no state yet.
 	_, err = store.CreateSavedView(rep, collections.CreateSavedViewInput{
-		Resource: "people", Name: "No query at all",
+		Resource: "contacts", Name: "No query at all",
 	})
 	assertField("a view with a null query", err, "query")
 
@@ -465,7 +465,7 @@ func TestSavedViewResourceCheckAgainstTheContractEnum(t *testing.T) {
 	for _, r := range []crmcontracts.SavedViewResource{
 		crmcontracts.SavedViewResourceSavedViewResourceActivities, crmcontracts.SavedViewResourceSavedViewResourceDeals,
 		crmcontracts.SavedViewResourceSavedViewResourceLeads, crmcontracts.SavedViewResourceSavedViewResourceCompanies,
-		crmcontracts.SavedViewResourceSavedViewResourcePartners, crmcontracts.SavedViewResourceSavedViewResourcePeople,
+		crmcontracts.SavedViewResourceSavedViewResourcePartners, crmcontracts.SavedViewResourceSavedViewResourceContacts,
 		crmcontracts.SavedViewResourceSavedViewResourceProjects,
 	} {
 		declared[string(r)] = true

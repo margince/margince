@@ -25,15 +25,15 @@ import (
 )
 
 type contextFixture struct {
-	rep1Person, rep3Person ids.UUID
+	rep1Contact, rep3Contact ids.UUID
 }
 
 func seedContextFixture(t *testing.T, e *queryEnv) contextFixture {
 	t.Helper()
 	return contextFixture{
-		rep1Person: e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+		rep1Contact: e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 			VALUES ($1, $2, 'Annegret Turbinenbau', 'manual', 'human:x')`, e.Rep1),
-		rep3Person: e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+		rep3Contact: e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 			VALUES ($1, $2, 'Bernhard Turbinenbau', 'manual', 'human:x')`, e.Rep3),
 	}
 }
@@ -45,11 +45,11 @@ func TestSearchContextAnswersRankedRecordsWithTheirExcerpts(t *testing.T) {
 	f := seedContextFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 
-	sealed := invokeContextSearch(e.admin(), t, registry, `{"query":"Turbinenbau","record_types":["person"]}`)
+	sealed := invokeContextSearch(e.admin(), t, registry, `{"query":"Turbinenbau","record_types":["contact"]}`)
 	answer := contextPayload(t, sealed.Data)
 
 	if len(answer.Hits) != 2 {
-		t.Fatalf("got %d hits, want both Turbinenbau people: %+v", len(answer.Hits), answer)
+		t.Fatalf("got %d hits, want both Turbinenbau contacts: %+v", len(answer.Hits), answer)
 	}
 	for _, hit := range answer.Hits {
 		if len(hit.Record.Fields) == 0 || hit.Record.Version == 0 {
@@ -63,8 +63,8 @@ func TestSearchContextAnswersRankedRecordsWithTheirExcerpts(t *testing.T) {
 			t.Errorf("the envelope does not name hit %s — every hit is a read and is sourced as one", hit.Record.ID)
 		}
 	}
-	if !contextHas(answer, f.rep1Person) || !contextHas(answer, f.rep3Person) {
-		t.Errorf("hits = %+v, want both seeded people for an admin", answer.Hits)
+	if !contextHas(answer, f.rep1Contact) || !contextHas(answer, f.rep3Contact) {
+		t.Errorf("hits = %+v, want both seeded contacts for an admin", answer.Hits)
 	}
 }
 
@@ -73,31 +73,31 @@ func TestSearchContextAnswersRankedRecordsWithTheirExcerpts(t *testing.T) {
 func TestSearchContextNarrowsToTheCallersRowScope(t *testing.T) {
 	e := setupQuery(t)
 	f := seedContextFixture(t, e)
-	// Ownership alone leaves a person readable by every seat with the grant;
-	// capture privacy is what takes the other person out of Rep1's row scope.
+	// Ownership alone leaves a contact readable by every seat with the grant;
+	// capture privacy is what takes the other contact out of Rep1's row scope.
 	if _, err := e.Owner.Exec(context.Background(),
-		`UPDATE person SET visibility = 'owner' WHERE id = $1`, f.rep3Person); err != nil {
-		t.Fatalf("capturing the other person privately: %v", err)
+		`UPDATE contact SET visibility = 'owner' WHERE id = $1`, f.rep3Contact); err != nil {
+		t.Fatalf("capturing the other contact privately: %v", err)
 	}
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 
 	sealed := invokeContextSearch(e.teamRep(e.Rep1, e.Team1), t, registry,
-		`{"query":"Turbinenbau","record_types":["person"]}`)
+		`{"query":"Turbinenbau","record_types":["contact"]}`)
 	answer := contextPayload(t, sealed.Data)
 
 	// The ENVELOPE has to omit it too. Evidence is the read ledger — what this
 	// answer rests on and what it was charged for — so a record absent from the
 	// hits but present there would have been read and paid for on the caller's
 	// behalf and then quietly dropped.
-	if sealedNames(sealed, f.rep3Person) {
-		t.Errorf("the envelope sources the private person %s", f.rep3Person)
+	if sealedNames(sealed, f.rep3Contact) {
+		t.Errorf("the envelope sources the private contact %s", f.rep3Contact)
 	}
 
-	if contextHas(answer, f.rep3Person) {
-		t.Fatalf("a rep was served the private person %s", f.rep3Person)
+	if contextHas(answer, f.rep3Contact) {
+		t.Fatalf("a rep was served the private contact %s", f.rep3Contact)
 	}
-	if !contextHas(answer, f.rep1Person) {
-		t.Fatalf("the rep's own person is missing — the narrowing went too far: %+v", answer.Hits)
+	if !contextHas(answer, f.rep1Contact) {
+		t.Fatalf("the rep's own contact is missing — the narrowing went too far: %+v", answer.Hits)
 	}
 	// Nothing says how much was left out. Both retrieval lanes are row-scoped, so
 	// the narrowing happens before this tool sees a hit at all — there is no
@@ -118,7 +118,7 @@ func TestSearchContextReportsAnUnboundEmbedLane(t *testing.T) {
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 
 	answer := contextPayload(t, invokeContextSearch(e.admin(), t, registry,
-		`{"query":"Turbinenbau","record_types":["person"]}`).Data)
+		`{"query":"Turbinenbau","record_types":["contact"]}`).Data)
 
 	if answer.Coverage != agents.CoveragePartialDegraded {
 		t.Errorf("coverage = %q with no embed lane bound, want partial_degraded", answer.Coverage)

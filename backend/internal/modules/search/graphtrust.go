@@ -33,8 +33,8 @@ import (
 // never taken from a request body, and it already spells the distinction the
 // ladder is about: `human:<user>` or `agent:<passport>`.
 const (
-	trustHumanStatement   = 1.0 // T0 — a person said this
-	trustAgentWrite       = 0.7 // T1 — an agent wrote it, on a person's authority
+	trustHumanStatement   = 1.0 // T0 — a contact said this
+	trustAgentWrite       = 0.7 // T1 — an agent wrote it, on a contact's authority
 	trustCapturedExternal = 0.4 // T2 — a connector or importer brought it in
 )
 

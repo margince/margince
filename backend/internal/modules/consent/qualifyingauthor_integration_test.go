@@ -51,33 +51,33 @@ func (e *qualifyingEnv) filedInbound(t *testing.T, role string) {
 			return err
 		}
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, id, e.person); err != nil {
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, id, e.contact); err != nil {
 			return err
 		}
 		if role == "" {
 			return nil
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_participant (activity_id, person_id, role)
-			VALUES ($1, $2, $3)`, id, e.person, role)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, $3)`, id, e.contact, role)
 		return err
 	}); err != nil {
-		t.Fatalf("planting an inbound message filed under the person (role %q): %v", role, err)
+		t.Fatalf("planting an inbound message filed under the contact (role %q): %v", role, err)
 	}
 }
 
 // Being cc'd on a message somebody else wrote authorizes nothing.
 //
 // Mutation: drop the activity_participant join from inboundQualifyingEvent and
-// this passes — the verdict turns allowed on a message the person only received.
+// this passes — the verdict turns allowed on a message the contact only received.
 func TestBeingCopiedOnAMessageDoesNotMakeCorrespondenceLawful(t *testing.T) {
 	e := setupQualifying(t)
 
 	e.filedInbound(t, "cc")
 
 	if got := e.verdict(t); got.State == VerdictAllowed {
-		t.Fatalf("verdict %q (%s) after the person was merely cc'd, want not allowed — "+
+		t.Fatalf("verdict %q (%s) after the contact was merely cc'd, want not allowed — "+
 			"a filing link says the message belongs on their record, never that they wrote it, "+
 			"and counting it lets anyone manufacture a basis for writing to a third party by "+
 			"putting them in Cc", got.State, got.Reason)
@@ -92,13 +92,13 @@ func TestAMessageFiledUnderSomebodyWhoWroteNothingAuthorizesNothing(t *testing.T
 	e.filedInbound(t, "")
 
 	if got := e.verdict(t); got.State == VerdictAllowed {
-		t.Fatalf("verdict %q (%s) on a message the person is only FILED under, want not allowed — "+
+		t.Fatalf("verdict %q (%s) on a message the contact is only FILED under, want not allowed — "+
 			"activity_link carries no author concept, so a caller who may file an activity under a "+
 			"contact could otherwise write their own evidence for mailing them", got.State, got.Reason)
 	}
 }
 
-// And the arm still answers for the person who actually wrote to us — the case
+// And the arm still answers for the contact who actually wrote to us — the case
 // the whole Art 6(1)(f) reading exists for.
 //
 // Without this the two refusals above are satisfied by an arm that refuses
@@ -110,7 +110,7 @@ func TestTheAuthorOfAnInboundMessageStillMakesCorrespondenceLawful(t *testing.T)
 
 	got := e.verdict(t)
 	if got.State != VerdictAllowed {
-		t.Fatalf("verdict %q (%s) for the person who WROTE to us, want allowed — "+
+		t.Fatalf("verdict %q (%s) for the contact who WROTE to us, want allowed — "+
 			"they started the correspondence, which is the whole Art 6(1)(f) reading",
 			got.State, got.Reason)
 	}
@@ -137,8 +137,8 @@ func (e *qualifyingEnv) attendedMeeting(t *testing.T, offset time.Duration, capt
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_participant (activity_id, person_id, role)
-			VALUES ($1, $2, 'attendee')`, id, e.person)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'attendee')`, id, e.contact)
 		return err
 	}); err != nil {
 		t.Fatalf("planting a meeting at %s: %v", offset, err)
@@ -160,7 +160,7 @@ const (
 // This is the case the whole arm exists for. A partner invited to a demo next
 // week was refused as somebody who "has never written to you" — and the
 // invitation made it worse, because the classifier read the machine-generated
-// calendar mail as transactional and judged the person noise on it.
+// calendar mail as transactional and judged the contact noise on it.
 //
 // Mutation: drop the meetingQualifyingEvent arm from latestQualifyingEvent and
 // this fails, the verdict still unknown.
@@ -195,7 +195,7 @@ func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
 // A meeting a HUMAN logged is not evidence, however it is labelled.
 //
 // POST /activities takes kind, occurred_at and links from the request body, and
-// the log path stamps a participant row for every linked person. So without this
+// the log path stamps a participant row for every linked contact. So without this
 // bound any seat that can see a contact could log a "meeting" naming them and
 // mail them on the strength of it — writing its own permission slip.
 //
@@ -208,7 +208,7 @@ func TestAHandLoggedMeetingIsNotEvidence(t *testing.T) {
 
 	if got := e.verdict(t); got.State == VerdictAllowed {
 		t.Fatalf("verdict %q (%s) on a meeting a seat logged by hand, want not allowed — "+
-			"the request body names the kind, the date and the people, so anybody who can see a "+
+			"the request body names the kind, the date and the contacts, so anybody who can see a "+
 			"contact could otherwise authorize themselves to mail them", got.State, got.Reason)
 	}
 }

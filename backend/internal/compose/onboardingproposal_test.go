@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -28,31 +28,31 @@ func onboardingProposalRequest(engine *onboardingProposalEngine, locale *crmcont
 func TestOnboardingProposalServesTheDeterministicMapping(t *testing.T) {
 	readID := ids.NewV7()
 	current := "Acme Software"
-	read := people.SiteRead{
+	read := contacts.SiteRead{
 		ID: readID, Status: siteReadWireStatusDone, DraftVersion: 7, ProposalHash: "hash-7",
-		ProfileFields: []people.DeepReadField{
+		ProfileFields: []contacts.DeepReadField{
 			{Field: "offer_summary", Value: "CRM software", EvidenceSnippet: "We build CRM software", SourceURL: "https://acme.example", Confidence: 0.9},
 			{Field: "icp", Value: "Mid-market", EvidenceSnippet: "for mid-market teams", SourceURL: "https://acme.example", Confidence: 0.55},
 			{Field: "industry", Value: "Software", EvidenceSnippet: "software", SourceURL: "https://acme.example", Confidence: 0.54},
 			{Field: "usp", Value: "Fast", EvidenceSnippet: "  ", SourceURL: "https://acme.example", Confidence: 0.9},
 		},
-		Facts: []people.DeepReadFact{{
+		Facts: []contacts.DeepReadFact{{
 			Category: "offering", Field: "service", Value: "CRM rollout — implementation", ValueKey: "crm rollout",
 			EvidenceSnippet: "CRM rollout", SourceURL: "https://acme.example/services", Confidence: 0.8,
 		}},
-		LegalEntities: []people.SiteReadLegalEntity{
+		LegalEntities: []contacts.SiteReadLegalEntity{
 			{Name: "Acme GmbH", SourceURL: "https://acme.example/impressum"},
 			{Name: "Acme AG", SourceURL: "https://acme.example/impressum"},
 		},
 	}
-	comparisons := []people.SiteReadComparison{{Key: "display_name", Classification: "human_conflict", CurrentValue: &current, ProposedValue: "Acme GmbH"}}
+	comparisons := []contacts.SiteReadComparison{{Key: "display_name", Classification: "human_conflict", CurrentValue: &current, ProposedValue: "Acme GmbH"}}
 	engine := &onboardingProposalEngine{
 		state: onboardingStateReaderStub{state: identity.OnboardingState{
 			ID: ids.NewV7(), SiteReadID: &readID,
 			CompanyDraft: identity.OnboardingCompanyDraft{DisplayName: stringPtr("Acme")},
 		}},
-		people:  onboardingSiteReadReaderStub{read: read, comparisons: comparisons},
-		rollout: companyContextRolloutOnboarding,
+		contacts: onboardingSiteReadReaderStub{read: read, comparisons: comparisons},
+		rollout:  companyContextRolloutOnboarding,
 	}
 
 	recorder := onboardingProposalRequest(engine, nil)
@@ -97,7 +97,7 @@ func TestOnboardingProposalDoesNotReAskAnsweredQuestions(t *testing.T) {
 			// exactly one option value of the legal-entity question.
 			CompanyDraft: identity.OnboardingCompanyDraft{LegalName: stringPtr("Acme GmbH")},
 		}},
-		people: onboardingSiteReadReaderStub{read: people.SiteRead{ID: readID, Status: siteReadWireStatusDone, LegalEntities: []people.SiteReadLegalEntity{
+		contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID, Status: siteReadWireStatusDone, LegalEntities: []contacts.SiteReadLegalEntity{
 			{Name: "Acme GmbH", RegisteredAddress: "Berlin 1", SourceURL: "https://acme.example/legal"},
 			{Name: "Acme Holding AG", RegisteredAddress: "Zug 2", SourceURL: "https://acme.example/legal"},
 		}}},
@@ -123,7 +123,7 @@ func TestOnboardingProposalSpeaksTheRequestedLocale(t *testing.T) {
 	readID := ids.NewV7()
 	engine := &onboardingProposalEngine{
 		state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
-		people: onboardingSiteReadReaderStub{read: people.SiteRead{ID: readID, Status: siteReadWireStatusDone, LegalEntities: []people.SiteReadLegalEntity{
+		contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID, Status: siteReadWireStatusDone, LegalEntities: []contacts.SiteReadLegalEntity{
 			{Name: "Acme GmbH", SourceURL: "https://acme.example/legal"},
 			{Name: "Acme Holding AG", SourceURL: "https://acme.example/legal"},
 		}}},
@@ -159,9 +159,9 @@ func TestOnboardingProposalReportsAnUnfinishedRead(t *testing.T) {
 		t.Run(status, func(t *testing.T) {
 			readID := ids.NewV7()
 			engine := &onboardingProposalEngine{
-				state:   onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
-				people:  onboardingSiteReadReaderStub{read: people.SiteRead{ID: readID, Status: status}},
-				rollout: companyContextRolloutOnboarding,
+				state:    onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
+				contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID, Status: status}},
+				rollout:  companyContextRolloutOnboarding,
 			}
 			recorder := onboardingProposalRequest(engine, nil)
 			if recorder.Code != http.StatusOK {
@@ -216,9 +216,9 @@ func TestOnboardingProposalRefusesWhenThereIsNothingToProposeFrom(t *testing.T) 
 func TestOnboardingProposalPassesDependencyFailuresThrough(t *testing.T) {
 	readID := ids.NewV7()
 	engine := &onboardingProposalEngine{
-		state:   onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
-		people:  onboardingSiteReadReaderStub{err: errors.New("dossier unavailable")},
-		rollout: companyContextRolloutOnboarding,
+		state:    onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
+		contacts: onboardingSiteReadReaderStub{err: errors.New("dossier unavailable")},
+		rollout:  companyContextRolloutOnboarding,
 	}
 	if recorder := onboardingProposalRequest(engine, nil); recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())

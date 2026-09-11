@@ -51,7 +51,7 @@ func TestRecordTagsAnswersForAllThreeAdvertisedTypes(t *testing.T) {
 	e := tagEnv(t)
 	tag := createTag(t, e, "Cross Type")
 
-	person := createPersonWithTag(t, e, "Tagged Person", tag)
+	contact := createContactWithTag(t, e, "Tagged Contact", tag)
 
 	var company integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/companies", integration.AnyMap{
@@ -69,7 +69,7 @@ func TestRecordTagsAnswersForAllThreeAdvertisedTypes(t *testing.T) {
 
 	// A deal too: the test name claims three types, and two of them passing
 	// says nothing about the third — deal is the one whose row scope differs
-	// most from a person's.
+	// most from a contact's.
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	var deal integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/deals", integration.AnyMap{
@@ -87,7 +87,7 @@ func TestRecordTagsAnswersForAllThreeAdvertisedTypes(t *testing.T) {
 	}
 
 	for _, c := range []struct{ entityType, id string }{
-		{"person", person},
+		{"contact", contact},
 		{"company", companyID},
 		{"deal", dealID},
 	} {
@@ -108,9 +108,9 @@ func TestRecordTagsAnswersForAllThreeAdvertisedTypes(t *testing.T) {
 func TestRecordTagsNamesWhoAppliedTheTag(t *testing.T) {
 	e := tagEnv(t)
 	tag := createTag(t, e, "Applied By Someone")
-	person := createPersonWithTag(t, e, "Tagged", tag)
+	contact := createContactWithTag(t, e, "Tagged", tag)
 
-	body, status := readRecordTags(t, e, "person", person)
+	body, status := readRecordTags(t, e, "contact", contact)
 	if status != http.StatusOK {
 		t.Fatalf("status=%d", status)
 	}
@@ -138,21 +138,21 @@ func TestRecordTagsNamesWhoAppliedTheTag(t *testing.T) {
 func TestRecordTagsWithheldIsNotTheSameAsEmpty(t *testing.T) {
 	e := tagEnv(t)
 	tag := createTag(t, e, "Hidden Word")
-	tagged := createPersonWithTag(t, e, "Has A Tag", tag)
-	untagged := createPersonWithTag(t, e, "Has No Tags")
+	tagged := createContactWithTag(t, e, "Has A Tag", tag)
+	untagged := createContactWithTag(t, e, "Has No Tags")
 
 	// The genuinely empty record first, while the caller still holds the
 	// vocabulary: it has to read as NOT withheld, which is the distinction the
 	// flag exists to carry.
-	emptyBody, status := readRecordTags(t, e, "person", untagged)
+	emptyBody, status := readRecordTags(t, e, "contact", untagged)
 	if status != http.StatusOK {
-		t.Fatalf("reading the untagged person: status=%d", status)
+		t.Fatalf("reading the untagged contact: status=%d", status)
 	}
 	if emptyBody.Withheld {
 		t.Error("a record with no tags reads as withheld; the panel would say the wrong thing")
 	}
 	if len(emptyBody.Data) != 0 {
-		t.Errorf("the untagged person carries %+v", emptyBody.Data)
+		t.Errorf("the untagged contact carries %+v", emptyBody.Data)
 	}
 
 	// Now take the vocabulary away and read the TAGGED record. Revoking on the
@@ -160,7 +160,7 @@ func TestRecordTagsWithheldIsNotTheSameAsEmpty(t *testing.T) {
 	// refusal a rep in a workspace without the grant would meet.
 	revokeTagRead(t, e)
 
-	withheldBody, status := readRecordTags(t, e, "person", tagged)
+	withheldBody, status := readRecordTags(t, e, "contact", tagged)
 	if status != http.StatusOK {
 		t.Fatalf("reading as a caller without the vocabulary: status=%d", status)
 	}
@@ -191,14 +191,14 @@ func revokeTagRead(t *testing.T, e *apptest.AppEnv) {
 func TestRecordTagsCarriesArchivedWordsMarked(t *testing.T) {
 	e := tagEnv(t)
 	tag := createTag(t, e, "Retired Word")
-	person := createPersonWithTag(t, e, "Tagged Before Retirement", tag)
+	contact := createContactWithTag(t, e, "Tagged Before Retirement", tag)
 
 	var archived integration.AnyMap
 	if status := e.Call(t, "DELETE", "/v1/tags/"+tag, nil, nil, &archived); status != http.StatusOK {
 		t.Fatalf("archiving: status=%d body=%v", status, archived)
 	}
 
-	body, status := readRecordTags(t, e, "person", person)
+	body, status := readRecordTags(t, e, "contact", contact)
 	if status != http.StatusOK {
 		t.Fatalf("status=%d", status)
 	}

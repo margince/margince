@@ -10,12 +10,14 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // visibilityCheck matches a CHECK that constrains a `visibility` column,
 // capturing the vocabulary it admits. Both DDL shapes the migrations use are
 // covered: the inline column inside a CREATE TABLE (project, 0131) and the
-// later ALTER TABLE (person and company, 0095; signal, 0208; the
+// later ALTER TABLE (contact and company, 0095; signal, 0208; the
 // narrowing in 1787320003).
 var visibilityCheck = regexp.MustCompile(`(?is)CHECK\s*\(\s*visibility\s*(=|IN)\s*([^)]*)\)`)
 
@@ -111,7 +113,9 @@ func tablesWhoseCheckAdmitsOwner(t *testing.T) []string {
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
-		for table, vocabulary := range visibilityChecksIn(string(raw)) {
+		// Through the renames the migrations themselves declare, so a CHECK on a
+		// table since renamed is filed under the name the predicate beside it uses.
+		for table, vocabulary := range visibilityChecksIn(gatekit.WithCurrentNames(coreMigrationsDir, string(raw))) {
 			admits[table] = strings.Contains(vocabulary, "'owner'")
 		}
 		// A later migration can RENAME a table the CHECK was written against,

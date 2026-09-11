@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/platform/webread"
@@ -85,7 +85,7 @@ const (
 // per-attempt, not per-company, so two resolves of the same company can
 // never write the same object — an overwrite there would leave the stored
 // image and the row's recorded origin describing different pictures, and would
-// also write straight over a logo a person uploaded. The company id stays
+// also write straight over a logo a contact uploaded. The company id stays
 // in the key so an object is still traceable to the record it belongs to.
 func companyLogoKey(wsID ids.WorkspaceID, companyID ids.CompanyID) string {
 	return blobstore.WorkspaceKey(wsID, companyLogoKind, companyID.String()+"/"+ids.NewV7().String())
@@ -251,7 +251,7 @@ func fetchLogoCandidate(ctx context.Context, fetch assetFetcher, rawURL string) 
 // read whose real product is evidenced facts, so nothing here may fail that
 // read. Every outcome is logged instead, and a company with no resolved logo
 // renders its deterministic monogram, which is a clean face rather than a gap.
-func (w *siteDeepReadWorker) resolveLogo(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, crawl siteCrawl) {
+func (w *siteDeepReadWorker) resolveLogo(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, crawl siteCrawl) {
 	if w.blob == nil {
 		// No object store to hold the bytes.
 		return
@@ -307,9 +307,9 @@ func (w *siteDeepReadWorker) resolveLogo(ctx context.Context, args SiteDeepReadA
 // attempt and answers with it, or with "" when the object store refused. Each
 // attempt writing its own key is what keeps the stored image and the recorded
 // origin describing the same picture when two resolves overlap — and what keeps
-// a logo a person uploaded, which lives at a key of its own, from being written
+// a logo a contact uploaded, which lives at a key of its own, from being written
 // over at all.
-func (w *siteDeepReadWorker) storeResolvedLogo(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, logo resolvedLogo) string {
+func (w *siteDeepReadWorker) storeResolvedLogo(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, logo resolvedLogo) string {
 	wsID := ids.From[ids.WorkspaceKind](args.Workspace)
 	key := siteReadLogoKey(wsID, args.SiteReadID)
 	if claim.CompanyID != nil {
@@ -329,7 +329,7 @@ func (w *siteDeepReadWorker) storeResolvedLogo(ctx context.Context, args SiteDee
 // recordCompanyLogo points the company row at bytes that are already
 // stored, and collects whatever that write left unreferenced.
 func (w *siteDeepReadWorker) recordCompanyLogo(ctx context.Context, readID ids.UUID, companyID ids.CompanyID, key string, logo resolvedLogo, attempts []logoAttempt) {
-	written, superseded, err := w.people.SetCompanyLogo(ctx, companyID, key, logo.SourceURL)
+	written, superseded, err := w.contacts.SetCompanyLogo(ctx, companyID, key, logo.SourceURL)
 	if err != nil {
 		// Deliberately NOT reclaimed. An error here does not mean the write
 		// did not happen: a transaction can commit and still fail the caller
@@ -343,7 +343,7 @@ func (w *siteDeepReadWorker) recordCompanyLogo(ctx context.Context, readID ids.U
 	}
 	if !written {
 		w.reclaimLogoObject(ctx, readID, &key)
-		w.log.InfoContext(ctx, "resolved logo left unused: a person's own logo holds the field",
+		w.log.InfoContext(ctx, "resolved logo left unused: a contact's own logo holds the field",
 			"read", readID.String(), "source", logo.SourceURL)
 		return
 	}
@@ -364,8 +364,8 @@ func (w *siteDeepReadWorker) recordCompanyLogo(ctx context.Context, readID ids.U
 // the reference. The bytes stored for a refused park are collected right here:
 // an object no row names is one nothing can find to collect later, so the
 // attempt that stored it is the last chance it gets.
-func (w *siteDeepReadWorker) recordDossierLogo(ctx context.Context, readID ids.UUID, claim people.SiteReadClaim, slot people.LogoSlot, key string, logo resolvedLogo, attempts []logoAttempt) {
-	recorded, superseded, err := w.people.RecordSiteReadLogo(ctx, readID, claim.ClaimedAt, slot, key, logo.SourceURL)
+func (w *siteDeepReadWorker) recordDossierLogo(ctx context.Context, readID ids.UUID, claim contacts.SiteReadClaim, slot contacts.LogoSlot, key string, logo resolvedLogo, attempts []logoAttempt) {
+	recorded, superseded, err := w.contacts.RecordSiteReadLogo(ctx, readID, claim.ClaimedAt, slot, key, logo.SourceURL)
 	if err != nil {
 		// Kept for the same reason the company write keeps its bytes: a
 		// failed call is not a write that did not happen.
@@ -386,20 +386,20 @@ func (w *siteDeepReadWorker) recordDossierLogo(ctx context.Context, readID ids.U
 		"stored_bytes", len(logo.PNG), "candidates", logoAttemptSummary(attempts))
 }
 
-// logoWorthResolving asks before resolving anything: a field a person holds is
+// logoWorthResolving asks before resolving anything: a field a contact holds is
 // not going to be written, so fetching and normalizing a mark for it is work
 // nobody uses. The write applies the rule again under the row lock — this is
 // the cheap path, never the authority. A provenance read that fails leaves the
 // field's owner unknown, and the lane stands down rather than guess.
 func (w *siteDeepReadWorker) logoWorthResolving(ctx context.Context, readID ids.UUID, companyID ids.CompanyID) bool {
-	held, err := w.people.LogoHeldByHuman(ctx, companyID)
+	held, err := w.contacts.LogoHeldByHuman(ctx, companyID)
 	if err != nil {
 		w.log.WarnContext(ctx, "reading the company's logo provenance failed",
 			"read", readID.String(), "err", err)
 		return false
 	}
 	if held {
-		w.log.InfoContext(ctx, "logo resolve skipped: a person's own logo holds the field",
+		w.log.InfoContext(ctx, "logo resolve skipped: a contact's own logo holds the field",
 			"read", readID.String())
 		return false
 	}

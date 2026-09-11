@@ -390,7 +390,7 @@ func TestListingDocumentsOfAMissingCorpusIsNotFound(t *testing.T) {
 //
 // The corpus is filled by one statement rather than by 20,000 uploads: what is
 // under test is the refusal, and a test that took a minute to reach it would be
-// deleted by the next person who ran the suite.
+// deleted by the next contact who ran the suite.
 func TestADocumentCrossingTheCorpusPassageCeilingIsRefused(t *testing.T) {
 	ie := newIngestEnv(t)
 	filler := ie.upload(t, "filler.md", "text/markdown", prose(1))

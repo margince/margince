@@ -68,8 +68,8 @@ func TestEverySettingIsUniqueWellFormedAndGoverned(t *testing.T) {
 		// The object must be one the RBAC vocabulary actually knows. An empty
 		// one is an open door; an unknown one is worse, because auth.Require
 		// would gate against an object no role is granted — or, if it collides
-		// with a record object like `person`, hand every rep holding
-		// person:update the ability to flip an installation-wide posture. With
+		// with a record object like `contact`, hand every rep holding
+		// contact:update the ability to flip an installation-wide posture. With
 		// no RLS on `setting` (0190) this gate is the only thing standing there.
 		if !slices.Contains(coreObjects, d.Object) {
 			t.Errorf("%s declares RBAC object %q, which is not in the closed object set; "+

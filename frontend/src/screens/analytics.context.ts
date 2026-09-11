@@ -24,7 +24,7 @@ const CONTEXT_KEY = ["analytics-context"] as const;
 /**
  * The caller's frame, read once.
  *
- * The server decides which population this person measures by default and
+ * The server decides which population this contact measures by default and
  * which ones they may choose; nothing here recreates that policy. A screen
  * asking the question itself would be a second answer, and the two would
  * disagree the first time somebody's grants changed.

@@ -13,7 +13,7 @@ One PR per record after its overview lands:
 - **History** on all four: the rail restyle from Step 3 with the filter
   strip above (`ChronologyFilter`, `TimelineFilterBar`); undo/reversal rows
   (`historyreversalrow.tsx`) as hollow-dot changes with Restore.
-- **Company People**: `CoverageBand`, then the committee map
+- **Company Contacts**: `CoverageBand`, then the committee map
   (`mapModelFromCoverage`), then the roster; `IntroRequestModal`,
   `coverageexplorer.tsx` behind "Where are we thin".
 - **Contact Network**: order pinned by e2e; the map's panel gets the
@@ -107,7 +107,7 @@ learns one page.
   ("Not assessed · 0 of 3 rated", "Nothing billed"); the deep-read card
   **leads the column in the 360's place** and the 360 pane is not drawn
   until a read exists; What needs you holds the one row "Read their site"
-  or nothing; About is the empty dossier line with "Write it"; People is
+  or nothing; About is the empty dossier line with "Write it"; Contacts is
   "Add a contact"; the details panel opens with the fields to fill.
 - Contact thin (`ThinState`): the identity, the readings that exist (a
   strip slot that cannot be read is "Not shown" with no tone), the consent
@@ -132,7 +132,7 @@ learns one page.
   plus the marker; the folded thread at most five; the rest is History.
 - What needs you shows the lead row plus at most three, then "N more" into
   the Worklist filtered to this record.
-- People as chips: three named plus "+N"; Stakeholders the same.
+- Contacts as chips: three named plus "+N"; Stakeholders the same.
 - The page cap (`page.has_more`, `co.commercial.truncated`,
   `project.deals.more`) keeps its sentences; a count on a truncated page
   reads "at least N", never N.

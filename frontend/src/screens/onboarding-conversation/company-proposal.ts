@@ -28,7 +28,7 @@ export type ClarifyAnswer = {
   dismissed?: boolean;
   /** The dismissal was NOT the human's — another answer of theirs already
    * settled this question, so it was retired rather than declined. Both
-   * resolve identically on the wire; they read differently to a person, and
+   * resolve identically on the wire; they read differently to a contact, and
    * a surface that tells someone they skipped a question they never saw is
    * wrong about the only part they can check. */
   autoResolved?: boolean;
@@ -344,7 +344,7 @@ export type LegalFieldGap = "not-published" | "not-checked" | "unpicked";
 // opposed to a claim that the site was searched and came up empty. A field
 // outside the trio, or one that already carries a value, has no gap to name.
 // Neither does a field on the manual path: with no crawl behind it there is
-// no "did not find" to report, only a blank the person has not filled yet.
+// no "did not find" to report, only a blank the contact has not filled yet.
 //
 // A candidate that carries the field outranks both, because the page plainly
 // states it and "the page does not state it" would be false. What is left to

@@ -89,7 +89,7 @@ const (
 
 	// MirrorProduct identifies reads and writes against a customer's own CRM
 	// while this product mirrors it. Their administrator sees the traffic in an
-	// audit log beside their people's own, and "some Go program" is not an
+	// audit log beside their contacts's own, and "some Go program" is not an
 	// answer to "what is writing to our records".
 	MirrorProduct = "margince-mirror"
 	MirrorHeader  = MirrorProduct + "/" + version

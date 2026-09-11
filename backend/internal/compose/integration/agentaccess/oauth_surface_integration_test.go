@@ -46,7 +46,7 @@ func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
 	agentBearer := map[string]string{"Authorization": "Bearer " + body["access_token"].(string)}
 
 	// A webhook subscription create, because it is one of the few writes the
-	// contract still declares confirm-first. Archiving a person staged this
+	// contract still declares confirm-first. Archiving a contact staged this
 	// call until #2426 moved 32 verbs to auto_execute under ADR-0055: a
 	// passport carries the granting human's own seat and grants, so a verb it
 	// can spend is one its holder could spend unaided. The claim under test is
@@ -182,8 +182,8 @@ func TestHostedMCPTransportSharesTheGovernedSurface(t *testing.T) {
 	if status != http.StatusOK || !strings.Contains(out, `"search_records"`) {
 		t.Fatalf("hosted tools/list → %d %s", status, out)
 	}
-	status, out = rpc(token, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_record","arguments":{"record_type":"person","fields":{"full_name":"Hosted Agent Person"}}}}`)
-	if status != http.StatusOK || !strings.Contains(out, "Hosted Agent Person") {
+	status, out = rpc(token, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_record","arguments":{"record_type":"contact","fields":{"full_name":"Hosted Agent Contact"}}}}`)
+	if status != http.StatusOK || !strings.Contains(out, "Hosted Agent Contact") {
 		t.Fatalf("hosted tools/call → %d %s", status, out)
 	}
 

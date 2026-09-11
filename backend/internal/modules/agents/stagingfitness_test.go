@@ -67,11 +67,11 @@ func (elsewhereProvider) Read(_ context.Context, ref datasource.EntityRef) (data
 // "which tools stage", and the count assertion each walk makes would then be
 // pinning a different universe.
 func stageableToolArgs() (reads, creates map[string]string) {
-	person, lead, deal, stage, activity := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	contact, lead, deal, stage, activity := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	reads = map[string]string{
-		"archive_record": fmt.Sprintf(`{"record_type":"person","id":%q}`, person),
+		"archive_record": fmt.Sprintf(`{"record_type":"contact","id":%q}`, contact),
 		"promote_lead":   fmt.Sprintf(`{"lead_id":%q,"trigger":"meeting_booked"}`, lead),
-		"merge_records":  fmt.Sprintf(`{"record_type":"person","source_id":%q,"target_id":%q}`, ids.NewV7(), person),
+		"merge_records":  fmt.Sprintf(`{"record_type":"contact","source_id":%q,"target_id":%q}`, ids.NewV7(), contact),
 		"advance_deal":   fmt.Sprintf(`{"deal_id":%q,"to_stage_id":%q}`, deal, stage),
 		"progress_deal":  fmt.Sprintf(`{"deal_id":%q,"to_stage_id":%q,"note":"n"}`, deal, stage),
 		"send_message":   fmt.Sprintf(`{"activity_id":%q,"body":"b","consent_purpose":"support"}`, activity),
@@ -89,7 +89,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 				`"links":[{"entity_type":"company","entity_id":%q}]}`, ids.NewV7()),
 		// The whole-call staging the tier floor produces (#982). It patches an
 		// existing row, so it carries the same obligation as its siblings.
-		"update_record": fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"full_name":"X"}}`, person),
+		"update_record": fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"full_name":"X"}}`, contact),
 	}
 	// A create names no existing record, so it has no target to probe. What it
 	// owes instead is to stage the shape it claims: the record TYPE, and no id —
@@ -116,7 +116,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 	}
 
 	creates = map[string]string{
-		"create_record": `{"record_type":"person","fields":{"full_name":"Fresh"}}`,
+		"create_record": `{"record_type":"contact","fields":{"full_name":"Fresh"}}`,
 	}
 	return reads, creates
 }
@@ -208,8 +208,8 @@ func TestEveryStageableToolRefusesATargetHeldElsewhere(t *testing.T) {
 // change no approval could release.
 func TestMergeRefusesAnExternallyHeldSourceUnderALocalSurvivor(t *testing.T) {
 	survivor, src := ids.NewV7(), ids.NewV7()
-	survivorRef := datasource.EntityRef{Type: datasource.EntityPerson, ID: survivor}
-	sourceRef := datasource.EntityRef{Type: datasource.EntityPerson, ID: src}
+	survivorRef := datasource.EntityRef{Type: datasource.EntityContact, ID: survivor}
+	sourceRef := datasource.EntityRef{Type: datasource.EntityContact, ID: src}
 	p := &fakeSoR{records: map[datasource.EntityRef]datasource.Record{
 		survivorRef: nativeRecord(datasource.Record{Ref: survivorRef, Fields: json.RawMessage(`{}`), Version: 4}),
 		// Deliberately unstamped: this record's authority lives elsewhere.
@@ -217,7 +217,7 @@ func TestMergeRefusesAnExternallyHeldSourceUnderALocalSurvivor(t *testing.T) {
 	}}
 
 	_, err := mergeRecords{p: p}.StageInfo(context.Background(),
-		json.RawMessage(fmt.Sprintf(`{"record_type":"person","source_id":%q,"target_id":%q}`, src, survivor)))
+		json.RawMessage(fmt.Sprintf(`{"record_type":"contact","source_id":%q,"target_id":%q}`, src, survivor)))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("StageInfo err = %v, want ErrUnsupportedBySoR — the merge source was not validated", err)
@@ -233,7 +233,7 @@ type localProvider struct {
 // A local provider archives, which the staging seam asks BEFORE it stages: a
 // provider that cannot is refused at the door and never reaches a summary.
 func (localProvider) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
-	return []datasource.EntityType{datasource.EntityPerson}, nil
+	return []datasource.EntityType{datasource.EntityContact}, nil
 }
 
 func (localProvider) RefuseArchive(context.Context, datasource.EntityRef) error { return nil }
@@ -331,7 +331,7 @@ func TestTheStagedRefusalCarriesTheSummaryTheCardWasGiven(t *testing.T) {
 		t.Fatal("the card was given no summary, so this pair compares two empty strings")
 	}
 	if staged.Summary != card {
-		t.Errorf("the human's card says %q and the caller is told %q — a person and an agent "+
+		t.Errorf("the human's card says %q and the caller is told %q — a contact and an agent "+
 			"waiting on two descriptions of one staged change", card, staged.Summary)
 	}
 	if !strings.Contains(err.Error(), card) {
@@ -368,10 +368,10 @@ func (stagingTags) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) 
 
 // RecordTagTypes is read at registration, not at staging: the tag registrar
 // asks it while building the apply/remove schema.
-func (stagingTags) RecordTagTypes() []string { return []string{"person", "company", "deal"} }
+func (stagingTags) RecordTagTypes() []string { return []string{"contact", "company", "deal"} }
 
 // TaggableTypes is read at registration too, by apply_tag's schema.
-func (stagingTags) TaggableTypes() []string { return []string{"person", "company", "deal"} }
+func (stagingTags) TaggableTypes() []string { return []string{"contact", "company", "deal"} }
 
 // stagingImports serves the run commit_import reads before it can describe what
 // committing would do.
@@ -379,7 +379,7 @@ type stagingImports struct{ Imports }
 
 func (stagingImports) ReadRun(_ context.Context, id ids.UUID) (crmcontracts.ImportRun, error) {
 	return crmcontracts.ImportRun{
-		Id: openapi_types.UUID(id), Object: "person", Status: "awaiting_approval",
+		Id: openapi_types.UUID(id), Object: "contact", Status: "awaiting_approval",
 	}, nil
 }
 

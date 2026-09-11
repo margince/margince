@@ -252,7 +252,7 @@ export function useRecentConversations(
   );
   const entries = activityTimeline(readable, undefined, undefined, who);
   // A bulk send is not a conversation. It is one message the sender addressed
-  // to several people and has no thread of its own, so "continuing" it would
+  // to several contacts and has no thread of its own, so "continuing" it would
   // anchor a reply to a mailing nobody wrote back to. Threads and single
   // messages are the ways in; the bulk groups are left where the History tab
   // draws them.

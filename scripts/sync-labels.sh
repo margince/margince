@@ -10,7 +10,7 @@
 # every issue that carries it and there is no undo — an issue's provenance is
 # the one thing nobody can reconstruct later (docs/reference/issue-labels.md
 # says so about these very labels). Retiring a label is a decision with a cost,
-# so it belongs to a person who has decided to pay it, not to a sync run.
+# so it belongs to a contact who has decided to pay it, not to a sync run.
 #
 # `gh label create --force` is create-or-update, so the two cases are one call
 # and the run is idempotent: a second pass changes nothing and says so.

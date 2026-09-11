@@ -6,7 +6,7 @@ package approvals
 // What POLLING a staged proposal needs, as distinct from what redeeming one
 // needs.
 //
-// The MCP Tasks extension hands an agent a durable handle while a person
+// The MCP Tasks extension hands an agent a durable handle while a contact
 // decides, and polling that handle asks two questions this module had no
 // read-only answer for: has anyone decided yet, and — once they have — what
 // exactly did they release? Both are reads, and neither settles anything: the
@@ -14,7 +14,7 @@ package approvals
 //
 // EVERY METHOD HERE IS BOUND TO THE PASSPORT THAT STAGED THE PROPOSAL, which is
 // this file's gate and the reason it needs no other. These are not a human's
-// view of an inbox — that is inbox.go, scoped to what a person may decide —
+// view of an inbox — that is inbox.go, scoped to what a contact may decide —
 // they are an agent's view of its OWN proposal, and an agent has exactly one:
 // the one it staged. So the binding is the whole authorization question, and
 // answering it in the SQL rather than above it means no caller can be added
@@ -70,7 +70,7 @@ type TaskState struct {
 	// approves one second before that still leaves a decision redeemable for
 	// RedemptionWindow afterwards. A handle that expired at the staging
 	// deadline would refuse itself while its approval was live, stranding an
-	// effect the person had already released — so the answer is the later of
+	// effect the contact had already released — so the answer is the later of
 	// the two, per status.
 	ExpiresAt time.Time
 	// Consumed reports that the single-use authority has already been spent.
@@ -120,7 +120,7 @@ func actionableUntil(a row, status string) time.Time {
 // releasing it (ADR-0036 §4), which rewrites both proposed_change and
 // diff_hash — the original hash then opens nothing. An executor replaying what
 // was originally staged would therefore try to perform what the agent asked for
-// rather than what the person allowed, and would be refused for the mismatch.
+// rather than what the contact allowed, and would be refused for the mismatch.
 func (s *Service) ProposedChange(ctx context.Context, id ids.ApprovalID) (json.RawMessage, error) {
 	var change json.RawMessage
 	if err := s.readOwnProposal(ctx, id, func(a row) { change = a.ProposedChange }); err != nil {
@@ -133,7 +133,7 @@ func (s *Service) ProposedChange(ctx context.Context, id ids.ApprovalID) (json.R
 // wrapper WithdrawInTx has lacked, for callers that hold none.
 //
 // retracted reports whether there was still an offer to take. It is FALSE for
-// an approval a human already decided — what a person answered is not the
+// an approval a human already decided — what a contact answered is not the
 // agent's to take back — and a caller that reported "withdrawn" either way
 // would tell its user the proposal was gone while it sat decided in the inbox.
 func (s *Service) Withdraw(ctx context.Context, id ids.ApprovalID, reason string) (retracted bool, err error) {

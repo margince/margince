@@ -69,7 +69,7 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 		return crmcontracts.Project{}, err
 	}
 	// A project with no requested owner belongs to its creator, the same
-	// default person/company/deal births apply. Ownerless matters
+	// default contact/company/deal births apply. Ownerless matters
 	// more here than elsewhere: write authority reads an unowned row as
 	// nobody's to change, so an ownerless project can never be attached to a
 	// deal by the rep who just created it (projects.EnsureAttachable).
@@ -206,7 +206,7 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 			return fmt.Errorf("archive project: %w", err)
 		}
 		// The stakeholder edges are attributes of the grouping, so they go
-		// with it — the people themselves are untouched.
+		// with it — the contacts themselves are untouched.
 		if _, err := tx.Exec(ctx,
 			`UPDATE relationship SET archived_at = $2
 			   WHERE project_id = $1 AND kind = 'project_stakeholder' AND archived_at IS NULL`,

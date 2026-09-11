@@ -10,7 +10,7 @@ package capture
 // during a classifier outage that is the only question worth asking, because
 // every new thread lands pending and stays there until the model answers.
 //
-// One seat's own threads and nobody else's. What a person's mailbox is holding
+// One seat's own threads and nobody else's. What a contact's mailbox is holding
 // is the most private thing this module knows: the list names threads a
 // classifier judged legal, personnel or personal, so a colleague's view of it
 // would disclose exactly what holding them exists to prevent. There is no id

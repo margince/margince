@@ -11,7 +11,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The Person 360's Art. 7 proof log + DOI redeem field (G-4/G-5). Three
+// The Contact 360's Art. 7 proof log + DOI redeem field (G-4/G-5). Three
 // purposes cover the ternary state matrix in one render: transactional
 // (granted, no DOI), events (unknown, no DOI), marketing_email (unknown,
 // requiring double opt-in) — the same PURPOSES/CONSENT shapes
@@ -69,15 +69,15 @@ const CONSENT = {
 };
 
 // The write gate reads `writable` off the record itself, so a story that wants
-// the Grant/Withdraw/ConfirmDetails verbs must hand the section a writable person.
-const WRITABLE_PERSON = { writable: true };
+// the Grant/Withdraw/ConfirmDetails verbs must hand the section a writable contact.
+const WRITABLE_CONTACT = { writable: true };
 
 function section(routes: RouteMap) {
   return () => {
     installFetchStub(routes);
     return (
       <StoryProviders>
-        <ConsentSection personId="person-1" person={WRITABLE_PERSON} />
+        <ConsentSection contactId="contact-1" contact={WRITABLE_CONTACT} />
       </StoryProviders>
     );
   };
@@ -92,23 +92,23 @@ export default meta;
 type Story = StoryObj<typeof ConsentSection>;
 
 // ConsentSection always mounts ConfirmDetailsAction underneath the rows
-// (P-8/P-9), and that control's useCanWrite("person", "update") call reaches
+// (P-8/P-9), and that control's useCanWrite("contact", "update") call reaches
 // GET /me unconditionally, regardless of which consent state this story is
 // about. So every story in this file routes it, granted a full rep seat that
-// may write the person, since none of the states below is itself the story
+// may write the contact, since none of the states below is itself the story
 // about the write gate (ConfirmDetails* below are).
 const MAY_WRITE = {
   user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
   authorization: {
     seat_type: "full",
-    objects: { person: { read: true, update: true } },
+    objects: { contact: { read: true, update: true } },
   },
 };
 
 export const Default: Story = {
   render: section({
     "GET /consent-purposes": () => jsonResponse(PURPOSES),
-    "GET /people/person-1/consent": () => jsonResponse(CONSENT),
+    "GET /contacts/contact-1/consent": () => jsonResponse(CONSENT),
     "GET /me": () => jsonResponse(MAY_WRITE),
   }),
 };
@@ -117,7 +117,7 @@ export const Default: Story = {
 export const ProofLogOpen: Story = {
   render: section({
     "GET /consent-purposes": () => jsonResponse(PURPOSES),
-    "GET /people/person-1/consent": () => jsonResponse(CONSENT),
+    "GET /contacts/contact-1/consent": () => jsonResponse(CONSENT),
     "GET /me": () => jsonResponse(MAY_WRITE),
   }),
   play: async ({ canvasElement }) => {
@@ -140,7 +140,7 @@ export const Empty: Story = {
   render: section({
     "GET /consent-purposes": () =>
       jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
-    "GET /people/person-1/consent": () =>
+    "GET /contacts/contact-1/consent": () =>
       jsonResponse({ state: [], events: [] }),
     "GET /me": () => jsonResponse(MAY_WRITE),
   }),
@@ -149,27 +149,27 @@ export const Empty: Story = {
 export const LoadError: Story = {
   render: section({
     "GET /consent-purposes": () => jsonResponse(PURPOSES),
-    "GET /people/person-1/consent": () =>
+    "GET /contacts/contact-1/consent": () =>
       jsonResponse({ title: "internal error", status: 500 }, 500),
     "GET /me": () => jsonResponse(MAY_WRITE),
   }),
 };
 
-// The per-person ask, under the per-purpose rows. It is a MUTATING control, so
-// it is drawn only for a caller who may write the person — which is why every
+// The per-contact ask, under the per-purpose rows. It is a MUTATING control, so
+// it is drawn only for a caller who may write the contact — which is why every
 // story below states a seat and a grant rather than leaving /me to the default.
 const ROWS: RouteMap = {
   "GET /consent-purposes": () => jsonResponse(PURPOSES),
-  "GET /people/person-1/consent": () => jsonResponse(CONSENT),
+  "GET /contacts/contact-1/consent": () => jsonResponse(CONSENT),
 };
 
 // The link went out. The address is the one the SERVER derived from the
-// person's own record — this surface reports it and cannot choose it.
+// contact's own record — this surface reports it and cannot choose it.
 export const ConfirmDetailsSent: Story = {
   render: section({
     ...ROWS,
     "GET /me": () => jsonResponse(MAY_WRITE),
-    "POST /people/person-1/consent/confirm-request": () =>
+    "POST /contacts/contact-1/consent/confirm-request": () =>
       jsonResponse(
         {
           delivered_to: "ada@example.test",
@@ -193,7 +193,7 @@ export const ConfirmDetailsUndelivered: Story = {
   render: section({
     ...ROWS,
     "GET /me": () => jsonResponse(MAY_WRITE),
-    "POST /people/person-1/consent/confirm-request": () =>
+    "POST /contacts/contact-1/consent/confirm-request": () =>
       jsonResponse(
         {
           delivered_to: "ada@example.test",
@@ -216,7 +216,7 @@ export const ConfirmDetailsRefused: Story = {
   render: section({
     ...ROWS,
     "GET /me": () => jsonResponse(MAY_WRITE),
-    "POST /people/person-1/consent/confirm-request": () =>
+    "POST /contacts/contact-1/consent/confirm-request": () =>
       jsonResponse(
         {
           title: "Unprocessable Entity",

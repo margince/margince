@@ -8,7 +8,7 @@ package activities
 // may read the row; it does not reach the vector a similarity probe answers
 // from, nor the attention label that put the message on a colleague's screen.
 // Both are the message's own text in another shape, and both are readable by
-// people the narrowing just excluded.
+// contacts the narrowing just excluded.
 
 import (
 	"context"
@@ -47,14 +47,14 @@ import (
 // boundary rather than a miss.
 //
 // The profile fields a signature enrichment wrote ARE retracted, through the
-// seam below. Only the ones nobody has taken over: a value a person restored or
+// seam below. Only the ones nobody has taken over: a value a contact restored or
 // corrected stays, and RetractSignatureFieldsTx states which columns tell those
 // apart.
 //
 // Idempotent: re-running deletes nothing more, which is what lets the consumer
 // that calls it retry.
 // SignatureFieldRetractor removes the profile fields one message's signature
-// wrote. people owns that table, so compose injects the edge, and it is required
+// wrote. contacts owns that table, so compose injects the edge, and it is required
 // rather than optional — a narrowing that skipped it would leave the message's
 // content on a record everybody reads.
 type SignatureFieldRetractor func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error

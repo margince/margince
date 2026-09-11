@@ -25,8 +25,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -52,7 +52,7 @@ type Completer interface {
 // call's cost and its latency together. Twelve is the size of a committee a
 // rep would name by hand; past it the account's contacts are a mailing list
 // rather than a buying group, and reading all of them would spend a premium
-// call on people nobody is selling to.
+// call on contacts nobody is selling to.
 const proposalCandidates = 12
 
 // proposalMessages is how many of a contact's own messages are read.
@@ -69,7 +69,7 @@ const proposalMessages = 6
 // never enters the prompt and cannot be proposed for; the gate then refuses
 // anything the model returned that the evidence does not support; and only
 // what is left is written, attributed to the reading agent rather than to the
-// person who pressed the button.
+// contact who pressed the button.
 func (s *Service) ProposeRoles(
 	ctx context.Context, lane Completer, dealID ids.DealID,
 ) (crmcontracts.DealRoleProposalResult, error) {
@@ -178,23 +178,23 @@ func (s *Service) proposalInput(
 	if err := auth.EnsureWritableLive(ctx, tx, "deal", dealID.UUID); err != nil {
 		return "", nil, err
 	}
-	roster, err := people.StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
+	roster, err := contacts.StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
 	if err != nil {
 		return "", nil, err
 	}
-	// Ranked the way the People tab ranks, then cut: a contact who has replied
+	// Ranked the way the Contacts tab ranks, then cut: a contact who has replied
 	// is both the likeliest to have said what they do and the one a reader
 	// would look at first, so the cut takes the tail rather than an arbitrary
 	// twelve by id.
-	people.RankContacts(roster)
+	contacts.RankContacts(roster)
 	if len(roster) > proposalCandidates {
 		roster = roster[:proposalCandidates]
 	}
-	personIDs := make([]ids.PersonID, 0, len(roster))
+	contactIDs := make([]ids.ContactID, 0, len(roster))
 	for _, contact := range roster {
-		personIDs = append(personIDs, contact.PersonID)
+		contactIDs = append(contactIDs, contact.ContactID)
 	}
-	identity, err := contactIdentity(ctx, tx, companyID, personIDs)
+	identity, err := contactIdentity(ctx, tx, companyID, contactIDs)
 	if err != nil {
 		return "", nil, err
 	}
@@ -202,13 +202,13 @@ func (s *Service) proposalInput(
 	if err != nil {
 		return "", nil, err
 	}
-	messages, err := ownWords(ctx, tx, companyID, personIDs, now)
+	messages, err := ownWords(ctx, tx, companyID, contactIDs, now)
 	if err != nil {
 		return "", nil, err
 	}
 
-	candidates := make([]proposeroles.Candidate, 0, len(personIDs))
-	for _, id := range personIDs {
+	candidates := make([]proposeroles.Candidate, 0, len(contactIDs))
+	for _, id := range contactIDs {
 		said := messages[id.UUID]
 		if len(said) == 0 {
 			// A contact who has written nothing cannot evidence a role. Passing
@@ -219,7 +219,7 @@ func (s *Service) proposalInput(
 		}
 		who := identity[id]
 		candidates = append(candidates, proposeroles.Candidate{
-			PersonID:  id.String(),
+			ContactID: id.String(),
 			FullName:  who.fullName,
 			Title:     titleOf(who),
 			HoldsRole: held[id.UUID],
@@ -282,7 +282,7 @@ func (s *Service) visibleOpenDeal(
 // heldSeats is who already has a role on this deal.
 //
 // From deals.Stakeholders, the same reader the committee board renders, so
-// "already answered" means the same thing on both. Its person row scope means
+// "already answered" means the same thing on both. Its contact row scope means
 // a seat the caller cannot see is absent here — which makes HoldsRole false
 // for a seat that exists, so the gate is not the only thing standing between a
 // proposal and a duplicate. The write re-checks under the row itself.
@@ -302,7 +302,7 @@ func heldSeats(
 	out := make(map[ids.UUID]bool, len(seats))
 	for _, seat := range seats {
 		if seat.Role != "" {
-			out[seat.PersonID] = true
+			out[seat.ContactID] = true
 		}
 	}
 	return out, nil

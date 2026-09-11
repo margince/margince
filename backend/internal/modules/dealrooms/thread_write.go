@@ -217,7 +217,7 @@ func postCommentTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, a
 // commentAuthorName names whoever spoke: the buyer's seat carries their own
 // name, and the seller's is their user record. Nil rather than a placeholder
 // when the row has gone — a note that named "Unknown" would be asserting
-// something about the person instead of admitting the record is thin.
+// something about the contact instead of admitting the record is thin.
 // The bool is "there is a name", which is a real answer and not a failure —
 // hence (string, bool, error) rather than a nil pointer standing for both.
 func commentAuthorName(ctx context.Context, tx pgx.Tx, by threadAuthor) (string, bool, error) {
@@ -315,7 +315,7 @@ func (s *Store) Reply(ctx context.Context, roomID ids.DealRoomID, threadID ids.U
 }
 
 // ResolveThread closes a thread. Human-only: resolving a required-change
-// thread is what unblocks the buyer's confirmation, so a person stands behind
+// thread is what unblocks the buyer's confirmation, so a contact stands behind
 // it. Already resolved answers the thread unchanged.
 func (s *Store) ResolveThread(ctx context.Context, roomID ids.DealRoomID, threadID ids.UUID) (crmcontracts.DealRoomThread, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
@@ -350,7 +350,7 @@ func (s *Store) ResolveThread(ctx context.Context, roomID ids.DealRoomID, thread
 		p.Set("resolved_at", nil, time.Now().UTC())
 		p.Set("resolved_by_user_id", nil, userID)
 		// No If-Match: a thread carries no version column, so there is no
-		// precondition to compare. The row lock is what serializes two people
+		// precondition to compare. The row lock is what serializes two contacts
 		// resolving at once, and it is taken by name — a nil version reads as a
 		// caller who had one and declined it.
 		lock, err := storekit.LockRow(ctx, tx, threadObject, threadID, storekit.NoArchiveColumn)

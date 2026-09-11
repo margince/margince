@@ -20,7 +20,7 @@ import { LABELS } from "./agentrail-copy";
 import { meFixture } from "./mefixture";
 
 // The margins are the one thing on a workspace screen that moves without being
-// asked for, and they move around the whole window. Some people cannot work
+// asked for, and they move around the whole window. Some contacts cannot work
 // beside that and some simply do not want to, so the panel carries a switch —
 // and what these cases hold is that the switch actually reaches the surface:
 // off means nothing is drawn and nothing is paid for, on means the light comes

@@ -20,7 +20,7 @@ expect:
     A bulk marketing send with every mass-mail marker present: a digest sender
     address, promotional subject, a list-membership explanation and unsubscribe
     footer. Nobody at this business has a relationship with the sender.
-    A kind of "newsletter" scores high. "person" scores low — it is the
+    A kind of "newsletter" scores high. "contact" scores low — it is the
     junk-record outcome ADR-0072 exists to prevent, though it is the SAFE
     direction of error: a wrongly created record is visible and deletable, where
     a wrongly hidden prospect is neither. "spam" is a near miss: the mail is

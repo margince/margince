@@ -7,11 +7,11 @@ package capture
 //
 // The decisions are already recorded — the ledger holds what the classifier
 // concluded, the override table holds what the owner said instead — but they
-// live in two tables and neither is readable by the person they are about. A
+// live in two tables and neither is readable by the contact they are about. A
 // product that decides silently and shows nobody is one an owner has to trust
 // rather than check, and the whole posture rests on them being able to check.
 //
-// One seat's own senders and nobody else's. Whose mail a person keeps out is
+// One seat's own senders and nobody else's. Whose mail a contact keeps out is
 // itself private: there is no id here that reaches a colleague's list and no
 // admin view of one.
 
@@ -32,7 +32,7 @@ import (
 // SenderDecision is one sender and what became of them.
 type SenderDecision struct {
 	Address string
-	// Kind is what the classifier concluded — person, newsletter, personal,
+	// Kind is what the classifier concluded — contact, newsletter, personal,
 	// advisor and the rest — or empty when it has not answered yet.
 	Kind string
 	// Status is the ledger's own lifecycle: pending, real, noise, unsure.
@@ -93,16 +93,16 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 			       coalesce(o.decision, '')     AS decision,
 			       coalesce(o.overruled_kind, '') AS overruled_kind,
 			       EXISTS (
-			         SELECT 1 FROM person_email pe
-			           JOIN person pr ON pr.id = pe.person_id AND pr.archived_at IS NULL
+			         SELECT 1 FROM contact_email pe
+			           JOIN contact pr ON pr.id = pe.contact_id AND pr.archived_at IS NULL
 			          WHERE pe.email = coalesce(p.email, o.address)
 			            AND pe.archived_at IS NULL
-			            -- The visibility rule, not just existence. A person
+			            -- The visibility rule, not just existence. A contact
 			            -- capture minted from somebody else's mailbox is
 			            -- owner-scoped precisely so nobody else learns they
 			            -- exist, and the address here is one the CALLER
 			            -- supplied — so an unscoped EXISTS would answer "does
-			            -- your colleague know this person" for any address a
+			            -- your colleague know this contact" for any address a
 			            -- seat cares to guess.
 			            AND (pr.visibility <> 'owner' OR pr.owner_id = $1)) AS record_exists,
 			       -- Only for a personal verdict the owner has not overruled:

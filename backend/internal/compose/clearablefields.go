@@ -30,12 +30,12 @@ package compose
 //     of a partner-add names both halves as null.
 //   - a lead's status and score override are absent because they are lifecycle
 //     positions and a sticky decision, not values.
-//   - a person's full_name and a company's display_name are absent because
+//   - a contact's full_name and a company's display_name are absent because
 //     a record with no name is not a record anybody can find again.
 //
 //nolint:goconst // the rows are wire FIELD names and record types read as data; the constants goconst points at are other concepts that spell the same word — a report field, a filter param — and hiding these behind them would assert a correspondence this table exists to state on its own
 var clearableFields = map[string][]string{
-	"person": {"first_name", "last_name", "title", "owner_id"},
+	"contact": {"first_name", "last_name", "title", "owner_id"},
 	"company": {
 		"legal_name", "description", "industry", "size_band",
 		"linkedin_url", "owner_id", "parent_company_id",

@@ -15,13 +15,13 @@ fixture:
     priya
 expect:
   outcome: accepted
-  answer: person
+  answer: contact
   rubric: >
     This is the release-blocking false-noise case (ADR-0072/A118 §4). The sender
     is an unmistakable inbound prospect: a named human, a specific commercial
     need, a stated timeline, and a request for a quote. The message is lowercase
     and unpolished, which is exactly the trap — informality is not noise.
-    A kind of "person" scores high: she is a human with an interest in this
+    A kind of "contact" scores high: she is a human with an interest in this
     business, and hers is the one kind that becomes a contact record.
     "spam" and "newsletter" are the failure this scenario exists to catch and
     score zero regardless of stated confidence, because both hide a genuine
@@ -29,8 +29,8 @@ expect:
     a milder way — they keep the correspondence visible and withhold only the
     contact record — so they score in the middle, above the hiding kinds and
     well below the right answer: Priya signs with her own name from her own
-    address, and reading that as a shared mailbox loses the person a rep needs to
-    reply to. A "person" verdict below the 0.7 floor also scores in the middle:
+    address, and reading that as a shared mailbox loses the contact a rep needs to
+    reply to. A "contact" verdict below the 0.7 floor also scores in the middle:
     abstaining is safe but costs a human the review.
   bands:
     certified_min: 70

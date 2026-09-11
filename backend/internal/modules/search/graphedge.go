@@ -3,7 +3,7 @@
 
 package search
 
-// The user↔contact interaction edge (CG-DDL-1 / ADR-0078): which of our people
+// The user↔contact interaction edge (CG-DDL-1 / ADR-0078): which of our contacts
 // interacts with which contact, how much, how recently.
 //
 // It is a PROJECTION. Every row is folded from activity_participant rows and
@@ -38,8 +38,8 @@ import (
 // is computed at read by StrengthOf, because a stored decayed number is wrong
 // the moment the clock moves.
 type InteractionEdge struct {
-	UserID   ids.UUID
-	PersonID ids.UUID
+	UserID    ids.UUID
+	ContactID ids.UUID
 
 	LastAt        time.Time
 	LastInboundAt *time.Time
@@ -76,10 +76,10 @@ func (e InteractionEdge) StrengthOf(now time.Time) relstrength.Score {
 // The market convention is to exclude cc, on the argument that being copied is
 // not a relationship. It was excluded here first and then reversed, and the
 // reason is worth keeping: in the accounts this product is built for, the
-// person who is always in copy on the thread is frequently the one who
+// contact who is always in copy on the thread is frequently the one who
 // actually knows the customer — the account lead cc'd on their team's
 // correspondence, the partner copied on every exchange. Dropping cc did not
-// remove noise so much as remove exactly those people from the answer to "who
+// remove noise so much as remove exactly those contacts from the answer to "who
 // here knows them".
 //
 // The score already handles the difference honestly without a role filter: a
@@ -88,7 +88,7 @@ func (e InteractionEdge) StrengthOf(now time.Time) relstrength.Score {
 // appear, ranked where they belong, instead of vanishing.
 const interactionRoles = `('from','to','cc','bcc','attendee','organizer')`
 
-// RecomputeEdgesForActivities re-folds every (user, person) pair reachable
+// RecomputeEdgesForActivities re-folds every (user, contact) pair reachable
 // from the named activities, from the base tables.
 //
 // It is the ONE maintenance entry point. A consumer that learns an activity
@@ -124,17 +124,17 @@ func RecomputeEdgesForActivities(ctx context.Context, tx pgx.Tx, activityIDs []i
 	return recomputePairs(ctx, tx, pairs)
 }
 
-// RecomputeEdgesForPerson re-folds every edge touching one contact — the
-// handler for a merge, an archive or a restore, where the person changed and
+// RecomputeEdgesForContact re-folds every edge touching one contact — the
+// handler for a merge, an archive or a restore, where the contact changed and
 // no single activity did.
-func RecomputeEdgesForPerson(ctx context.Context, tx pgx.Tx, personID ids.UUID) error {
+func RecomputeEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT u.user_id
 		  FROM activity_participant p
 		  JOIN activity_participant u ON u.activity_id = p.activity_id
-		 WHERE p.person_id = $1 AND u.user_id IS NOT NULL
+		 WHERE p.contact_id = $1 AND u.user_id IS NOT NULL
 		 UNION
-		SELECT user_id FROM graph_interaction_edge WHERE person_id = $1`, personID)
+		SELECT user_id FROM graph_interaction_edge WHERE contact_id = $1`, contactID)
 	if err != nil {
 		return fmt.Errorf("search: resolving the colleagues who know a contact: %w", err)
 	}
@@ -145,7 +145,7 @@ func RecomputeEdgesForPerson(ctx context.Context, tx pgx.Tx, personID ids.UUID) 
 		if err := rows.Scan(&u); err != nil {
 			return err
 		}
-		pairs = append(pairs, pair{user: u, person: personID})
+		pairs = append(pairs, pair{user: u, contact: contactID})
 	}
 	if err := rows.Err(); err != nil {
 		return err
@@ -153,23 +153,23 @@ func RecomputeEdgesForPerson(ctx context.Context, tx pgx.Tx, personID ids.UUID) 
 	if err := recomputePairs(ctx, tx, pairs); err != nil {
 		return err
 	}
-	contactPairs, err := contactPairsForPerson(ctx, tx, personID)
+	contactPairs, err := contactPairsForContact(ctx, tx, contactID)
 	if err != nil {
 		return err
 	}
 	return recomputeContactPairs(ctx, tx, contactPairs)
 }
 
-// DropEdgesForPerson removes every edge to one contact outright — the erasure
+// DropEdgesForContact removes every edge to one contact outright — the erasure
 // and merge-source handler. The projection must not be the one place a
-// deleted person's correspondence pattern survives. Both projections, and for
+// deleted contact's correspondence pattern survives. Both projections, and for
 // the contact one BOTH endpoint columns: the subject standing on the far end
 // of somebody else's edge is still the subject.
-func DropEdgesForPerson(ctx context.Context, tx pgx.Tx, personID ids.UUID) error {
-	if _, err := tx.Exec(ctx, `DELETE FROM graph_interaction_edge WHERE person_id = $1`, personID); err != nil {
+func DropEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM graph_interaction_edge WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("search: dropping a contact's interaction edges: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM graph_contact_edge WHERE person_a = $1 OR person_b = $1`, personID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM graph_contact_edge WHERE contact_a = $1 OR contact_b = $1`, contactID); err != nil {
 		return fmt.Errorf("search: dropping a contact's observed peer edges: %w", err)
 	}
 	return nil
@@ -187,20 +187,20 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		return nil
 	}
 	users := make([]ids.UUID, 0, len(pairs))
-	people := make([]ids.UUID, 0, len(pairs))
+	contacts := make([]ids.UUID, 0, len(pairs))
 	for _, p := range pairs {
 		users = append(users, p.user)
-		people = append(people, p.person)
+		contacts = append(contacts, p.contact)
 	}
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
 
 	if _, err := tx.Exec(ctx, `
 		WITH target AS (
-		    SELECT DISTINCT user_id, person_id
-		      FROM unnest($1::uuid[], $2::uuid[]) AS t(user_id, person_id)
+		    SELECT DISTINCT user_id, contact_id
+		      FROM unnest($1::uuid[], $2::uuid[]) AS t(user_id, contact_id)
 		),
 		folded AS (
-		    SELECT t.user_id, t.person_id,
+		    SELECT t.user_id, t.contact_id,
 		           max(a.occurred_at) AS last_at,
 		           max(a.occurred_at) FILTER (WHERE a.direction = 'inbound')  AS last_inbound_at,
 		           max(a.occurred_at) FILTER (WHERE a.direction = 'outbound') AS last_outbound_at,
@@ -213,18 +213,18 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		        ON up.user_id = t.user_id AND up.role IN `+interactionRoles+`
 		      JOIN activity_participant pp
 		        ON pp.activity_id = up.activity_id
-		       AND pp.person_id = t.person_id AND pp.role IN `+interactionRoles+`
+		       AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		      JOIN activity a
 		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		     GROUP BY t.user_id, t.person_id
+		     GROUP BY t.user_id, t.contact_id
 		)
 		INSERT INTO graph_interaction_edge AS e
-		    (user_id, person_id, last_at, last_inbound_at, last_outbound_at,
+		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at,
 		     count_90d, in_count_90d, out_count_90d, count_total, computed_at)
-		SELECT f.user_id, f.person_id, f.last_at, f.last_inbound_at, f.last_outbound_at,
+		SELECT f.user_id, f.contact_id, f.last_at, f.last_inbound_at, f.last_outbound_at,
 		       f.count_90d, f.in_90d, f.out_90d, f.count_total, now()
 		  FROM folded f
-		ON CONFLICT (user_id, person_id) DO UPDATE SET
+		ON CONFLICT (user_id, contact_id) DO UPDATE SET
 		    last_at          = EXCLUDED.last_at,
 		    last_inbound_at  = EXCLUDED.last_inbound_at,
 		    last_outbound_at = EXCLUDED.last_outbound_at,
@@ -233,7 +233,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		    out_count_90d    = EXCLUDED.out_count_90d,
 		    count_total      = EXCLUDED.count_total,
 		    computed_at      = EXCLUDED.computed_at`,
-		users, people); err != nil {
+		users, contacts); err != nil {
 		return fmt.Errorf("search: recomputing interaction edges: %w", err)
 	}
 
@@ -242,16 +242,16 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 	// colleague for an introduction the evidence no longer supports.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM graph_interaction_edge e
-		 USING unnest($1::uuid[], $2::uuid[]) AS t(user_id, person_id)
-		 WHERE e.user_id = t.user_id AND e.person_id = t.person_id
+		 USING unnest($1::uuid[], $2::uuid[]) AS t(user_id, contact_id)
+		 WHERE e.user_id = t.user_id AND e.contact_id = t.contact_id
 		   AND NOT EXISTS (
 		       SELECT 1
 		         FROM activity_participant up
 		         JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		        WHERE up.user_id = t.user_id AND up.role IN `+interactionRoles+`
-		          AND pp.person_id = t.person_id AND pp.role IN `+interactionRoles+`)`,
-		users, people); err != nil {
+		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`)`,
+		users, contacts); err != nil {
 		return fmt.Errorf("search: pruning interaction edges that lost their evidence: %w", err)
 	}
 	return nil
@@ -286,7 +286,7 @@ const liveMemberJoin = `JOIN app_user u ON u.id = e.user_id AND u.status = 'acti
 // stops naming both halves.
 const laterMemberJoin = `JOIN app_user lu ON lu.id = later.user_id AND lu.status = 'active' AND lu.archived_at IS NULL`
 
-// EdgesForPerson answers "who on our team knows this contact".
+// EdgesForContact answers "who on our team knows this contact".
 //
 // It returns edges in LAST-CONTACT order and does NOT rank by warmth, because
 // warmth is not stored — it is computed at read from these rows. A caller that
@@ -294,31 +294,31 @@ const laterMemberJoin = `JOIN app_user lu ON lu.id = later.user_id AND lu.status
 // SortByStrength, which is what the network surface uses.
 //
 // Two gates, and both are load-bearing. The caller must be able to read the
-// PERSON — capture privacy means an unpromoted contact is nobody's business
+// CONTACT — capture privacy means an unpromoted contact is nobody's business
 // but their importer's, and an edge list would otherwise disclose both that
 // the contact exists and who talks to them. And the colleagues named are
 // filtered to live members, so a departed employee stops being recommended
 // without the projection needing to be rewritten when they leave.
-func EdgesForPerson(ctx context.Context, tx pgx.Tx, personID ids.UUID, limit int) ([]InteractionEdge, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+func EdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID, limit int) ([]InteractionEdge, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	// EnsureVisibleLive, not EnsureVisible: an ARCHIVED contact is hidden by
-	// every ordinary person read, and an unbounded caller skips EnsureVisible's
+	// every ordinary contact read, and an unbounded caller skips EnsureVisible's
 	// probe entirely. Either gap would let a known id return the contact's
 	// colleagues and interaction counts after the record itself stopped being
 	// readable.
-	if err := auth.EnsureVisibleLive(ctx, tx, "person", personID); err != nil {
+	if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT e.user_id, e.person_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
+		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
 		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total
 		  FROM graph_interaction_edge e
 		  `+liveMemberJoin+`
-		 WHERE e.person_id = $1
+		 WHERE e.contact_id = $1
 		 ORDER BY e.last_at DESC, e.user_id
-		 LIMIT $2`, personID, limit)
+		 LIMIT $2`, contactID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading who knows a contact: %w", err)
 	}
@@ -347,28 +347,28 @@ func SortByStrength(edges []InteractionEdge, now time.Time) {
 	})
 }
 
-// EdgesForPeople answers the same question for a whole contact set in one
+// EdgesForContacts answers the same question for a whole contact set in one
 // pass — what a company page needs, where asking per contact would open one
 // query per row and read a different instant for each.
 //
-// It does NOT probe each person's visibility: the caller assembled the set
+// It does NOT probe each contact's visibility: the caller assembled the set
 // from its own row-scoped read, and re-probing here would be a second
 // enforcement of the same rule that could drift from the first. Callers that
-// take a person id from a request use EdgesForPerson.
-func EdgesForPeople(ctx context.Context, tx pgx.Tx, people []ids.UUID) ([]InteractionEdge, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+// take a contact id from a request use EdgesForContact.
+func EdgesForContacts(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) ([]InteractionEdge, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	if len(people) == 0 {
+	if len(contacts) == 0 {
 		return nil, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT e.user_id, e.person_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
+		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
 		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total
 		  FROM graph_interaction_edge e
 		  `+liveMemberJoin+`
-		 WHERE e.person_id = ANY($1)
-		 ORDER BY e.person_id, e.last_at DESC, e.user_id`, people)
+		 WHERE e.contact_id = ANY($1)
+		 ORDER BY e.contact_id, e.last_at DESC, e.user_id`, contacts)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading who knows a contact set: %w", err)
 	}
@@ -380,7 +380,7 @@ func scanEdges(rows pgx.Rows) ([]InteractionEdge, error) {
 	var out []InteractionEdge
 	for rows.Next() {
 		var e InteractionEdge
-		if err := rows.Scan(&e.UserID, &e.PersonID, &e.LastAt, &e.LastInboundAt, &e.LastOutbound,
+		if err := rows.Scan(&e.UserID, &e.ContactID, &e.LastAt, &e.LastInboundAt, &e.LastOutbound,
 			&e.Count90d, &e.InCount90d, &e.OutCount90d, &e.CountTotal); err != nil {
 			return nil, err
 		}
@@ -422,9 +422,9 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO graph_interaction_edge
-		    (user_id, person_id, last_at, last_inbound_at, last_outbound_at,
+		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at,
 		     count_90d, in_count_90d, out_count_90d, count_total, computed_at)
-		SELECT up.user_id, pp.person_id,
+		SELECT up.user_id, pp.contact_id,
 		       max(a.occurred_at),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
@@ -437,8 +437,8 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		  JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		  JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		 WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
-		   AND pp.person_id IS NOT NULL AND pp.role IN `+interactionRoles+`
-		 GROUP BY up.user_id, pp.person_id`); err != nil {
+		   AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
+		 GROUP BY up.user_id, pp.contact_id`); err != nil {
 		return fmt.Errorf("search: rebuilding the interaction projection: %w", err)
 	}
 	return rebuildContactEdges(ctx, tx, window)
@@ -446,7 +446,7 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 
 // rebuildContactEdges is RebuildEdges' contact↔contact half, under the same
 // contract: replace wholesale, same audience rule, same role set. The strict
-// person ordering in the self-join both canonicalizes the pair and counts each
+// contact ordering in the self-join both canonicalizes the pair and counts each
 // shared activity once.
 func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 	if _, err := tx.Exec(ctx, `DELETE FROM graph_contact_edge`); err != nil {
@@ -454,19 +454,19 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO graph_contact_edge
-		    (person_a, person_b, last_at, count_90d, count_total, computed_at)
-		SELECT pa.person_id, pb.person_id,
+		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at)
+		SELECT pa.contact_id, pb.contact_id,
 		       max(a.occurred_at),
 		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`),
 		       count(DISTINCT `+graphInteractionUnit+`),
 		       now()
 		  FROM activity_participant pa
 		  JOIN activity_participant pb
-		    ON pb.activity_id = pa.activity_id AND pb.person_id > pa.person_id
+		    ON pb.activity_id = pa.activity_id AND pb.contact_id > pa.contact_id
 		  JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		 WHERE pa.person_id IS NOT NULL AND pa.role IN `+interactionRoles+`
+		 WHERE pa.contact_id IS NOT NULL AND pa.role IN `+interactionRoles+`
 		   AND pb.role IN `+interactionRoles+`
-		 GROUP BY pa.person_id, pb.person_id`); err != nil {
+		 GROUP BY pa.contact_id, pb.contact_id`); err != nil {
 		return fmt.Errorf("search: rebuilding the contact projection: %w", err)
 	}
 	return nil

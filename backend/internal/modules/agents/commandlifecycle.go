@@ -94,7 +94,7 @@ func requireGenuineTrigger(trigger string) error {
 	}
 	// The four that count ride in Guidance, which is ours, and the caller's word
 	// in Cause, which is bounded. Naming none of them left an agent guessing at
-	// a closed set of four, while the REST twin (people.handlers_lead) spelled
+	// a closed set of four, while the REST twin (contacts.handlers_lead) spelled
 	// it out — one door taught the vocabulary and the other refused without it.
 	return &BadArgsError{
 		Cause:    fmt.Errorf("trigger %q is not genuine engagement", trigger),

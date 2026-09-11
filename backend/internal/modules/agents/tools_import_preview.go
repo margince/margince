@@ -34,12 +34,12 @@ func (t previewImport) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createImportRun",
 		InputSchema: schema(`{"type":"object","required":["object","csv"],"properties":{
-			"object":{"type":"string","enum":["` + importObjectCompany + `","` + importObjectLead + `","` + importObjectPerson + `"]},
+			"object":{"type":"string","enum":["` + importObjectCompany + `","` + importObjectLead + `","` + importObjectContact + `"]},
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
-			  "description":"Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"company_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands."},
+			  "description":"Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a CONTACT run, map the company column to \"company_name\" to link each contact to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the contact still lands."},
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
-			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For people an address already held is refused either way — an email is a real key, a company name is not."}},
+			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For contacts an address already held is refused either way — an email is a real key, a company name is not."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportPreviewResult](),
 	}
@@ -76,7 +76,7 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	// The caller's mapping wins where it names a column, and the proposal
 	// fills the rest. A caller that sends none gets the proposal whole —
 	// which is honest rather than convenient, because the report says what
-	// each column became and a person reads it before anything commits.
+	// each column became and a reader reads it before anything commits.
 	mapping := make(map[string]string, len(profile.SuggestedMapping))
 	for column, field := range profile.SuggestedMapping {
 		mapping[column] = field
@@ -152,7 +152,7 @@ const discardTimeout = 10 * time.Second
 //
 // The proposal matches NAMES, and nothing more (migration.SuggestMapping); the
 // timidity is right for the screen, which draws an unplaced column as a blank
-// the person fills. A tool caller has no blanks. Handed a proposal that maps
+// the contact fills. A tool caller has no blanks. Handed a proposal that maps
 // `id` and drops `Company`, `City`, `Country` and `Band`, they get something
 // plausible that validates clean and commits an update with no changed fields
 // — an import that reports success and writes nothing. A partial answer that

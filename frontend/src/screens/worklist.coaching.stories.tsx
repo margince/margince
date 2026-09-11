@@ -53,7 +53,7 @@ export const ThreeMoves: Story = {
   ),
 };
 
-/** One person, named once however many thresholds they cross. */
+/** One contact, named once however many thresholds they cross. */
 export const OneMove: Story = {
   render: () => (
     <StoryProviders>

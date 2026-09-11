@@ -20,7 +20,7 @@ package compose
 //     role its direction implies (our user sends on outbound, receives on
 //     inbound), because a one-way blast and a real exchange must be
 //     distinguishable later;
-//   - the counterparty is recorded even before any person exists for them;
+//   - the counterparty is recorded even before any contact exists for them;
 //   - replay writes nothing new — capture's sync loop is at-least-once, and a
 //     participant set that grows on every poll is worse than none.
 
@@ -51,7 +51,7 @@ func mailboxOwnerCtx(e *integration.Env, owner ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true},
-				"person":   {Create: true, Read: true, Update: true},
+				"contact":  {Create: true, Read: true, Update: true},
 				"company":  {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -64,7 +64,7 @@ func mailboxOwnerCtx(e *integration.Env, owner ids.UUID) context.Context {
 type participantRow struct {
 	role    string
 	user    *ids.UUID
-	person  *ids.UUID
+	contact *ids.UUID
 	address string
 }
 
@@ -73,7 +73,7 @@ func readParticipants(t *testing.T, e *integration.Env, activityID ids.UUID) []p
 	var out []participantRow
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
-			SELECT role, user_id, person_id, coalesce(address, '')
+			SELECT role, user_id, contact_id, coalesce(address, '')
 			  FROM activity_participant WHERE activity_id = $1
 			 ORDER BY role, coalesce(address, '')`, activityID)
 		if err != nil {
@@ -82,7 +82,7 @@ func readParticipants(t *testing.T, e *integration.Env, activityID ids.UUID) []p
 		defer rows.Close()
 		for rows.Next() {
 			var p participantRow
-			if err := rows.Scan(&p.role, &p.user, &p.person, &p.address); err != nil {
+			if err := rows.Scan(&p.role, &p.user, &p.contact, &p.address); err != nil {
 				return err
 			}
 			out = append(out, p)
@@ -139,18 +139,18 @@ func TestCapturedMailRecordsTheMailboxOwnerAsAParticipant(t *testing.T) {
 	assertParticipant(t, in, "from", nil, "pat@counterparty.test")
 }
 
-func TestTheCounterpartyIsRecordedBeforeAnyPersonExists(t *testing.T) {
+func TestTheCounterpartyIsRecordedBeforeAnyContactExists(t *testing.T) {
 	e := integration.Setup(t)
 	// The address arm is not a fallback, it is the honest answer: capture
-	// decides whether to create a person AFTER this transaction commits, and
+	// decides whether to create a contact AFTER this transaction commits, and
 	// for a suppressed or deferred sender it never does. Dropping the party
 	// until a record exists would lose the fact that they were in the
 	// conversation at all.
 	id := captureMail(t, e, e.Rep1, "p-ghost-1", connector.DirectionInbound, "nobody@stranger.test")
 	for _, p := range readParticipants(t, e, id) {
 		if p.address == "nobody@stranger.test" {
-			if p.person != nil {
-				t.Errorf("the counterparty already carries a person id; capture has not created one yet")
+			if p.contact != nil {
+				t.Errorf("the counterparty already carries a contact id; capture has not created one yet")
 			}
 			return
 		}
@@ -205,10 +205,10 @@ func assertParticipant(t *testing.T, rows []participantRow, role string, user *i
 
 // The two deletes the FK actions exist to survive. Both used to fail outright:
 // SET NULL on a user-only participant row leaves it naming nobody, which the
-// identity CHECK refuses, and clearing a ghost's matched_person_id leaves
+// identity CHECK refuses, and clearing a ghost's matched_contact_id leaves
 // match_status = 'confirmed', which the shape CHECK refuses. Neither failure was
 // visible from the graph tests, because nothing in them ever deleted anybody.
-func TestDeletingAPersonOrAUserIsNotBlockedByGraphRows(t *testing.T) {
+func TestDeletingAContactOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
 
@@ -216,7 +216,7 @@ func TestDeletingAPersonOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 	var doomed ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO person (full_name, owner_id, source, captured_by, visibility)
+			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES ('Departing Contact', $1, 'manual', 'human:test', 'workspace')
 			RETURNING id`, e.Rep1).Scan(&contact); err != nil {
 			return err
@@ -233,7 +233,7 @@ func TestDeletingAPersonOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 			RETURNING id`).Scan(&activityID); err != nil {
 			return err
 		}
-		// A user-ONLY participant row: no person arm, no address arm.
+		// A user-ONLY participant row: no contact arm, no address arm.
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity_participant (activity_id, user_id, role)
 			VALUES ($1, $2, 'from')`, activityID, doomed); err != nil {
@@ -243,7 +243,7 @@ func TestDeletingAPersonOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO linkedin_connection
 			  (owner_user_id, full_name, normalized_name, company_name,
-			   normalized_company, matched_person_id, match_status, source)
+			   normalized_company, matched_contact_id, match_status, source)
 			VALUES ($1, 'Departing Contact', 'departing contact', 'Acme',
 			        'acme', $2, 'confirmed', 'csv_export')`, e.Rep1, contact)
 		return err
@@ -261,10 +261,10 @@ func TestDeletingAPersonOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 	}
 
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `DELETE FROM person WHERE id = $1`, contact)
+		_, err := tx.Exec(ctx, `DELETE FROM contact WHERE id = $1`, contact)
 		return err
 	}); err != nil {
-		t.Errorf("deleting a person with a confirmed LinkedIn match failed: %v\n"+
+		t.Errorf("deleting a contact with a confirmed LinkedIn match failed: %v\n"+
 			"this is the Art. 17 path — an erasure request that cannot complete "+
 			"is a compliance failure, not an inconvenience", err)
 	}
@@ -272,29 +272,29 @@ func TestDeletingAPersonOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 	var ghosts int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM linkedin_connection WHERE matched_person_id = $1`,
+			`SELECT count(*) FROM linkedin_connection WHERE matched_contact_id = $1`,
 			contact).Scan(&ghosts)
 	}); err != nil {
 		t.Fatalf("counting ghosts: %v", err)
 	}
 	if ghosts != 0 {
-		t.Errorf("the erased person still has %d LinkedIn ghost(s) pointing at them", ghosts)
+		t.Errorf("the erased contact still has %d LinkedIn ghost(s) pointing at them", ghosts)
 	}
 }
 
 // A relink corrects ONE association, and must leave every other participant
-// alone. Inferring the displaced person from "is a participant but no longer
+// alone. Inferring the displaced contact from "is a participant but no longer
 // linked" was wrong twice over: a participant can name somebody who was never
 // linked at all — capture stamps a counterparty whether or not a link exists —
 // and that row would then be rewritten to name a contact who was never in the
 // conversation.
-func TestRelinkRepointsOnlyThePersonItDisplaced(t *testing.T) {
+func TestRelinkRepointsOnlyTheContactItDisplaced(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
 
-	linked := e.SeedPerson(t, "Linked Contact", &e.Rep1)
-	unlinked := e.SeedPerson(t, "Never Linked", &e.Rep1)
-	corrected := e.SeedPerson(t, "The Real Contact", &e.Rep1)
+	linked := e.SeedContact(t, "Linked Contact", &e.Rep1)
+	unlinked := e.SeedContact(t, "Never Linked", &e.Rep1)
+	corrected := e.SeedContact(t, "The Real Contact", &e.Rep1)
 
 	var activityID ids.ActivityID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -305,13 +305,13 @@ func TestRelinkRepointsOnlyThePersonItDisplaced(t *testing.T) {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, activityID, linked); err != nil {
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, activityID, linked); err != nil {
 			return err
 		}
 		// Two participants: one matching the link, one that never had a link.
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, role)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
 			VALUES ($1, $2, 'from'), ($1, $3, 'cc')`, activityID, linked, unlinked)
 		return err
 	}); err != nil {
@@ -319,7 +319,7 @@ func TestRelinkRepointsOnlyThePersonItDisplaced(t *testing.T) {
 	}
 
 	if _, err := e.Activities.RelinkActivity(e.Admin(), activityID, activities.RelinkActivityInput{
-		EntityType: "person", EntityID: corrected, ReplaceExistingOfType: true,
+		EntityType: "contact", EntityID: corrected, ReplaceExistingOfType: true,
 	}); err != nil {
 		t.Fatalf("relinking: %v", err)
 	}
@@ -327,7 +327,7 @@ func TestRelinkRepointsOnlyThePersonItDisplaced(t *testing.T) {
 	got := map[ids.UUID]string{}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT person_id, role FROM activity_participant WHERE activity_id = $1`, activityID)
+			`SELECT contact_id, role FROM activity_participant WHERE activity_id = $1`, activityID)
 		if err != nil {
 			return err
 		}
@@ -348,15 +348,15 @@ func TestRelinkRepointsOnlyThePersonItDisplaced(t *testing.T) {
 	// Roles too, and exactly two rows — the repointed one and the untouched
 	// one. A repoint that ADDED the corrected contact while keeping the
 	// displaced row would leave three and still pass a membership check, as
-	// would one that moved the right person into the wrong role.
+	// would one that moved the right contact into the wrong role.
 	want := map[ids.UUID]string{corrected: "from", unlinked: "cc"}
 	if len(got) != len(want) {
 		t.Errorf("%d participants after the relink, want %d — the displaced row was "+
 			"added to rather than replaced", len(got), len(want))
 	}
-	for person, role := range want {
-		switch gotRole, ok := got[person]; {
-		case !ok && person == corrected:
+	for contact, role := range want {
+		switch gotRole, ok := got[contact]; {
+		case !ok && contact == corrected:
 			t.Error("the relink did not repoint the participant it displaced, so the " +
 				"participants and the links now tell different stories about the same mail")
 		case !ok:
@@ -365,7 +365,7 @@ func TestRelinkRepointsOnlyThePersonItDisplaced(t *testing.T) {
 				"in the conversation")
 		case gotRole != role:
 			t.Errorf("participant %s has role %q, want %q — a repoint must not change "+
-				"who sent and who was copied", person, gotRole, role)
+				"who sent and who was copied", contact, gotRole, role)
 		}
 	}
 	if _, ok := got[linked]; ok {

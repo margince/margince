@@ -166,7 +166,7 @@ func (h Handlers) SetActivityAudience(w http.ResponseWriter, r *http.Request, id
 // `not_sales` settles the thread for everybody, while `snooze` and `not_mine`
 // are the caller's own. The transport keeps that split rather than flattening
 // it into one write with a scope flag, so a reader of this function can see
-// which decisions reach past the person making them.
+// which decisions reach past the contact making them.
 func (h Handlers) SetActivityDisposition(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var req crmcontracts.SetActivityDispositionRequest
 	if !httperr.Decode(w, r, &req) {

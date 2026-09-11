@@ -24,7 +24,7 @@ import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
 import { downloadBytes } from "./download";
 import "./buyerroom.css";
 
-// The Deal Room as its BUYER sees it — the one screen an outside person ever
+// The Deal Room as its BUYER sees it — the one screen an outside contact ever
 // reaches in this app. Anonymous: no seat, no cookie. The invitation link lands
 // on `#/room?c=<credential>`; the router takes the credential off the hash
 // (app/router.tsx's takeHashCredential, ahead of every gate that can render
@@ -136,7 +136,7 @@ export function BuyerRoomScreen() {
     },
   });
 
-  // A fresh link outranks a kept session: the person clicked it on purpose.
+  // A fresh link outranks a kept session: the contact clicked it on purpose.
   // Exchanged at most ONCE per mount, held in a ref rather than in state: the
   // credential is single-use, and an effect that runs twice (StrictMode replays
   // mount effects in development) would spend it on the first run and be
@@ -152,7 +152,7 @@ export function BuyerRoomScreen() {
   // Which credential the tab is currently exchanging. A reply for anything else
   // is a superseded link answering late and must not touch the session — two
   // links pasted in quick succession would race, and whichever answered last
-  // would win regardless of which the person meant.
+  // would win regardless of which the contact meant.
   const awaiting = useRef<string | null>(null);
   useEffect(() => {
     if (!credential || spent.current.has(credential)) {
@@ -165,7 +165,7 @@ export function BuyerRoomScreen() {
     awaiting.current = credential;
     // The session the tab already holds is KEPT while the new link is checked.
     // Cleared first, an expired new link drew the dead-link page over a room
-    // the person could still read, and a refresh brought it back from storage —
+    // the contact could still read, and a refresh brought it back from storage —
     // two answers to one question a moment apart.
     setRefusal(null);
     exchangeAsync(credential).then(
@@ -728,9 +728,9 @@ function BuyerHero({
       {welcome ? <p className="buyer-welcome">{welcome}</p> : null}
       <div className="buyer-contact">
         {/* The mark is the steward's own, drawn from their name the way every
-            person in the product is drawn — the one face on a page that is
+            contact in the product is drawn — the one face on a page that is
             otherwise documents. A room whose steward's seat is gone gets no
-            mark: a monogram of the words "your contact" draws a person who
+            mark: a monogram of the words "your contact" draws a contact who
             does not exist. */}
         {stewardName ? <Avatar name={stewardName} size="sm" /> : null}
         <p className="t-caption buyer-meta">
@@ -745,7 +745,7 @@ function BuyerHero({
 // Whom to ask, as a buyer reads it: the seller's own name while their seat
 // stands, and the product's word for "somebody there" once it is gone. Both
 // screens that name a steward say it through this, so a room cannot address a
-// buyer to a person on one and to nobody on the next.
+// buyer to a contact on one and to nobody on the next.
 function stewardLabel(
   name: string | null | undefined,
   t: ReturnType<typeof useT>,

@@ -41,7 +41,7 @@ describe("what the selected row is about", () => {
             id: "one",
             title: "A task",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-0000000000aa",
               label: "Kirsten Vogel",
             },
@@ -118,7 +118,7 @@ describe("what the selected row is about", () => {
             source: "customer_waiting",
             category: "customer_waiting",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-0000000000cc",
               label: "Alice Müller",
             },
@@ -156,7 +156,7 @@ describe("what the selected row is about", () => {
           id: "one",
           title: "A task",
           subject: {
-            type: "person",
+            type: "contact",
             id: "01a05500-0000-7000-8000-0000000000aa",
             label: "Kirsten Vogel",
           },

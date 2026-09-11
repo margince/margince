@@ -23,7 +23,7 @@ export const DONT_IMPORT = "";
 // column will identify a row BEFORE the server has to refuse a mapping that
 // identifies none.
 export function identifyingFieldFor(object: ImportObject): string {
-  // A person and a lead are both identified by their email: it is the one
+  // A contact and a lead are both identified by their email: it is the one
   // column that makes a re-import converge on the record it already wrote.
   return object === "company" ? "display_name" : "email";
 }

@@ -34,7 +34,7 @@ import (
 // declares its fields. It is a type binding, not a field list: nothing about
 // WHICH fields are askable is decided here.
 var contractRecords = map[string]reflect.Type{
-	entityPerson:        reflect.TypeOf(crmcontracts.Person{}),
+	entityContact:       reflect.TypeOf(crmcontracts.Contact{}),
 	entityCompany:       reflect.TypeOf(crmcontracts.Company{}),
 	entityDeal:          reflect.TypeOf(crmcontracts.Deal{}),
 	entityLead:          reflect.TypeOf(crmcontracts.Lead{}),

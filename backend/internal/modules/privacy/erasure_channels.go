@@ -3,7 +3,7 @@
 
 package privacy
 
-// The channel half of Art. 17 erasure. A person's channel identities — the
+// The channel half of Art. 17 erasure. A contact's channel identities — the
 // provider account id behind their messages and the @username it carries —
 // identify the subject as directly as an address does, and the id is the key a
 // re-capture would resurrect them by. So the same three steps the address half
@@ -33,20 +33,20 @@ type channelIdentity struct {
 	ChannelUserID string
 }
 
-// personChannelIdentities reads every channel account bound to the subject,
+// contactChannelIdentities reads every channel account bound to the subject,
 // archived bindings included: an archived row still holds the provider account
 // id and the handle, which identify the human exactly as a live row does, and
-// archiving a Person archives their bindings (people/person.go), so a
+// archiving a Contact archives their bindings (contacts/contact.go), so a
 // live-only read would erase nobody who had ever been archived.
 //
-// Called BEFORE anything downstream deletes person_channel_identity — both
+// Called BEFORE anything downstream deletes contact_channel_identity — both
 // eraseChannelIdentities (which deletes the rows this returns) and
 // purgeDerivedTraces (which needs the same identifiers to reach the subject's
 // raw_capture rows) key off this one query, so there is exactly one spelling
 // of "which accounts belong to this subject" in the erasure path.
-func personChannelIdentities(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]channelIdentity, error) {
+func contactChannelIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]channelIdentity, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT provider, channel_user_id FROM person_channel_identity WHERE person_id = $1`, personID)
+		`SELECT provider, channel_user_id FROM contact_channel_identity WHERE contact_id = $1`, contactID)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func channelIdentityLockKeys(identities []channelIdentity) []storekit.ChannelIde
 
 // eraseChannelIdentities removes the subject's channel identities and suppresses
 // them, returning how many were suppressed for the erasure tombstone's counts.
-// identities is the caller's OWN pre-erasure read (personChannelIdentities) —
+// identities is the caller's OWN pre-erasure read (contactChannelIdentities) —
 // this function never re-queries, because the raw_capture purge in
 // purgeDerivedTraces needs the identical rows read at the identical moment;
 // two independent reads could observe different data under concurrent writes.
@@ -115,18 +115,18 @@ func channelIdentityLockKeys(identities []channelIdentity) []storekit.ChannelIde
 // which is indistinguishable from a working erasure until the next message
 // arrives.
 //
-// The delete resolves by ACCOUNT, not by person_id. uq_person_channel_identity
+// The delete resolves by ACCOUNT, not by contact_id. uq_contact_channel_identity
 // is partial on archived_at IS NULL, so the same provider account can be bound
-// by more than one Person row once an earlier binding is archived — and every
+// by more than one Contact row once an earlier binding is archived — and every
 // one of those rows holds the erased human's account id and handle. Deleting
 // only the subject's own rows would suppress and purge on an identifier that a
 // sibling row goes on storing. refuseRivalIdentifierHolders (erasure_rivals.go)
-// is what keeps this from reaching a LIVE Person's binding: this delete only
+// is what keeps this from reaching a LIVE Contact's binding: this delete only
 // ever also covers rows hanging off already-archived duplicates.
 func eraseChannelIdentities(ctx context.Context, tx pgx.Tx, identities []channelIdentity) (int, error) {
 	for _, identity := range identities {
 		if _, err := tx.Exec(ctx,
-			`DELETE FROM person_channel_identity WHERE provider = $1 AND channel_user_id = $2`,
+			`DELETE FROM contact_channel_identity WHERE provider = $1 AND channel_user_id = $2`,
 			identity.Provider, identity.ChannelUserID); err != nil {
 			return 0, err
 		}
@@ -143,7 +143,7 @@ func eraseChannelIdentities(ctx context.Context, tx pgx.Tx, identities []channel
 
 // purgeChannelRawCapture reaches raw_capture by channel identity, the
 // counterpart to purgeDerivedTraces' email lane (erasure.go): a Telegram-only
-// Person carries no email at all, so that lane never runs for them, and
+// Contact carries no email at all, so that lane never runs for them, and
 // without this one their raw captures — the verbatim update JSON, including
 // display name, username, numeric id and full message text — would survive
 // Art. 17 erasure forever.
@@ -167,10 +167,10 @@ func eraseChannelIdentities(ctx context.Context, tx pgx.Tx, identities []channel
 //
 // The membership arm reads the CHAT and not new_chat_member.user, which is
 // the bot: my_chat_member reports a change to the bot's own membership
-// (capture/telegram/membership.go), so that user id belongs to no Person and
+// (capture/telegram/membership.go), so that user id belongs to no Contact and
 // an erasure keyed on it would purge nothing while appearing to cover the
 // shape. A private chat's id IS the customer's own user id, which is exactly
-// what person_channel_identity stores.
+// what contact_channel_identity stores.
 //
 // ai_call_payload (erasure.go's purgeDerivedTraces) gets no equivalent lane:
 // 0089's schema gives it no structural link to a subject at all, so the only
@@ -182,7 +182,7 @@ func eraseChannelIdentities(ctx context.Context, tx pgx.Tx, identities []channel
 // by an address.
 //
 // The email lane in erasuretimeline.go cannot reach these. It matches
-// `counterparty` against an address, and a channel trace writes the person's
+// `counterparty` against an address, and a channel trace writes the contact's
 // DISPLAY NAME into that column instead (capture/trace.go, traceChannelPayload)
 // — so a subject who only ever wrote from Telegram had every trace row survive
 // an erasure that reported success.
@@ -196,21 +196,21 @@ func eraseChannelIdentities(ctx context.Context, tx pgx.Tx, identities []channel
 // and there is no third column to join on. Crude for the same reason the lanes
 // around it are crude — over-deleting a diagnostic row that expires within the
 // day is recoverable, under-deleting personal data is not — and bounded by the
-// provider so an erasure cannot reach a same-named person on another transport.
+// provider so an erasure cannot reach a same-named contact on another transport.
 //
 // A subject with no name and no channel identity matches nothing, which is the
 // correct amount of work: there is no column left that could name them.
 // subjectDisplayName reads the name the channel trace wrote, BEFORE the
 // cascade's anonymize step replaces it with a placeholder.
 //
-// Gathered at the top of ErasePerson beside the subject's emails and channel
+// Gathered at the top of EraseContact beside the subject's emails and channel
 // identities, for exactly the reason those are: every purge below that line
 // matches on an identifier, and an identifier read after it has been wiped
 // matches nothing while the rows it was meant to reach stay named.
-func subjectDisplayName(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (string, error) {
+func subjectDisplayName(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (string, error) {
 	var name string
 	if err := tx.QueryRow(ctx,
-		`SELECT full_name FROM person WHERE id = $1`, personID).Scan(&name); err != nil {
+		`SELECT full_name FROM contact WHERE id = $1`, contactID).Scan(&name); err != nil {
 		return "", fmt.Errorf("privacy: reading the subject's name for the channel trace purge: %w", err)
 	}
 	return name, nil
@@ -219,9 +219,9 @@ func subjectDisplayName(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (
 func purgeChannelCaptureTrace(ctx context.Context, tx pgx.Tx, fullName string, identities []channelIdentity) (int64, error) {
 	// The name arrives as an ARGUMENT rather than being read here, and that is
 	// the whole correctness of this lane: anonymizeSubjectRows has already
-	// overwritten person.full_name by the time the purge runs, so a SELECT here
+	// overwritten contact.full_name by the time the purge runs, so a SELECT here
 	// would match the placeholder, delete nothing, and leave every row naming
-	// the person — reporting success. subjectDisplayName reads it before the
+	// the contact — reporting success. subjectDisplayName reads it before the
 	// first destructive statement, beside the emails and identities the rest of
 	// the cascade is given the same way.
 	fullName = strings.TrimSpace(fullName)

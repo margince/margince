@@ -181,7 +181,7 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 			return false, held, err
 		}
 	}
-	if in.EntityType == linkEntityPerson && in.ReplaceExistingOfType && len(displaced) > 0 {
+	if in.EntityType == linkEntityContact && in.ReplaceExistingOfType && len(displaced) > 0 {
 		if err := repointDisplacedParticipants(ctx, tx, id, in.EntityID, displaced); err != nil {
 			return false, held, err
 		}

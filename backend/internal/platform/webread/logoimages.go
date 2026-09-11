@@ -10,14 +10,14 @@ package webread
 // rel to name it. Two things do name it. A schema.org block names it in so many
 // words (`logo`, schemaorg.go), and the page's own markup labels the image —
 // in its alt text, its class, its id or the file's name — because that is how
-// the people who built the site found it too.
+// the contacts who built the site found it too.
 //
 // This harvest deliberately reads the BODY, which the <head>-only asset harvest
 // (extractHeadAssets) refuses to, and the two are not in conflict: the body is
 // read for the one asset that lives nowhere else, and only with the page's own
 // label on it. A caller that must not let page content choose a company's face
 // stays with the head's declarations; the one that reads this list shows the
-// result to a person before any record wears it.
+// result to a contact before any record wears it.
 
 import (
 	"net/url"

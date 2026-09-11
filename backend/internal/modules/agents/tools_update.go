@@ -48,9 +48,9 @@ func (t updateRecord) Spec() mcp.ToolSpec {
 		Description:   updateRecordCopy.render(),
 		RequiredScope: principal.ScopeWrite,
 		Tier:          mcp.TierAutoExecute,
-		OpenAPIOp:     "updatePerson/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship",
+		OpenAPIOp:     "updateContact/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship",
 		InputSchema: schema(`{"type":"object","required":["record_type","id","fields"],"properties":{
-			"record_type":{"type":"string","enum":["person","company","deal","lead","activity","project","relationship"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship"]},
 			"id":{"type":"string","format":"uuid"},
 			"fields":{"type":"object","description":` + jsonString("Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. "+recordFieldsDescription) + `},
 			"if_version":{"type":"integer","description":"Optimistic-concurrency guard: the last-seen record version"},
@@ -80,7 +80,7 @@ type stagedApprovalNote struct {
 //
 // It stages the WHOLE call, not the per-field residue Handle's precedence split
 // stages. The two answer different questions and both are real: the split asks
-// "may a machine overwrite what a person typed", and applies everything else
+// "may a machine overwrite what a human typed", and applies everything else
 // meanwhile; the floor says this operation is confirm-first whatever the fields
 // hold, so nothing may apply until a human releases it. The floor is resolved
 // before admission, so a call that reaches here has already been judged the
@@ -103,7 +103,7 @@ func (t updateRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 // Handle is the per-field human-edit-precedence split (interfaces.md
 // §2.1): fields a human last wrote are staged 🟡 for approval, the rest
 // of the patch applies 🟢 in the same call — a machine does not silently
-// undo a person, and a person does not block the machine's own fields.
+// undo a contact, and a contact does not block the machine's own fields.
 func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args updateRecordArgs
 	if err := decodeArgs(in, &args); err != nil {
@@ -219,7 +219,7 @@ func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs,
 	}
 	// Composed once and answered twice: the human's card and the caller's
 	// refusal describe one staged change, and a second wording of it would let
-	// the person and the agent wait on two different descriptions.
+	// the contact and the agent wait on two different descriptions.
 	summary := fmt.Sprintf("Update %s %s: overwrite human-edited %s",
 		args.RecordType, recordLabel(rec), strings.Join(split.Conflicts, ", "))
 	id, alreadyApproved, err := t.staging.StageCall(ctx, StageRequest{

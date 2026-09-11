@@ -45,10 +45,10 @@ func seedSpendRun(t *testing.T, e *runsEnv, state, pool string, reserved int, ac
 	var runID string
 	if err := e.owner.QueryRow(ctx, `
 		INSERT INTO provider_run
-		  (subject_kind, person_id, provider, trigger, state, skip_reason, input_fingerprint,
+		  (subject_kind, contact_id, provider, trigger, state, skip_reason, input_fingerprint,
 		   external_correlation_id, connection_version, connection_epoch,
 		   configuration_snapshot, requested_categories, created_at, completed_at)
-		VALUES ('person', $1, 'surfe', 'manual', $2, $4, 'fp-' || gen_random_uuid()::text,
+		VALUES ('contact', $1, 'surfe', 'manual', $2, $4, 'fp-' || gen_random_uuid()::text,
 		        gen_random_uuid(), 1, 1, '{}'::jsonb, ARRAY['professional_email'],
 		        (date_trunc('month', now() AT TIME ZONE 'UTC')
 			           - make_interval(months => $3)) AT TIME ZONE 'UTC'
@@ -229,10 +229,10 @@ func TestTheSpendHistorySurvivesAnErasure(t *testing.T) {
 	// eraser, which lives in a module this package may not import.
 	if _, err := e.owner.Exec(context.Background(), `
 		UPDATE provider_run
-		   SET person_id = NULL, subject_kind = 'scrubbed',
+		   SET contact_id = NULL, subject_kind = 'scrubbed',
 		       input_fingerprint = '', provider_job_id = NULL,
 		       requested_by = NULL, configuration_snapshot = '{}'::jsonb
-		 WHERE person_id = $1`, e.mine); err != nil {
+		 WHERE contact_id = $1`, e.mine); err != nil {
 		t.Fatal(err)
 	}
 

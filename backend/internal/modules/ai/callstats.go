@@ -29,7 +29,7 @@ import (
 // sums likewise span every served row, so a retry's real spend is carried.
 // CompletedCalls counts only the rows that terminated cleanly (error_sentinel IS
 // NULL). The distinction matters where the observed-units denominator is a call
-// COUNT (enrich per person, embed per entity): a metering_failed retry spent
+// COUNT (enrich per contact, embed per entity): a metering_failed retry spent
 // tokens but did NOT complete a fresh unit of work, so it belongs in the token
 // numerator yet must not inflate the call denominator — counting it in both
 // would divide its retry cost back out. CompletedCalls is that de-inflated

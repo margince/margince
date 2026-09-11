@@ -118,7 +118,7 @@ describe("the company record page when its 360 read fails", () => {
 
   it("says the sections could not be loaded rather than that there is nothing", async () => {
     // The other half of degrading honestly. An empty state on a failed read is
-    // the worse reading of the two: "no people on this account" is a claim, and
+    // the worse reading of the two: "no contacts on this account" is a claim, and
     // this page has not earned it. `sectionState` draws `unavailable` for
     // exactly this case, so at least one section must be saying so.
     stubWith360Status(500);

@@ -33,10 +33,10 @@ func TestCaptureHealthCountsABacklogAnAdminCannotSee(t *testing.T) {
 
 	// A captured contact still owner-private, with no settled answer about its
 	// sender: exactly the row the sweeps repair and nobody can see.
-	person := ids.NewV7()
-	e.WsExec(t, `INSERT INTO person (id, full_name, owner_id, visibility, captured_by, source)
-		VALUES ($1, 'Waiting Contact', $2, 'owner', 'connector:gmail', 'capture')`, person, e.Rep1)
-	e.WsExec(t, `INSERT INTO person_email (person_id, email, source, captured_by) VALUES ($1, 'waiting@example.test', 'capture', 'connector:gmail')`, person)
+	contact := ids.NewV7()
+	e.WsExec(t, `INSERT INTO contact (id, full_name, owner_id, visibility, captured_by, source)
+		VALUES ($1, 'Waiting Contact', $2, 'owner', 'connector:gmail', 'capture')`, contact, e.Rep1)
+	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, 'waiting@example.test', 'capture', 'connector:gmail')`, contact)
 	// And a thread whose confidentiality question is still open.
 	e.WsExec(t, `INSERT INTO capture_thread_verdict (thread_key, user_id, status)
 		VALUES ('thread:open', $1, 'pending')`, e.Rep1)

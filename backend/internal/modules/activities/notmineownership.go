@@ -55,7 +55,7 @@ func NotMineRearmWorkflows(store *Store) []workflow.Handler {
 // no owner, so no message is filed under one changing hands.
 var handOffTriggers = []string{
 	"deal.owner_changed",
-	"person.updated",
+	"contact.updated",
 	"company.updated",
 	"lead.updated",
 }
@@ -68,7 +68,7 @@ var handOffTriggers = []string{
 // before any statement names it. Each record's own table is its entity type,
 // and the name reaches SQL through pgx.Identifier.Sanitize below.
 var ownerBearing = map[datasource.EntityType]bool{
-	datasource.EntityPerson:  true,
+	datasource.EntityContact: true,
 	datasource.EntityCompany: true,
 	datasource.EntityDeal:    true,
 	datasource.EntityLead:    true,
@@ -91,7 +91,7 @@ func (w notMineRearm) Spec() workflow.Spec {
 // Match declines an update that changed no owner.
 //
 // `deal.owner_changed` is the hand-off itself and always matches. The other
-// three ride an envelope that fires on every column, and a person's row is
+// three ride an envelope that fires on every column, and a contact's row is
 // written by every enrichment pass — so running the reconcile on all of them
 // would put a delete over one contact's whole timeline behind every field the
 // provider fills in.
@@ -99,7 +99,7 @@ func (w notMineRearm) Spec() workflow.Spec {
 // It fails toward DOING the work: a payload this build cannot read as a set of
 // changed fields matches, because the cost of running the reconcile for nothing
 // is one statement that deletes no rows, and the cost of skipping it is a
-// message that stays hidden from the person who now owns it with nothing to say
+// message that stays hidden from the contact who now owns it with nothing to say
 // why.
 func (w notMineRearm) Match(_ context.Context, ev workflow.Event) (bool, error) {
 	if w.trigger == handOffTriggers[0] {

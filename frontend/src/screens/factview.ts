@@ -211,7 +211,7 @@ export function groupFacts(
 
 // Within a category: the most confident first, then by field and value.
 //
-// Both are RENDERED in the group, so the tiebreaker is a list a person scans
+// Both are RENDERED in the group, so the tiebreaker is a list a contact scans
 // and it orders in that reader's own alphabet. Two things follow, and the field
 // half is the one that is easy to get half right:
 //

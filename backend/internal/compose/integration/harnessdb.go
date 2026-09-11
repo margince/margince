@@ -9,8 +9,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -43,7 +43,7 @@ func harnessDB(pool *pgxpool.Pool, ws ids.UUID) *database.DB {
 	return database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
 }
 
-// DealsFor and PeopleFor are the harness stores of ANOTHER workspace, for the
+// DealsFor and ContactsFor are the harness stores of ANOTHER workspace, for the
 // cross-tenant suites that seed a second tenant and then drive it through the
 // real writer.
 //
@@ -55,8 +55,8 @@ func (e *Env) DealsFor(ws ids.UUID) *deals.Store {
 	return deals.NewStore(e.DBFor(ws), installseam.Deals())
 }
 
-// PeopleFor is DealsFor for the people module; see its doc for why the second
+// ContactsFor is DealsFor for the contacts module; see its doc for why the second
 // tenant needs a store of its own.
-func (e *Env) PeopleFor(ws ids.UUID) *people.Store {
-	return people.NewStore(e.DBFor(ws))
+func (e *Env) ContactsFor(ws ids.UUID) *contacts.Store {
+	return contacts.NewStore(e.DBFor(ws))
 }

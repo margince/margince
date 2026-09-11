@@ -8,13 +8,13 @@ package integration
 // The seat count the entitlement surface reports, against a real database.
 //
 // Nothing else can prove it. The count is a SQL predicate over app_user — full
-// seats held by a person and not deactivated — and the three decisions it makes
+// seats held by a contact and not deactivated — and the three decisions it makes
 // are the difference between a meter that bills honestly and one that bills for
 // access the installation never had or already withdrew:
 //
 //   a read seat is never counted        A62/ADR-0047: they are unlimited
 //   a deactivated seat is not counted   the access is already gone
-//   an agent seat is not counted        LICENSE: a Seat is a natural person
+//   an agent seat is not counted        LICENSE: a Seat is a natural contact
 //
 // A unit test cannot see any of it: what is real here is the predicate running
 // against rows a real database holds, and the verdict the server reaches with
@@ -68,9 +68,9 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 	}))
 	e.BootstrapWorkspace(t)
 
-	// A second person, through the members surface — the writer, not an insert.
+	// A second contact, through the members surface — the writer, not an insert.
 	if status := e.Call(t, "POST", "/v1/users", map[string]any{
-		"email": "second@example.com", "display_name": "Second Person", "role": "rep",
+		"email": "second@example.com", "display_name": "Second Contact", "role": "rep",
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("invite a second member → %d, want 201", status)
 	}
@@ -113,15 +113,15 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 			afterDemotion.SeatsUsed, before)
 	}
 	// And it reaches ZERO: every metered seat on this installation belongs to a
-	// person, and no product path creates anything else.
+	// contact, and no product path creates anything else.
 	if afterDemotion.SeatsUsed != 0 {
 		t.Errorf("seats in use = %d after every human became a read seat, want 0 — something is "+
-			"metered that no person uses", afterDemotion.SeatsUsed)
+			"metered that no contact uses", afterDemotion.SeatsUsed)
 	}
 
 	// THE THIRD RULE, and this is the only place that holds it: an agent seat is
 	// NOT counted. LICENSE defines a Seat as "a single, identified natural
-	// person" and excludes automated agents acting under the authority of a
+	// contact" and excludes automated agents acting under the authority of a
 	// counted Seat — and this meter is what that document is read against, so a
 	// customer reading the licence they signed and an operator reading
 	// seats_used must get the same number.
@@ -137,7 +137,7 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 	// `full` and `active` are spelled out because app_user_agent_is_full admits
 	// no other seat type for an agent — the same constraint that makes this row
 	// survive the demotion above, and what would have made it the one metered
-	// seat on an installation with no people left on it.
+	// seat on an installation with no contacts left on it.
 	if _, err := e.Owner.Exec(context.Background(),
 		`INSERT INTO app_user (email, display_name, is_agent, seat_type, status)
 		 VALUES ('runner@example.com', 'A Runner', true, 'full', 'active')`); err != nil {
@@ -176,7 +176,7 @@ func TestTheEntitlementSurfaceAnswersAnUnlicensedInstallation(t *testing.T) {
 // installation's commercial standing (UC-ADMIN-03 F1).
 var licenseReaderPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
-	Objects:  map[string]principal.ObjectGrant{"person": {Create: true, Read: true, Update: true}},
+	Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true, Update: true}},
 	RowScope: principal.RowScopeTeam,
 }
 

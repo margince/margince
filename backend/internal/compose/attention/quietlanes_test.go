@@ -11,7 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Two lanes report a silence: a deal nobody is moving, and a person nobody is
+// Two lanes report a silence: a deal nobody is moving, and a contact nobody is
 // talking to. They rest on different records and answer to different readers,
 // so each proves separately that it speaks only when it has ground to.
 
@@ -158,17 +158,17 @@ func TestAFeedWithNoRiskReaderSendsNoRiskLane(t *testing.T) {
 	}
 }
 
-// A lapsed relationship carries the span, the person it is about, and when
+// A lapsed relationship carries the span, the contact it is about, and when
 // they last spoke. All three, because the card is read as a chronology: the
 // number is what a rep acts on, the name is who to act on, and the date is
 // what makes the claim checkable against that contact's own timeline.
 func TestALapsedRelationshipCarriesItsSpanAndItsLastExchange(t *testing.T) {
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	spoke := readInstant.AddDate(0, 0, -63)
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil,
 		&stubDecay{rows: []QuietRelationship{
-			{PersonID: person, Name: "Dana Weiss", QuietDays: 63, LastAt: spoke},
+			{ContactID: contact, Name: "Dana Weiss", QuietDays: 63, LastAt: spoke},
 		}},
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
@@ -194,18 +194,18 @@ func TestALapsedRelationshipCarriesItsSpanAndItsLastExchange(t *testing.T) {
 	if item.OccurredAt == nil || !item.OccurredAt.Equal(spoke) {
 		t.Errorf("occurred_at = %v, want the last exchange %v", item.OccurredAt, spoke)
 	}
-	// The subject is the PERSON, not the edge: the card's one move is opening
+	// The subject is the CONTACT, not the edge: the card's one move is opening
 	// that contact, and a subject naming anything else sends the reader
 	// somewhere they cannot act.
-	if item.Subject == nil || item.Subject.Type != "person" {
-		t.Errorf("subject = %v, want the person the silence is about", item.Subject)
+	if item.Subject == nil || item.Subject.Type != "contact" {
+		t.Errorf("subject = %v, want the contact the silence is about", item.Subject)
 	}
 	// A way THROUGH to the contact, and a way to SET THEM ASIDE.
 	//
 	// The second was missing for as long as this lane has existed, and its
 	// absence is what made the row a warning a rep could not answer: nobody is
 	// waiting on a quiet contact, so a rep who had decided not to chase this one
-	// met the same person every morning with nothing to say so.
+	// met the same contact every morning with nothing to say so.
 	//
 	// It is not a decision about the relationship — the contact is no less quiet
 	// for being set aside — which is why the dismissal is the READER's own and

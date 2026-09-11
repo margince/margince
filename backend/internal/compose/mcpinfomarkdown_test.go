@@ -14,7 +14,7 @@ package compose
 //
 // The JSON stays the artifact of record because it is what a client receives
 // byte for byte. It is also 200 KB of nested schema, which is not a thing a
-// person reads to answer "what can this tool do" — so this page carries the
+// contact reads to answer "what can this tool do" — so this page carries the
 // index, the sizes and the prose, and keeps each schema behind a fold.
 
 import (
@@ -117,7 +117,7 @@ func writeMCPInfoHead(page *strings.Builder, doc mcpInfo) {
 
 // writeMCPInfoComposition prints what the wire total is made of, because the
 // paragraph above has warned in prose since this page existed and the number in
-// the table is still the one people act on.
+// the table is still the one contacts act on.
 //
 // The last column is the point: the largest component is the one no prompt
 // carries, so "shorten the descriptions" attacks a quarter of the bytes and

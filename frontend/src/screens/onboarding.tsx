@@ -114,7 +114,7 @@ export function isMultilineField(field: CompanyFieldName): boolean {
  * carries that candidate's page, and its quote when the read captured one —
  * and no confidence at all, because nothing ever measured one: the entity lane
  * carries no score on the wire, and a number minted here would read as machine
- * certainty about a choice a person made.
+ * certainty about a choice a contact made.
  *
  * Both parts are therefore optional, and every surface that draws a confidence
  * meter or an evidence line has to answer for their absence rather than fill

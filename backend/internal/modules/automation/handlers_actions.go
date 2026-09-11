@@ -119,7 +119,7 @@ func (e *MissingConsentPurposeError) FieldFault() (field, code, message string) 
 // owns.
 //
 // Releasing a held draft SENDS it, and the send goes out from the approving
-// human's own mailbox under their name — so the card belongs to the person the
+// human's own mailbox under their name — so the card belongs to the contact the
 // message would go out as, and approvals narrows it to them. An automation with
 // no owner names nobody, and there are only three things such a firing could do:
 // stage a card decidable by nobody, which rots in the inbox until its window
@@ -138,7 +138,7 @@ type MissingDraftOwnerError struct{}
 
 func (e *MissingDraftOwnerError) Error() string {
 	return "this automation drafts an email but has no owner; a drafted message goes out under one " +
-		"person's name and is released by that person, so assign an owner before enabling it"
+		"contact's name and is released by that contact, so assign an owner before enabling it"
 }
 
 // FieldFault names what an operator has to set.

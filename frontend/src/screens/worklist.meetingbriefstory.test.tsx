@@ -15,7 +15,7 @@ const { AMeetingWithItsStartTime, AMeetingWithNobodyToBriefAgainst } =
 
 // The two meeting stories must render DIFFERENTLY, and this is what says so.
 //
-// They are one absent field apart: `with_person` decides whether the row can
+// They are one absent field apart: `with_contact` decides whether the row can
 // address the brief at all. A pair of stories that looked alike would let a
 // wrong destination ship looking exactly like a right one — which is the whole
 // reason the negative story exists, and it is not a claim a story can make

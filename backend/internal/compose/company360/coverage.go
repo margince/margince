@@ -11,7 +11,7 @@ package company360
 //
 // Counted over the WHOLE account rather than a page, because a coverage figure
 // taken from a page is a figure about the page and the reader cannot tell the
-// two apart. The roster read this folds is the same one the 360's people
+// two apart. The roster read this folds is the same one the 360's contacts
 // section and the contact list use, so the three cannot disagree about who is
 // on the account.
 
@@ -26,8 +26,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -37,7 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Coverage reads the account's coverage for the company People tab.
+// Coverage reads the account's coverage for the company Contacts tab.
 func (s *Service) Coverage(
 	ctx context.Context, companyID ids.CompanyID,
 ) (crmcontracts.CompanyCoverage, error) {
@@ -53,15 +53,15 @@ func (s *Service) Coverage(
 		AsOf:  now,
 		Deals: []crmcontracts.CompanyCoverageDeal{},
 	}
-	active, err := s.people.ActiveCompanyColumns(ctx)
+	active, err := s.contacts.ActiveCompanyColumns(ctx)
 	if err != nil {
 		return crmcontracts.CompanyCoverage{}, err
 	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		if _, err := s.people.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active); err != nil {
+		if _, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active); err != nil {
 			return err
 		}
-		all, err := people.StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
+		all, err := contacts.StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
 		if err != nil {
 			return err
 		}
@@ -78,19 +78,19 @@ func (s *Service) Coverage(
 }
 
 // summarise counts the account by engagement state.
-func summarise(all []people.ContactStrength) crmcontracts.CompanyCoverageSummary {
+func summarise(all []contacts.ContactStrength) crmcontracts.CompanyCoverageSummary {
 	out := crmcontracts.CompanyCoverageSummary{ContactsTotal: len(all)}
 	for _, c := range all {
-		switch people.EngagementOf(c.Strength) {
-		case people.EngagementWaiting:
+		switch contacts.EngagementOf(c.Strength) {
+		case contacts.EngagementWaiting:
 			out.Waiting++
-		case people.EngagementAnswered:
+		case contacts.EngagementAnswered:
 			out.Answered++
-		case people.EngagementNoReply:
+		case contacts.EngagementNoReply:
 			out.NoReply++
-		case people.EngagementLapsed:
+		case contacts.EngagementLapsed:
 			out.Lapsed++
-		case people.EngagementUntried:
+		case contacts.EngagementUntried:
 			out.Untried++
 		}
 	}
@@ -104,32 +104,32 @@ func summarise(all []people.ContactStrength) crmcontracts.CompanyCoverageSummary
 // put first, on the one screen that shows both.
 func (s *Service) fillBestWayIn(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
-	all []people.ContactStrength, out *crmcontracts.CompanyCoverage,
+	all []contacts.ContactStrength, out *crmcontracts.CompanyCoverage,
 ) error {
 	if len(all) == 0 {
 		return nil
 	}
-	ranked := make([]people.ContactStrength, len(all))
+	ranked := make([]contacts.ContactStrength, len(all))
 	copy(ranked, all)
-	people.RankContacts(ranked)
+	contacts.RankContacts(ranked)
 	best := ranked[0]
 	// The top-ranked contact is no-reply only when every contact on the account
 	// is, since waiting, answered and untried all outrank it — and then there is
 	// no way IN to name: following up again is a decision the reader makes, not
 	// a route the page recommends.
-	if people.EngagementOf(best.Strength) == people.EngagementNoReply {
+	if contacts.EngagementOf(best.Strength) == contacts.EngagementNoReply {
 		return nil
 	}
-	identity, err := contactIdentity(ctx, tx, companyID, []ids.PersonID{best.PersonID})
+	identity, err := contactIdentity(ctx, tx, companyID, []ids.ContactID{best.ContactID})
 	if err != nil {
 		return err
 	}
-	who := identity[best.PersonID]
+	who := identity[best.ContactID]
 	out.BestWayIn = &crmcontracts.CompanyCoverageRoute{
-		PersonId:      openapi_types.UUID(best.PersonID.UUID),
+		ContactId:     openapi_types.UUID(best.ContactID.UUID),
 		FullName:      who.fullName,
 		Title:         who.title,
-		Engagement:    crmcontracts.ContactEngagement(people.EngagementOf(best.Strength)),
+		Engagement:    crmcontracts.ContactEngagement(contacts.EngagementOf(best.Strength)),
 		LastInboundAt: best.Strength.LastInbound,
 	}
 	return nil
@@ -143,7 +143,7 @@ func (s *Service) fillBestWayIn(
 // allowed to ask is the disclosure inverted.
 func (s *Service) fillCommittee(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time,
-	all []people.ContactStrength, out *crmcontracts.CompanyCoverage,
+	all []contacts.ContactStrength, out *crmcontracts.CompanyCoverage,
 ) error {
 	openDeals, err := s.visibleOpenDeals(ctx, tx, companyID)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -171,7 +171,7 @@ func (s *Service) fillCommittee(
 	}
 	out.Completeness.CommitteeRead = true
 
-	// Stakeholders applies the PERSON row scope itself, so a seat whose holder
+	// Stakeholders applies the CONTACT row scope itself, so a seat whose holder
 	// this caller may not see is absent from the slice rather than anonymous.
 	// Counting the true total separately is what lets a gap stay honest: a
 	// champion the reader cannot see is still a champion, and reporting a
@@ -191,27 +191,27 @@ func (s *Service) fillCommittee(
 func (s *Service) wireCommittee(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, dealID ids.DealID,
 	now time.Time, seats []deals.DealStakeholder, total int,
-	all []people.ContactStrength,
+	all []contacts.ContactStrength,
 ) (crmcontracts.CompanyCoverageCommittee, error) {
 	out := crmcontracts.CompanyCoverageCommittee{
 		Seats:         []crmcontracts.CompanyCoverageSeat{},
 		Gaps:          []string{},
 		UnlistedSeats: total - len(seats),
 	}
-	engagement := make(map[ids.UUID]people.Engagement, len(all))
+	engagement := make(map[ids.UUID]contacts.Engagement, len(all))
 	for _, c := range all {
-		engagement[c.PersonID.UUID] = people.EngagementOf(c.Strength)
+		engagement[c.ContactID.UUID] = contacts.EngagementOf(c.Strength)
 	}
-	personIDs := make([]ids.PersonID, 0, len(seats))
+	contactIDs := make([]ids.ContactID, 0, len(seats))
 	for _, seat := range seats {
-		personIDs = append(personIDs, ids.From[ids.PersonKind](seat.PersonID))
+		contactIDs = append(contactIDs, ids.From[ids.ContactKind](seat.ContactID))
 	}
-	identity, err := contactIdentity(ctx, tx, companyID, personIDs)
+	identity, err := contactIdentity(ctx, tx, companyID, contactIDs)
 	if err != nil {
 		return crmcontracts.CompanyCoverageCommittee{}, err
 	}
 	// Who on our side can reach each seat, from the SAME reader the 360's
-	// people section uses — a second route ranking would let the map and the
+	// contacts section uses — a second route ranking would let the map and the
 	// roster disagree about which colleague to ask. Absent without the
 	// activity grant, because an empty set is an answer.
 	var routes map[ids.UUID]crmcontracts.Company360ContactRoutes
@@ -220,8 +220,8 @@ func (s *Service) wireCommittee(
 		return crmcontracts.CompanyCoverageCommittee{}, err
 	}
 	if mayRoutes {
-		raw := make([]ids.UUID, len(personIDs))
-		for i, id := range personIDs {
+		raw := make([]ids.UUID, len(contactIDs))
+		for i, id := range contactIDs {
 			raw[i] = id.UUID
 		}
 		routes, err = contactRoutes(ctx, tx, raw, now)
@@ -229,7 +229,7 @@ func (s *Service) wireCommittee(
 			return crmcontracts.CompanyCoverageCommittee{}, err
 		}
 	}
-	// Which of these seats the product read rather than a person asserted, and
+	// Which of these seats the product read rather than a contact asserted, and
 	// what it read them from. Kept out of deals.Stakeholders because one caller
 	// needing provenance is not a reason to widen the shape every caller reads.
 	marks, err := suggestedSeats(ctx, tx, dealID, seats)
@@ -240,18 +240,18 @@ func (s *Service) wireCommittee(
 	for _, seat := range seats {
 		held[seat.Role] = true
 		wire := crmcontracts.CompanyCoverageSeat{
-			PersonId: openapi_types.UUID(seat.PersonID),
-			FullName: identity[ids.From[ids.PersonKind](seat.PersonID)].fullName,
-			Role:     seat.Role,
+			ContactId: openapi_types.UUID(seat.ContactID),
+			FullName:  identity[ids.From[ids.ContactKind](seat.ContactID)].fullName,
+			Role:      seat.Role,
 		}
-		if state, ok := engagement[seat.PersonID]; ok {
+		if state, ok := engagement[seat.ContactID]; ok {
 			at := crmcontracts.ContactEngagement(state)
 			wire.Engagement = &at
 		}
-		if route, ok := routes[seat.PersonID]; ok {
+		if route, ok := routes[seat.ContactID]; ok {
 			wire.Routes = &route
 		}
-		if mark, ok := marks[seatKey{person: seat.PersonID, role: seat.Role}]; ok {
+		if mark, ok := marks[seatKey{contact: seat.ContactID, role: seat.Role}]; ok {
 			if mark.suggested {
 				wire.AiSuggested = &mark.suggested
 			}
@@ -289,7 +289,7 @@ func (s *Service) visibleOpenDeals(
 ) ([]crmcontracts.CompanyCoverageDeal, error) {
 	// The OBJECT grant first, and separately from the row scope: scope answers
 	// WHICH deals this caller may see, never WHETHER they may ask. A caller
-	// holding company, person and relationship but not deal was being
+	// holding company, contact and relationship but not deal was being
 	// served deal names and the committee sitting on them, because the read
 	// reached for the scope clause and never for the grant behind it.
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
@@ -323,12 +323,12 @@ func (s *Service) visibleOpenDeals(
 	return out, rows.Err()
 }
 
-// seatCount is how many live seats the deal has, WITHOUT the person row scope.
+// seatCount is how many live seats the deal has, WITHOUT the contact row scope.
 //
 // Deliberately unscoped, and the only place in this read that is: the count
 // answers "is the committee bigger than what you were shown", which is exactly
 // the question the scoped read cannot answer about itself. It discloses a
-// number and never a name — not which person, not which seat, and never a
+// number and never a name — not which contact, not which seat, and never a
 // pair. What it can tell a reader is that the committee is bigger than the
 // list they were given, which is the fact the page needs in order NOT to
 // print "nobody is champion" over a committee it could not read whole.
@@ -354,16 +354,16 @@ func seatCount(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (int, error) {
 	return total, nil
 }
 
-// seatKey identifies ONE seat, which is a person AND a role.
+// seatKey identifies ONE seat, which is a contact AND a role.
 //
-// The table's own uniqueness key is (deal_id, person_id, role), so a person can
-// legitimately hold two roles on one deal. Keyed by person alone, both cards
+// The table's own uniqueness key is (deal_id, contact_id, role), so a contact can
+// legitimately hold two roles on one deal. Keyed by contact alone, both cards
 // carried whichever row the scan returned last — so Confirm on one could patch
 // the other, changing a role the reader was not looking at or colliding with
 // the uniqueness index.
 type seatKey struct {
-	person ids.UUID
-	role   string
+	contact ids.UUID
+	role    string
 }
 
 // seatMark is what a seat's own row says about where it came from.
@@ -371,7 +371,7 @@ type seatMark struct {
 	suggested bool
 	// relationshipID is the seat's own row, which a reader needs in order to
 	// disagree with it. Confirming or changing a role is a patch on THIS row,
-	// and the person id alone cannot name it: the same contact can sit on two
+	// and the contact id alone cannot name it: the same contact can sit on two
 	// deals, and the two seats are different rows.
 	relationshipID ids.UUID
 	// version is what the seat's patch sends as If-Match. Without it a reader
@@ -395,11 +395,11 @@ func suggestedSeats(
 	}
 	ids0 := make([]ids.UUID, 0, len(seats))
 	for _, seat := range seats {
-		ids0 = append(ids0, seat.PersonID)
+		ids0 = append(ids0, seat.ContactID)
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	peoplePos, dealPos, agentPos := arg(ids0), arg(dealID), arg(proposeroles.CapturedBy)
+	contactsPos, dealPos, agentPos := arg(ids0), arg(dealID), arg(proposeroles.CapturedBy)
 	// The edge grant, like every other reader of this table: a seat names two
 	// records, and who may learn that pair is what relationship.read governs.
 	// The sibling that reads the same rows for the 360 asks for it, and a
@@ -408,7 +408,7 @@ func suggestedSeats(
 	if err != nil {
 		return nil, err
 	}
-	// SCOPED TO THIS DEAL. Keyed by person alone, somebody sitting on two deals
+	// SCOPED TO THIS DEAL. Keyed by contact alone, somebody sitting on two deals
 	// carried whichever row the scan happened to return last — so a seat a
 	// colleague typed here could be marked as the product's reading because of
 	// an unrelated deal elsewhere.
@@ -417,11 +417,11 @@ func suggestedSeats(
 	// archived rows, so filtering ended ones here as well would drop the
 	// provenance of a seat still on the board and quietly unmark it.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT r.person_id, coalesce(r.role, ''), r.captured_by = $%d, r.id, r.version
+		SELECT r.contact_id, coalesce(r.role, ''), r.captured_by = $%d, r.id, r.version
 		  FROM relationship r
-		 WHERE r.kind = 'deal_stakeholder' AND r.person_id = ANY($%d)
+		 WHERE r.kind = 'deal_stakeholder' AND r.contact_id = ANY($%d)
 		   AND r.deal_id = $%d AND r.archived_at IS NULL
-		   AND (%s)`, agentPos, peoplePos, dealPos, edgeBound), args...)
+		   AND (%s)`, agentPos, contactsPos, dealPos, edgeBound), args...)
 	if err != nil {
 		return nil, fmt.Errorf("company360: reading the committee's provenance: %w", err)
 	}
@@ -429,7 +429,7 @@ func suggestedSeats(
 	for rows.Next() {
 		var key seatKey
 		var mark seatMark
-		if err := rows.Scan(&key.person, &key.role, &mark.suggested,
+		if err := rows.Scan(&key.contact, &key.role, &mark.suggested,
 			&mark.relationshipID, &mark.version); err != nil {
 			return nil, err
 		}

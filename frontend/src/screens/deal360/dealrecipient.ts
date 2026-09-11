@@ -25,9 +25,9 @@ const CHAMPION = "champion";
  * dealRecipientSeat picks the stakeholder a first message goes to, or undefined
  * when the deal has nobody to offer.
  *
- * A seat whose `person_name` is null is skipped at every step. That null means
- * the caller may not read that person: the seat still counts toward coverage —
- * how many people carry a deal is not a fact being withheld — but addressing a
+ * A seat whose `contact_name` is null is skipped at every step. That null means
+ * the caller may not read that contact: the seat still counts toward coverage —
+ * how many contacts carry a deal is not a fact being withheld — but addressing a
  * message to somebody this reader cannot open would put a name in their To
  * field that the rest of the product refuses to show them.
  *
@@ -41,7 +41,7 @@ export function dealRecipientSeat(
   if (!seats) {
     return undefined;
   }
-  const readable = seats.filter((seat) => seat.person_name);
+  const readable = seats.filter((seat) => seat.contact_name);
   return (
     readable.find((seat) => seat.role === CHAMPION) ??
     readable.find((seat) => seat.engaged) ??

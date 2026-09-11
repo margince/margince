@@ -113,7 +113,7 @@ func TestReconcileChannelProvidersRefusesAProviderNameTheGrammarRejects(t *testi
 }
 
 // A provider whose supplier is gone on a LATER boot is kept, never deleted —
-// activity and person_channel_identity rows may still reference it.
+// activity and contact_channel_identity rows may still reference it.
 func TestReconcileChannelProvidersNeverDeletesARetiredRow(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -280,7 +280,7 @@ func TestReconcileChannelProvidersRegistersACaptureOnlyUnitTransportAsUnsendable
 // A unit SHADOWING a core connector fails the boot, and this is the sharpest
 // failure the whole surface has: every Telegram reply a rep wrote would leave on
 // the unit's per-member credential instead of the workspace's bot — the same
-// message, sent by a different person, with nothing on the screen different.
+// message, sent by a different contact, with nothing on the screen different.
 //
 // It is refused HERE rather than in the extension preflight because this is the
 // first point at which both sets exist: the core's transports are decided when

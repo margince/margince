@@ -61,7 +61,7 @@ const recurringPreviewUnsupportedReason = "preview is not yet supported for a re
 //
 // It also checks date_field against the workspace's own LIVE catalog via
 // catalog (AutomationStore.WithFieldCatalog, fieldcatalog.Reader — the
-// same seam deals.Store/people.Store already consume, so this is not new
+// same seam deals.Store/contacts.Store already consume, so this is not new
 // cross-module plumbing): an unknown, retired, or wrong-typed column
 // answers a 422 ParamError here, before renewalPreviewDef ever builds SQL
 // around it, rather than reaching Postgres and surfacing as a raw 500. A
@@ -128,7 +128,7 @@ func validateRenewalPreviewDateField(ctx context.Context, catalog fieldcatalog.R
 // renewalPreviewDef builds one renewal_reminder instance's previewDef at
 // request time: table is the instance's own validated object (one of
 // renewalReminderObjects, all five of which carry archived_at — verified
-// against migrations/core's own DDL for person/company/deal/lead/
+// against migrations/core's own DDL for contact/company/deal/lead/
 // project, not assumed), and the one field is the instance's own
 // date_field column, quoted via pgx.Identifier — the SAME quoting
 // pgx.Identifier{}.Sanitize() customfields/engine.go's quoteIdentifier

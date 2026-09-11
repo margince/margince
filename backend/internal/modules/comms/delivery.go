@@ -129,5 +129,5 @@ const (
 )
 
 // IsController reports whether this delivery is the installation writing in its
-// own name rather than a person writing from their mailbox.
+// own name rather than a contact writing from their mailbox.
 func (d Delivery) IsController() bool { return d.SenderKind == SenderController }

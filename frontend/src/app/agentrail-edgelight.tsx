@@ -10,7 +10,7 @@ import { LABELS } from "./agentrail-copy";
  * works.
  *
  * It belongs to the agent rather than to the settings screen because it is a
- * reading of the agent, and the panel is where a person is already looking at
+ * reading of the agent, and the panel is where a contact is already looking at
  * that reading — a preference about a surface you can see from here is one you
  * should be able to answer from here. It is also the only control on this
  * panel, which is why the foot carries nothing else: everything above it

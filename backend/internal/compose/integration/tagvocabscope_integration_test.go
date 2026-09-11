@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,7 +35,7 @@ func boundedTagAuthor() principal.Permissions {
 	return principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
 			"tag":     {Create: true, Read: true, Update: true, Delete: true},
-			"person":  {Create: true, Read: true, Update: true, Delete: true},
+			"contact": {Create: true, Read: true, Update: true, Delete: true},
 			"company": {Create: true, Read: true, Update: true, Delete: true},
 		},
 		RowScope: principal.RowScopeOwn,
@@ -146,14 +146,14 @@ func TestABoundedSeatStillTagsItsOwnRecords(t *testing.T) {
 	bounded := e.As(e.AdminUser, nil, boundedTagAuthor())
 	// Created BY the bounded seat, so the row is theirs by construction rather
 	// than by a seeded owner column somebody has to keep in step.
-	mine, err := e.People.CreatePerson(bounded, people.CreatePersonInput{
+	mine, err := e.Contacts.CreateContact(bounded, contacts.CreateContactInput{
 		FullName: "Own Record", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("the bounded seat creating its own record: %v", err)
 	}
 
-	if _, err := store.ApplyTag(bounded, word.ID, "person",
+	if _, err := store.ApplyTag(bounded, word.ID, "contact",
 		ids.UUID(mine.Id)); err != nil {
 		t.Fatalf("a bounded seat tagging its OWN record: %v — the vocabulary "+
 			"gate must not reach a per-record write", err)

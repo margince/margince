@@ -8,7 +8,7 @@ package company360
 // What "this activity belongs to this account" means, proved over a real
 // database and through every surface that asks the question.
 //
-// Mail is filed against the PERSON it was with, so an account whose timeline
+// Mail is filed against the CONTACT it was with, so an account whose timeline
 // matched only its own activity_link rows showed a rep an empty page for a
 // company they had been emailing all week. The account is reached through
 // three links — its own, its deal's, and a LIVE employment — and the timeline
@@ -46,7 +46,7 @@ func accountMailAt(t *testing.T, owner *pgx.Conn, ws ids.UUID, subject string, a
 
 // accountMeetingAt seeds a meeting. A meeting carries no direction — nobody
 // sends one — and, since 1788000100, may carry no company link either:
-// the only way it reaches an account is through the people who were in it.
+// the only way it reaches an account is through the contacts who were in it.
 func accountMeetingAt(t *testing.T, owner *pgx.Conn, subject string, at time.Time) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
@@ -58,32 +58,32 @@ func accountMeetingAt(t *testing.T, owner *pgx.Conn, subject string, at time.Tim
 	return id
 }
 
-// attend puts a person on an event as a PARTICIPANT and nothing else — no
+// attend puts a contact on an event as a PARTICIPANT and nothing else — no
 // activity_link, which is the shape the account walk used to miss entirely.
-func attend(t *testing.T, owner *pgx.Conn, activity, person ids.UUID) {
+func attend(t *testing.T, owner *pgx.Conn, activity, contact ids.UUID) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO activity_participant (activity_id, person_id, role) VALUES ($1, $2, 'attendee')`,
-		activity, person); err != nil {
+		`INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'attendee')`,
+		activity, contact); err != nil {
 		t.Fatalf("seeding participant: %v", err)
 	}
 }
 
-// employ ties a person to a company as a current employee, in the role
+// employ ties a contact to a company as a current employee, in the role
 // the graph draws them in.
-func employ(t *testing.T, e *integration.Env, person, company ids.UUID, title string) {
+func employ(t *testing.T, e *integration.Env, contact, company ids.UUID, title string) {
 	t.Helper()
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, role, source, captured_by)
-		VALUES ('employment', $1, $2, $3, 'manual', 'human:x')`, person, company, title)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, role, source, captured_by)
+		VALUES ('employment', $1, $2, $3, 'manual', 'human:x')`, contact, company, title)
 }
 
-// employAt ties a person to a company. endedOn nil is a live employment;
+// employAt ties a contact to a company. endedOn nil is a live employment;
 // a date ends it.
-func employAt(t *testing.T, e *integration.Env, person, company ids.UUID, endedOn *time.Time) {
+func employAt(t *testing.T, e *integration.Env, contact, company ids.UUID, endedOn *time.Time) {
 	t.Helper()
 	e.WsExec(t, `INSERT INTO relationship
-		(kind, person_id, company_id, started_at, ended_at, source, captured_by)
-		VALUES ('employment', $1, $2, DATE '2026-01-01', $3::date, 'manual', 'human:x')`, person, company, endedOn)
+		(kind, contact_id, company_id, started_at, ended_at, source, captured_by)
+		VALUES ('employment', $1, $2, DATE '2026-01-01', $3::date, 'manual', 'human:x')`, contact, company, endedOn)
 }
 
 // accountTimeline lists the account's timeline the way GET /activities does.
@@ -128,12 +128,12 @@ func TestAccountTimelineReachesMailThroughItsContactsAndDeals(t *testing.T) {
 	other := e.SeedCompany(t, "Globex", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
-	employee := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	employee := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employAt(t, e, employee, company, nil)
-	leaver := e.SeedPerson(t, "Sam Leaver", &e.Rep1)
+	leaver := e.SeedContact(t, "Sam Leaver", &e.Rep1)
 	ended := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	employAt(t, e, leaver, company, &ended)
-	stranger := e.SeedPerson(t, "Kim Elsewhere", &e.Rep1)
+	stranger := e.SeedContact(t, "Kim Elsewhere", &e.Rep1)
 	employAt(t, e, stranger, other, nil)
 
 	deal := e.SeedDeal(t, "Acme renewal", pipeline, stage, &e.Rep1)
@@ -142,13 +142,13 @@ func TestAccountTimelineReachesMailThroughItsContactsAndDeals(t *testing.T) {
 	direct := accountMailAt(t, owner, e.WS, "direct", company360Clock.Add(-1*time.Hour))
 	integration.LinkToCompany(t, e, direct, company)
 	viaContact := accountMailAt(t, owner, e.WS, "via a current employee", company360Clock.Add(-2*time.Hour))
-	integration.LinkActivity(t, owner, viaContact, "person", employee)
+	integration.LinkActivity(t, owner, viaContact, "contact", employee)
 	viaDeal := accountMailAt(t, owner, e.WS, "via the deal", company360Clock.Add(-3*time.Hour))
 	integration.LinkActivity(t, owner, viaDeal, "deal", deal)
 	viaLeaver := accountMailAt(t, owner, e.WS, "via a former employee", company360Clock.Add(-4*time.Hour))
-	integration.LinkActivity(t, owner, viaLeaver, "person", leaver)
+	integration.LinkActivity(t, owner, viaLeaver, "contact", leaver)
 	viaStranger := accountMailAt(t, owner, e.WS, "via another account's contact", company360Clock.Add(-5*time.Hour))
-	integration.LinkActivity(t, owner, viaStranger, "person", stranger)
+	integration.LinkActivity(t, owner, viaStranger, "contact", stranger)
 
 	listed, _ := accountTimeline(rep, t, e, company, 25, "")
 	for _, want := range []struct {
@@ -196,7 +196,7 @@ func TestAccountTimelineReachesMailThroughItsContactsAndDeals(t *testing.T) {
 	}
 }
 
-// A COMPANY IS REACHED THROUGH THE PEOPLE WHO WERE IN THE ROOM. A meeting may
+// A COMPANY IS REACHED THROUGH THE CONTACTS WHO WERE IN THE ROOM. A meeting may
 // carry no company link, and capture puts the far side on the invitation
 // rather than in activity_link — so a walk that starts only from the links
 // answers an account's afternoon with nothing in it.
@@ -212,12 +212,12 @@ func TestAccountTimelineReachesAMeetingThroughSomebodyInTheRoom(t *testing.T) {
 	other := e.SeedCompany(t, "Globex", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
-	employee := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	employee := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employAt(t, e, employee, company, nil)
-	leaver := e.SeedPerson(t, "Sam Leaver", &e.Rep1)
+	leaver := e.SeedContact(t, "Sam Leaver", &e.Rep1)
 	ended := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	employAt(t, e, leaver, company, &ended)
-	stranger := e.SeedPerson(t, "Kim Elsewhere", &e.Rep1)
+	stranger := e.SeedContact(t, "Kim Elsewhere", &e.Rep1)
 	employAt(t, e, stranger, other, nil)
 
 	withEmployee := accountMeetingAt(t, owner, "the quarterly review", company360Clock.Add(-1*time.Hour))
@@ -229,7 +229,7 @@ func TestAccountTimelineReachesAMeetingThroughSomebodyInTheRoom(t *testing.T) {
 
 	listed, _ := accountTimeline(rep, t, e, company, 25, "")
 	if !containsActivity(listed, withEmployee) {
-		t.Errorf("the account timeline omits a meeting whose only person is on the invitation (%v): %v",
+		t.Errorf("the account timeline omits a meeting whose only contact is on the invitation (%v): %v",
 			withEmployee, listed)
 	}
 	for _, unwanted := range []struct {
@@ -257,16 +257,16 @@ func TestTheAccountWalkDoesNotWidenTheCallersReadScope(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	// Both contacts work at the account; one is capture-private to Rep3.
-	mine := e.SeedPerson(t, "My Contact", &e.Rep1)
+	mine := e.SeedContact(t, "My Contact", &e.Rep1)
 	employAt(t, e, mine, company, nil)
-	theirs := e.SeedPerson(t, "Their Private Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirs, e.Rep3)
+	theirs := e.SeedContact(t, "Their Private Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
 	employAt(t, e, theirs, company, nil)
 
 	visible := accountMailAt(t, owner, e.WS, "terms", company360Clock.Add(-1*time.Hour))
-	integration.LinkActivity(t, owner, visible, "person", mine)
+	integration.LinkActivity(t, owner, visible, "contact", mine)
 	hidden := accountMailAt(t, owner, e.WS, "confidential terms", company360Clock.Add(-2*time.Hour))
-	integration.LinkActivity(t, owner, hidden, "person", theirs)
+	integration.LinkActivity(t, owner, hidden, "contact", theirs)
 
 	listed, _ := accountTimeline(rep, t, e, company, 25, "")
 	if containsActivity(listed, hidden) {
@@ -290,7 +290,7 @@ func TestAccountTimelinePagesWithoutDuplicatesOrOmissions(t *testing.T) {
 
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employAt(t, e, contact, company, nil)
 
 	// Five mails, one hour apart, alternating how they reach the account; the
@@ -302,7 +302,7 @@ func TestAccountTimelinePagesWithoutDuplicatesOrOmissions(t *testing.T) {
 			integration.LinkToCompany(t, e, mail, company)
 		}
 		if i%2 == 1 || i == 2 {
-			integration.LinkActivity(t, owner, mail, "person", contact)
+			integration.LinkActivity(t, owner, mail, "contact", contact)
 		}
 		want = append(want, mail)
 	}
@@ -351,18 +351,18 @@ func TestSinceLastVisitCountsMailRolledUpThroughAContact(t *testing.T) {
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	companyID := ids.From[ids.CompanyKind](company)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employAt(t, e, contact, company, nil)
 
 	// Mail that arrived BEFORE the visit is not new; the ack pins the baseline
 	// at the read's own instant.
 	before := accountMailAt(t, owner, e.WS, "old thread", company360Clock.Add(-time.Hour))
-	integration.LinkActivity(t, owner, before, "person", contact)
+	integration.LinkActivity(t, owner, before, "contact", contact)
 	if _, err := svc.Acknowledge(rep, companyID); err != nil {
 		t.Fatalf("acknowledging the visit: %v", err)
 	}
 	after := accountMailAt(t, owner, e.WS, "new thread", company360Clock.Add(time.Hour))
-	integration.LinkActivity(t, owner, after, "person", contact)
+	integration.LinkActivity(t, owner, after, "contact", contact)
 
 	view, err := svc.Assemble(rep, companyID)
 	if err != nil {
@@ -392,7 +392,7 @@ func TestLastTouchSeparatesWhoWroteLastAndWalksTheSameThreeLinks(t *testing.T) {
 
 	company := e.SeedCompany(t, "Scale Commerce", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	employee := e.SeedPerson(t, "Christian Contact", &e.Rep1)
+	employee := e.SeedContact(t, "Christian Contact", &e.Rep1)
 	employAt(t, e, employee, company, nil)
 
 	// The newest inbound reaches the account only through its contact, which
@@ -400,7 +400,7 @@ func TestLastTouchSeparatesWhoWroteLastAndWalksTheSameThreeLinks(t *testing.T) {
 	oldInbound := integration.AccountMailDirectedAt(t, owner, e.WS, "old reply", "inbound", company360Clock.Add(-90*time.Hour))
 	integration.LinkToCompany(t, e, oldInbound, company)
 	newInbound := integration.AccountMailDirectedAt(t, owner, e.WS, "their reply", "inbound", company360Clock.Add(-30*time.Hour))
-	integration.LinkActivity(t, owner, newInbound, "person", employee)
+	integration.LinkActivity(t, owner, newInbound, "contact", employee)
 	outbound := integration.AccountMailDirectedAt(t, owner, e.WS, "our nudge", "outbound", company360Clock.Add(-2*time.Hour))
 	integration.LinkToCompany(t, e, outbound, company)
 

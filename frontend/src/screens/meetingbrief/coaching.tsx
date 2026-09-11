@@ -25,10 +25,10 @@ export function CoachPanel({
   const t = useT();
   return (
     <Panel
-      title={t("person.meeting.coach.title")}
+      title={t("contact.meeting.coach.title")}
       titleLevel={3}
       tone={writtenByModel ? "ai" : "accent"}
-      titleAction={<Badge quiet>{t("person.meeting.coach.eyebrow")}</Badge>}
+      titleAction={<Badge quiet>{t("contact.meeting.coach.eyebrow")}</Badge>}
     >
       <PanelBody>
         <p className="mb-coach-lead">{coaching.focus}</p>
@@ -37,17 +37,17 @@ export function CoachPanel({
           facts={[
             {
               key: "listen",
-              term: t("person.meeting.coach.listenFor"),
+              term: t("contact.meeting.coach.listenFor"),
               value: coaching.listen_for,
             },
             {
               key: "watch",
-              term: t("person.meeting.coach.watchFor"),
+              term: t("contact.meeting.coach.watchFor"),
               value: coaching.watch_for,
             },
             {
               key: "intervene",
-              term: t("person.meeting.coach.interveneIf"),
+              term: t("contact.meeting.coach.interveneIf"),
               value: coaching.intervene_if,
             },
           ]}
@@ -69,7 +69,7 @@ export function MeetingPaths({
   }
   return (
     <Panel
-      title={t("person.meeting.coach.paths")}
+      title={t("contact.meeting.coach.paths")}
       titleLevel={3}
       // The same layer the panel above draws, so the same writer wrote it. A
       // lead reading one tinted card beside an untinted one would take the two

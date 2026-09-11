@@ -12,11 +12,11 @@ import type { ListState, ViewSpec } from "./listquery";
 type RowTag = components["schemas"]["RowTag"];
 
 /**
- * The columns and views every owner-scoped record list shares (people,
+ * The columns and views every owner-scoped record list shares (contacts,
  * companies, leads), defined ONCE.
  *
  * Three lists carried three copies of the Owner column, and when the column
- * was fixed on People and Companies (it had rendered "typed by a person" for
+ * was fixed on Contacts and Companies (it had rendered "typed by a contact" for
  * every human-captured row) the Leads copy kept the bug. A column that exists
  * on two lists is defined here; a screen adds only what is specific to its
  * record.

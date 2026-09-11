@@ -23,7 +23,7 @@ idempotency — lives behind the **one** Sink, so it happens in exactly one plac
 ```text
 provider record ──▶ connector.Normalize ──▶ Sink.Upsert  (ONE transaction)
                     (pure mapping, no I/O)     ├─ raw_capture    the re-parseable original
-                                               ├─ domain row     person / company / activity
+                                               ├─ domain row     contact / company / activity
                                                ├─ audit_log      stamped: connector principal
                                                └─ event_outbox   the domain event
 
@@ -102,12 +102,12 @@ name instead: that is what one message, one activity rests on.
 One pipeline concern runs *inside* the Sink, before anything is written:
 
 - **Counterparty auto-create (PO-F-1/PO-F-2).** Every captured message names the human on the other side
-  (direction-classified against the mailbox owner). The Sink routes it through the people module's **one
+  (direction-classified against the mailbox owner). The Sink routes it through the contacts module's **one
   dedupe chokepoint**: an exact match reuses, a fuzzy match creates-and-records for the review queue. An
   erased address stays dead (A13).
 
   The **company** is not created here. Capture used to derive a company from every non-consumer
-  mail domain, which manufactured companies named after people (`sebastian@kestner.example` became
+  mail domain, which manufactured companies named after contacts (`sebastian@kestner.example` became
   "Kestner"). It now records an open question in `company_domain_disposition` and a `domain_triage`
   site read answers it: a `company` verdict creates the company from what the site states, and a
   `personal` / `provider` verdict refuses one for good. Consumer mail is answered by its own domain and
@@ -299,7 +299,7 @@ the three onboarding chips); the roster manages an existing connection.
 
 OAuth2 to the Microsoft identity platform with `offline_access User.Read Calendars.Read`. It **reuses
 the same Entra app as the Outlook mailbox**, but as its *own* authorization requesting the calendar
-permission alone — so a person can bring their calendar without their mail, and disconnecting either
+permission alone — so a seat can bring their calendar without their mail, and disconnecting either
 leaves the other standing (exactly the boundary the Gmail/Calendar pair keeps). Incremental sync walks
 a **calendarView delta** from a `deltaLink`; a stale link (`ErrDeltaGone`, HTTP 410) re-anchors.
 
@@ -420,7 +420,7 @@ The pipeline is live; these were scoped out, not missed:
 - **Every connection is standing** and syncs in the background; only Gmail/Graph backfill, only
   Gmail/Graph send, and only Gmail/Graph push.
 - **Mail and calendar are always separate connections**, on Google and Microsoft alike: one consent
-  each, so a person can bring one without the other and disconnect either.
+  each, so a seat can bring one without the other and disconnect either.
 
 ## Where the code lives
 
@@ -432,7 +432,7 @@ The pipeline is live; these were scoped out, not missed:
 | The registry — scope intersection, Connect/Disconnect, SyncOnce, backfill, watch | `internal/modules/capture/registry.go`, `registry_connections.go`, `registry_watch.go`, `backfill.go` |
 | Sync-state sidecar (backoff, error taxonomy, degrade/heal) | `internal/modules/capture/syncstate.go` |
 | Consumer-mail gate + the workspace's own list (CAP-PARAM-5) | `internal/platform/freemail/`, `internal/modules/capture/freemaildomain.go` |
-| Domain triage — the company question and its verdict | `internal/modules/people/domaintriage.go`, `domaintriageresolve.go`, `internal/compose/deepreadtriage.go` |
+| Domain triage — the company question and its verdict | `internal/modules/contacts/domaintriage.go`, `domaintriageresolve.go`, `internal/compose/deepreadtriage.go` |
 | Counterparty / RFC822 mapping (direction, ThreadKey, skip rules) | `internal/modules/capture/mailmap/mailmap.go` |
 | Gmail connector (OAuth, history sync, Pub/Sub watch, backfill) | `internal/modules/capture/gmail/` |
 | IMAP connector (standing UID-watermark sync; netguard SSRF guard) | `internal/modules/capture/imap/` |
@@ -446,7 +446,7 @@ The pipeline is live; these were scoped out, not missed:
 | Backfill + digest HTTP surface | `internal/compose/backfilltransport.go` |
 | Gmail push webhook (token + OIDC) | `internal/compose/gmailpush.go`, `capture/push.go` |
 | Background jobs (dispatcher, sync, backfill, watch renewal, digest) | `internal/compose/jobs.go`, `capturejobs.go`; `backend/cmd/worker/main.go` |
-| The tables | `raw_capture, capture_connection, capture_sync_state, capture_backfill, workspace_email_domain, capture_digest, capture_freemail_domain, capture_pending_counterparty, capture_auto_enrich_state` (+ people's `company_domain_disposition`) |
+| The tables | `raw_capture, capture_connection, capture_sync_state, capture_backfill, workspace_email_domain, capture_digest, capture_freemail_domain, capture_pending_counterparty, capture_auto_enrich_state` (+ contacts's `company_domain_disposition`) |
 | The REST contract | `backend/api/crm.yaml` (`/connectors*`, `/capture/settings`, `/capture/consumer-mail-domains`, `/digest`) |
 | The connect UI (Settings + onboarding) | `frontend/src/screens/connectors.tsx`, `onboarding-connect-panels.tsx`, `onboarding-conversation/connect-act.tsx`, `backfill.tsx` |
 

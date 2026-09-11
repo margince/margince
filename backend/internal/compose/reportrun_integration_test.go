@@ -9,12 +9,12 @@ package compose
 //
 // A report sentence cites a run id and a cell, and the number is dereferenced
 // when somebody reads the report. That makes a saved run the one object here
-// whose rows were computed for ONE person and are later fetched by ANOTHER, so
+// whose rows were computed for ONE contact and are later fetched by ANOTHER, so
 // the whole file is about a single question: does the pointer carry data across
 // a permission boundary?
 //
 // It must not. What a saved run fixes is the QUESTION. The answer is recomputed
-// under whoever is reading, which is why two people can cite one cell and
+// under whoever is reading, which is why two contacts can cite one cell and
 // legitimately see different numbers.
 
 import (
@@ -118,7 +118,7 @@ func dealCount(t *testing.T, answer AnalyticsAnswer) float64 {
 // A saved run is a citation, not a grant.
 //
 // The proof cannot use a row scope on this population, and that is a fact about
-// deals rather than a gap in the test: person, company, lead, deal and
+// deals rather than a gap in the test: contact, company, lead, deal and
 // project are identity tables (platform/auth/tableclass.go), readable by every
 // seat, so their row-scope clause renders TRUE and two readers with different
 // scopes legitimately count the same deals. Asserting a narrowing here would
@@ -293,7 +293,7 @@ func TestSavingTheSameQuestionTwiceMakesTwoRuns(t *testing.T) {
 // The audit row carries the question and never the answer.
 //
 // audit_log is append-only and outlives the run, so rows narrowed for one
-// person must not be copied into an image every support engineer can read.
+// contact must not be copied into an image every support engineer can read.
 func TestSavingARunAuditsTheQuestionAndNotTheRows(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
@@ -553,7 +553,7 @@ func (e *forecastEnv) render(
 
 // The tool surface and the web surface answer with one engine.
 //
-// Not a style point. A model composing a report and a person composing the same
+// Not a style point. A model composing a report and a contact composing the same
 // one must get the same figures and the same refusals — two renderers would
 // drift, and the first sign of it would be a model reporting a number the
 // screen does not show.

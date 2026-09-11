@@ -100,7 +100,7 @@ describe("the api client's request deadline", () => {
   it("still waits on a model route past REQUEST_TIMEOUT_MS", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("fetch", neverAnswers());
-    const draft = api.POST("/people/{id}/draft-email", {
+    const draft = api.POST("/contacts/{id}/draft-email", {
       params: { path: { id: "01a0-4cd2" } },
       body: {},
     });
@@ -223,7 +223,7 @@ describe("the api client's model-call count", () => {
       }),
     );
 
-    await api.POST("/people/{id}/draft-email", {
+    await api.POST("/contacts/{id}/draft-email", {
       params: { path: { id: "01a0-4cd2" } },
       body: {},
     });
@@ -232,7 +232,7 @@ describe("the api client's model-call count", () => {
     expect(modelCallsInFlight()).toBe(0);
   });
 
-  // The draft is not the only route a person presses and then waits on. This
+  // The draft is not the only route a contact presses and then waits on. This
   // one is here because the list read three routes while the contract had
   // nine, and a route missing from it fails the only way that cannot be seen:
   // the chrome reports an agent at rest, which is exactly what it would report
@@ -277,7 +277,7 @@ describe("the api client's model-call count", () => {
       }),
     );
 
-    await api.POST("/people/{id}/draft-email", {
+    await api.POST("/contacts/{id}/draft-email", {
       params: { path: { id: "01a0-4cd2" } },
       body: {},
     });
@@ -288,7 +288,7 @@ describe("the api client's model-call count", () => {
 
   // The meeting brief is assembled fresh on every open — nothing is stored, so
   // every GET is two model calls — and it is a READ. The count used to admit
-  // POST only, so a person opened the brief, waited on the agent for the whole
+  // POST only, so a contact opened the brief, waited on the agent for the whole
   // of it, and the chrome reported an agent at rest: the failure this file
   // exists for, arriving through the verb rather than the path.
   it("counts a read whose handler generates on every call", async () => {
@@ -338,7 +338,7 @@ describe("the api client's model-call count", () => {
     expect(modelCallsInFlight()).toBe(0);
   });
 
-  // The same read with no reading stored is a generation the person waits on,
+  // The same read with no reading stored is a generation the contact waits on,
   // and the only thing that tells the two apart from here is time: a stored
   // answer is back in a few hundred milliseconds, a model's in many seconds. So
   // the count begins once the request has outlived a stored answer, and ends

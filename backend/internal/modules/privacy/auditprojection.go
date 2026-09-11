@@ -76,7 +76,7 @@ const auditActorNameJoins = `
 // typed through — "Claude", "Cursor" — from the passport the row recorded.
 //
 // Three hops, all of them nullable, and each null means something different:
-// a passport minted by hand in Settings has no oauth_grant_id (a person made
+// a passport minted by hand in Settings has no oauth_grant_id (a contact made
 // it for themselves, and its own label is whatever they typed); a grant whose
 // client row was deleted resolves nothing; and a row with no passport at all
 // was not a delegated write. Every one of those falls back to the generic

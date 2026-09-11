@@ -7,7 +7,7 @@ package gates
 
 // One refusal set, three spellings.
 //
-// A person reads a reason twice: once as the sentence under a disabled Undo
+// A reader reads a reason twice: once as the sentence under a disabled Undo
 // button, and once as the 409 that comes back if they press it anyway and the
 // binding evaluation disagrees. Those must be the same words. Three artefacts
 // hold the set — the Go constants the evaluator returns, the crm.yaml enum the
@@ -85,7 +85,7 @@ func declaredReasons() []string {
 // produces.
 // Every reason a branch actually returns is in compose.Reasons. Without this
 // the list is a hand-kept claim: a branch refusing with a constant nobody
-// listed would publish no enum member, get no frontend copy, and reach a person
+// listed would publish no enum member, get no frontend copy, and reach a contact
 // as a raw identifier under a disabled button — and no gate here would notice,
 // because all three of the others read the list rather than the branches.
 func TestEveryReasonABranchReturnsIsListed(t *testing.T) {
@@ -101,7 +101,7 @@ func TestEveryReasonABranchReturnsIsListed(t *testing.T) {
 	for name := range returned.anywhere {
 		if !listed[name] {
 			t.Errorf("%s is returned by a branch and is not in compose.Reasons; "+
-				"it would publish no enum member and get no copy, and reach a person "+
+				"it would publish no enum member and get no copy, and reach a contact "+
 				"as a raw identifier under a disabled button", name)
 		}
 	}
@@ -152,7 +152,7 @@ func readFrontendReasonCopy(t *testing.T) string {
 			return nil
 		}
 		// A reason named only in a test satisfies nobody: the gate exists to
-		// prove a PERSON is given words for the refusal, and a test file is not
+		// prove a CONTACT is given words for the refusal, and a test file is not
 		// a sentence anyone reads.
 		if strings.HasSuffix(path, ".test.ts") || strings.HasSuffix(path, ".test.tsx") {
 			return nil

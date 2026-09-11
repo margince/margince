@@ -14,9 +14,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -36,7 +36,7 @@ type Service struct {
 	pool       *pgxpool.Pool
 	deals      *deals.Store
 	projects   *projects.Store
-	people     *people.Store
+	contacts   *contacts.Store
 	contracts  *contracts.Store
 	activities *activities.Store
 	now        func() time.Time
@@ -50,13 +50,13 @@ func NewService(
 	pool *pgxpool.Pool,
 	dealStore *deals.Store,
 	projectStore *projects.Store,
-	peopleStore *people.Store,
+	contactsStore *contacts.Store,
 	contractStore *contracts.Store,
 	activityStore *activities.Store,
 	now func() time.Time,
 ) *Service {
 	return &Service{
-		pool: pool, deals: dealStore, projects: projectStore, people: peopleStore,
+		pool: pool, deals: dealStore, projects: projectStore, contacts: contactsStore,
 		contracts: contractStore, activities: activityStore, now: now,
 	}
 }
@@ -78,7 +78,7 @@ type catalogs struct {
 	// one is held. Under a loaded pool that waits on the connection it is
 	// already inside — a deadlock Postgres cannot break, because it sees two
 	// unrelated sessions rather than one goroutine waiting on itself.
-	company people.CustomColumns
+	company contacts.CustomColumns
 }
 
 func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
@@ -102,7 +102,7 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 	// Only a denial is swallowed. Any other failure is a real one, and empty
 	// columns handed to a caller who does hold the grant would silently drop
 	// the company's custom fields from the page.
-	switch c.company, err = s.people.ActiveCompanyColumns(ctx); {
+	switch c.company, err = s.contacts.ActiveCompanyColumns(ctx); {
 	case err == nil, errors.Is(err, apperrors.ErrPermissionDenied):
 	default:
 		return catalogs{}, err

@@ -169,7 +169,7 @@ describe("a meeting says when it starts", () => {
   // The case that tells the VIEWER's day from the server's.
   //
   // 22:30 UTC on the 31st is 00:30 on the 1st in Berlin — tomorrow to the
-  // person reading it, still today to a machine in UTC. Every other case here
+  // contact reading it, still today to a machine in UTC. Every other case here
   // lands on the same calendar day under either rule, so without this one the
   // zone-aware comparison could be swapped for a UTC one and nothing would
   // fail. That is the shape of a test suite that agrees with itself.

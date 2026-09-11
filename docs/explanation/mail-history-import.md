@@ -65,7 +65,7 @@ own unit:
 | pass | one unit is | what it produces |
 |---|---|---|
 | classify | a message | the attention label: commitment / meeting / noise |
-| enrich | a newly created person | contact fields read from the mail signature |
+| enrich | a newly created contact | contact fields read from the mail signature |
 | embed | an entity | the vector that makes it searchable |
 
 So the estimate is `Σ per-pass (expected units × per-unit cost)`, and **both factors are measured
@@ -74,7 +74,7 @@ rather than assumed**:
 ```text
   expected units ◀── this connection's last completed import
                      (how many messages one scan captured,
-                      how many people it created)
+                      how many contacts it created)
 
   per-unit cost  ◀── this workspace's last 7 days of real model calls,
                      each repriced at the model that will actually run it now
@@ -128,7 +128,7 @@ through a flaky morning must not be ended by faults it already recovered from.
 
 While it pages, the run measures its own yield — and this is what makes the *next* preview accurate.
 
-The counterparty resolver reports what each ensure actually did. `people_created` counts persons
+The counterparty resolver reports what each ensure actually did. `contacts_created` counts contacts
 **minted**, not resolved onto — an email from someone already in the CRM triggers no enrich call
 either. `companies_created` counts something subtly different: **domains this run queued for a
 company verdict**, because capture creates no companies at all. A run that met twelve new domains did
@@ -154,9 +154,9 @@ So read the committed columns as a **floor** on what the run created, never an o
 gap needs a ledger keyed on the created row's id, which is a design decision rather than a cleanup.
 
 The yields are an honest **under-count**, by design. A sender the tier gate defers is resolved by the
-verdict engine long after the page that saw it, and the person it may eventually mint is nobody's page
-to claim. This is why a run reporting zero people created is read as **"ratio unavailable"** rather than
-"zero people": a window whose senders were all already known, suppressed, or deferred reads zero while a
+verdict engine long after the page that saw it, and the contact it may eventually mint is nobody's page
+to claim. This is why a run reporting zero contacts created is read as **"ratio unavailable"** rather than
+"zero contacts": a window whose senders were all already known, suppressed, or deferred reads zero while a
 wider window would create plenty. Quoting a confident `$0` for enrich off that zero would be the
 dishonest option, so the estimate floors instead and says `heuristic`.
 
@@ -177,13 +177,13 @@ One thing does fire on the completing edge: the same-day digest, so a freshly im
 on the morning screen instead of waiting for the nightly pass. It fires only on the single step that
 moves a live run to `done`, so a lost race can never produce a spurious digest.
 
-While it runs, the status surface reports `messages_scanned`, `captured`, `skipped`, `people_created`,
+While it runs, the status surface reports `messages_scanned`, `captured`, `skipped`, `contacts_created`,
 `companies_created` and `dedupe_candidates`, alongside the estimate the run started with as the
 progress denominator.
 
 ## Honest limitations
 
-- **The people/company yields under-count** deferred senders, as above. Deliberate, and the zero case is
+- **The contacts/company yields under-count** deferred senders, as above. Deliberate, and the zero case is
   handled rather than papered over.
 - **The scope count is capped** at 20,000 messages; beyond that the preview reports a floor.
 - **The estimate assumes your next messages look like your recent ones.** Longer mail costs more.

@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "1908cf3b3398b323d75186a349e794bfdae6ba5b2b191e9ca5aae1cfc809bced"
+const JobContractHash = "f474c7b0f0e65162a928618bb66669d5f174e67da25bc12f7c43f23e7718722c"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -243,7 +243,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"VatChecker"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "CompanyID"}, {Name: "Requested", Scalar: true, Reason: "whether a person asked for this consultation, rather than a write having earned it. It decides whether the worker asks about a number the register has already answered, so it cannot be resolved from the company the job names — the row says what the number is, never who wanted it re-checked. A bare true/false carrying no subject data: it names no person, and erasing the contact who pressed the button leaves nothing here to erase."}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "Requested", Scalar: true, Reason: "whether a contact asked for this consultation, rather than a write having earned it. It decides whether the worker asks about a number the register has already answered, so it cannot be resolved from the company the job names — the row says what the number is, never who wanted it re-checked. A bare true/false carrying no subject data: it names no contact, and erasing the contact who pressed the button leaves nothing here to erase."}, {Name: "Workspace"}},
 	},
 	"close_date_sweep": {
 		Kind:      "close_date_sweep",

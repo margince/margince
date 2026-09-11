@@ -83,13 +83,13 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 		t.Fatalf("seeding the signed contract: %v", err)
 	}
 
-	person := integration.SeedIDRow(t, owner, `
-		INSERT INTO person (id, full_name, source, captured_by)
+	contact := integration.SeedIDRow(t, owner, `
+		INSERT INTO contact (id, full_name, source, captured_by)
 		VALUES ($1, 'Signer', 'manual', 'test')`)
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'test')`,
-		person, deal); err != nil {
+		contact, deal); err != nil {
 		t.Fatalf("seeding the economic buyer: %v", err)
 	}
 

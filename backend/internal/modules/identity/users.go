@@ -69,7 +69,7 @@ var (
 	// on the strength of an identity that can never sign in.
 	errAgentSeatHoldsNoRole = fmt.Errorf("%w: the agent seat holds no role", apperrors.ErrConflict)
 	// A role key nobody defines is a 404 like a missing user, but it is a
-	// DIFFERENT 404: the admin mistyped a role, not a person. Wrapping keeps
+	// DIFFERENT 404: the admin mistyped a role, not a contact. Wrapping keeps
 	// the status while letting the handler say which of the two happened.
 	errUnknownRole = fmt.Errorf("%w: no role with this key is defined", apperrors.ErrNotFound)
 )
@@ -130,7 +130,7 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		// EXCEPT an agent identity, which carries a NULL password_hash by
 		// construction and is never invited to anything: it holds no credential
 		// because it does not sign in, and its authority comes from the passport
-		// granting it. 'invited' is a state a person leaves by redeeming a link,
+		// granting it. 'invited' is a state a contact leaves by redeeming a link,
 		// so putting a row there that nobody can redeem strands it — reactivated
 		// on paper and inert in fact, with no route back.
 		// RETURNING carries the NEW status, which is what the audit image below
@@ -267,7 +267,7 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 //
 // A departing colleague's imported LinkedIn network goes with them. It is
 // THEIR address book — thousands of third parties who never agreed to be in
-// this CRM and whose only tie to it was that one person's employment. Keeping
+// this CRM and whose only tie to it was that one contact's employment. Keeping
 // it would leave the company holding a private contact list belonging to
 // someone who no longer works here, long after the relationship that
 // justified holding it ended. Deleted rather than tombstoned: a tombstone

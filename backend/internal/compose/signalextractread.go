@@ -161,7 +161,7 @@ var dueThreadsQuery = `
 			       --
 			       -- Counted from the link directly rather than through a reach
 			       -- set: a project is named on the activity or it is not, where
-			       -- a company is also reached through the people on it.
+			       -- a company is also reached through the contacts on it.
 			       count(DISTINCT pl.project_id) AS project_count,
 			       -- Shared only when EVERY message is: the model is shown the
 			       -- whole conversation, so what it writes is as private as the
@@ -176,7 +176,7 @@ var dueThreadsQuery = `
 			       --
 			       -- A thread whose messages answer to DIFFERENT owners has no
 			       -- one reader every message admits; naming one of them would
-			       -- hand that person the others' content through the summary.
+			       -- hand that contact the others' content through the summary.
 			       -- It names nobody, and the WHERE below then refuses it.
 			       bool_and(coalesce(vis.shared, true)) AS shared,
 			       CASE WHEN count(DISTINCT vis.private_owner) > 1 THEN NULL
@@ -186,8 +186,8 @@ var dueThreadsQuery = `
 			       -- takes the whole thread out of the pass, and does NOT fall
 			       -- back to its mailbox owner the way capture-private RECORDS
 			       -- do. The two look alike and are not: a record's owner
-			       -- visibility says one person is the reader, so a summary
-			       -- addressed to that person discloses nothing new, while a
+			       -- visibility says one contact is the reader, so a summary
+			       -- addressed to that contact discloses nothing new, while a
 			       -- limited audience says the message's content is withheld
 			       -- from readers who can still see the records it is filed
 			       -- against — and an owner-scoped signal is a durable,
@@ -232,14 +232,14 @@ var dueThreadsQuery = `
 			  -- against. A message is discoverable when ANY of its links is
 			  -- (auth.ActivityDiscoverClause), so one workspace-visible link
 			  -- shares it; only an activity whose every link is capture-private
-			  -- belongs to one person, and then that person is its owner.
+			  -- belongs to one contact, and then that contact is its owner.
 			  LEFT JOIN LATERAL (
 			    SELECT bool_or(coalesce(vp.visibility, vo.visibility, 'workspace') <> 'owner') AS shared,
 			           min(coalesce(vp.owner_id, vo.owner_id)::text)
 			             FILTER (WHERE coalesce(vp.visibility, vo.visibility) = 'owner')
 			             AS private_owner
 			      FROM activity_link vl
-			      LEFT JOIN person vp ON vp.id = vl.person_id
+			      LEFT JOIN contact vp ON vp.id = vl.contact_id
 			      LEFT JOIN company vo ON vo.id = vl.company_id
 			     WHERE vl.activity_id = a.id
 			  ) vis ON true
@@ -312,9 +312,9 @@ var dueThreadsQuery = `
 //
 // A conversation's account comes from the three-arm walk (the message's own
 // link, its deal's account, the employer of the contact it is about) rather
-// than a direct company link. Capture files mail against the PERSON it was
+// than a direct company link. Capture files mail against the CONTACT it was
 // with, so a direct match resolves nothing on real correspondence — an account
-// is reached through its people, or not at all.
+// is reached through its contacts, or not at all.
 //
 // The walk is joined rather than applied as a predicate because the question
 // here is which account a thread belongs to, not whether it belongs to a known

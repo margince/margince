@@ -496,7 +496,7 @@ describe("DecisionDeck — the states it can honestly be in", () => {
   });
 
   // A refused commit keeps the tray. The verdicts are the only copy of a
-  // person's answers, and clearing them would ask for all of them again.
+  // contact's answers, and clearing them would ask for all of them again.
   it("keeps the staged verdicts when the commit came back refused", async () => {
     const user = userEvent.setup();
     const { rerender } = render(deck());

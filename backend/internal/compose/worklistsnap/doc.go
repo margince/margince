@@ -29,14 +29,14 @@
 // Freezing the headline over work the reader can no longer see or act on would
 // be a steadier number and a false one.
 //
-// PER READER, and never shared. A walk is one person's position in one
+// PER READER, and never shared. A walk is one contact's position in one
 // question, and the fingerprint beside it is that question — scope, filter,
 // owner — so a token carried onto a different one is refused rather than
 // resumed into an answer nobody asked for.
 //
 // It owns `worklist_snapshot`, and writes no audit row and no event: this is
-// per-reader derived state, the shape company_brief, person_brief and
-// deal_status_card already have. An assembly generated FOR one person and never
+// per-reader derived state, the shape company_brief, contact_brief and
+// deal_status_card already have. An assembly generated FOR one contact and never
 // served to another has no record history to write, and a trail over it would
 // record reading rather than changing.
 package worklistsnap

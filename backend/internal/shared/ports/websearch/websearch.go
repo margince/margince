@@ -6,7 +6,7 @@
 // The product already reads a URL it was handed: the site-read pipeline is
 // robots-aware, paced, capped, and feeds an evidence-or-omit extractor. What
 // it cannot do is FIND a page nobody named. Every capability that needs
-// discovery — the deep-person research profiler, account research, any public
+// discovery — the deep-contact research profiler, account research, any public
 // signal lane — waits on that, which is why ADR-0081 made the seam a
 // pre-build gate rather than an implementation detail.
 //
@@ -42,7 +42,7 @@ import (
 // ErrNoProvider reports a deployment that bound no search provider. It is a
 // capability limit, not a domain sentinel: callers degrade to what they can
 // answer from captured data and say so, rather than presenting an empty
-// result set as "nothing exists about this person".
+// result set as "nothing exists about this contact".
 var ErrNoProvider = errors.New("websearch: no provider is configured for this deployment")
 
 // ErrBudgetExhausted reports the workspace's search allowance spent for the

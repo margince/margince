@@ -138,7 +138,7 @@ export function provenanceOfEntry(
   entry: Pick<AuditHistoryEntry, "actor_type" | "actor_id">,
   viewerUserId?: string,
 ): Provenance {
-  // A Deal Room participant: a person, and one from outside the company,
+  // A Deal Room participant: a contact, and one from outside the company,
   // which is its own arm rather than the machine treatment or the colleague
   // one. `actor_id` is `buyer:<participant uuid>` — an identifier no reader can
   // look up and no lookup here resolves — so the tag says the kind and stops.
@@ -203,7 +203,7 @@ export type EntryFieldChange = {
 // A key the image does not hold reads as absent rather than as empty text: the
 // diff draws its own wording for a field that did not exist before or does not
 // now, and "" is a value somebody stored.
-// Columns the write path stamps rather than a person choosing. They sit in the
+// Columns the write path stamps rather than a contact choosing. They sit in the
 // audit image because the row really did change, and showing them as field
 // changes tells a reader somebody edited "updated at" — which nobody did, and
 // which they cannot act on. The restore drops them for the same reason.

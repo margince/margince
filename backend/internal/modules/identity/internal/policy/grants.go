@@ -134,7 +134,7 @@ const (
 	objAiModelRate = "ai_model_rate"
 	// Which vendor this installation's text is sent to (ai-operational-spec
 	// §1.4). Deliberately NOT folded into installation_settings: whoever may
-	// rename the company has no business re-pointing where its people's
+	// rename the company has no business re-pointing where its contacts's
 	// correspondence is processed, and those become one grant the moment the
 	// two share an object.
 	//
@@ -231,7 +231,7 @@ const (
 	// installation makes deliberately by editing a custom role.
 	objUserAdmin = "user_admin"
 	// The role directory and the role editor. Ops READS it — an operator
-	// answering "why can this person not see that" needs the policy in front of
+	// answering "why can this contact not see that" needs the policy in front of
 	// them — while changing a role stays with admin, because a holder of the
 	// editor can grant themselves anything the editor can express.
 	objRoleAdmin = "role_admin"
@@ -271,7 +271,7 @@ const (
 	// Its own object rather than a corner of consent_config, because the two are
 	// different authorities: consent_config is who may change the RULES, and
 	// this is who may act against the answer those rules produced about one
-	// person. An installation that delegates the first has not thereby
+	// contact. An installation that delegates the first has not thereby
 	// delegated the second.
 	objCommunicationException = "communication_exception"
 	// The sign-in policy: which providers are offered and whether a password is

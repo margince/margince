@@ -34,7 +34,7 @@ import (
 // is short because reaching ahead of production is only honest for a shape
 // somebody has argued for.
 var occurrenceTriggerKinds = map[string]string{
-	"manual":   "a run a person started by hand, which the corpus drives because a hand-started turn is the same window with a different name on it",
+	"manual":   "a run a contact started by hand, which the corpus drives because a hand-started turn is the same window with a different name on it",
 	"calendar": "the occurrence-driven shape triggerProvenance names as the confusable one; certifying it before its writer exists is why the corpus carries it",
 }
 

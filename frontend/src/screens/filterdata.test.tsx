@@ -23,7 +23,7 @@ import { newGroup, newLeaf } from "./segmentpredicate";
 afterEach(cleanup);
 
 const VOCAB_BODY = {
-  resource: "person",
+  resource: "contact",
   fields: [
     {
       name: "full_name",
@@ -77,8 +77,8 @@ describe("the vocabulary read", () => {
     const { result } = renderHook(
       () => {
         // Two hooks, one resource — a builder and a picker on the same screen.
-        useFilterVocabulary("person");
-        return useFilterVocabulary("person");
+        useFilterVocabulary("contact");
+        return useFilterVocabulary("contact");
       },
       { wrapper },
     );
@@ -93,7 +93,7 @@ describe("the vocabulary read", () => {
 describe("the preview read", () => {
   it("does not ask about an empty group", async () => {
     const { seen, wrapper } = harness();
-    renderHook(() => useFilterPreview("person", newGroup("and")), { wrapper });
+    renderHook(() => useFilterPreview("contact", newGroup("and")), { wrapper });
 
     // An empty group is refused as filter_shape_invalid, so asking spends a
     // request to be told what isComplete already knows.
@@ -105,7 +105,7 @@ describe("the preview read", () => {
     renderHook(
       () =>
         useFilterPreview(
-          "person",
+          "contact",
           newGroup("and", [newLeaf("full_name", "contains", "")]),
         ),
       { wrapper },
@@ -121,7 +121,7 @@ describe("the preview read", () => {
     const { result } = renderHook(
       () =>
         useFilterPreview(
-          "person",
+          "contact",
           newGroup("and", [newLeaf("full_name", "contains", "ann")]),
         ),
       { wrapper },
@@ -146,7 +146,7 @@ describe("the preview read", () => {
 
     const { result, rerender } = renderHook(
       ({ tree }: { tree: ReturnType<typeof newGroup> }) =>
-        useFilterPreview("person", tree),
+        useFilterPreview("contact", tree),
       { wrapper, initialProps: { tree: first } },
     );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

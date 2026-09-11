@@ -71,7 +71,7 @@ import "./projects.css";
 
 // The project page: one composite read (GET /projects/{id}/360) drawn in the
 // company page's three zones — what the project IS on the left (its phase
-// history, its people, its paper), what is HAPPENING in the middle (deals,
+// history, its contacts, its paper), what is HAPPENING in the middle (deals,
 // open commitments), and the chronology underneath. `sections_omitted` is
 // what keeps every card honest: a section the reader's role cannot read says
 // so instead of drawing an empty list.
@@ -366,8 +366,8 @@ function ProjectActions({
           under this project, which is the filing a message written from here
           can only mean. Off in overlay for the reason the other verbs are: a
           mirrored workspace has no send of its own. No `recordAddress` — a
-          project is not a person and has no address of its own to open with,
-          so the reader picks from the account's people rather than the page
+          project is not a contact and has no address of its own to open with,
+          so the reader picks from the account's contacts rather than the page
           guessing which of them a project-wide message is to. */}
       {!overlay && (
         <RecordEmailVerb

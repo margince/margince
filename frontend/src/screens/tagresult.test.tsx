@@ -18,7 +18,11 @@ import { TagResultScreen } from "./tagresult";
 
 const TAG = "01a0641b-db0c-7b92-8564-6c843bf58df3";
 
-function tagRead(usage: { people: number; companies: number; deals: number }) {
+function tagRead(usage: {
+  contacts: number;
+  companies: number;
+  deals: number;
+}) {
   return () =>
     jsonResponse({
       id: TAG,
@@ -38,8 +42,8 @@ afterEach(() => {
 describe("the tag page names what carries the word", () => {
   it("lists the records themselves, by name", async () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 1, companies: 1, deals: 1 }),
-      "GET /people": () =>
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 1, deals: 1 }),
+      "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
       "GET /companies": () =>
         jsonResponse({ data: [{ id: "o-1", display_name: "MiTek" }] }),
@@ -64,8 +68,8 @@ describe("the tag page names what carries the word", () => {
 
   it("opens the record the row names", async () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 1, companies: 0, deals: 0 }),
-      "GET /people": () =>
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),
+      "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
     });
     render(
@@ -82,8 +86,8 @@ describe("the tag page names what carries the word", () => {
   // reporting zero, is what made the page read as an inventory of absences.
   it("draws no group for a type nothing carries", async () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 1, companies: 0, deals: 0 }),
-      "GET /people": () =>
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),
+      "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
     });
     render(
@@ -101,8 +105,8 @@ describe("the tag page names what carries the word", () => {
   // blank row: a reader cannot press what they cannot see.
   it("names a record carrying no name", async () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 1, companies: 0, deals: 0 }),
-      "GET /people": () =>
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),
+      "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "" }] }),
     });
     render(
@@ -121,8 +125,8 @@ describe("the tag page names what carries the word", () => {
   it("does not ask for the rows of a type carrying none", async () => {
     let dealCalls = 0;
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 1, companies: 0, deals: 0 }),
-      "GET /people": () =>
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),
+      "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
       "GET /deals": () => {
         dealCalls += 1;
@@ -144,8 +148,8 @@ describe("the tag page names what carries the word", () => {
   // count therefore promised rows the list would not return.
   it("counts the rows it shows, not the tag's usage", async () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 3, companies: 0, deals: 0 }),
-      "GET /people": () =>
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 3, companies: 0, deals: 0 }),
+      "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
     });
     render(
@@ -163,8 +167,8 @@ describe("the tag page names what carries the word", () => {
   // tells a reader they may not see records that are simply unfetched.
   it("does not report a failed read as records being withheld", async () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 2, companies: 0, deals: 0 }),
-      "GET /people": () =>
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 2, companies: 0, deals: 0 }),
+      "GET /contacts": () =>
         new Response("nope", {
           status: 500,
           headers: { "content-type": "text/plain" },
@@ -198,9 +202,9 @@ describe("the tag page names what carries the word", () => {
           color: "slate",
           version: 2,
           archived_at: "2026-09-01T00:00:00Z",
-          usage: { people: 2, companies: 2, deals: 2 },
+          usage: { contacts: 2, companies: 2, deals: 2 },
         }),
-      "GET /people": () => jsonResponse({ data: [] }),
+      "GET /contacts": () => jsonResponse({ data: [] }),
       "GET /companies": () => jsonResponse({ data: [] }),
       "GET /deals": () => jsonResponse({ data: [] }),
     });
@@ -218,7 +222,7 @@ describe("the tag page names what carries the word", () => {
 
   it("says so when the word is on nothing at all", async () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 0, companies: 0, deals: 0 }),
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 0, companies: 0, deals: 0 }),
     });
     render(
       <StoryProviders>

@@ -2,7 +2,7 @@
  *
  * Two marks, both drawn on the periphery of the whole window, both absent unless
  * there is something to say. The window and not the content column: what they
- * report is true of the workspace a person is working in, and a contour that
+ * report is true of the workspace a contact is working in, and a contour that
  * stopped at the sidebar would read as a panel border. `fixed` for the same
  * reason, so neither mark moves when a screen scrolls or the sidebar collapses.
  *
@@ -15,7 +15,7 @@
  * 2. **Movement means work.** Only the working mark moves, and only while work is
  *    actually in flight. Nothing here loops for decoration.
  * 3. **Waiting is the stillest state, not the loudest.** Something that cannot
- *    proceed without a person holds a complete, motionless contour. A staged
+ *    proceed without a contact holds a complete, motionless contour. A staged
  *    action that looked busy would be lying about who it is waiting for.
  *
  * The working mark is a shader now (agent-edge.tsx, agent-edge-shader.ts), so what
@@ -31,7 +31,7 @@
      It used to sit at 21, just over the chrome, on the reasoning that anything
      asking for a reader's attention belongs over it. That reasoning had the
      subject wrong. The mark is a property of the WINDOW and not of the page: it
-     says the agent is working for this person right now, which stays true while
+     says the agent is working for this contact right now, which stays true while
      a composer is open over the record, and a scrim that covers the page was
      covering the one report that is not about the page. Pressing "Draft with
      AI" in the composer lit an edge nobody could see.

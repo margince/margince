@@ -9,7 +9,7 @@ package agents
 // Without them the `fields` argument is an opaque object and the only way to
 // learn a name is to guess and read the error: a real session spent three
 // round-trips discovering name → display_name for a company and then
-// display_name → full_name for a person, and never did find that a person's
+// display_name → full_name for a contact, and never did find that a contact's
 // company is not a field at all. A tool surface that requires trial and
 // error to use is a tool surface that will be used wrongly.
 //
@@ -42,7 +42,7 @@ import (
 // type the seam does not serve would be describing nothing.
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityPerson:       reflect.TypeFor[crmcontracts.CreatePersonRequest](),
+		datasource.EntityContact:      reflect.TypeFor[crmcontracts.CreateContactRequest](),
 		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
 		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.CreateDealRequest](),
 		datasource.EntityLead:         reflect.TypeFor[crmcontracts.CreateLeadRequest](),
@@ -56,7 +56,7 @@ var (
 	// domain one — an edge's ends are what it IS, so moving one is an archive
 	// plus a new edge, never an update.
 	updateShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityPerson:       reflect.TypeFor[crmcontracts.UpdatePersonRequest](),
+		datasource.EntityContact:      reflect.TypeFor[crmcontracts.UpdateContactRequest](),
 		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
 		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.UpdateDealRequest](),
 		datasource.EntityLead:         reflect.TypeFor[crmcontracts.UpdateLeadRequest](),
@@ -137,7 +137,7 @@ const customFieldPrefix = "cf_"
 // governed call — whose caller cannot see a response body it did not think to
 // re-read — refuses up front instead of reporting success for a write it did
 // not perform. Two sessions lost data to that silence: company_id on a
-// person create, and emails on a person UPDATE, which is a real field on
+// contact create, and emails on a contact UPDATE, which is a real field on
 // create and no field at all on update.
 //
 // The line is the CREDENTIAL, not the door, and it stopped being the door when

@@ -9,7 +9,7 @@ package activities
 // way for anyone to change either. "9am" therefore meant 4pm in Ho Chi Minh
 // City, and a Monday morning in Saigon was still Sunday to the scheduler.
 //
-// Which hours a host keeps is a fact about that PERSON, and identity owns it.
+// Which hours a host keeps is a fact about that CONTACT, and identity owns it.
 // This module may not import a sibling, so what arrives here is a value and a
 // resolver compose injects. docs/explanation/scheduling.md is the design.
 
@@ -24,7 +24,7 @@ import (
 // days they work, read on their own zone.
 //
 // A value type rather than a reach into identity: this module may not import a
-// sibling, and the hours are a fact about a person that identity owns. compose
+// sibling, and the hours are a fact about a contact that identity owns. compose
 // injects the resolver that answers it.
 type WorkingHours struct {
 	StartMinute int

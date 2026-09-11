@@ -8,7 +8,7 @@ package compose
 // The bypass itself, against real Postgres (#982).
 //
 // A tier tightened for ONE record type — creating a project confirmed, creating a
-// person not — is honoured by the REST door, whose tier comes from the operation.
+// contact not — is honoured by the REST door, whose tier comes from the operation.
 // The MCP door resolves a tier from the VERB, and the verb that performs the same
 // write is `create_record`, auto-execute for every type it admits.
 //

@@ -13,7 +13,7 @@
 // primitive in the tree.
 //
 // It did not. `richtext.tsx` shipped a rich-text editor with its own stylesheet,
-// story and test, mounted in screens/persondrawers.tsx, and the string
+// story and test, mounted in screens/contactdrawers.tsx, and the string
 // "RichText" appeared nowhere in the catalog's 77KB. That is precisely the
 // component a second author rebuilds: the noun is obvious, the grep comes back
 // empty, and the duplicate looks reasonable in review.

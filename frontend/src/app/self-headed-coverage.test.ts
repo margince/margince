@@ -26,7 +26,7 @@ import { SELF_HEADED_SCREENS } from "./pagemeta";
 // they are the only exemption: a heading built from something the shell cannot
 // resolve — the reader's name, a tag's name — is not a page name lookup.
 const HEADS_ITSELF_WITHOUT_THE_HOOK: Readonly<Record<string, string>> = {
-  // "Guten Morgen, Demo." — the greeting is the heading, and it is a person's
+  // "Guten Morgen, Demo." — the greeting is the heading, and it is a contact's
   // name rather than the page's.
   brief: "greets the reader by name",
   // The tag's own name, which the shell cannot know from the route alone.

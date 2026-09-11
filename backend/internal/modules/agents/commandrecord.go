@@ -4,14 +4,14 @@
 package agents
 
 // The two commands one tool serves through TWO contract operations
-// (margince/margince#928 task 7): merge_records is mergePerson and
+// (margince/margince#928 task 7): merge_records is mergeContact and
 // mergeCompany, and enrich is scrapeCompany and deepReadCompany. Both are
 // where the seam has to carry meaning rather than shape.
 //
 // A merge is the only command here that names TWO records, and which is which
 // is the whole of it — one row survives and one is archived into it. The REST
-// route says so in two places at once: POST /v1/people/{id}/merge merges the
-// ROUTED person INTO the body's `target_id`, so the routed id is the record
+// route says so in two places at once: POST /v1/contacts/{id}/merge merges the
+// ROUTED contact INTO the body's `target_id`, so the routed id is the record
 // merged FROM and the approval binds to the survivor named in the body. The
 // route walk this seam replaces reads the routed id and gets the wrong half.
 //
@@ -61,7 +61,7 @@ type mergeResolver struct {
 	// on what the reads found and Subject pins and names it, and two readings
 	// are two moments those answers are free to describe differently. A pair
 	// rather than two anchoredRecords because the record TYPE is the command's,
-	// not the resolver's — a merge is person-to-person or company-to-company, and the
+	// not the resolver's — a merge is contact-to-contact or company-to-company, and the
 	// type arrives with the call.
 	// seen is the command the pair was read for, so a resolver asked about a
 	// second merge reads that merge — the same key archiveResolver's own memo

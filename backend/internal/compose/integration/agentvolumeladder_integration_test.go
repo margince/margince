@@ -102,10 +102,10 @@ func callTool(t *testing.T, e *apptest.AppEnv, bearer map[string]string, tool st
 func TestAReadPastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.T) {
 	e, meter := ladderApp(t, "ladder-read", agentvolume.Limits{Reads: 100})
 	bearer, passport := passportWithID(t, e, "reading agent", "read")
-	seedPeople(t, e, 2)
+	seedContacts(t, e, 2)
 	spendCounter(t, e, meter, passport, agentvolume.Reads, 120)
 
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusTooManyRequests {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusTooManyRequests {
 		t.Fatalf("a read past its threshold → %d, want 429", status)
 	}
 
@@ -128,7 +128,7 @@ func TestAReadPastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.
 		t.Fatalf("approving the step-up → %d", status)
 	}
 
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusOK {
 		t.Errorf("the agent is still refused after its human approved the step-up → %d; "+
 			"the window the gate reads and the window the approval widened are not the same window", status)
 	}
@@ -141,7 +141,7 @@ func TestAReadPastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.
 func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
 	e, meter := ladderApp(t, "ladder-once", agentvolume.Limits{Reads: 100})
 	bearer, passport := passportWithID(t, e, "reading agent", "read")
-	seedPeople(t, e, 2)
+	seedContacts(t, e, 2)
 	spendCounter(t, e, meter, passport, agentvolume.Reads, 120)
 	callTool(t, e, bearer, "search_records", AnyMap{"query": "Metered"})
 	id, _, _ := pendingStepUp(t, e)
@@ -152,7 +152,7 @@ func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
 	// The released allowance is spent too.
 	spendCounter(t, e, meter, passport, agentvolume.Reads, 100)
 
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusTooManyRequests {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusTooManyRequests {
 		t.Errorf("a second crossing after one release → %d, want 429: approving once granted a standing permission", status)
 	}
 }

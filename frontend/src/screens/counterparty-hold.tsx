@@ -13,7 +13,7 @@ import { problemMessageOf, throwProblem } from "./common";
 // A hold is about the CORRESPONDENT rather than about any one message: holding
 // a lawyer's domain says that whatever passes between you is private, without
 // having to read each message to decide. It belongs on the record page because
-// that is where a person thinks about the correspondent — the Senders page
+// that is where a contact thinks about the correspondent — the Senders page
 // answers "what did the classifier decide", this answers "I have decided, about
 // this one".
 //

@@ -9,7 +9,7 @@ import { day, renderWorklist, stub } from "./worklist.testkit";
 // Whose hidden work the guardrail is about.
 //
 // The panel says what the queue is NOT showing, which makes it the one surface
-// where attributing a figure to the wrong person does the most damage: a reader
+// where attributing a figure to the wrong contact does the most damage: a reader
 // checking whether their day is honest is told about somebody else's.
 //
 // The endpoint takes no owner and no scope. It derives its subject from the
@@ -47,7 +47,7 @@ describe("the hidden-backlog panel is about the reader", () => {
   // colleague's name and reported the MANAGER's own hidden work: "412 hidden
   // from you" read as Lena's backlog. On the one surface whose whole job is to
   // say what a queue is not showing, that is the worst place in the product to
-  // attribute a figure to the wrong person.
+  // attribute a figure to the wrong contact.
   it("AC-WORKLIST-MGR-02: draws no hidden-backlog panel on a colleague's queue", async () => {
     stub(day({ scope_options: ["mine", "team"] }));
     renderWorklist("en", "11111111-1111-4111-8111-111111111111");

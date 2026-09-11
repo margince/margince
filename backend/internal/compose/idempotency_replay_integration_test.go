@@ -106,16 +106,16 @@ func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
 	}
 }
 
-// keyedPersonRouter mounts a stub on the person-update route, which
+// keyedContactRouter mounts a stub on the contact-update route, which
 // replayScope probes, wired per-route so the chi RoutePattern binds.
-func keyedPersonRouter(e *integration.Env, handler http.HandlerFunc) chi.Router {
+func keyedContactRouter(e *integration.Env, handler http.HandlerFunc) chi.Router {
 	r := chi.NewRouter()
-	r.With(idempotency(e.Pool, nil)).Patch("/v1/people/{id}", handler)
+	r.With(idempotency(e.Pool, nil)).Patch("/v1/contacts/{id}", handler)
 	return r
 }
 
-func keyedPersonCall(ctx context.Context, r chi.Router, person ids.UUID, key string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPatch, "/v1/people/"+person.String(), strings.NewReader(`{"full_name":"Renamed"}`)).WithContext(ctx)
+func keyedContactCall(ctx context.Context, r chi.Router, contact ids.UUID, key string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPatch, "/v1/contacts/"+contact.String(), strings.NewReader(`{"full_name":"Renamed"}`)).WithContext(ctx)
 	req.Header.Set("Idempotency-Key", key)
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
@@ -130,27 +130,27 @@ func keyedPersonCall(ctx context.Context, r chi.Router, person ids.UUID, key str
 func TestReplayRefusesOnceTheCallerHasLostSightOfTheRecord(t *testing.T) {
 	e := integration.Setup(t)
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
-	person := e.SeedPerson(t, "Visible then not", &e.Rep1)
+	contact := e.SeedContact(t, "Visible then not", &e.Rep1)
 
 	calls := 0
-	r := keyedPersonRouter(e, func(w http.ResponseWriter, _ *http.Request) {
+	r := keyedContactRouter(e, func(w http.ResponseWriter, _ *http.Request) {
 		calls++
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		if _, err := io.WriteString(w, `{"id":"`+person.String()+`","full_name":"Renamed"}`); err != nil {
+		if _, err := io.WriteString(w, `{"id":"`+contact.String()+`","full_name":"Renamed"}`); err != nil {
 			t.Errorf("writing the stub response: %v", err)
 		}
 	})
 
 	const key = "replay-after-revocation"
-	if first := keyedPersonCall(rep1, r, person, key); first.Code != http.StatusOK {
+	if first := keyedContactCall(rep1, r, contact, key); first.Code != http.StatusOK {
 		t.Fatalf("first call = %d, want 200", first.Code)
 	}
 
 	// While the record is still visible the key replays, and does NOT
 	// re-execute — without this the 404 below would prove nothing, since a
 	// gate that broke replay outright would produce it too.
-	replay := keyedPersonCall(rep1, r, person, key)
+	replay := keyedContactCall(rep1, r, contact, key)
 	if replay.Code != http.StatusOK {
 		t.Fatalf("replay while visible = %d, want the recorded 200", replay.Code)
 	}
@@ -162,11 +162,11 @@ func TestReplayRefusesOnceTheCallerHasLostSightOfTheRecord(t *testing.T) {
 	}
 
 	// The record becomes capture-private to another rep — the one state that
-	// takes a person out of this caller's read scope. Nothing about the claim
+	// takes a contact out of this caller's read scope. Nothing about the claim
 	// changed: same principal, same key, same path, same body.
-	e.MakeCapturePrivate(t, "person", person, e.Rep3)
+	e.MakeCapturePrivate(t, "contact", contact, e.Rep3)
 
-	after := keyedPersonCall(rep1, r, person, key)
+	after := keyedContactCall(rep1, r, contact, key)
 	if after.Code != http.StatusNotFound {
 		t.Fatalf("replay after losing sight = %d, want 404 — a stored response must not outlive the authority it was produced under (API-CC-8)", after.Code)
 	}

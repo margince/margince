@@ -96,7 +96,7 @@ func TestTheGroupPreLockHoldsEveryPendingMemberAtOnce(t *testing.T) {
 // statement, not one per kind.
 //
 // Re-proposing rebundles what it joins, so a bundle ends up holding a company's
-// facts and its published people with different ages, and a decision walks that
+// facts and its published contacts with different ages, and a decision walks that
 // as ONE interleaved (created_at, id) sequence. Two ordered runs, one per kind,
 // are not one order: the decision can hold a lead the act is about to want while
 // waiting for a facts row the act already holds. So the kinds are variadic, and
@@ -107,7 +107,7 @@ func TestAMultiKindActLocksEveryKindItStages(t *testing.T) {
 	company := e.company(t)
 	bundle := ids.NewV7()
 
-	lead := e.stageInto(ctx, t, bundle, company, kindSiteLead, "the published person")
+	lead := e.stageInto(ctx, t, bundle, company, kindSiteLead, "the published contact")
 	facts := e.stageInto(ctx, t, bundle, company, kindDeepRead, "the company facts")
 
 	held, released := make(chan struct{}), make(chan struct{})

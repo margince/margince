@@ -11,7 +11,7 @@ package company360
 // the next open and reclaimed by the worker's own retry, a deployment with no
 // worker settles on the floor in-request, a lane that breaks or defers leaves
 // the reader with the rules and the row with the truth, and a reader the
-// account refuses — or who is not a person — gets no read at all.
+// account refuses — or who is not a contact — gets no read at all.
 
 import (
 	"context"
@@ -361,7 +361,7 @@ func TestAReaderTheAccountRefusesGetsNoRead(t *testing.T) {
 	if _, err := svc.Ensure(owner, theirs, false); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an open on a hidden account: %v, want not found", err)
 	}
-	// An agent is refused as a matter of permission: the scan is a person's.
+	// An agent is refused as a matter of permission: the scan is a contact's.
 	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	if _, err := svc.Ensure(agent, company, false); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("an agent's open: %v, want permission denied", err)

@@ -14,9 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -25,7 +25,7 @@ import (
 // the system invariants: the starters are catalog automations (instance-
 // gated, pausable) — the automation module's own seven handlers
 // (StarterWorkflows, incl. route_lead's create_task reading) plus
-// assign_lead_owner from people (the routing decision is transactional
+// assign_lead_owner from contacts (the routing decision is transactional
 // lead-store SQL — AUTO-NOTE-2, §3.5: assign_lead_owner ASSIGNS AN
 // OWNER, a different act from automation's own route_lead, which
 // creates a task) — while the lead-score recompute is a formula
@@ -51,7 +51,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	// engine depends only on the port; this is the one place a concrete
 	// identity is injected (ADR-0054 §8), same as platform/auth.NewGate.
 	engine := automation.NewWorkflowEngine(db, identity.NewService(db.Pool()))
-	peopleStore := people.NewStore(db)
+	contactsStore := contacts.NewStore(db)
 	// Executors ride the same per-workspace dispatch as every other
 	// datasource consumer: a starter firing for an overlay-mode
 	// workspace reads/writes through the overlay seam, not silently
@@ -77,11 +77,11 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	for _, handler := range automation.StarterWorkflows(ex) {
 		engine.RegisterWorkflow(handler)
 	}
-	engine.RegisterWorkflow(people.LeadRoutingWorkflow(peopleStore))
-	for _, handler := range people.LeadScoreWorkflows(peopleStore) {
+	engine.RegisterWorkflow(contacts.LeadRoutingWorkflow(contactsStore))
+	for _, handler := range contacts.LeadScoreWorkflows(contactsStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}
-	for _, handler := range people.LeadSLAWorkflows(peopleStore) {
+	for _, handler := range contacts.LeadSLAWorkflows(contactsStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}
 	activityStore := activities.NewStore(db)

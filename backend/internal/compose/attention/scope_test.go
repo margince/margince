@@ -75,7 +75,7 @@ func TestTheOfferedScopesMatchTheReadersOwnReach(t *testing.T) {
 }
 
 // Asking for a scope the reader does not hold is REFUSED, never narrowed.
-// Quietly answering a question about the team with facts about one person
+// Quietly answering a question about the team with facts about one contact
 // would leave the reader believing they had seen the team.
 func TestAWiderScopeThanTheReaderHoldsIsRefusedNotNarrowed(t *testing.T) {
 	if _, err := resolveScope(readerAt(principal.RowScopeOwn), scopeTeam); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -458,7 +458,7 @@ func (teammatesFailing) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bo
 //
 // The overnight brief ranks against the acting reader's own responsibility —
 // their deal, or one they hold an open assigned task on. So a brief row is
-// already bound to the person asking, and judging it afterwards by DEAL OWNER
+// already bound to the contact asking, and judging it afterwards by DEAL OWNER
 // drops exactly the assist the ranking admitted: the night picks a colleague's
 // deal because this rep has work on it, and the filter removes it before they
 // ever see it. That is the starvation the ranking fix closed, one layer down.
@@ -482,7 +482,7 @@ func TestAnAssistedDealSurvivesMineAndStaysOffANamedOwnersPage(t *testing.T) {
 	if kept := keepReadersOwn(ctx, rows); len(kept) != 1 {
 		t.Errorf("the reader's own overnight pick was dropped by the owner filter (%d kept)", len(kept))
 	}
-	// The same row under a NAMED owner is not that person's work: it is the
+	// The same row under a NAMED owner is not that contact's work: it is the
 	// acting reader's, and this is not their page.
 	if kept := keepOwnedBy(rows, colleague); len(kept) != 0 {
 		t.Errorf("a named owner's page inherited the reader's own overnight pick (%d kept)", len(kept))

@@ -69,7 +69,7 @@ func publicPreferences(store *consent.Store, limits publicPreferenceLimiters) fu
 			}
 
 			// Resolved for its refusal, not its answer: the handlers resolve
-			// the token again for the person it names, while this gate exists
+			// the token again for the contact it names, while this gate exists
 			// to turn an unknown, revoked or expired token away before any of
 			// them run. Unknown and revoked read identically as absent — the
 			// surface never becomes a consent-state oracle.

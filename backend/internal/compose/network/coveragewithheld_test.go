@@ -33,7 +33,7 @@ func coverageReaderWithoutTheEdgeGrant() context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"deal":    {Read: true},
-				"person":  {Read: true},
+				"contact": {Read: true},
 				"company": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -87,19 +87,19 @@ func TestTheDepartureReadRefusesBeforeItReachesAStatement(t *testing.T) {
 // between "nothing was withheld" and "the server did not say".
 // A seat has to reach the wire NAMED. The deal page rendered these rows as the
 // bare role — "economic_buyer" — because nothing on the payload said who the
-// person was, and a rep could not tell one stakeholder from another.
+// contact was, and a rep could not tell one stakeholder from another.
 //
-// The withheld half is the other assertion: a person the caller may not read
-// still occupies a seat, because how many people carry a deal is not the
+// The withheld half is the other assertion: a contact the caller may not read
+// still occupies a seat, because how many contacts carry a deal is not the
 // secret. Its name goes absent rather than empty, so a client renders its own
 // "cannot read this contact" rather than a blank that looks like a data fault.
-func TestASeatCarriesItsPersonsNameUnlessTheCallerMayNotReadThem(t *testing.T) {
+func TestASeatCarriesItsContactsNameUnlessTheCallerMayNotReadThem(t *testing.T) {
 	named, hidden := ids.NewV7(), ids.NewV7()
 	out := wireCoverage(DealCoverage{
 		DealID: ids.NewV7(),
 		Stakeholders: []deals.DealStakeholder{
-			{PersonID: named, Role: "economic_buyer", Engaged: true},
-			{PersonID: hidden, Role: "champion"},
+			{ContactID: named, Role: "economic_buyer", Engaged: true},
+			{ContactID: hidden, Role: "champion"},
 		},
 	}, nil, map[ids.UUID]string{named: "Thorsten Sifferlien"})
 
@@ -107,11 +107,11 @@ func TestASeatCarriesItsPersonsNameUnlessTheCallerMayNotReadThem(t *testing.T) {
 		t.Fatalf("the payload carries %d seats, want both — a seat the caller cannot name still counts",
 			len(out.Stakeholders))
 	}
-	if out.Stakeholders[0].PersonName == nil || *out.Stakeholders[0].PersonName != "Thorsten Sifferlien" {
+	if out.Stakeholders[0].ContactName == nil || *out.Stakeholders[0].ContactName != "Thorsten Sifferlien" {
 		t.Errorf("the readable seat reached the wire unnamed: %+v", out.Stakeholders[0])
 	}
-	if out.Stakeholders[1].PersonName != nil {
-		t.Errorf("a seat the caller may not read was named %q", *out.Stakeholders[1].PersonName)
+	if out.Stakeholders[1].ContactName != nil {
+		t.Errorf("a seat the caller may not read was named %q", *out.Stakeholders[1].ContactName)
 	}
 }
 

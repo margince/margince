@@ -37,12 +37,12 @@ type relationshipList struct {
 // linkedPair is one employment, its two records, and the versions a caller
 // reading either record's history would have in hand.
 type linkedPair struct {
-	person  string
+	contact string
 	company string
 	edge    relationshipRecord
 }
 
-// seedEmployment creates the person, the company and the link between them
+// seedEmployment creates the contact, the company and the link between them
 // through the product's own endpoints. Seeding the edge any other way would
 // prove nothing about the audit row this reversal reads.
 //
@@ -53,10 +53,10 @@ const seededEdgeRole = "cto"
 func seedEmploymentOverHTTP(t *testing.T, e *apptest.AppEnv) linkedPair {
 	t.Helper()
 	role := seededEdgeRole
-	var person personRecord
-	if status := e.Call(t, "POST", "/v1/people",
-		AnyMap{"full_name": "Ada Employed"}, nil, &person); status != 201 {
-		t.Fatalf("create person → %d", status)
+	var contact contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
+		AnyMap{"full_name": "Ada Employed"}, nil, &contact); status != 201 {
+		t.Fatalf("create contact → %d", status)
 	}
 	var company struct {
 		ID string `json:"id"`
@@ -65,8 +65,8 @@ func seedEmploymentOverHTTP(t *testing.T, e *apptest.AppEnv) linkedPair {
 		AnyMap{"display_name": "Employer GmbH"}, nil, &company); status != 201 {
 		t.Fatalf("create company → %d", status)
 	}
-	return linkedPair{person: person.ID, company: company.ID, edge: linkEdge(t, e, AnyMap{
-		"kind": "employment", "person_id": person.ID, "company_id": company.ID,
+	return linkedPair{contact: contact.ID, company: company.ID, edge: linkEdge(t, e, AnyMap{
+		"kind": "employment", "contact_id": contact.ID, "company_id": company.ID,
 		"role": role, "source": "manual",
 	})}
 }
@@ -122,12 +122,12 @@ func ifMatch(version int64) map[string]string {
 	return map[string]string{"If-Match": fmt.Sprint(version)}
 }
 
-// liveEdgesOf is the person's un-archived links, which is how "the edge is
+// liveEdgesOf is the contact's un-archived links, which is how "the edge is
 // gone" is observable to a client.
-func liveEdgesOf(t *testing.T, e *apptest.AppEnv, person string) []relationshipRecord {
+func liveEdgesOf(t *testing.T, e *apptest.AppEnv, contact string) []relationshipRecord {
 	t.Helper()
 	var list relationshipList
-	if status := e.Call(t, "GET", "/v1/relationships?person_id="+person, nil, nil, &list); status != 200 {
+	if status := e.Call(t, "GET", "/v1/relationships?contact_id="+contact, nil, nil, &list); status != 200 {
 		t.Fatalf("list relationships → %d", status)
 	}
 	return list.Data
@@ -145,13 +145,13 @@ func TestEndToEnd_anEdgeIsUnlinkedByReversingTheLineThatMadeIt(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
 
-	entry := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
+	entry := theEdgeEntry(t, readHistory(t, e, "contact", pair.contact), "create")
 	if !entry.Undoable.Undoable {
 		t.Fatalf("a fresh link reads as not undoable: %v", entry.Undoable.Reason)
 	}
-	person := readPerson(t, e, pair.person)
+	contact := readContact(t, e, pair.contact)
 
-	status, reversal := reverseEntry(t, e, "person", pair.person, entry.ID, person.Version)
+	status, reversal := reverseEntry(t, e, "contact", pair.contact, entry.ID, contact.Version)
 	if status != 200 {
 		t.Fatalf("reverse → %d, want 200 (reason %v)", status, reversal.Undoable.Reason)
 	}
@@ -159,14 +159,14 @@ func TestEndToEnd_anEdgeIsUnlinkedByReversingTheLineThatMadeIt(t *testing.T) {
 		t.Errorf("the reversal's own line came back as %+v; want the row that reverses %s",
 			reversal, entry.ID)
 	}
-	if edges := liveEdgesOf(t, e, pair.person); len(edges) != 0 {
+	if edges := liveEdgesOf(t, e, pair.contact); len(edges) != 0 {
 		t.Errorf("the link is still live after the reverse: %+v", edges)
 	}
 }
 
 // The SAME link, reversed from the other end. An edge sits on both records'
 // histories, so both must be able to act on it — and the anchor's rules apply
-// whichever page the person was reading.
+// whichever page the contact was reading.
 func TestEndToEnd_anEdgeIsReversibleFromTheOtherEndToo(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -187,7 +187,7 @@ func TestEndToEnd_anEdgeIsReversibleFromTheOtherEndToo(t *testing.T) {
 	if reversal.UndidAuditLogID == nil || *reversal.UndidAuditLogID != entry.ID {
 		t.Errorf("the reversal's line came back as %+v, want the row reversing %s", reversal, entry.ID)
 	}
-	if edges := liveEdgesOf(t, e, pair.person); len(edges) != 0 {
+	if edges := liveEdgesOf(t, e, pair.contact); len(edges) != 0 {
 		t.Errorf("the link is still live: %+v", edges)
 	}
 }
@@ -203,13 +203,13 @@ func TestEndToEnd_aLinkAlreadyPutBackSaysSoOnTheNextRead(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
 
-	entry := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
-	person := readPerson(t, e, pair.person)
-	if status, reversal := reverseEntry(t, e, "person", pair.person, entry.ID, person.Version); status != 200 {
+	entry := theEdgeEntry(t, readHistory(t, e, "contact", pair.contact), "create")
+	contact := readContact(t, e, pair.contact)
+	if status, reversal := reverseEntry(t, e, "contact", pair.contact, entry.ID, contact.Version); status != 200 {
 		t.Fatalf("the first reverse → %d (reason %v)", status, reversal.Undoable.Reason)
 	}
 
-	again := theEntryByID(t, readHistory(t, e, "person", pair.person), entry.ID)
+	again := theEntryByID(t, readHistory(t, e, "contact", pair.contact), entry.ID)
 	if again.Undoable.Undoable || again.Undoable.Reason == nil || *again.Undoable.Reason != "already_undone" {
 		t.Errorf("the reversed link reads as %+v, want a refusal naming already_undone", again.Undoable)
 	}
@@ -227,7 +227,7 @@ func TestEndToEnd_reversingAnUnlinkRefusesByNameAndWritesNothing(t *testing.T) {
 		t.Fatalf("unlink → %d", status)
 	}
 
-	before := readHistory(t, e, "person", pair.person)
+	before := readHistory(t, e, "contact", pair.contact)
 	entry := theEdgeEntry(t, before, "archive")
 	if entry.Undoable.Undoable {
 		t.Fatal("an unlink reads as reversible; putting a removed link back is an un-archive")
@@ -236,16 +236,16 @@ func TestEndToEnd_reversingAnUnlinkRefusesByNameAndWritesNothing(t *testing.T) {
 		t.Errorf("the unlink's refusal is %v, want edge_relink_unsupported", entry.Undoable.Reason)
 	}
 
-	person := readPerson(t, e, pair.person)
-	status, _ := reverseEntry(t, e, "person", pair.person, entry.ID, person.Version)
+	contact := readContact(t, e, pair.contact)
+	status, _ := reverseEntry(t, e, "contact", pair.contact, entry.ID, contact.Version)
 	if status != 409 {
 		t.Errorf("reversing an unlink → %d, want 409", status)
 	}
-	if after := readHistory(t, e, "person", pair.person); len(after.Data) != len(before.Data) {
+	if after := readHistory(t, e, "contact", pair.contact); len(after.Data) != len(before.Data) {
 		t.Errorf("the refusal wrote a row: history went from %d to %d lines",
 			len(before.Data), len(after.Data))
 	}
-	if edges := liveEdgesOf(t, e, pair.person); len(edges) != 0 {
+	if edges := liveEdgesOf(t, e, pair.contact); len(edges) != 0 {
 		t.Errorf("the refused reverse re-linked the edge: %+v", edges)
 	}
 }
@@ -310,14 +310,14 @@ func TestEndToEnd_reversingAnEdgeChangeReplaysWhatTheLinkHeld(t *testing.T) {
 		t.Fatalf("patch the link → %d", status)
 	}
 
-	entry := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "update")
-	person := readPerson(t, e, pair.person)
-	status, reversal := reverseEntry(t, e, "person", pair.person, entry.ID, person.Version)
+	entry := theEdgeEntry(t, readHistory(t, e, "contact", pair.contact), "update")
+	contact := readContact(t, e, pair.contact)
+	status, reversal := reverseEntry(t, e, "contact", pair.contact, entry.ID, contact.Version)
 	if status != 200 {
 		t.Fatalf("reverse the change → %d, want 200 (reason %v)", status, reversal.Undoable.Reason)
 	}
 
-	edges := liveEdgesOf(t, e, pair.person)
+	edges := liveEdgesOf(t, e, pair.contact)
 	if len(edges) != 1 {
 		t.Fatalf("the link count changed on a field replay: %+v", edges)
 	}
@@ -338,19 +338,19 @@ func TestEndToEnd_anEdgeReverseDoesNotMoveEitherRecordsVersion(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
 
-	entry := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
-	before := readPerson(t, e, pair.person)
-	if status, reversal := reverseEntry(t, e, "person", pair.person, entry.ID, before.Version); status != 200 {
+	entry := theEdgeEntry(t, readHistory(t, e, "contact", pair.contact), "create")
+	before := readContact(t, e, pair.contact)
+	if status, reversal := reverseEntry(t, e, "contact", pair.contact, entry.ID, before.Version); status != 200 {
 		t.Fatalf("reverse → %d (reason %v)", status, reversal.Undoable.Reason)
 	}
-	if after := readPerson(t, e, pair.person); after.Version != before.Version {
-		t.Errorf("the person's version moved from %d to %d on an edge write; the record's If-Match "+
+	if after := readContact(t, e, pair.contact); after.Version != before.Version {
+		t.Errorf("the contact's version moved from %d to %d on an edge write; the record's If-Match "+
 			"would then be a guard, and this path pins the edge's version instead",
 			before.Version, after.Version)
 	}
 }
 
-// Two people reversing ONE link from opposite ends over HTTP. Exactly one lands.
+// Two contacts reversing ONE link from opposite ends over HTTP. Exactly one lands.
 //
 // Both requests are honestly concurrent, so WHICH refusal the loser gets depends
 // on where it was overtaken: the version moved under it, or the link was already
@@ -368,12 +368,12 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
 
-	fromPerson := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
+	fromContact := theEdgeEntry(t, readHistory(t, e, "contact", pair.contact), "create")
 	fromCompany := theEdgeEntry(t, readHistory(t, e, "company", pair.company), "create")
-	if fromPerson.ID != fromCompany.ID {
-		t.Fatalf("the two ends name different entries for one link: %s vs %s", fromPerson.ID, fromCompany.ID)
+	if fromContact.ID != fromCompany.ID {
+		t.Fatalf("the two ends name different entries for one link: %s vs %s", fromContact.ID, fromCompany.ID)
 	}
-	person := readPerson(t, e, pair.person)
+	contact := readContact(t, e, pair.contact)
 	var company struct {
 		Version int64 `json:"version"`
 	}
@@ -387,7 +387,7 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 	}
 	results := make(chan outcome, 2)
 	go func() {
-		status, entry := reverseEntry(t, e, "person", pair.person, fromPerson.ID, person.Version)
+		status, entry := reverseEntry(t, e, "contact", pair.contact, fromContact.ID, contact.Version)
 		results <- outcome{status, reasonOf(entry)}
 	}()
 	go func() {
@@ -420,25 +420,25 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 // decided from was current". An edge write never moves either record's version,
 // so the edge's own version cannot answer that question — and a route whose
 // guard binds on one branch and not the other means two different things
-// depending on which row a person pressed Undo on.
+// depending on which row a contact pressed Undo on.
 func TestEndToEnd_reversingALinkFromAStaleRecordScreenIsRefusedAndWritesNothing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
 
-	entry := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
-	stale := readPerson(t, e, pair.person)
+	entry := theEdgeEntry(t, readHistory(t, e, "contact", pair.contact), "create")
+	stale := readContact(t, e, pair.contact)
 	// The record moves under the open screen, which is the whole premise.
-	if status := e.Call(t, "PATCH", "/v1/people/"+pair.person,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+pair.contact,
 		AnyMap{"title": "COO"}, nil, nil); status != 200 {
-		t.Fatalf("move the person under the screen → %d", status)
+		t.Fatalf("move the contact under the screen → %d", status)
 	}
 
-	status, code := reverseRefusal(t, e, "person", pair.person, entry.ID, stale.Version)
+	status, code := reverseRefusal(t, e, "contact", pair.contact, entry.ID, stale.Version)
 	if status != http.StatusConflict || code != "version_skew" {
 		t.Errorf("a reverse decided from a stale screen → %d %q, want 409 version_skew", status, code)
 	}
-	if edges := liveEdgesOf(t, e, pair.person); len(edges) != 1 {
+	if edges := liveEdgesOf(t, e, pair.contact); len(edges) != 1 {
 		t.Errorf("the link is %+v after a refused reverse; the record's If-Match is "+
 			"required on this route and the edge branch has to honour it too", edges)
 	}

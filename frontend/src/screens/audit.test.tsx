@@ -91,7 +91,7 @@ describe("ActorTag", () => {
     expect(screen.queryByText(/u-gone/)).toBeNull();
   });
 
-  it("names the Deal Room participant, so a disputed negotiation reads a person", () => {
+  it("names the Deal Room participant, so a disputed negotiation reads a contact", () => {
     wrap(
       <ActorTag
         entry={entry({
@@ -138,7 +138,7 @@ describe("ActorTag", () => {
     expect(screen.getByText("Lars Vogt")).toBeTruthy();
     expect(screen.getByText("via an agent")).toBeTruthy();
     // The passport uuid was the prominent half before PD-002. It is now not
-    // shown at all: a person is answerable for the change, and the tool is a
+    // shown at all: a contact is answerable for the change, and the tool is a
     // qualifier on them.
     expect(screen.queryByText(/01a01740/)).toBeNull();
   });

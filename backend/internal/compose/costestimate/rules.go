@@ -19,18 +19,18 @@ type unitRule struct {
 	// observedUnits computes the expected units for scanned messages from a
 	// COMPLETED backfill yield (the caller guarantees y.Scanned > 0). ok=false
 	// means the yield cannot anchor this task's ratio, so the caller floors and
-	// marks the estimate heuristic — this is where enrich's zero-people guard lives.
+	// marks the estimate heuristic — this is where enrich's zero-contacts guard lives.
 	observedUnits func(scanned int64, y capture.BackfillYields) (units int64, ok bool)
 	// observedDenom is the observed-unit count the window's served slices are
 	// divided by for the priced-slice cost: classify's exact labeled-message
 	// count (absorbs batching + solo re-asks), else the summed COMPLETED served
-	// calls (one enrich call per person, one embed call per entity). Completed —
+	// calls (one enrich call per contact, one embed call per entity). Completed —
 	// not all served — so a metering_failed retry, whose spend rides the token
 	// numerator, does not inflate the call denominator and divide its own cost out.
 	observedDenom func(slices []ai.ServedTaskTotal, labeled int64) int64
 	// denomIsCalls says whether observedDenom is a COUNT OF CALLS (Σcalls) rather
 	// than a count of some other unit. It decides how a partly-unpriced mix
-	// re-weights: when the denominator is call-based (enrich per person, embed
+	// re-weights: when the denominator is call-based (enrich per contact, embed
 	// per entity — one call per unit), the priced slices' share of the cost is
 	// their share of the calls, so pricedDenom scales by pricedCalls/Σcalls.
 	// When it is NOT call-based (classify's denominator is labeled MESSAGES, and
@@ -65,22 +65,22 @@ var unitRulesByName = map[string]unitRule{
 			TokensOut: classifyVerdictTokens,
 		},
 	},
-	"per_person": {
-		// A zero people_created is "ratio unavailable", not "zero people": a run
+	"per_contact": {
+		// A zero contacts_created is "ratio unavailable", not "zero contacts": a run
 		// counts only the counterparties its own pages minted, so a window whose
 		// senders were all already known, suppressed, or deferred to the verdict
 		// engine reads zero while a wider window would still create plenty. Reporting
 		// ok=false floors to the named default, which is honest; a silent
 		// observed-0 on a consent number — quoting $0 enrich to the user — is not.
 		observedUnits: func(scanned int64, y capture.BackfillYields) (int64, bool) {
-			if y.PeopleCreated == 0 {
+			if y.ContactsCreated == 0 {
 				return 0, false
 			}
-			return scanned * y.PeopleCreated / y.Scanned, true // persons
+			return scanned * y.ContactsCreated / y.Scanned, true // contacts
 		},
 		observedDenom: func(slices []ai.ServedTaskTotal, _ int64) int64 { return sumCompletedCalls(slices) },
-		denomIsCalls:  true, // one enrich call per person
-		// Per person: the trailing signature lines plus the extraction prompt in,
+		denomIsCalls:  true, // one enrich call per contact
+		// Per contact: the trailing signature lines plus the extraction prompt in,
 		// a small field bundle out.
 		floor: ai.Usage{
 			TokensIn:  signatureLineCount*signatureLineTokens + enrichSystemTokens,
@@ -88,14 +88,14 @@ var unitRulesByName = map[string]unitRule{
 		},
 	},
 	"per_entity": {
-		// person/company embed entities are counted from the run's own committed
+		// contact/company embed entities are counted from the run's own committed
 		// yields, which are an honest UNDER-count: a sender the tier gate deferred
 		// is resolved by the verdict engine long after the page that saw it, and
-		// the person it may eventually mint is nobody's page to claim. Embeddings
+		// the contact it may eventually mint is nobody's page to claim. Embeddings
 		// is NOT floored on that shortfall: captured is exact and dominates the
 		// entity mix, so the observed ratio stays the honest anchor.
 		observedUnits: func(scanned int64, y capture.BackfillYields) (int64, bool) {
-			return scanned * (y.Captured + y.PeopleCreated + y.CompaniesCreated) / y.Scanned, true // entities
+			return scanned * (y.Captured + y.ContactsCreated + y.CompaniesCreated) / y.Scanned, true // entities
 		},
 		observedDenom: func(slices []ai.ServedTaskTotal, _ int64) int64 { return sumCompletedCalls(slices) },
 		denomIsCalls:  true, // one embed call per entity
@@ -130,7 +130,7 @@ var backfillTasks = []ai.Task{ai.TaskCaptureClassify, ai.TaskEnrich, ai.TaskEmbe
 // sumCompletedCalls totals the COMPLETED served calls (error_sentinel IS NULL,
 // excluding metering_failed retries) across a task's window slices — the
 // observed-unit denominator for the tasks that fire one call per unit (enrich
-// per person, embeddings per entity). A metering_failed retry spent tokens
+// per contact, embeddings per entity). A metering_failed retry spent tokens
 // (carried in the token sums) but completed no fresh unit, so it must not be
 // counted here: doing so would inflate the denominator and cancel its own cost.
 func sumCompletedCalls(slices []ai.ServedTaskTotal) int64 {

@@ -3,7 +3,7 @@
 
 package consent
 
-// The one answer to "may we write to this person for this purpose", and the
+// The one answer to "may we write to this contact for this purpose", and the
 // reason for it.
 //
 // It exists so the composer's preview and the dispatcher's transmit-time check
@@ -52,7 +52,7 @@ const (
 	ClassPhoneOutreach Class = "phone_outreach"
 )
 
-// Verdict is the effective answer for one person and one purpose.
+// Verdict is the effective answer for one contact and one purpose.
 type Verdict struct {
 	// State is allowed, blocked, or unknown. Unknown is not a soft block: it
 	// means no decision is recorded, and the offered action is to REQUEST
@@ -60,7 +60,7 @@ type Verdict struct {
 	State string
 	// Reason is the answer in the reader's words — "she wrote to you on 2 May",
 	// "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain
-	// to the person in front of them is not usable.
+	// to the contact in front of them is not usable.
 	Reason string
 	// Qualifying names the event that flipped correspondence to allowed, when
 	// one did. Recording WHICH event is what makes the Art 6(1)(f) balancing
@@ -120,16 +120,16 @@ type PurposeRow struct {
 	RequiresDOI bool
 }
 
-// MarketingContext is what a marketing verdict needs beyond the person and the
+// MarketingContext is what a marketing verdict needs beyond the contact and the
 // purpose: the exception this installation's jurisdiction grants.
 //
 // Passed in for the reason `since` is passed in — resolving it needs a settings
-// read, and VerdictForPerson is deliberately free of those.
+// read, and VerdictForContact is deliberately free of those.
 type MarketingContext struct {
 	Exception *messaging.MarketingException
 }
 
-// VerdictForPerson is THE decision. Both the guard endpoint and the transmit
+// VerdictForContact is THE decision. Both the guard endpoint and the transmit
 // gate call it, so a preview and a send answer with the same code.
 //
 // The order of the checks is the ruling, and it is not rearrangeable: an
@@ -146,8 +146,8 @@ type MarketingContext struct {
 // is deliberately free of settings reads: a rep holds no settings-read grant
 // and a gated read inside the verdict would fail a send with a 500 rather than
 // an answer about consent.
-func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
-	suppressed, at, err := objectionStands(ctx, tx, personID, purpose.ID)
+func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
+	suppressed, at, err := objectionStands(ctx, tx, contactID, purpose.ID)
 	if err != nil {
 		return Verdict{}, err
 	}
@@ -158,16 +158,16 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 	// The same communication_suppression table the transmit gate reads
 	// (liveSuppression, authorizetransmit.go), asked here so the preview this
 	// function answers for cannot say "allowed" a moment after the real send
-	// would refuse. A different table from the person_consent read above: that
+	// would refuse. A different table from the contact_consent read above: that
 	// one is this PURPOSE's own recorded state; this one binds by CATEGORY
 	// regardless of what was ever granted for it — an Art. 21 objection blocks
 	// marketing even though nobody ever withdrew consent for it in words.
 	//
-	// No address: this answers about the PERSON in general, the question a
+	// No address: this answers about the CONTACT in general, the question a
 	// guard read asks, not about one message to one address — an address-level
-	// hard bounce on a stale mailbox must not read as "this person is blocked"
+	// hard bounce on a stale mailbox must not read as "this contact is blocked"
 	// when they have another channel on file.
-	kinds, err := liveSuppression(ctx, tx, personID, connector.Recipient{})
+	kinds, err := liveSuppression(ctx, tx, contactID, connector.Recipient{})
 	if err != nil {
 		return Verdict{}, err
 	}
@@ -184,7 +184,7 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 		return Verdict{State: VerdictAllowed, Reason: "account and contract notices need no consent"}, nil
 
 	case ClassBusinessCorrespondence:
-		return correspondenceVerdict(ctx, tx, personID, purpose, since)
+		return correspondenceVerdict(ctx, tx, contactID, purpose, since)
 
 	case ClassPhoneOutreach:
 		// Dormant by decision: the purpose exists so the model is complete. A
@@ -192,15 +192,15 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 		return Verdict{State: VerdictBlocked, Reason: "no call path is configured", Code: BlockNoChannel}, nil
 
 	default:
-		return marketingVerdict(ctx, tx, personID, purpose, marketing)
+		return marketingVerdict(ctx, tx, contactID, purpose, marketing)
 	}
 }
 
 // correspondenceVerdict answers for ordinary business correspondence: the
-// person's own recorded answer first, and only then what the record implies.
+// contact's own recorded answer first, and only then what the record implies.
 //
 // THE ORDER IS THE FIX. This arm used to read qualifying events alone, so an
-// explicit `granted` row authorized nothing: a person who had said in as many
+// explicit `granted` row authorized nothing: a contact who had said in as many
 // words that we may write to them was refused until they happened to send an
 // inbound message, while one inbound message opened every unrelated send. A
 // recorded answer is the strongest thing a subject can give us about their own
@@ -212,13 +212,13 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 //
 // The implied arm below is unchanged and stays second: it is the Art 6(1)(f)
 // reading of a relationship the subject started, and it is what answers for the
-// overwhelming majority of people, who never record an answer either way.
-func correspondenceVerdict(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow, since time.Time) (Verdict, error) {
+// overwhelming majority of contacts, who never record an answer either way.
+func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since time.Time) (Verdict, error) {
 	// requiresDOI is passed as the purpose declares it rather than as a
 	// constant false. Correspondence does not demand the round trip today, and
 	// hard-coding that here would silently ignore an installation that turned
 	// it on for this purpose.
-	state, granted, err := recordedState(ctx, tx, personID, purpose.ID, purpose.RequiresDOI)
+	state, granted, err := recordedState(ctx, tx, contactID, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
 		return Verdict{}, err
 	}
@@ -235,7 +235,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, personID string, purp
 			Code:   BlockUnconfirmedDOI,
 		}, nil
 	}
-	event, source, err := latestQualifyingEvent(ctx, tx, personID, since)
+	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since)
 	if err != nil {
 		return Verdict{}, err
 	}
@@ -247,7 +247,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, personID string, purp
 			State: VerdictUnknown,
 			// The reason does not distinguish "never" from "not lately", and
 			// deliberately: both mean the same thing to the rep reading it —
-			// nothing on file supports writing to this person out of the blue
+			// nothing on file supports writing to this contact out of the blue
 			// right now — and a message that said "their last contact has
 			// lapsed" would invite hunting for an expiry to override rather
 			// than recording why this send is lawful.
@@ -267,8 +267,8 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, personID string, purp
 // with all four of its conditions on the record. There is no legitimate-interest
 // escape for marketing email, B2C or B2B, and the product does not offer the
 // toggle.
-func marketingVerdict(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
-	state, granted, err := recordedState(ctx, tx, personID, purpose.ID, purpose.RequiresDOI)
+func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
+	state, granted, err := recordedState(ctx, tx, contactID, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
 		return Verdict{}, err
 	}
@@ -288,7 +288,7 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, personID string, purpose P
 			Code:   BlockUnconfirmedDOI,
 		}, nil
 	}
-	allowed, err := existingCustomerAllows(ctx, tx, personID, marketing.Exception)
+	allowed, err := existingCustomerAllows(ctx, tx, contactID, marketing.Exception)
 	if err != nil {
 		return Verdict{}, err
 	}
@@ -353,18 +353,18 @@ func qualifyingReason(event QualifyingEvent) string {
 // The state row says THAT they objected; the append-only proof ledger says
 // when. The date is read from the ledger's newest withdrawal rather than from
 // the state row, which carries only the capture time of whatever decision is
-// current — on a person who granted after withdrawing, that timestamp names
+// current — on a contact who granted after withdrawing, that timestamp names
 // the grant, and a refusal quoting it would cite the wrong day back to a rep
 // standing in front of the customer.
 //
 // A missing ledger row does not soften the answer: the state is the authority
 // for the verdict, and a zero time renders as an objection whose date this
 // installation cannot evidence.
-func objectionStands(ctx context.Context, tx pgx.Tx, personID, purposeID string) (bool, time.Time, error) {
+func objectionStands(ctx context.Context, tx pgx.Tx, contactID, purposeID string) (bool, time.Time, error) {
 	var state string
 	err := tx.QueryRow(ctx, `
-		SELECT pc.state FROM person_consent pc
-		WHERE pc.person_id = $1 AND pc.purpose_id = $2`, personID, purposeID).Scan(&state)
+		SELECT pc.state FROM contact_consent pc
+		WHERE pc.contact_id = $1 AND pc.purpose_id = $2`, contactID, purposeID).Scan(&state)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, time.Time{}, nil
 	}
@@ -377,16 +377,16 @@ func objectionStands(ctx context.Context, tx pgx.Tx, personID, purposeID string)
 	var at time.Time
 	err = tx.QueryRow(ctx, `
 		SELECT ce.captured_at FROM consent_event ce
-		WHERE ce.person_id = $1 AND ce.purpose_id = $2 AND ce.new_state = 'withdrawn'
+		WHERE ce.contact_id = $1 AND ce.purpose_id = $2 AND ce.new_state = 'withdrawn'
 		ORDER BY ce.captured_at DESC
-		LIMIT 1`, personID, purposeID).Scan(&at)
+		LIMIT 1`, contactID, purposeID).Scan(&at)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return false, time.Time{}, fmt.Errorf("read the objection's proof: %w", err)
 	}
 	return true, at, nil
 }
 
-// recordedState reads the person's own decision for this purpose, and whether
+// recordedState reads the contact's own decision for this purpose, and whether
 // it satisfies the DOI round-trip when the purpose demands one.
 //
 // issuance_trigger IS NOT NULL is what separates a confirmation from a claim of
@@ -400,10 +400,10 @@ func objectionStands(ctx context.Context, tx pgx.Tx, personID, purposeID string)
 //
 // It is NULL on the rows the retired operator-token endpoint produced, which
 // returned the plaintext to the operator and accepted it straight back, so one
-// person could mint and redeem a confirmation the subject never saw. Those rows
+// contact could mint and redeem a confirmation the subject never saw. Those rows
 // stay on the proof log as the history they are, and authorize no send.
-func recordedState(ctx context.Context, tx pgx.Tx, personID, purposeID string, requiresDOI bool) (string, bool, error) {
-	return recordedStateFor(ctx, tx, subjectColumnPerson, personID, purposeID, requiresDOI)
+func recordedState(ctx context.Context, tx pgx.Tx, contactID, purposeID string, requiresDOI bool) (string, bool, error) {
+	return recordedStateFor(ctx, tx, subjectColumnContact, contactID, purposeID, requiresDOI)
 }
 
 // PurposesForGuard lists the purposes a guard read reports on, in a fixed order

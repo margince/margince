@@ -15,7 +15,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The two slots a decision row hands out: the dialog that reads the WHOLE
 // proposal, and the inline editor that rewrites the part of it this
-// installation lets a person change.
+// installation lets a contact change.
 //
 // The editor's shape comes from the kind, not from the payload, and that is
 // what the three editor stories below are for. A `held_draft` offers the words

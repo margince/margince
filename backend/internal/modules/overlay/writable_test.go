@@ -32,7 +32,7 @@ func seatWith(actions ...principal.Action) context.Context {
 		}
 	}
 	objects := map[string]principal.ObjectGrant{}
-	for _, object := range []string{"person", "company", "deal", "lead", "project", "activity"} {
+	for _, object := range []string{"contact", "company", "deal", "lead", "project", "activity"} {
 		objects[object] = grant
 	}
 	return principal.WithActor(context.Background(), principal.Principal{
@@ -48,7 +48,7 @@ func TestASupportedTypeWithTheGrantIsWritable(t *testing.T) {
 	ctx := seatWith(principal.ActionRead, principal.ActionUpdate)
 
 	for _, et := range []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityCompany,
+		datasource.EntityContact, datasource.EntityCompany,
 		datasource.EntityDeal, datasource.EntityLead,
 	} {
 		if !SupportsWrite(WriteUpdate, et) {
@@ -66,7 +66,7 @@ func TestASupportedTypeWithoutTheGrantIsNotWritable(t *testing.T) {
 	t.Parallel()
 	ctx := seatWith(principal.ActionRead)
 
-	if Writable(ctx, datasource.EntityPerson) {
+	if Writable(ctx, datasource.EntityContact) {
 		t.Error("a read-only seat reads as writable: the flag would offer an edit the write refuses")
 	}
 }
@@ -117,7 +117,7 @@ func TestNoOverlayTypeSupportsCreate(t *testing.T) {
 func TestAnUnseatedCallerIsNotWritable(t *testing.T) {
 	t.Parallel()
 
-	if Writable(context.Background(), datasource.EntityPerson) {
+	if Writable(context.Background(), datasource.EntityContact) {
 		t.Error("a context with no actor read as writable")
 	}
 }

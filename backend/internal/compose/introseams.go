@@ -22,8 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/network"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -57,7 +57,7 @@ func introPathLister(pool *pgxpool.Pool) agents.IntroPathLister {
 		var out []agents.IntroRoute
 		var truncated bool
 		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-			// The account gate first. A route names the account's people, so a
+			// The account gate first. A route names the account's contacts, so a
 			// caller who cannot read the account must not learn who works
 			// there — through a tool any more than through a URL.
 			if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
@@ -70,12 +70,12 @@ func introPathLister(pool *pgxpool.Pool) agents.IntroPathLister {
 			if err := auth.EnsureVisibleLive(ctx, tx, "company", companyID); err != nil {
 				return err
 			}
-			// The person grant, taken BEFORE the read rather than inferred from
+			// The contact grant, taken BEFORE the read rather than inferred from
 			// whether it returned anything. Without it an account with no
-			// visible contacts and an account this caller may not read people
+			// visible contacts and an account this caller may not read contacts
 			// at all answer identically — and the difference between those two
 			// is itself a fact about the account.
-			if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+			if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 				return err
 			}
 			contacts, err := accountContacts(ctx, tx, companyID)
@@ -103,16 +103,16 @@ func introPathLister(pool *pgxpool.Pool) agents.IntroPathLister {
 // because the score is computed after the read and capping first would cut by
 // last contact instead of by warmth.
 func rankIntroRoutes(ctx context.Context, tx pgx.Tx, contacts []accountContact) ([]agents.IntroRoute, error) {
-	people := make([]ids.UUID, 0, len(contacts))
+	contactIDs := make([]ids.UUID, 0, len(contacts))
 	names := make(map[ids.UUID]string, len(contacts))
 	for _, contact := range contacts {
-		people = append(people, contact.id)
+		contactIDs = append(contactIDs, contact.id)
 		names[contact.id] = contact.name
 	}
-	// EdgesForPeople takes the person grant; the contact set it is given
-	// already passed the person row scope in accountContacts, so an unpromoted
+	// EdgesForContacts takes the contact grant; the contact set it is given
+	// already passed the contact row scope in accountContacts, so an unpromoted
 	// captured contact never becomes a route.
-	edges, err := search.EdgesForPeople(ctx, tx, people)
+	edges, err := search.EdgesForContacts(ctx, tx, contactIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func rankIntroRoutes(ctx context.Context, tx pgx.Tx, contacts []accountContact) 
 		score := e.StrengthOf(now)
 		route := agents.IntroRoute{
 			UserID: e.UserID, DisplayName: members[e.UserID],
-			PersonID: e.PersonID, PersonName: names[e.PersonID],
+			ContactID: e.ContactID, ContactName: names[e.ContactID],
 			StrengthBucket: score.Bucket, Interactions90d: e.Count90d,
 		}
 		// A `none` band carries NO number: never spoken and spoken-then-cold
@@ -170,14 +170,14 @@ type accountContact struct {
 	name string
 }
 
-// accountContacts reads the account's live employees under the caller's person
+// accountContacts reads the account's live employees under the caller's contact
 // row scope, in id order, reading one row past the bound so the caller can tell
 // a full account from a cut one.
 func accountContacts(ctx context.Context, tx pgx.Tx, companyID ids.UUID) ([]accountContact, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
-	// The edge grant, taken BEFORE the read for the same reason the person
+	// The edge grant, taken BEFORE the read for the same reason the contact
 	// grant above is: an intro route IS the employment edge — "who works there
 	// that we know" — so a caller refused edges must be refused here rather
 	// than handed an empty route list. An empty list is a believable answer,
@@ -189,7 +189,7 @@ func accountContacts(ctx context.Context, tx pgx.Tx, companyID ids.UUID) ([]acco
 	if edgeBound == "" {
 		edgeBound = jsonTrue
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "person", "p", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
 	if err != nil {
 		return nil, err
 	}
@@ -200,10 +200,10 @@ func accountContacts(ctx context.Context, tx pgx.Tx, companyID ids.UUID) ([]acco
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT DISTINCT p.id, p.full_name
 		  FROM relationship r
-		  JOIN person p ON p.id = r.person_id AND p.archived_at IS NULL
+		  JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
 		 WHERE r.kind = 'employment' AND r.company_id = $%d
 		   -- Still employed TODAY. A future end date is still employment: a
-		   -- person leaving next month can still make an introduction this
+		   -- contact leaving next month can still make an introduction this
 		   -- week, and the departure rule in compose/network already treats
 		   -- that row as live. Two spellings would let one surface call them
 		   -- gone while the other calls them current.
@@ -238,7 +238,7 @@ const atRiskScanLimit = 25
 // sweep sees precisely the book the caller sees. Deals are assessed in the
 // order that list returns them, and the sweep stops at the cap rather than
 // sampling: a deterministic prefix can be explained to a rep, a sample cannot.
-func atRiskLister(pool *pgxpool.Pool, ppl *people.Store) agents.AtRiskLister {
+func atRiskLister(pool *pgxpool.Pool, ppl *contacts.Store) agents.AtRiskLister {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	return func(ctx context.Context) (agents.AtRiskReport, error) {
 		var out agents.AtRiskReport
@@ -277,7 +277,7 @@ func atRiskLister(pool *pgxpool.Pool, ppl *people.Store) agents.AtRiskLister {
 			}
 			// The findings are named ONCE for the whole sweep, not once per
 			// deal. A first cut left this surface unnamed on a cost argument —
-			// twenty-five deals, one gated person read each — but the ids can
+			// twenty-five deals, one gated contact read each — but the ids can
 			// simply be collected across every finding and resolved in a
 			// single batched read, so the cost was never twenty-five reads. It
 			// matters because the SAME CoverageRisk shape is named under
@@ -290,22 +290,22 @@ func atRiskLister(pool *pgxpool.Pool, ppl *people.Store) agents.AtRiskLister {
 	}
 }
 
-// nameSweepFindings names the people every finding in the sweep is about, in
+// nameSweepFindings names the contacts every finding in the sweep is about, in
 // one read.
 //
-// Same gate as the coverage read: people.PersonNamesTx carries the person
+// Same gate as the coverage read: contacts.ContactNamesTx carries the contact
 // object check as well as the row scope, and a caller who may read the deals
-// but not people gets the findings unnamed rather than no findings — the
+// but not contacts gets the findings unnamed rather than no findings — the
 // findings are about the DEALS.
-func nameSweepFindings(ctx context.Context, tx pgx.Tx, ppl *people.Store, flagged []agents.AtRiskDeal) error {
+func nameSweepFindings(ctx context.Context, tx pgx.Tx, ppl *contacts.Store, flagged []agents.AtRiskDeal) error {
 	seen := map[ids.UUID]bool{}
-	wanted := make([]ids.PersonID, 0)
+	wanted := make([]ids.ContactID, 0)
 	for _, d := range flagged {
 		for _, r := range d.Risks {
-			for _, id := range r.PersonIDs {
+			for _, id := range r.ContactIDs {
 				if !seen[id] {
 					seen[id] = true
-					wanted = append(wanted, ids.From[ids.PersonKind](id))
+					wanted = append(wanted, ids.From[ids.ContactKind](id))
 				}
 			}
 		}
@@ -313,7 +313,7 @@ func nameSweepFindings(ctx context.Context, tx pgx.Tx, ppl *people.Store, flagge
 	if len(wanted) == 0 {
 		return nil
 	}
-	names, err := ppl.PersonNamesTx(ctx, tx, wanted)
+	names, err := ppl.ContactNamesTx(ctx, tx, wanted)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil
@@ -322,7 +322,7 @@ func nameSweepFindings(ctx context.Context, tx pgx.Tx, ppl *people.Store, flagge
 	}
 	for i, d := range flagged {
 		for j, r := range d.Risks {
-			flagged[i].Risks[j].People = namedPeople(r.PersonIDs, names)
+			flagged[i].Risks[j].Contacts = namedContacts(r.ContactIDs, names)
 		}
 	}
 	return nil
@@ -375,7 +375,7 @@ func dealAtRisk(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal, now time.Ti
 		return agents.AtRiskDeal{}, dealNoFinding, nil
 	}
 	// Unnamed HERE and named by the caller: nameSweepFindings resolves every
-	// finding's people in one read once the sweep is done, rather than each
+	// finding's contacts in one read once the sweep is done, rather than each
 	// deal paying for its own.
 	return agents.AtRiskDeal{
 		DealID: ids.UUID(d.Id), Name: d.Name, Risks: toAgentRisks(coverage.Risks, nil),

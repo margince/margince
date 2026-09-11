@@ -186,7 +186,7 @@ export const digest: MorningDigest = {
   capture: {
     messages_synced: 42,
     activities_created: 42,
-    people_created: 5,
+    contacts_created: 5,
     companies_created: 2,
   },
   review: {
@@ -594,7 +594,7 @@ export const teamWeek: TeamWeeklyReview = {
       focus_label: "Three meetings closed without a next step",
     },
   ],
-  // Who is talked about first: the person who asked for help, then the one
+  // Who is talked about first: the contact who asked for help, then the one
   // whose meetings ended open, then the week that went well.
   agenda: ["u-tobias", "u-mira", "u-lena"],
   outlook: weeklyOutlook,

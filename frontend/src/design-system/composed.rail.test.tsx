@@ -10,10 +10,10 @@ import { RecordView } from "./composed";
 afterEach(cleanup);
 
 // The rail says who wrote before a reader reads a word: a change the agent
-// made carries the indigo mark, a change a person made the hollow one, and a
+// made carries the indigo mark, a change a contact made the hollow one, and a
 // thing that was said the solid one. Held on the class the sheet colours by.
 describe("the timeline's rail marks who wrote", () => {
-  it("draws an agent's change indigo, a person's hollow, and an exchange solid", () => {
+  it("draws an agent's change indigo, a contact's hollow, and an exchange solid", () => {
     const { container } = render(
       <RecordView
         name="Anna Weber"

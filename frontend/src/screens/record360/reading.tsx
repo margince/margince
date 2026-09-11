@@ -5,7 +5,7 @@
 //
 // The same reading in the same order on an account, a contact, a lead and a
 // deal: the call the machine reached, with the thread it was read from; what
-// needs a person today; and, under them, the two reference sections a reader
+// needs a contact today; and, under them, the two reference sections a reader
 // consults rather than reads, side by side. The parts are cards; what binds
 // them is the interval, not a box — a bordered container holding bordered
 // cards is a card inside a card.

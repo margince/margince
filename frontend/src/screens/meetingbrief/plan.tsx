@@ -64,7 +64,7 @@ export function ObjectivePanel({
   const byModel = plan.generated_by === "model";
   return (
     <Panel
-      title={t("person.meeting.objective")}
+      title={t("contact.meeting.objective")}
       titleLevel={3}
       tone={byModel ? "ai" : "accent"}
       // The disclosure rides the plan's LEAD and nowhere else: the panels under
@@ -88,7 +88,7 @@ export function ObjectivePanel({
         </div>
         {plan.opening && (
           <div className="mb-open">
-            <Eyebrow as="h4">{t("person.meeting.openWith")}</Eyebrow>
+            <Eyebrow as="h4">{t("contact.meeting.openWith")}</Eyebrow>
             <Claim
               sentence={plan.opening}
               onOpenRecord={onOpenRecord}
@@ -119,9 +119,9 @@ export function AccountArc({
   }
   return (
     <Panel
-      title={t("person.meeting.arc")}
+      title={t("contact.meeting.arc")}
       titleLevel={3}
-      sub={t("person.meeting.arcSub")}
+      sub={t("contact.meeting.arcSub")}
       tone={plan.generated_by === "model" ? "ai" : undefined}
     >
       {plan.account_arc.map((moment) => (
@@ -164,7 +164,7 @@ export function AdvancePanel({
   ] as const;
   return (
     <Panel
-      title={t("person.meeting.close")}
+      title={t("contact.meeting.close")}
       titleLevel={3}
       tone={plan.generated_by === "model" ? "ai" : "accent"}
     >
@@ -173,7 +173,7 @@ export function AdvancePanel({
           {legs.map((leg) => (
             <div key={leg.key}>
               <Eyebrow as="h4">
-                {t(`person.meeting.advance.${leg.key}`)}
+                {t(`contact.meeting.advance.${leg.key}`)}
               </Eyebrow>
               <Claim
                 sentence={leg.sentence}
@@ -200,7 +200,7 @@ export function Unknowns({ plan }: Readonly<{ plan: MeetingPlan }>) {
   }
   return (
     <Panel
-      title={t("person.meeting.unknowns")}
+      title={t("contact.meeting.unknowns")}
       titleLevel={3}
       tone={plan.generated_by === "model" ? "ai" : undefined}
     >
@@ -233,7 +233,7 @@ export function LikelyAsks({
   }
   return (
     <Panel
-      title={t("person.meeting.likelyAsks")}
+      title={t("contact.meeting.likelyAsks")}
       titleLevel={3}
       tone={plan.generated_by === "model" ? "ai" : undefined}
     >
@@ -243,7 +243,7 @@ export function LikelyAsks({
             <div className="mb-ask-head">
               <strong>{ask.question}</strong>
               <Badge tone={ask.relevance === "high" ? "warn" : undefined} quiet>
-                {t(`person.meeting.relevance.${ask.relevance}`)}
+                {t(`contact.meeting.relevance.${ask.relevance}`)}
               </Badge>
             </div>
             <Claim
@@ -284,7 +284,7 @@ export function TopRisk({
   const { response_plan: response } = plan.top_risk;
   return (
     <Panel
-      title={t("person.meeting.beReady")}
+      title={t("contact.meeting.beReady")}
       titleLevel={3}
       tone={plan.generated_by === "model" ? "ai" : "warn"}
     >
@@ -296,15 +296,15 @@ export function TopRisk({
         />
         <FactList
           facts={[
-            { key: "say", term: t("person.meeting.say"), value: response.say },
+            { key: "say", term: t("contact.meeting.say"), value: response.say },
             {
               key: "show",
-              term: t("person.meeting.show"),
+              term: t("contact.meeting.show"),
               value: response.show,
             },
             {
               key: "avoid",
-              term: t("person.meeting.avoid"),
+              term: t("contact.meeting.avoid"),
               value: response.avoid,
             },
           ]}
@@ -322,7 +322,7 @@ export function Scenarios({ plan }: Readonly<{ plan: MeetingPlan }>) {
   }
   return (
     <Panel
-      title={t("person.meeting.scenarios")}
+      title={t("contact.meeting.scenarios")}
       titleLevel={3}
       tone={plan.generated_by === "model" ? "ai" : undefined}
     >

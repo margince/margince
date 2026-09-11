@@ -51,7 +51,7 @@ const aBusyMorning: HandledData = {
       summary: "Sent the confirmation to Kirsten",
       occurred_at: "2026-09-05T08:12:00Z",
       subject: {
-        type: "person",
+        type: "contact",
         id: "00000000-0000-4000-8000-0000000000a1",
         label: "Kirsten Bauer",
       },

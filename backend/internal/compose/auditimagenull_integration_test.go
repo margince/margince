@@ -40,7 +40,7 @@ func writeAuditImage(t *testing.T, e *integration.Env, before, after string) err
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id,
 			                       before, after, occurred_at)
-			VALUES ('human', 'user:'||$1::text, 'update', 'person', $2, nullif($3,'')::jsonb, nullif($4,'')::jsonb, $5)`,
+			VALUES ('human', 'user:'||$1::text, 'update', 'contact', $2, nullif($3,'')::jsonb, nullif($4,'')::jsonb, $5)`,
 			ids.NewV7(), ids.NewV7(), before, after, time.Now().UTC())
 		return err
 	})

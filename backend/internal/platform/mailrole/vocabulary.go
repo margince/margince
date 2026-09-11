@@ -3,21 +3,21 @@
 
 package mailrole
 
-// roleTokens are the words that name a FUNCTION rather than a person. A local
+// roleTokens are the words that name a FUNCTION rather than a contact. A local
 // part containing one of them, as a whole word, is a mailbox a company
 // answers.
 //
 // German and English both appear because this product's installations
 // correspond in both, and `buchhaltung@` is exactly as much a department as
 // `accounting@`. A word goes in only when it names a function in EVERY use: a
-// person may be called Bill, so `bill` stays out while `billing` goes in.
+// contact may be called Bill, so `bill` stays out while `billing` goes in.
 //
 // Machine local parts — `noreply@`, `mailerdaemon@`, `notification@` — are NOT
 // here. capture/transactional.go's machineMarkers owns that vocabulary and
 // recordWorthy asks it before this list, so repeating them would be the second
 // spelling this package exists to prevent. The two lists answer different
 // questions: that one asks whether a reply reaches anybody, this one asks
-// whether a person is named.
+// whether a contact is named.
 //
 // Words that name a function AND are ordinary business vocabulary stay OUT,
 // however role-like they look: `team`, `group`, `partner`, `business`, `media`,
@@ -25,7 +25,7 @@ package mailrole
 // `contact`, `help`, `news`, `press`, `admin`, `alerts`, `care`. Each is a
 // real word other lists in this tree legitimately hold — an RBAC object, a
 // refusal phrase, a company-name stopword — and matching them here would refuse
-// contacts on a word a person's address may honestly contain. The AI verdict
+// contacts on a word a contact's address may honestly contain. The AI verdict
 // owns the addresses this list cannot reach; a deterministic list that guessed
 // would be worse than one that abstains.
 //
@@ -45,7 +45,7 @@ var roleTokens = map[string]struct{}{
 	// Answering a customer. `cs` is the borderline one and it is admitted
 	// deliberately: it is two letters and could be somebody's initials, but the
 	// two outcomes are not symmetric. A wrong role_mailbox creates NO contact
-	// and the owner can still say `business`; a wrong person puts a service
+	// and the owner can still say `business`; a wrong contact puts a service
 	// desk in the shared CRM under a made-up human name, which is the defect
 	// this list exists to prevent and which nothing retracts today.
 	"support": {}, "helpdesk": {}, "service": {}, "servicedesk": {}, "customercare": {},
@@ -59,7 +59,7 @@ var roleTokens = map[string]struct{}{
 	"booking": {}, "reservation": {}, "reservierung": {},
 
 	// Managing a building or a tenancy — the case that put a property
-	// management desk in this tree as a person called "City Garden CS6".
+	// management desk in this tree as a contact called "City Garden CS6".
 	"hausverwaltung": {}, "mieterservice": {}, "tenants": {},
 
 	// Money
@@ -70,10 +70,10 @@ var roleTokens = map[string]struct{}{
 	// Selling and marketing
 	"sales": {}, "vertrieb": {}, "marketing": {},
 
-	// Publishing at people
+	// Publishing at contacts
 	"newsletter": {}, "presse": {}, "events": {}, "veranstaltung": {},
 
-	// People and hiring. `jobs`, `careers`, `karriere` and `bewerbung` are
+	// Contacts and hiring. `jobs`, `careers`, `karriere` and `bewerbung` are
 	// deliberately absent: platform/techprofile already reads those four words
 	// as WEBSITE PATH labels, and one vocabulary answering two questions is how
 	// a list starts disagreeing with itself. A hiring mailbox reaches this list
@@ -88,12 +88,12 @@ var roleTokens = map[string]struct{}{
 	"bestellung": {}, "reservations": {}, "bookings": {}, "versand": {},
 }
 
-// roleQualifiers modify a department without naming a person: a region, a size,
+// roleQualifiers modify a department without naming a contact: a region, a size,
 // a word like "team". They matter only for DisplayName, where "APAC Billing"
-// and "Support Team" must read as departments rather than as people.
+// and "Support Team" must read as departments rather than as contacts.
 //
 // They are deliberately NOT matched in a local part on their own: `apac@` says
-// nothing about whether a person answers it, and refusing it would lose a real
+// nothing about whether a contact answers it, and refusing it would lose a real
 // mailbox on no evidence.
 var roleQualifiers = map[string]struct{}{
 	"apac": {}, "emea": {}, "amer": {}, "americas": {}, "asia": {},
@@ -104,7 +104,7 @@ var roleQualifiers = map[string]struct{}{
 }
 
 // helpdeskVendors host their customers' support queues. Mail from one names the
-// vendor's routing address, never a person: a ticket reply arrives from
+// vendor's routing address, never a contact: a ticket reply arrives from
 // `support+<ticket-id>@<tenant>.zendesk.com` however the human behind it signed
 // it.
 //

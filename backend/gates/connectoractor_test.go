@@ -11,7 +11,7 @@ package gates
 // by anybody, so the audit row names the connector — and WHICH connector is a
 // fact about the run. It was written down instead: `connector:surfe`, bound by
 // the workers that execute a run, correct only while provider_connection,
-// provider_run and person_provider_claim each carried a CHECK pinning them to
+// provider_run and contact_provider_claim each carried a CHECK pinning them to
 // one provider. Those checks are gone so a second vendor can be connected.
 //
 // A LITERAL IS NOT A BUG UNTIL THERE ARE TWO, which is exactly why it needs a

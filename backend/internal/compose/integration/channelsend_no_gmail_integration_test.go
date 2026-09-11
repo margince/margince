@@ -38,7 +38,7 @@ import (
 )
 
 // setupChannelSendNoGmail lays down the same fixture setupChannelSend
-// (channelsend_integration_test.go) does — a person, their channel identity,
+// (channelsend_integration_test.go) does — a contact, their channel identity,
 // the inbound activity, consent — but boots the composition without any
 // Google app configured, so the ONLY thing wiring the connect registry (and
 // the pre-flight over it) is compose.WithKeyvault.
@@ -56,13 +56,13 @@ func setupChannelSendNoGmail(t *testing.T) *channelSendEnv {
 	apptest.BootstrapWorkspaceSession(t, e, "Channel Send No-Gmail E2E", "rep@fable.test", "Admin")
 
 	c := &channelSendEnv{AppEnv: e}
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Telegram Buyer"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Telegram Buyer"}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
-	c.personID = person.ID
+	c.contactID = contact.ID
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM app_user WHERE email = $1`, "rep@fable.test").Scan(&c.user)

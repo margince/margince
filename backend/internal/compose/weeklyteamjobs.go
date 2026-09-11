@@ -6,8 +6,8 @@ package compose
 // The weekly job's third phase: freezing each team's week.
 //
 // Its own file because it is a different subject from the per-rep pass beside
-// it — that one measures one person under their own authority, this one totals
-// people already measured and stamps who was on the team. It runs LAST for a
+// it — that one measures one contact under their own authority, this one totals
+// contacts already measured and stamps who was on the team. It runs LAST for a
 // reason stated at its call site: a snapshot assembled while reps were still
 // being measured would freeze a team that was half-counted.
 
@@ -30,7 +30,7 @@ import (
 // snapshotTeams freezes each live team's week, once the member reviews are in.
 //
 // One snapshot per team, assembled under the authority of a member who leads
-// it: the read is of frozen rows the team's own people wrote, and the tier gate
+// it: the read is of frozen rows the team's own contacts wrote, and the tier gate
 // on TeamReview is what stops an own-scoped seat asking for one.
 func (w *weeklyGenerateWorker) snapshotTeams(
 	ctx context.Context, wsID ids.UUID, now time.Time,
@@ -144,7 +144,7 @@ func (w *weeklyGenerateWorker) snapshotTeam(
 // Read HERE rather than through the identity roster seam because that one
 // answers "who shares a team with the caller" — the union across every team
 // they are on. A snapshot is about ONE team, and a lead on two would otherwise
-// freeze both teams' people into each.
+// freeze both teams' contacts into each.
 func (w *weeklyGenerateWorker) teamMembers(
 	ctx context.Context, teamID ids.UUID,
 ) ([]weekly.TeamMember, error) {

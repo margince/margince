@@ -24,7 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -36,10 +36,10 @@ func (f failingRunTransparency) Get(context.Context, ids.UUID) (ai.RunSummary, e
 	return ai.RunSummary{}, f.err
 }
 
-func onboardingDraft(t *testing.T, e *integration.Env) people.SiteRead {
+func onboardingDraft(t *testing.T, e *integration.Env) contacts.SiteRead {
 	t.Helper()
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	read, joined, err := e.People.StartOnboardingSiteRead(ctx, seedURL, "human:"+e.Rep1.String(), nil)
+	read, joined, err := e.Contacts.StartOnboardingSiteRead(ctx, seedURL, "human:"+e.Rep1.String(), nil)
 	if err != nil {
 		t.Fatalf("start onboarding read: %v", err)
 	}
@@ -49,24 +49,24 @@ func onboardingDraft(t *testing.T, e *integration.Env) people.SiteRead {
 	return finishOnboardingDraft(t, e, read)
 }
 
-func finishOnboardingDraft(t *testing.T, e *integration.Env, read people.SiteRead) people.SiteRead {
+func finishOnboardingDraft(t *testing.T, e *integration.Env, read contacts.SiteRead) contacts.SiteRead {
 	t.Helper()
-	if _, err := e.People.BeginSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
+	if _, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
 		Workspace: e.WS, SiteReadID: read.ID, RequestedBy: read.RequestedBy,
 	}), read.ID, 10*time.Minute); err != nil {
 		t.Fatalf("begin onboarding read: %v", err)
 	}
-	fields := []people.DeepReadField{
+	fields := []contacts.DeepReadField{
 		{Field: "display_name", Value: "Acme", EvidenceSnippet: "Acme builds onboarding software.", SourceURL: seedURL, Confidence: 0.96},
 		{Field: "offer_summary", Value: "Employee onboarding software", EvidenceSnippet: "Employee onboarding software for growing teams.", SourceURL: seedURL, Confidence: 0.91},
 		{Field: "icp", Value: "Growing RevOps teams", EvidenceSnippet: "Built for growing RevOps teams.", SourceURL: seedURL, Confidence: 0.88},
 		{Field: "registered_address", Value: "Website Road 2", EvidenceSnippet: "Visit us at Website Road 2.", SourceURL: seedURL, Confidence: 0.93},
 	}
-	facts := []people.DeepReadFact{
+	facts := []contacts.DeepReadFact{
 		{Category: "offering", Field: "service", Value: "Implementation — guided CRM rollout", ValueKey: "implementation", EvidenceSnippet: "Guided CRM rollout", SourceURL: seedURL, Confidence: 0.9},
 		{Category: "signal", Field: "technology", Value: "PostgreSQL — data platform", ValueKey: "postgresql", EvidenceSnippet: "Built on PostgreSQL", SourceURL: seedURL, Confidence: 0.84},
 	}
-	found := []people.SiteReadPerson{{
+	found := []contacts.SiteReadContact{{
 		Name: "Anna Keller", Role: "Founder", PublishedEmail: "anna@acme.example",
 		LinkedinURL:     "https://www.linkedin.com/in/anna-keller",
 		EvidenceSnippet: "Anna Keller, Founder", SourceURL: seedURL + "/team",
@@ -77,19 +77,19 @@ func finishOnboardingDraft(t *testing.T, e *integration.Env, read people.SiteRea
 	}
 	workerCtx := deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{Workspace: e.WS, SiteReadID: read.ID})
 	stopped := "page_cap"
-	if err := e.People.FinishSiteRead(workerCtx, read.ID, people.FinishSiteReadInput{
+	if err := e.Contacts.FinishSiteRead(workerCtx, read.ID, contacts.FinishSiteReadInput{
 		Status: "partial", FactCount: len(fields) + len(facts), ProfileFields: fields,
-		Pages: []people.SiteReadPage{
+		Pages: []contacts.SiteReadPage{
 			{URL: seedURL, Kind: "home"},
 			{URL: seedURL + "/team", Kind: "team"},
 		},
-		Skipped:       []people.SiteReadSkip{{URL: seedURL + "/blog", Reason: "page_cap"}},
-		StoppedReason: &stopped, Facts: facts, People: found,
+		Skipped:       []contacts.SiteReadSkip{{URL: seedURL + "/blog", Reason: "page_cap"}},
+		StoppedReason: &stopped, Facts: facts, Contacts: found,
 		Warnings: []string{"Page limit reached."}, ProposalHash: hash,
 	}); err != nil {
 		t.Fatalf("finish onboarding read: %v", err)
 	}
-	ready, err := e.People.GetOnboardingSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), read.ID)
+	ready, err := e.Contacts.GetOnboardingSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,13 +169,13 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 		startRec.Header().Get("Location") != "/v1/company/site-reads/"+started.Id.String() || len(inserter.inserts) != 1 {
 		t.Fatalf("started dossier = %+v, location %q, jobs %d", started, startRec.Header().Get("Location"), len(inserter.inserts))
 	}
-	// Onboarding is a person watching this page — it must never queue behind
+	// Onboarding is a contact watching this page — it must never queue behind
 	// a boot sweep's housekeeping fan-out on the shared deep_read pool.
 	if got := inserter.opts[0].Priority; got != DeepReadPriorityLive {
 		t.Fatalf("an onboarding deep read queued at priority %d, want %d (live)", got, DeepReadPriorityLive)
 	}
 
-	read, err := e.People.GetOnboardingSiteRead(human, ids.UUID(started.Id))
+	read, err := e.Contacts.GetOnboardingSiteRead(human, ids.UUID(started.Id))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,8 +191,8 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 		t.Fatal(err)
 	}
 	if dossier.Status != crmcontracts.CompanySiteReadStatusPartial || len(dossier.Pages) != 3 ||
-		len(dossier.ProfileFields) != 4 || len(dossier.Facts) != 2 || len(dossier.People) != 1 ||
-		dossier.People[0].PublishedEmail == nil || dossier.People[0].LinkedinUrl == nil {
+		len(dossier.ProfileFields) != 4 || len(dossier.Facts) != 2 || len(dossier.Contacts) != 1 ||
+		dossier.Contacts[0].PublishedEmail == nil || dossier.Contacts[0].LinkedinUrl == nil {
 		t.Fatalf("polled dossier lost progressive findings: %+v", dossier)
 	}
 
@@ -203,7 +203,7 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 		Profile: crmcontracts.CompanyProfileInput{
 			DisplayName: "Acme", OfferSummary: &offer, Icp: &icp, Website: &website,
 		},
-		SelectedFactKeys: []string{people.SiteReadFactKey(ready.Facts[0])},
+		SelectedFactKeys: []string{contacts.SiteReadFactKey(ready.Facts[0])},
 	}
 	confirm := onboardingPOST(human, t,
 		"/v1/company/site-reads/"+ready.ID.String()+"/confirm", confirmBody)
@@ -343,7 +343,7 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 	}
 }
 
-func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing.T) {
+func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsContactsSeparate(t *testing.T) {
 	e := integration.Setup(t)
 	ready := onboardingDraft(t, e)
 	if e.WsCount(t, `SELECT count(*) FROM company WHERE is_anchor`) != 0 ||
@@ -352,14 +352,14 @@ func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing
 		t.Fatal("the operational onboarding draft wrote company domain truth before confirmation")
 	}
 
-	engine := &deepReadEngine{people: e.People, approvals: approvals.NewService(e.DB())}
+	engine := &deepReadEngine{contacts: e.Contacts, approvals: approvals.NewService(e.DB())}
 	offer, editedICP, website := "Employee onboarding software", "B2B RevOps teams with 50–500 employees", seedURL
-	company, _, err := e.People.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
+	company, _, err := e.Contacts.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), contacts.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName: "Acme", Website: &website,
 		Fields:           map[string]*string{"offer_summary": &offer, "icp": &editedICP},
-		SelectedFactKeys: []string{people.SiteReadFactKey(ready.Facts[0])},
-	}, engine.stageOnboardingPeople)
+		SelectedFactKeys: []string{contacts.SiteReadFactKey(ready.Facts[0])},
+	}, engine.stageOnboardingContacts)
 	if err != nil {
 		t.Fatalf("confirm onboarding read: %v", err)
 	}
@@ -394,17 +394,17 @@ func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing
 		t.Fatalf("profile provenance site/human = %d/%d, want 2/1", siteRows, humanRows)
 	}
 	if leads != 0 || leadProposals != 1 {
-		t.Fatalf("people lane created %d leads and %d proposals, want 0 leads and 1 separate proposal", leads, leadProposals)
+		t.Fatalf("contacts lane created %d leads and %d proposals, want 0 leads and 1 separate proposal", leads, leadProposals)
 	}
 	if confirmedCompany != company.CompanyID.UUID {
 		t.Fatalf("dossier bound to %s, want anchor %s", confirmedCompany, company.CompanyID)
 	}
 
-	_, _, err = e.People.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
+	_, _, err = e.Contacts.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), contacts.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName: "Acme", Fields: map[string]*string{"offer_summary": &offer, "icp": &editedICP},
 	}, nil)
-	if !errors.Is(err, people.ErrSiteReadAlreadyConfirmed) {
+	if !errors.Is(err, contacts.ErrSiteReadAlreadyConfirmed) {
 		t.Fatalf("replayed confirmation = %v, want the already-confirmed refusal", err)
 	}
 }
@@ -420,25 +420,25 @@ func TestCorrectingAFactAtColdStartStoresItAsTheHumansOwnAssertion(t *testing.T)
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	ready := onboardingDraft(t, e)
-	engine := &deepReadEngine{people: e.People, approvals: approvals.NewService(e.DB())}
+	engine := &deepReadEngine{contacts: e.Contacts, approvals: approvals.NewService(e.DB())}
 
 	accepted, wrong := ready.Facts[0], ready.Facts[1]
 	corrected := "ClickHouse — data platform"
 	offer, icp := "Employee onboarding software", "Growing RevOps teams"
-	company, _, err := e.People.ConfirmCompanySiteRead(human, people.ConfirmCompanySiteReadInput{
+	company, _, err := e.Contacts.ConfirmCompanySiteRead(human, contacts.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName:      "Acme",
 		Fields:           map[string]*string{"offer_summary": &offer, "icp": &icp},
-		SelectedFactKeys: []string{people.SiteReadFactKey(accepted), people.SiteReadFactKey(wrong)},
-		Resolutions: []people.SiteReadResolution{
-			{Key: people.SiteReadFactKey(wrong), Action: "use_value", Value: &corrected},
+		SelectedFactKeys: []string{contacts.SiteReadFactKey(accepted), contacts.SiteReadFactKey(wrong)},
+		Resolutions: []contacts.SiteReadResolution{
+			{Key: contacts.SiteReadFactKey(wrong), Action: "use_value", Value: &corrected},
 		},
-	}, engine.stageOnboardingPeople)
+	}, engine.stageOnboardingContacts)
 	if err != nil {
 		t.Fatalf("correcting a fact at cold start: %v", err)
 	}
 
-	stored := map[string]people.CompanyFact{}
+	stored := map[string]contacts.CompanyFact{}
 	for _, fact := range company.Facts {
 		stored[fact.Category+"/"+fact.Field] = fact
 	}
@@ -477,7 +477,7 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	humanOffer, humanICP, humanAddress := "Human-authored advisory", "Human-authored finance teams", "Human Road 1"
-	if _, err := e.People.SaveCompany(human, people.SaveCompanyInput{
+	if _, err := e.Contacts.SaveCompany(human, contacts.SaveCompanyInput{
 		DisplayName: "Acme",
 		Fields: map[string]*string{
 			"offer_summary":      &humanOffer,
@@ -488,9 +488,9 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 		t.Fatalf("seed human company: %v", err)
 	}
 	ready := onboardingDraft(t, e)
-	engine := &deepReadEngine{people: e.People, approvals: approvals.NewService(e.DB())}
+	engine := &deepReadEngine{contacts: e.Contacts, approvals: approvals.NewService(e.DB())}
 
-	_, comparisons, err := e.People.GetCompanySiteRead(human, ready.ID)
+	_, comparisons, err := e.Contacts.GetCompanySiteRead(human, ready.ID)
 	if err != nil {
 		t.Fatalf("compare refresh: %v", err)
 	}
@@ -505,7 +505,7 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 	}
 
 	proposedOffer, proposedICP, proposedAddress := "Employee onboarding software", "Growing RevOps teams", "Website Road 2"
-	base := people.ConfirmCompanySiteReadInput{
+	base := contacts.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName: "Acme",
 		Fields: map[string]*string{
@@ -514,15 +514,15 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 			"registered_address": &proposedAddress,
 		},
 	}
-	if _, _, err := e.People.ConfirmCompanySiteRead(human, base, engine.stageOnboardingPeople); err == nil {
+	if _, _, err := e.Contacts.ConfirmCompanySiteRead(human, base, engine.stageOnboardingContacts); err == nil {
 		t.Fatal("refresh committed without resolving its human conflicts")
 	} else {
-		var invalid *people.InvalidSiteReadResolutionError
+		var invalid *contacts.InvalidSiteReadResolutionError
 		if !errors.As(err, &invalid) {
 			t.Fatalf("unresolved refresh = %v, want InvalidSiteReadResolutionError", err)
 		}
 	}
-	unchanged, err := e.People.GetAnchorCompany(human)
+	unchanged, err := e.Contacts.GetAnchorCompany(human)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -532,12 +532,12 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 	}
 
 	customOffer := "Human-reviewed onboarding advisory"
-	base.Resolutions = []people.SiteReadResolution{
+	base.Resolutions = []contacts.SiteReadResolution{
 		{Key: "offer_summary", Action: "use_value", Value: &customOffer},
 		{Key: "icp", Action: "accept_proposal"},
 		{Key: "registered_address", Action: "accept_proposal"},
 	}
-	confirmed, _, err := e.People.ConfirmCompanySiteRead(human, base, engine.stageOnboardingPeople)
+	confirmed, _, err := e.Contacts.ConfirmCompanySiteRead(human, base, engine.stageOnboardingContacts)
 	if err != nil {
 		t.Fatalf("confirm resolved refresh: %v", err)
 	}
@@ -569,19 +569,19 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 	}
 }
 
-func TestOnboardingConfirmationRollsBackWhenSeparatePeopleCannotStage(t *testing.T) {
+func TestOnboardingConfirmationRollsBackWhenSeparateContactsCannotStage(t *testing.T) {
 	e := integration.Setup(t)
 	ready := onboardingDraft(t, e)
 	offer, icp := "Employee onboarding software", "Growing RevOps teams"
-	stageFailure := func(context.Context, pgx.Tx, ids.CompanyID, people.SiteRead, []people.SiteReadPerson) ([]ids.UUID, error) {
+	stageFailure := func(context.Context, pgx.Tx, ids.CompanyID, contacts.SiteRead, []contacts.SiteReadContact) ([]ids.UUID, error) {
 		return nil, errors.New("approval store unavailable")
 	}
-	_, _, err := e.People.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
+	_, _, err := e.Contacts.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), contacts.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName: "Acme", Fields: map[string]*string{"offer_summary": &offer, "icp": &icp},
 	}, stageFailure)
 	if err == nil {
-		t.Fatal("confirmation succeeded while its separate people staging failed")
+		t.Fatal("confirmation succeeded while its separate contacts staging failed")
 	}
 	if e.WsCount(t, `SELECT count(*) FROM company WHERE is_anchor`) != 0 ||
 		e.WsCount(t, `SELECT count(*) FROM company_profile_field`) != 0 ||
@@ -604,8 +604,8 @@ func TestOnboardingConfirmationRollsBackWhenSeparatePeopleCannotStage(t *testing
 func TestOnboardingSiteReadStartRollsBackWhenQueueInsertFails(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	_, _, err := e.People.StartOnboardingSiteRead(ctx, seedURL, "human:"+e.Rep1.String(),
-		func(context.Context, pgx.Tx, people.SiteRead) error {
+	_, _, err := e.Contacts.StartOnboardingSiteRead(ctx, seedURL, "human:"+e.Rep1.String(),
+		func(context.Context, pgx.Tx, contacts.SiteRead) error {
 			return errors.New("river insert failed")
 		})
 	if err == nil {
@@ -617,7 +617,7 @@ func TestOnboardingSiteReadStartRollsBackWhenQueueInsertFails(t *testing.T) {
 }
 
 // Most company websites name nobody you can contact. That read stages no
-// people, hands back an empty proposal list, and confirming it must still
+// contacts, hands back an empty proposal list, and confirming it must still
 // work — it is the ordinary case, not an edge one.
 //
 // It did not. A nil proposal slice encodes as SQL NULL, `site_read.proposal_ids`
@@ -628,46 +628,46 @@ func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	read, _, err := e.People.StartOnboardingSiteRead(ctx, seedURL, "human:"+e.Rep1.String(), nil)
+	read, _, err := e.Contacts.StartOnboardingSiteRead(ctx, seedURL, "human:"+e.Rep1.String(), nil)
 	if err != nil {
 		t.Fatalf("start onboarding read: %v", err)
 	}
-	if _, err := e.People.BeginSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
+	if _, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
 		Workspace: e.WS, SiteReadID: read.ID, RequestedBy: read.RequestedBy,
 	}), read.ID, 10*time.Minute); err != nil {
 		t.Fatalf("begin onboarding read: %v", err)
 	}
 
-	fields := []people.DeepReadField{
+	fields := []contacts.DeepReadField{
 		{Field: "display_name", Value: "Acme", EvidenceSnippet: "Acme builds onboarding software.", SourceURL: seedURL, Confidence: 0.96},
 		{Field: "offer_summary", Value: "Employee onboarding software", EvidenceSnippet: "Employee onboarding software for growing teams.", SourceURL: seedURL, Confidence: 0.91},
 	}
-	// No People at all: the site has no team page, or names only staff whose
+	// No Contacts at all: the site has no team page, or names only staff whose
 	// address it does not publish.
 	hash, err := siteReadProposalHash(fields, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := e.People.FinishSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
+	if err := e.Contacts.FinishSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
 		Workspace: e.WS, SiteReadID: read.ID,
-	}), read.ID, people.FinishSiteReadInput{
+	}), read.ID, contacts.FinishSiteReadInput{
 		Status: "done", FactCount: len(fields), ProfileFields: fields,
-		Pages:        []people.SiteReadPage{{URL: seedURL, Kind: "home"}},
+		Pages:        []contacts.SiteReadPage{{URL: seedURL, Kind: "home"}},
 		ProposalHash: hash,
 	}); err != nil {
 		t.Fatalf("finish onboarding read: %v", err)
 	}
-	ready, err := e.People.GetOnboardingSiteRead(ctx, read.ID)
+	ready, err := e.Contacts.GetOnboardingSiteRead(ctx, read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	engine := &deepReadEngine{people: e.People, approvals: approvals.NewService(e.DB())}
+	engine := &deepReadEngine{contacts: e.Contacts, approvals: approvals.NewService(e.DB())}
 	website := seedURL
-	company, _, err := e.People.ConfirmCompanySiteRead(ctx, people.ConfirmCompanySiteReadInput{
+	company, _, err := e.Contacts.ConfirmCompanySiteRead(ctx, contacts.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName: "Acme", Website: &website,
-	}, engine.stageOnboardingPeople)
+	}, engine.stageOnboardingContacts)
 	if err != nil {
 		t.Fatalf("confirming a read that named nobody: %v\n"+
 			"this is the ordinary company website, and onboarding cannot finish without it", err)

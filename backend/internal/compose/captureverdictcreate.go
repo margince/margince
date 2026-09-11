@@ -5,7 +5,7 @@ package compose
 
 // What a verdict CREATES, and for whom.
 //
-// Two of the sender kinds end in records: `person` makes the workspace's
+// Two of the sender kinds end in records: `contact` makes the workspace's
 // contact, `advisor` makes the mailbox owner's. They share one assembler
 // because they differ in a single field, and a second spelling is how the
 // linking, the triage hand-off and the erasure check would drift apart between
@@ -21,7 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -34,9 +34,9 @@ import (
 // open — creates nothing, and says so: the row is corrected to `suppressed`
 // rather than left reading `real`. Erasure outranks a verdict, and a ledger (or
 // a SAR built from it) that reports `real` for someone with no record would be
-// describing a person who does not exist.
+// describing a contact who does not exist.
 func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
-	created, err := createCounterpartyRecords(ctx, tx, e.people, e.tagFiler, counterpartyCreation{
+	created, err := createCounterpartyRecords(ctx, tx, e.contacts, e.tagFiler, counterpartyCreation{
 		Email:       row.Email,
 		DisplayName: row.DisplayName,
 		Domain:      row.Domain,
@@ -67,7 +67,7 @@ func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx p
 // assembler is how the linking, the triage hand-off and the erasure check would
 // drift apart between them.
 func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
-	created, err := createCounterpartyRecords(ctx, tx, e.people, e.tagFiler, counterpartyCreation{
+	created, err := createCounterpartyRecords(ctx, tx, e.contacts, e.tagFiler, counterpartyCreation{
 		Email:       row.Email,
 		DisplayName: row.DisplayName,
 		Domain:      row.Domain,
@@ -102,7 +102,7 @@ type counterpartyCreation struct {
 	// same thing and stamping the channel into both puts a value on the wire
 	// that no client can parse.
 	CapturedBy string
-	// OwnerScoped births the person visible to the mailbox owner alone. An
+	// OwnerScoped births the contact visible to the mailbox owner alone. An
 	// ordinary verdict leaves this false, which is what PROMOTES a record
 	// capture minted owner-scoped; an advisor verdict sets it, so the record is
 	// made and the promotion does not happen.
@@ -131,10 +131,10 @@ type counterpartyCreated struct {
 // Held by: TestOneAssemblerCreatesEveryCounterpartyAVerdictMakes
 // (backend/internal/compose/captureverdictkinds_test.go), which fails when a
 // second verdict-side file calls EnsureCounterpartyTx.
-func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Store,
+func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.Store,
 	filer *connectorTagFiler, in counterpartyCreation,
 ) (counterpartyCreated, error) {
-	res, err := store.EnsureCounterpartyTx(ctx, tx, people.EnsureCounterpartyInput{
+	res, err := store.EnsureCounterpartyTx(ctx, tx, contacts.EnsureCounterpartyInput{
 		Email:       in.Email,
 		DisplayName: in.DisplayName,
 		Domain:      in.Domain,
@@ -144,29 +144,29 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Sto
 		CapturedBy:  in.CapturedBy,
 		OwnerScoped: in.OwnerScoped,
 	})
-	if errors.Is(err, people.ErrCounterpartySuppressed) {
+	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		return counterpartyCreated{Suppressed: true}, nil
 	}
 	if err != nil {
 		return counterpartyCreated{}, err
 	}
 	// The ensure links the message that raised the question; the sender may have
-	// written more while it was open, and all of them belong on this person's
+	// written more while it was open, and all of them belong on this contact's
 	// timeline rather than only the first.
 	//
 	// Synchronously, on the verdict's own transaction, although the same repair
-	// also runs off the person event: this cohort is a commit-time promise the
+	// also runs off the contact event: this cohort is a commit-time promise the
 	// verdict makes, and a promise kept by a consumer is kept at some other time.
 	// The promotion is idempotent, so the consumer's later pass finds nothing
 	// left to do.
-	if _, err := store.PromotePersonCohortTx(ctx, tx, res.PersonID); err != nil {
+	if _, err := store.PromoteContactCohortTx(ctx, tx, res.ContactID); err != nil {
 		return counterpartyCreated{}, err
 	}
-	// Only a person this ensure MADE. An address that already had a record is
+	// Only a contact this ensure MADE. An address that already had a record is
 	// not something this connector captured — filing it now would claim the
 	// batch brought in a contact that was already here.
-	if res.PersonCreated {
-		if err := filer.fileUnderConnectorTag(ctx, tx, in, res.PersonID); err != nil {
+	if res.ContactCreated {
+		if err := filer.fileUnderConnectorTag(ctx, tx, in, res.ContactID); err != nil {
 			return counterpartyCreated{}, err
 		}
 	}
@@ -177,7 +177,7 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Sto
 	return out, nil
 }
 
-// createPersonForVerdict makes the contact a `person` verdict earns, and
+// createContactForVerdict makes the contact a `contact` verdict earns, and
 // decides HOW WIDELY it is visible.
 //
 // The verdict says the sender is a named human. It does not say the workspace
@@ -193,10 +193,10 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Sto
 //
 // Both keep the record — the owner corresponded with somebody real — and both
 // keep it owner-scoped. Anything else is the ordinary shared contact.
-func (e *CounterpartyVerdictEngine) createPersonForVerdict(
+func (e *CounterpartyVerdictEngine) createContactForVerdict(
 	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
 ) (string, error) {
-	narrow, err := e.personStaysTheOwners(ctx, tx, row)
+	narrow, err := e.contactStaysTheOwners(ctx, tx, row)
 	if err != nil {
 		return "", err
 	}
@@ -204,9 +204,9 @@ func (e *CounterpartyVerdictEngine) createPersonForVerdict(
 		// The ledger says so too, in this transaction.
 		//
 		// Two other readers ask this ledger whether the sender is a judged
-		// person and treat the answer as permission to publish: the widening
+		// contact and treat the answer as permission to publish: the widening
 		// sweep that reopens held mail, and the birth decision that shares a
-		// future message. Recording the withholding only on the person row left
+		// future message. Recording the withholding only on the contact row left
 		// both of them matching a contact that had deliberately been kept
 		// private, so the next pass republished what this one withheld.
 		if err := capture.MarkWithheldFromWorkspaceTx(ctx, tx, row.ID); err != nil {
@@ -220,7 +220,7 @@ func (e *CounterpartyVerdictEngine) createPersonForVerdict(
 	}
 	// The mail a `classified` mailbox held while it waited for this answer.
 	// Bounded, and not drained here: this transaction already carries the
-	// ledger resolution and a person record, and a sender with a thousand held
+	// ledger resolution and a contact record, and a sender with a thousand held
 	// messages would hold it open for all of them. The reconciling pass
 	// finishes what this leaves.
 	//
@@ -230,9 +230,9 @@ func (e *CounterpartyVerdictEngine) createPersonForVerdict(
 	return triageDomain, e.widenClearedSender(ctx, tx, row.Email)
 }
 
-// personStaysTheOwners reports whether a `person` verdict's record must stay
+// contactStaysTheOwners reports whether a `contact` verdict's record must stay
 // visible to the mailbox owner alone.
-func (e *CounterpartyVerdictEngine) personStaysTheOwners(
+func (e *CounterpartyVerdictEngine) contactStaysTheOwners(
 	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
 ) (bool, error) {
 	// An address WE reached that has never answered. Judged on the recorded

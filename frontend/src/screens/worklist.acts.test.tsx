@@ -201,7 +201,7 @@ describe("a row's verbs are one line with the lane's answer last", () => {
         title: "Katrin asked for an introduction",
         actions: ["decide", "open"],
         subject: {
-          type: "person",
+          type: "contact",
           id: "01a05500-0000-7000-8000-0000000000dd",
           label: "Dana Buyer",
         },

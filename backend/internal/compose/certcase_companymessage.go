@@ -35,7 +35,7 @@ package compose
 // from the fixture it sent, and never from anything else.
 //
 // The conversation context arrives assembled rather than as the identity and
-// people stores it came from, because the certified thing is the prompt built
+// contacts stores it came from, because the certified thing is the prompt built
 // from it, not the database read that produced it. What that read guarantees
 // about it — the dossier's numbering and bounds, and the completion plan the
 // draft implies — is enforced at Prepare instead, so a fixture outside it

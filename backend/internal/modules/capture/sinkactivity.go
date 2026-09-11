@@ -94,7 +94,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		}
 		return ref, false, counterpartyDecision{}, nil
 	}
-	// Everything a NEW row still needs: its links, its files, its people, its
+	// Everything a NEW row still needs: its links, its files, its contacts, its
 	// audit and event, and the ladder's decision about who it is with. Split out
 	// so this function reads as the three answers a capture can have — the row
 	// was already here, the row is new, or the capture failed.
@@ -147,7 +147,7 @@ func (s *Sink) finishNewActivity(
 	}
 	// Everyone else who was in it — the CCs, the meeting's organizer and
 	// attendees. Separate from the two ends above because these are resolved
-	// against our own people here rather than promoted later.
+	// against our own contacts here rather than promoted later.
 	// The party list is OURS to trust only when the PROVIDER stated it — our own
 	// mailbox owner attested as the sender, or a calendar enumerating its
 	// attendees. On anything inbound it is the sender's text.
@@ -158,7 +158,7 @@ func (s *Sink) finishNewActivity(
 	// And the names those rows just recorded, for an attendee who is ALREADY a
 	// contact. A calendar invitation names every attendee in full, and that is
 	// the only full name a contact minted from a bare address ever gets: the
-	// ladder that names people never runs for a meeting, because attendance is
+	// ladder that names contacts never runs for a meeting, because attendance is
 	// a list and the mapper leaves the counterparty unset. The other ordering —
 	// an attendee who becomes a contact later — belongs to the cohort repair.
 	if s.nameParticipants != nil && namesSomebody(rec.Participants) {
@@ -190,7 +190,7 @@ func (s *Sink) finishNewActivity(
 		return counterpartyDecision{}, err
 	}
 	// A meeting names no counterparty, so the gate above created nothing and
-	// nothing has filed this row anywhere. The people who were in it are already
+	// nothing has filed this row anywhere. The contacts who were in it are already
 	// resolved on the participant rows, so the links come from there — BEFORE
 	// the audience limiter, which decides what a link-less record is born as.
 	derivedLinks := 0
@@ -210,7 +210,7 @@ func (s *Sink) finishNewActivity(
 	// It answers no count, and derivedLinks is deliberately not grown by it. The
 	// limiter below only ever NARROWS — its single write sets participants — so a
 	// count here could not widen a message a hold was placed on. What it WOULD do
-	// is skip that narrowing for a message filed under nobody but the people
+	// is skip that narrowing for a message filed under nobody but the contacts
 	// copied on it, leaving mail workspace-readable that the limiter exists to
 	// hold. The meeting arm feeds the count because an attendee link means a
 	// record stands behind the meeting; a cc'd contact is not that claim.
@@ -277,7 +277,7 @@ func (s *Sink) upsertActivity(
 		fields.Kind, fields.ChannelProvider, fields.Subject, fields.Body, occurredAt, fields.Direction,
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), rec.ThreadKey,
 		// Normalized lowercased at the write (a connector need not lowercase the
-		// header case), matching the person_email normalization, so the T1
+		// header case), matching the contact_email normalization, so the T1
 		// correspondence lookup's index-backed equality matches regardless of
 		// the sender's casing without a runtime case fold.
 		strings.ToLower(strings.TrimSpace(rec.Counterparty.Email)),
@@ -350,7 +350,7 @@ func (s *Sink) upsertActivity(
 func (s *Sink) linkActivity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, links []datasource.EntityRef) error {
 	for _, link := range links {
 		column, ok := map[datasource.EntityType]string{
-			datasource.EntityPerson:  "person_id",
+			datasource.EntityContact: "contact_id",
 			datasource.EntityCompany: "company_id",
 			datasource.EntityDeal:    "deal_id",
 		}[link.Type]

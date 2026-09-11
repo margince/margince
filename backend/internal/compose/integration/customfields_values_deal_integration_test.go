@@ -9,10 +9,10 @@ package integration
 // 2a-ii T3): the same fieldcatalog seam wired into the deals store —
 // active cf_* columns ride create/update writes and get/list reads like
 // core fields, with the same drop-on-mismatch and workspace-isolation
-// posture the person/company suites prove.
+// posture the contact/company suites prove.
 //
 // BOTH records this store writes are covered here, deal and project, and
-// the second one is why the pairing matters. Person, company, lead
+// the second one is why the pairing matters. Contact, company, lead
 // and deal each had a create-with-a-custom-field case; project had none,
 // and project was the one whose INSERT numbered its first custom
 // placeholder over its own last fixed bind — so every CreateProject
@@ -164,5 +164,5 @@ func TestCustomFieldValues_ProjectRoundTrip(t *testing.T) {
 	assertCF(t, updated.AdditionalProperties, col, "fixed-price")
 }
 
-// dealIDOf mirrors PersonIDOf/companyIDOf for the deal suites.
+// dealIDOf mirrors ContactIDOf/companyIDOf for the deal suites.
 func dealIDOf(u ids.UUID) ids.DealID { return ids.From[ids.DealKind](u) }

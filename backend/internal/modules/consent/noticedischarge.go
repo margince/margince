@@ -37,7 +37,7 @@ import (
 // The window is a FLOOR, not an exact interval, and the difference is worth
 // stating because the table has no "when was a disclosure last sent" column to
 // measure from. updated_at is the nearest thing, and it moves for any write: a
-// merge relinking the person (people/mergerelink.go) touches it, which EXTENDS
+// merge relinking the contact (contacts/mergerelink.go) touches it, which EXTENDS
 // somebody's cooldown by up to a month. That errs toward not re-sending, which
 // is the safe direction — the duty stays visible on the queue either way, and a
 // second mail to somebody who already got one is the harm this bounds.
@@ -50,7 +50,7 @@ import (
 // not need one to be correct.
 const noticeResendCooldown = 30 * 24 * time.Hour
 
-// dischargeNoticeCases moves this person's live cases that the sent disclosure
+// dischargeNoticeCases moves this contact's live cases that the sent disclosure
 // discharges onto `queued`, and answers how many it moved.
 //
 // QUEUED RATHER THAN COMPLETED, and the distinction is the honest one: this
@@ -64,12 +64,12 @@ const noticeResendCooldown = 30 * 24 * time.Hour
 // the reply somebody else sends) is left where it is.
 //
 // IT DISCHARGES WHAT EXISTS NOW, and a case opened later is not reached. The
-// person.created consumer opens cases asynchronously, so a confirm mail sent in
-// the window between a person committing and that consumer running moves
+// contact.created consumer opens cases asynchronously, so a confirm mail sent in
+// the window between a contact committing and that consumer running moves
 // nothing, and the case then opens as owed. That failure is the SAFE one: the
 // duty stays on the queue, visibly undischarged, and the worst outcome is a
 // second disclosure to somebody who already had one. Reconciling it would mean
-// reading the person's sent mail from here, which is a delivery question this
+// reading the contact's sent mail from here, which is a delivery question this
 // module cannot answer, and the alternative — assuming a recent mail discharged
 // a duty recorded after it — is the unsafe direction.
 //
@@ -86,7 +86,7 @@ const noticeResendCooldown = 30 * 24 * time.Hour
 // the cooldown counts a second attempt and stays queued — the duty was not
 // discharged by the first message, and the count is what says so.
 func dischargeNoticeCases(
-	ctx context.Context, tx pgx.Tx, personID ids.PersonID, route string, now time.Time,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, route string, now time.Time,
 ) (int, error) {
 	// The cooldown boundary is computed HERE, off the injected clock, rather
 	// than as SQL arithmetic on now(): the caller's `now` is what a test drives
@@ -102,12 +102,12 @@ func dischargeNoticeCases(
 		   SET state = $4, attempts = c.attempts + 1, updated_at = $3
 		  FROM privacy_notice_case prior
 		 WHERE prior.id = c.id
-		   AND c.person_id = $1
+		   AND c.contact_id = $1
 		   AND c.state = ANY($5)
 		   AND $2 = ANY(c.allowed_routes)
 		   AND (c.attempts = 0 OR c.updated_at <= $6)
 		RETURNING c.id, c.rule, c.attempts, prior.state, prior.attempts`,
-		personID, route, now, string(NoticeQueued),
+		contactID, route, now, string(NoticeQueued),
 		dischargeableNoticeStates(), restedSince)
 	if err != nil {
 		return 0, fmt.Errorf("record that a disclosure was sent for this contact's open duties: %w", err)
@@ -161,7 +161,7 @@ func dischargeNoticeCases(
 // Blocked is the one subtraction. A blocked case names an obstacle, and sending
 // past it would leave the row asserting both that a disclosure went out and that
 // one could not — which the table's blocked_shape CHECK also refuses, so without
-// this filter one blocked case would make every confirm mail to that person fail
+// this filter one blocked case would make every confirm mail to that contact fail
 // on a raw constraint violation.
 func dischargeableNoticeStates() []string {
 	return slices.DeleteFunc(unresolvedNoticeStates(), func(state string) bool {

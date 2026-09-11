@@ -2,7 +2,7 @@
 // where that claim is held.
 //
 // A geolocation refusal arrives as code 1 whether the HOST never let the frame
-// ask or a PERSON was asked and said no. Those mean opposite things: the first
+// ask or a CONTACT was asked and said no. Those mean opposite things: the first
 // says the deck's location scenario cannot be built on this host, the second
 // says it can and somebody declined. The messages that distinguish them are not
 // standardised — every engine words them differently — which is exactly why the

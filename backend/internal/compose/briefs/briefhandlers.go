@@ -153,7 +153,7 @@ func (h Handlers) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, item
 //
 // 204 rather than the annotated run: the caller is the agent that just wrote
 // it, and handing the prose straight back is how a loop reads its own output as
-// new information and talks itself into a second pass. The person reads it
+// new information and talks itself into a second pass. The reader reads it
 // through GET /brief like everything else.
 func (h Handlers) AnnotateMorningBrief(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.AnnotateBriefRequest

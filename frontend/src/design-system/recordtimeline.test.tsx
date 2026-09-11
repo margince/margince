@@ -94,7 +94,7 @@ const INSTALLATION_ZONE = "Asia/Ho_Chi_Minh";
 
 function Harness({ firstPage }: Readonly<{ firstPage?: ActivityPage }>) {
   const [filters, setFilters] = useTimelineFilters("p-1");
-  const timeline = useRecordTimeline("person", "p-1", { filters, firstPage });
+  const timeline = useRecordTimeline("contact", "p-1", { filters, firstPage });
   const entries = activityTimeline(timeline.activities, "human:u-1", (row) => (
     <button type="button">relink {row.id}</button>
   ));
@@ -116,10 +116,10 @@ function Harness({ firstPage }: Readonly<{ firstPage?: ActivityPage }>) {
  * what makes a row openable.
  *
  * A separate harness rather than a parameter on the one above, because what it
- * proves is that nothing on the path is person-shaped. The hook takes the
+ * proves is that nothing on the path is contact-shaped. The hook takes the
  * entity kind, the mapper reads the server's own summary, and the row is the
  * design system's — so a lead reaches the canonical row for the same reason a
- * contact does, and this fails if any of the three grows a person branch.
+ * contact does, and this fails if any of the three grows a contact branch.
  */
 function LeadHarness({
   onOpen,
@@ -167,7 +167,7 @@ function mount(firstPage?: ActivityPage, client = newQueryClient()) {
  */
 function IdsHarness({ firstPage }: Readonly<{ firstPage?: ActivityPage }>) {
   const [filters] = useTimelineFilters("p-1");
-  const timeline = useRecordTimeline("person", "p-1", { filters, firstPage });
+  const timeline = useRecordTimeline("contact", "p-1", { filters, firstPage });
   return (
     <>
       {timeline.activities.map((row, index) => (
@@ -367,7 +367,7 @@ describe("a record timeline you can work in", () => {
   });
 
   // The LEAD page's own path. Every surface it uses is the shared one, so a
-  // lead's mail reads exactly as a contact's does — and a person branch
+  // lead's mail reads exactly as a contact's does — and a contact branch
   // appearing anywhere on that path fails here.
   it("draws a lead's email with the canonical row, openable", async () => {
     const opened: string[] = [];
@@ -407,7 +407,7 @@ describe("a record timeline you can work in", () => {
       </QueryClientProvider>,
     );
 
-    // The read went to the LEAD's timeline, not a person's.
+    // The read went to the LEAD's timeline, not a contact's.
     await waitFor(() =>
       expect(feed.last().searchParams.get("entity_type")).toBe("lead"),
     );

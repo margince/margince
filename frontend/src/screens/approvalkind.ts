@@ -118,7 +118,7 @@ export const EDITABLE_FIELDS: Readonly<
     { field: "subject", as: "text", label: "decision.draftSubject" },
     { field: "body", as: "textarea", label: "decision.draftBody" },
   ],
-  // The date is the entire question, and it is the only thing here a person may
+  // The date is the entire question, and it is the only thing here a contact may
   // change. Undeclared, the generic editor offered every string in the payload:
   // the deal's uuid as a text box to retype, the server's own reason sentence
   // as if it were the reader's to rewrite, and the previous date beside the
@@ -181,7 +181,7 @@ export const EDITABLE_FIELDS: Readonly<
 // declaration, and they are the whole point:
 //
 //   - a field nobody declares is NOT SHOWN. Identifiers, versions and
-//     dedupe keys are how the software finds a record, not why a person should
+//     dedupe keys are how the software finds a record, not why a contact should
 //     agree to something. They stay reachable under the detail dialog's
 //     technical disclosure for whoever genuinely needs them.
 //   - `lead` is the sentence the card leads with, under the headline. At most
@@ -272,7 +272,7 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       },
     ],
     // A lead captured from a company's own site. The reader is deciding whether
-    // this is a real person worth keeping, so the snippet that named them leads.
+    // this is a real contact worth keeping, so the snippet that named them leads.
     site_lead: [
       {
         field: "evidence_snippet",
@@ -295,7 +295,7 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       { field: "email", label: "approval.field.email", as: "text" },
       { field: "domain", label: "approval.field.domain", as: "text" },
     ],
-    // Two records that look like one person. The names are the whole comparison.
+    // Two records that look like one contact. The names are the whole comparison.
     linkedin_match: [
       {
         field: "connection_name",
@@ -307,7 +307,11 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         label: "approval.field.connection_company",
         as: "text",
       },
-      { field: "person_name", label: "approval.field.person_name", as: "text" },
+      {
+        field: "contact_name",
+        label: "approval.field.contact_name",
+        as: "text",
+      },
     ],
     // A message that was scheduled and then stopped. Why it stopped is the whole
     // question, and the SUMMARY already carries that sentence: the server maps
@@ -533,7 +537,7 @@ export function resolveDisplay(
  *
  * ONE case, declared rather than inferred. A close-date correction on a stale
  * deal proposes the date the deal already carries — the sweep keeps the date and
- * asks a person instead of guessing a new one — so the card printed "Date on it
+ * asks a contact instead of guessing a new one — so the card printed "Date on it
  * now 01.10.2026" directly above "Proposed date 01.10.2026". Two captions over
  * one value is not a comparison; it reads as a fault in the card.
  *

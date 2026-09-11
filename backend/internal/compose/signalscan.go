@@ -62,7 +62,7 @@ type ghostedCandidate struct {
 //
 // The account behind an interaction comes from the three-arm walk
 // (activities.CompanyReachSet), not a direct company link. Capture files mail
-// against the PERSON it was with, so a direct match resolves nothing on real
+// against the CONTACT it was with, so a direct match resolves nothing on real
 // correspondence. Reaching through the contact is also what makes the rule
 // TRUE: a reply from a colleague at the same account answers us, and a rule
 // that cannot see that reply calls an answered thread ghosted.
@@ -170,7 +170,7 @@ func WriteGhostedSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Ghosted
 			Fingerprint: signalFingerprint(kindGhostedThread, found.CompanyID, found.ActivityID),
 			// The message is CITED, not quoted. This finding is shared with
 			// everyone who can see the account, while the message it points at
-			// may be readable by one person — capture files mail against
+			// may be readable by one contact — capture files mail against
 			// contacts it auto-creates owner-private, and this rule reaches the
 			// account through them. Carrying the subject line here would hand
 			// that text to every reader; carrying the id hands them a link that

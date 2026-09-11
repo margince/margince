@@ -275,7 +275,7 @@ describe("handing a file to the Settings voice card", () => {
 
   // Two conversational files queue two questions. The second must be asked
   // fresh: carrying the first answer over would submit a speaker the reader
-  // never chose for that file — silently ingesting the wrong person's words
+  // never chose for that file — silently ingesting the wrong contact's words
   // whenever that name happens to appear in both.
   it("does not carry one file's chosen speaker into the next file's question", async () => {
     const bodies = stubApi(CONVERSATION);

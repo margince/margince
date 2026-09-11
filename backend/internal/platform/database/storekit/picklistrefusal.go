@@ -13,7 +13,7 @@ import (
 //
 // A picklist leaf compares text, so a typo compiles fine and selects nothing.
 // That is an honest answer for a value no row carries, and it is the wrong
-// answer for the person who just typed it: the equivalent list PARAMETER
+// answer for the contact who just typed it: the equivalent list PARAMETER
 // answers 422 for the same mistake, so a saved view and a URL disagreed about
 // whether "Open" is a status.
 //

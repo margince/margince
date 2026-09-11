@@ -37,7 +37,7 @@ gh api --paginate "repos/$REPO/issues?state=open&per_page=100" |
 #
 # Oldest, because it is the one carrying whatever triage the title has already
 # collected. Two issues under one title is the state a capped read produced, and
-# the repeat belongs on the one people have been talking in.
+# the repeat belongs on the one contacts have been talking in.
 lookup() {
   jq -r --arg t "$1" '[.[] | select(.title == $t)] | min_by(.number) | .number // empty' \
     "$open_issues"
@@ -350,7 +350,7 @@ fi
 #
 # MAIN_SUSPECTS is an over-approximation — every commit since the health check was
 # last green. Printed as-is rather than narrowed: a guessed culprit sends the wrong
-# person looking, which is worse than a dozen candidates and a failing test name.
+# contact looking, which is worse than a dozen candidates and a failing test name.
 
 if [[ "${MAIN_GATES_RESULT:-}" = "failure" ]]; then
   report "main is red: the backend gate fails on the tip" "priority: critical,area: ci-tests,bug" \

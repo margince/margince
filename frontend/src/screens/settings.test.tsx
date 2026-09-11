@@ -193,7 +193,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // A member correcting the name their colleagues see them by. Until this row
   // existed there was no way to: `display_name` was written by the invite and
   // by nothing else, so a name typed wrong stayed wrong on every record that
-  // person touched.
+  // contact touched.
   it("saves a corrected name to the caller's own seat", async () => {
     const user = userEvent.setup();
     const sent: { path: string; body: unknown }[] = [];
@@ -504,8 +504,8 @@ describe("SettingsScreen restructured pages", () => {
       mergedEntryBackend({
         roles: ["admin"],
         allow: {
-          person: ["read"],
-          // What opens Privacy now. `person:read` still reaches the purposes
+          contact: ["read"],
+          // What opens Privacy now. `contact:read` still reaches the purposes
           // list — that endpoint's gate is unchanged — but it no longer opens
           // the page, because every seeded role holds it.
           //
@@ -539,7 +539,7 @@ describe("SettingsScreen restructured pages", () => {
       mergedEntryBackend({
         roles: ["admin"],
         allow: {
-          person: ["read"],
+          contact: ["read"],
           audit_log: ["read"],
         },
       }),
@@ -608,7 +608,7 @@ describe("SettingsScreen restructured pages", () => {
   it("withholds the trail from a reader without the read, and asks the server for nothing", async () => {
     const backend = mergedEntryBackend({
       roles: ["ops"],
-      allow: { person: ["read"] },
+      allow: { contact: ["read"] },
     });
     vi.stubGlobal("fetch", backend);
     // Rendered directly: without the grant the catalog gives this reader no
@@ -694,7 +694,7 @@ describe("SettingsScreen restructured pages", () => {
 // The Google app is one app per installation, supplied by whoever operates it,
 // and every rep's mailbox is connected through it. It shipped on `connections`
 // — a `self` page — which put installation configuration on a page holding a
-// person's own mailbox and their own LinkedIn network. The server gates the read
+// contact's own mailbox and their own LinkedIn network. The server gates the read
 // on capture_settings, so a rep saw a refused card rather than the operator's
 // client id; the defect was that the page offered them a setting that was never
 // theirs.
@@ -732,7 +732,7 @@ describe("installation-wide cards live off the personal pages", () => {
     return walk(tabContent(id));
   }
 
-  it("puts the vendor OAuth apps on an installation page, not beside a person's own connections", () => {
+  it("puts the vendor OAuth apps on an installation page, not beside a contact's own connections", () => {
     const hosts = SETTINGS_PAGES.filter((page) =>
       pageRenders(page.id, "OAuthAppCard"),
     );

@@ -58,7 +58,7 @@ Find the sentence that matches your rule.
 **How:** build list A from the owner and list B from the copy, separately. Then
 assert **both** differences are empty — `A minus B` and `B minus A`. Never just
 "A contains B". Write down in the test which side is the owner, so the next
-person knows which one to fix.
+contact knows which one to fix.
 
 **Hardness:** H3 if both sides are lists. H1 if one side is text.
 
@@ -147,8 +147,8 @@ invisible to the walk. Say that in the test. Never claim those paths carry nothi
 an outbox event; a rename owes a duplicate check; a write owes a permission probe.
 
 **Examples:** `writeshape_test.go` (audit row ⇒ outbox event on the same path) ·
-`writeauthorityreach_test.go` · `rbacgate_test.go` · `personscrub_test.go`
-(deleting and anonymising a person clear the same tables) · `dedupespine_test.go` ·
+`writeauthorityreach_test.go` · `rbacgate_test.go` · `contactscrub_test.go`
+(deleting and anonymising a contact clear the same tables) · `dedupespine_test.go` ·
 `companyrenamerecheck_test.go` (every company rename reaches the duplicate check —
 the gate whose first version was vacuous, which is why the quantifier table above
 exists).
@@ -245,7 +245,7 @@ register of recognised claims.
 **Hardness:** H1. It can only hold a phrasing it recognises.
 
 **Use when** you are about to write "the only", "the one spelling of", or "spelled
-once" in a comment. That sentence stops the next person searching: they grep, find
+once" in a comment. That sentence stops the next contact searching: they grep, find
 your claim, and stop. A false one is worse than no comment at all.
 
 **Examples:** `uniquenessclaims_test.go` and its detector ·
@@ -333,7 +333,7 @@ walks a smaller tree and reports PASS.
 5. Failure message **printed once by you**. Check the argument order.
 6. Escape hatch **next to the subject** where possible — a `doc.go` line, a contract
    field, a `//craft:ignore <check> <reason>`. A map inside the test file is invisible
-   to exactly the person who needs it. If you can't, say in the test why.
+   to exactly the reader who needs it. If you can't, say in the test why.
 7. Waive the **instance, not the category**. A waiver keyed by package or rule name
    lets the next offender in free.
 8. An **empty waiver map is a result** — say so in a comment, so adding an entry is a
@@ -346,13 +346,13 @@ walks a smaller tree and reports PASS.
 
 ## When a chokepoint beats a gate
 
-A gate holds a rule people would otherwise have to remember. A **chokepoint** —
+A gate holds a rule contacts would otherwise have to remember. A **chokepoint** —
 one function that can't be called wrong — removes the remembering. Prefer it when
 the callers look alike and the whole obligation fits in one call.
 
 They are not alternatives. The audit+event rule has both: `storekit.Audit` /
 `Emit` is the chokepoint, and `writeshape_test.go` is still the gate, because
-nothing stops the next person writing the pair by hand next to it. **The
+nothing stops the next contact writing the pair by hand next to it. **The
 chokepoint makes the gate simple; the gate keeps the chokepoint the only door.**
 
 Two things a chokepoint usually can't absorb, both live in this codebase:

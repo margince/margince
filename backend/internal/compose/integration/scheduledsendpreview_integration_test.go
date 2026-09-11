@@ -55,7 +55,7 @@ func TestAScheduledAccountSendReadsBackWhatItWillAskTheEngine(t *testing.T) {
 		"to":              []string{"buyer@preflight.test"},
 		"consent_purpose": "transactional",
 		"links": []AnyMap{
-			{"entity_type": "person", "entity_id": p.personID},
+			{"entity_type": "contact", "entity_id": p.contactID},
 		},
 		"evidence":     AnyMap{"activity_id": p.activityID},
 		"scheduled_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
@@ -70,8 +70,8 @@ func TestAScheduledAccountSendReadsBackWhatItWillAskTheEngine(t *testing.T) {
 	}
 
 	got := p.scheduledOnTheWire(t, id)
-	if len(got.Links) != 1 || got.Links[0].EntityType != "person" || got.Links[0].EntityID != p.personID {
-		t.Errorf("the records the send named came back as %+v, want the one person it was filed under: "+
+	if len(got.Links) != 1 || got.Links[0].EntityType != "contact" || got.Links[0].EntityID != p.contactID {
+		t.Errorf("the records the send named came back as %+v, want the one contact it was filed under: "+
 			"the account-send preview refuses a message naming no records, so a row without them "+
 			"cannot be asked about", got.Links)
 	}

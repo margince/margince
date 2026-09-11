@@ -10,7 +10,7 @@ package gates
 // THE QUESTION THIS ANSWERS. "What is reachable unauthenticated?" is the first
 // thing an auditor asks, and before this the answer was "read routes.go and
 // work it out". Worse for the day-to-day: adding an unauthenticated route was
-// one person's decision in one file, and nothing noticed. A reviewer could not
+// one contact's decision in one file, and nothing noticed. A reviewer could not
 // tell an intentional exception from an accidental one, because both look
 // identical — a route registered without the session middleware.
 //

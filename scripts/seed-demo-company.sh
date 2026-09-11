@@ -87,16 +87,16 @@ else
 fi
 echo "  $COMPANY = $company_id"
 
-# ---- the people ------------------------------------------------------------
+# ---- the contacts ------------------------------------------------------------
 # Three named roles, because the relationship-coverage card reads role gaps and
 # the Today card's "best route" ranks contacts by strength. One contact makes
 # both of them say nothing interesting.
-echo "== the people =="
-person_id() { psql_one "SELECT id FROM person WHERE full_name = '$1' AND archived_at IS NULL LIMIT 1"; }
+echo "== the contacts =="
+contact_id() { psql_one "SELECT id FROM contact WHERE full_name = '$1' AND archived_at IS NULL LIMIT 1"; }
 
-ensure_person() { # ensure_person <name> <email> <title>
+ensure_contact() { # ensure_contact <name> <email> <title>
   local name="$1" email="$2" title="$3" existing status
-  existing="$(person_id "$name")"
+  existing="$(contact_id "$name")"
   if [[ -n "$existing" ]]; then
     # stderr, not stdout: stdout IS the id this function returns, and a
     # progress line on it becomes part of the value the caller captures.
@@ -104,7 +104,7 @@ ensure_person() { # ensure_person <name> <email> <title>
     printf '%s' "$existing"
     return
   fi
-  status="$(api POST /people "$(jq -n --arg n "$name" --arg e "$email" --arg t "$title" --arg o "$company_id" '{
+  status="$(api POST /contacts "$(jq -n --arg n "$name" --arg e "$email" --arg t "$title" --arg o "$company_id" '{
     full_name: $n,
     job_title: $t,
     emails: [{email: $e, is_primary: true}],
@@ -116,9 +116,9 @@ ensure_person() { # ensure_person <name> <email> <title>
   jq -r .id < "$workdir/body"
 }
 
-sarah_id="$(ensure_person "Sarah Cole" "sarah@glazedfrog.example" "CFO")"
-nick_id="$(ensure_person "Nick Oettinger" "nick@glazedfrog.example" "Head of Operations")"
-mark_id="$(ensure_person "Mark Hughes" "mark@glazedfrog.example" "Operations Manager")"
+sarah_id="$(ensure_contact "Sarah Cole" "sarah@glazedfrog.example" "CFO")"
+nick_id="$(ensure_contact "Nick Oettinger" "nick@glazedfrog.example" "Head of Operations")"
+mark_id="$(ensure_contact "Mark Hughes" "mark@glazedfrog.example" "Operations Manager")"
 
 # ---- the deals -------------------------------------------------------------
 # Two open, so the commercial card has a leading deal to name and the KPI row
@@ -167,13 +167,13 @@ ensure_activity() { # ensure_activity <source-id> <json-body>
   echo "  OK: created $key"
 }
 
-mail() { # mail <key> <subject> <direction> <when> <person-id>
+mail() { # mail <key> <subject> <direction> <when> <contact-id>
   ensure_activity "$1" "$(jq -n --arg s "$2" --arg d "$3" --arg w "$4" --arg k "$1" \
     --arg o "$company_id" --arg p "$5" '{
       kind: "email", subject: $s, direction: $d, occurred_at: $w,
       source: "manual", source_system: "demo-seed", source_id: $k,
       links: [{entity_type: "company", entity_id: $o},
-              {entity_type: "person", entity_id: $p}]
+              {entity_type: "contact", entity_id: $p}]
     }')"
 }
 
@@ -190,7 +190,7 @@ ensure_activity demo-gf-meeting "$(jq -n --arg o "$company_id" --arg p "$sarah_i
   occurred_at: "2026-08-12T09:00:00Z", duration_seconds: 1800,
   source: "manual", source_system: "demo-seed", source_id: "demo-gf-meeting",
   links: [{entity_type: "company", entity_id: $o},
-          {entity_type: "person", entity_id: $p}]
+          {entity_type: "contact", entity_id: $p}]
 }')"
 
 # An open commitment with a due date — the Today card's "next commitment".

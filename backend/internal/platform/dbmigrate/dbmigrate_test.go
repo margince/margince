@@ -144,11 +144,11 @@ func TestALedgerRowNamingADifferentMigrationStopsTheRun(t *testing.T) {
 	t.Parallel()
 	applied := map[string]appliedRow{"0209": {name: "drop_workspace_identity_columns"}}
 
-	err := assertLedgerMatches("core", applied, Migration{Version: "0209", Name: "person_record_page_v2"})
+	err := assertLedgerMatches("core", applied, Migration{Version: "0209", Name: "contact_record_page_v2"})
 	if err == nil {
 		t.Fatal("a version applied under another name read as a match; the migration on disk would be skipped as done")
 	}
-	for _, want := range []string{"drop_workspace_identity_columns", "person_record_page_v2", "dev-fresh"} {
+	for _, want := range []string{"drop_workspace_identity_columns", "contact_record_page_v2", "dev-fresh"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal must name both migrations and the repair; %q is missing from %q", want, err)
 		}
@@ -160,9 +160,9 @@ func TestALedgerRowNamingADifferentMigrationStopsTheRun(t *testing.T) {
 // trip the guard, or every run would refuse.
 func TestALedgerRowMatchingItsMigrationIsNotARenumber(t *testing.T) {
 	t.Parallel()
-	applied := map[string]appliedRow{"0209": {name: "person_record_page_v2"}}
+	applied := map[string]appliedRow{"0209": {name: "contact_record_page_v2"}}
 
-	if err := assertLedgerMatches("core", applied, Migration{Version: "0209", Name: "person_record_page_v2"}); err != nil {
+	if err := assertLedgerMatches("core", applied, Migration{Version: "0209", Name: "contact_record_page_v2"}); err != nil {
 		t.Errorf("an exact match refused: %v", err)
 	}
 	if err := assertLedgerMatches("core", applied, Migration{Version: "0210", Name: "consumer_mail_create_grant"}); err != nil {

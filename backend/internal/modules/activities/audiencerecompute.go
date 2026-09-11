@@ -69,7 +69,7 @@ const (
 // captured row whose importing seat was deleted — and this leaves it alone.
 // SetAudience is the writer for those, and the two must never both write one
 // row: a derivation that overwrote a human's explicit `selected` would silently
-// widen a message a person deliberately narrowed.
+// widen a message a contact deliberately narrowed.
 //
 // Writes nothing when the derived audience equals the stored one, so a sync
 // that changes nothing produces no audit row and no event. That is not an
@@ -109,7 +109,7 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 		return fmt.Errorf("activities: reading the activity being recomputed: %w", err)
 	}
 	// A human's explicit member list is not a derivation's to move at all:
-	// widening publishes what a person narrowed by hand, and narrowing discards
+	// widening publishes what a contact narrowed by hand, and narrowing discards
 	// the member set they named, which no contribution here knows how to
 	// rebuild.
 	if stored == audienceSelected {
@@ -118,7 +118,7 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	// A human's decision binds in ONE direction, and it is asked BEFORE anything
 	// is derived.
 	//
-	// Asymmetric on purpose. A person who narrowed their own correspondence has
+	// Asymmetric on purpose. A contact who narrowed their own correspondence has
 	// said something no contribution can rebuild, so nothing here widens past
 	// it. But write authority over an activity is broader than membership of it
 	// — a link-less message admits any content-visible caller — so a colleague
@@ -128,7 +128,7 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	// Asked FIRST because the contributions that held the message are still
 	// there after a human opens it: the seat's import row still records the
 	// posture it was captured under, and deriving from that would re-narrow the
-	// row on the very next sync, silently undoing what the person did.
+	// row on the very next sync, silently undoing what the contact did.
 	if deref(storedReason) == ReasonManual {
 		manual, err := manualDecisionStands(ctx, tx, activityID, stored)
 		if err != nil || manual {
@@ -389,7 +389,7 @@ func sameReason(stored *string, derived string) bool {
 // what the contributors now ask for.
 //
 // It stands whenever the human's answer is at least as strict as the derived
-// one: a person who narrowed cannot be widened, and a person who opened is
+// one: a contact who narrowed cannot be widened, and a contact who opened is
 // overruled only by a contribution that genuinely holds the message. Deriving
 // here rather than trusting the stored reason is what makes the second half
 // true — a seat's own posture must still be able to hold a message a colleague
@@ -466,7 +466,7 @@ func ClearCounterpartyHoldTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.A
 // and they are the ones a rep cannot share today.
 //
 // Every other reason is left where it is: `counterparty` is this seat's standing
-// decision about a PERSON rather than this message, `workspace_floor` is an
+// decision about a CONTACT rather than this message, `workspace_floor` is an
 // admin's decision one seat cannot overrule, and `no_record` / `no_counterparty`
 // are the capture ladder's filing facts rather than judgements about
 // confidentiality. The value predicate stays in the UPDATE even though the

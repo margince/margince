@@ -4,7 +4,7 @@
 package commsauthz
 
 // Reason codes a decision carries. Stable, bounded and safe to put in a metric
-// label or show an operator: none of them names a person, an address or a
+// label or show an operator: none of them names a contact, an address or a
 // message.
 const (
 	// ReasonObjection is Art. 21 — the subject objected to direct marketing.
@@ -31,7 +31,7 @@ const (
 	ReasonLegacyTransactionalUnevidenced = "legacy_transactional_unevidenced"
 	// ReasonUnknownPurpose is a purpose key nothing defines.
 	ReasonUnknownPurpose = "unknown_purpose"
-	// ReasonNoSubject is a recipient that resolves to nobody, or to two people.
+	// ReasonNoSubject is a recipient that resolves to nobody, or to two contacts.
 	ReasonNoSubject = "recipient_resolves_to_no_single_subject"
 	// ReasonNoMarketingConsent is marketing without a grant or an exception.
 	ReasonNoMarketingConsent = "no_marketing_consent"
@@ -41,7 +41,7 @@ const (
 	ReasonConsentWithdrawn = "consent_withdrawn"
 	// ReasonFrequencyCapReached is a jurisdiction's ceiling on how many
 	// advertising messages one address may receive in a window. A fact about
-	// VOLUME rather than about the person: nothing they did refuses this
+	// VOLUME rather than about the contact: nothing they did refuses this
 	// message, and the same message is lawful again once the window rolls.
 	ReasonFrequencyCapReached = "frequency_cap_reached"
 	// ReasonAllowed is the allow path's own code, so every row has one.
@@ -169,7 +169,7 @@ func (s DecisionSet) Effective(modeFor func(Category) Mode, legacyAllowed bool) 
 // It is the per-recipient twin of Effective, which answers for a whole set at
 // transmit. Both are spelled here so a caller asking "would this stop" never
 // recombines verdict, mode and absoluteness for itself — three inputs and one
-// rule, and a second copy of it decides whether mail reaches a person.
+// rule, and a second copy of it decides whether mail reaches a contact.
 //
 // Held by: TestWouldRefuseFollowsTheModeExceptWhereNothingMay (absolute_test.go)
 func (d Decision) WouldRefuse(mode Mode) bool {
@@ -182,7 +182,7 @@ func (d Decision) WouldRefuse(mode Mode) bool {
 	return mode == ModeEnforce
 }
 
-// CanBeOverruled reports whether a person may lift this refusal by recording
+// CanBeOverruled reports whether a contact may lift this refusal by recording
 // why they are writing.
 //
 // Both axes have to agree. LevelForReason says whose decision it is, and four

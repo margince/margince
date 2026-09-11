@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeProfileUrl, profileUrlLabel } from "./profileurl";
 
-// The product's position is that a profile is read by the PERSON, in their own
+// The product's position is that a profile is read by the CONTACT, in their own
 // browser, and that the software only stores what they bring back. So the one
 // thing proven here is that this file changes a string's shape and never
 // reaches the network — every case below is a pure input/output pair, which is
@@ -19,7 +19,7 @@ describe("normalizing a pasted profile address", () => {
     );
   });
 
-  it("keeps a scheme the person typed rather than upgrading it", () => {
+  it("keeps a scheme the human typed rather than upgrading it", () => {
     // Silently promoting http to https would claim a certificate nobody saw.
     expect(normalizeProfileUrl("http://example.com/team/jdoe")).toBe(
       "http://example.com/team/jdoe",
@@ -52,7 +52,7 @@ describe("normalizing a pasted profile address", () => {
   });
 
   it("hands back what was typed when the value is not an address", () => {
-    // The person has to be able to see and correct their own mistake, so a
+    // The contact has to be able to see and correct their own mistake, so a
     // refused value is never mangled into something else.
     expect(normalizeProfileUrl("jdoe")).toBe("jdoe");
     expect(normalizeProfileUrl("javascript:alert(1)")).toBe(
@@ -61,7 +61,7 @@ describe("normalizing a pasted profile address", () => {
   });
 });
 
-describe("the address as a person reads it", () => {
+describe("the address as a reader reads it", () => {
   it("drops the scheme and www a reader already knows", () => {
     expect(profileUrlLabel("https://www.linkedin.com/in/jdoe")).toBe(
       "linkedin.com/in/jdoe",

@@ -14,7 +14,7 @@ import { useLocale, useT } from "../../i18n";
 import { CommercialPanel, recordNamesIn } from "../company360";
 import { CompanyContractState } from "../companycommercial";
 import { CompanyProjects } from "../companyprojects";
-import { contactRole, peopleSlice } from "../companyrailshared";
+import { contactRole, contactsSlice } from "../companyrailshared";
 import { activityHeadline, CompanyRecentList } from "../companyrecent";
 import type { CompanyTab } from "../companytab";
 import { CompanyWorkCard } from "../companywork";
@@ -26,7 +26,7 @@ type Company360 = components["schemas"]["Company360"];
 // where the rest of the thread reads.
 const THREAD_LIMIT = 6;
 
-// How many people stand as chips before the remainder becomes one "+N" chip.
+// How many contacts stand as chips before the remainder becomes one "+N" chip.
 const CHIP_LIMIT = 3;
 
 /**
@@ -233,16 +233,16 @@ export function MoneyPane({
 }
 
 /**
- * The account's people as cards: the first few with what they do and how to
+ * The account's contacts as cards: the first few with what they do and how to
  * write to them, the rest as one count, and the Contacts tab behind the title.
  *
  * They were name chips. A chip says somebody exists; a reader deciding which
  * of three to call had to open all three to find out which one buys. The card
  * carries the facts that decision needs, so it is made here rather than after
  * three round trips — which is the same trade the thread fold makes one panel
- * up, spent on the few people the server already ranked to the top.
+ * up, spent on the few contacts the server already ranked to the top.
  */
-export function PeopleChips({
+export function ContactsChips({
   view,
   loading,
   onOpenTab,
@@ -255,12 +255,12 @@ export function PeopleChips({
   const { locale } = useLocale();
   // Past the server's cut `count` is absent, and both the "All" verb and the
   // remainder chip drop their figure with it.
-  const { contacts, count, state } = peopleSlice(view, loading);
+  const { contacts, count, state } = contactsSlice(view, loading);
   const shown = contacts.slice(0, CHIP_LIMIT);
   const rest = contacts.length - shown.length;
   return (
     <Panel
-      title={t("co.rail.people.title")}
+      title={t("co.rail.contacts.title")}
       titleAction={
         state === "ready" && onOpenTab ? (
           <button
@@ -279,14 +279,14 @@ export function PeopleChips({
         {state === "ready" ? (
           <ul className="record-card-list">
             {shown.map((contact) => (
-              <li key={contact.person_id}>
+              <li key={contact.contact_id}>
                 <RecordCard
-                  kind="person"
+                  kind="contact"
                   name={contact.full_name}
-                  identity={contact.person_id}
+                  identity={contact.contact_id}
                   href={routeHash({
                     screen: "contacts",
-                    id: contact.person_id,
+                    id: contact.contact_id,
                   })}
                   position={contactRole(contact)}
                   email={contact.primary_email ?? undefined}
@@ -297,7 +297,7 @@ export function PeopleChips({
                 names no record, and a card with nothing to open in it reads
                 as one that failed to load. */}
             {(rest > 0 || count == null) && (
-              <li className="co-people-rest t-caption">
+              <li className="co-contacts-rest t-caption">
                 {count != null
                   ? `+${formatNumber(rest, locale)}`
                   : t("co.rail.more")}
@@ -307,8 +307,8 @@ export function PeopleChips({
         ) : (
           <SurfaceState
             state={state}
-            emptyLabel={t("co.rail.people.empty")}
-            loadingLabel={t("co.rail.people.title")}
+            emptyLabel={t("co.rail.contacts.empty")}
+            loadingLabel={t("co.rail.contacts.title")}
           >
             {null}
           </SurfaceState>

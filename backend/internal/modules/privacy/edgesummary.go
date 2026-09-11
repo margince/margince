@@ -42,7 +42,7 @@ type edgePhrase struct {
 // another's. That map's shape is unchanged and still has the problem; this one
 // does not acquire it.
 //
-// Only the three verbs an edge write emits (people/relationshipimage.go). An
+// Only the three verbs an edge write emits (contacts/relationshipimage.go). An
 // action absent here falls back to the record phrasing, which is honest if
 // clumsy — the alternative is a line that claims to know what happened.
 var edgePhrases = map[auditVerbKey]edgePhrase{

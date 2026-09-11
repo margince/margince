@@ -25,8 +25,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -35,7 +35,7 @@ var dynamicSegmentSingleConnPerms = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field": {Create: true, Read: true, Update: true, Delete: true},
-		"person":       {Create: true, Read: true, Update: true, Delete: true},
+		"contact":      {Create: true, Read: true, Update: true, Delete: true},
 		"list":         {Create: true, Read: true, Update: true, Delete: true},
 	},
 	RowScope: principal.RowScopeAll,
@@ -67,11 +67,11 @@ func TestListMembersEvaluatesADynamicSegmentOnTheCallersOnlyConnection(t *testin
 	ctx, cancel := context.WithTimeout(e.As(e.Rep1, nil, dynamicSegmentSingleConnPerms), txSeamBudget)
 	t.Cleanup(cancel)
 
-	peopleStore := people.NewStore(harnessDB(pool, e.WS)).WithFieldCatalog(svc)
+	contactsStore := contacts.NewStore(harnessDB(pool, e.WS)).WithFieldCatalog(svc)
 	lists := collections.NewStore(harnessDB(pool, e.WS)).WithFieldCatalog(svc)
 
 	field, err := svc.Create(ctx, customfields.FieldSpec{
-		Object: "person", Label: "Segment Budget", Type: customfields.TypeText, Source: "ui",
+		Object: "contact", Label: "Segment Budget", Type: customfields.TypeText, Source: "ui",
 	})
 	if err != nil {
 		t.Fatalf("defining the field: %v", err)
@@ -81,18 +81,18 @@ func TestListMembersEvaluatesADynamicSegmentOnTheCallersOnlyConnection(t *testin
 	}
 	column := *field.ColumnName
 
-	created, err := peopleStore.CreatePerson(ctx, people.CreatePersonInput{FullName: "Match", Source: "ui"})
+	created, err := contactsStore.CreateContact(ctx, contacts.CreateContactInput{FullName: "Match", Source: "ui"})
 	if err != nil {
-		t.Fatalf("creating the person: %v", err)
+		t.Fatalf("creating the contact: %v", err)
 	}
-	if _, err := peopleStore.UpdatePerson(ctx, ids.From[ids.PersonKind](ids.UUID(created.Id)), people.UpdatePersonInput{
+	if _, err := contactsStore.UpdateContact(ctx, ids.From[ids.ContactKind](ids.UUID(created.Id)), contacts.UpdateContactInput{
 		CustomFields: map[string]any{column: "gold"},
 	}); err != nil {
 		t.Fatalf("setting the custom field: %v", err)
 	}
 
 	listRow, err := lists.CreateList(ctx, collections.CreateListInput{
-		Name: "Gold segment", EntityType: "person", ListType: "dynamic",
+		Name: "Gold segment", EntityType: "contact", ListType: "dynamic",
 		Definition: map[string]any{"field": column, "op": "eq", "value": "gold"},
 	})
 	if err != nil {
@@ -133,7 +133,7 @@ func TestSavedViewValidatesItsFilterOnTheCallersOnlyConnection(t *testing.T) {
 	// at all: a core-field filter resolves from the static vocabulary, the
 	// second acquisition never occurs, and the case would pass proving nothing.
 	field, err := svc.Create(ctx, customfields.FieldSpec{
-		Object: "person", Label: "View Budget", Type: customfields.TypeText, Source: "ui",
+		Object: "contact", Label: "View Budget", Type: customfields.TypeText, Source: "ui",
 	})
 	if err != nil {
 		t.Fatalf("defining the field: %v", err)
@@ -146,7 +146,7 @@ func TestSavedViewValidatesItsFilterOnTheCallersOnlyConnection(t *testing.T) {
 	}
 
 	view, err := views.CreateSavedView(ctx, collections.CreateSavedViewInput{
-		Resource: "people", Name: "Gold accounts", Query: filter,
+		Resource: "contacts", Name: "Gold accounts", Query: filter,
 	})
 	if err != nil {
 		t.Fatalf("creating the view on the caller's only connection: %v — a timeout here is the "+

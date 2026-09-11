@@ -41,11 +41,11 @@ func (v *sealingVault) Put(_ context.Context, secret string) (string, error) {
 
 // confirmLaneEnv is one subject with a live address and the real lane wired.
 type confirmLaneEnv struct {
-	e      *integration.Env
-	ctx    context.Context
-	person ids.UUID
-	store  *consent.Store
-	vault  *sealingVault
+	e       *integration.Env
+	ctx     context.Context
+	contact ids.UUID
+	store   *consent.Store
+	vault   *sealingVault
 }
 
 // setupConfirmLane wires the REAL machinery, not a double: the delivery staging
@@ -59,18 +59,18 @@ func setupConfirmLane(t *testing.T) *confirmLaneEnv {
 	if err != nil {
 		t.Fatalf("jobs.NewInserter: %v", err)
 	}
-	person := e.SeedPerson(t, "Confirm Subject", &e.Rep1)
+	contact := e.SeedContact(t, "Confirm Subject", &e.Rep1)
 	if _, err := e.Pool.Exec(context.Background(), `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		VALUES ($1, 'subject@example.test', true, 'manual', 'human:test')`, person); err != nil {
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, 'subject@example.test', true, 'manual', 'human:test')`, contact); err != nil {
 		t.Fatal(err)
 	}
 	vault := &sealingVault{}
 	return &confirmLaneEnv{
-		e:      e,
-		ctx:    e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms),
-		person: person,
-		vault:  vault,
+		e:       e,
+		ctx:     e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms),
+		contact: contact,
+		vault:   vault,
 		store: consent.NewStore(InstallationDB(e.Pool)).
 			WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter), vault, "https://crm.example.test"),
 	}
@@ -81,7 +81,7 @@ func setupConfirmLane(t *testing.T) *confirmLaneEnv {
 func TestAConfirmLinkStagesADeliveryADecisionAndATimelineRow(t *testing.T) {
 	l := setupConfirmLane(t)
 
-	issued, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.PersonKind](l.person))
+	issued, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact))
 	if err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestAConfirmLinkStagesADeliveryADecisionAndATimelineRow(t *testing.T) {
 func TestTheEngineAllowsAConfirmationOnItsOwnEvidence(t *testing.T) {
 	l := setupConfirmLane(t)
 
-	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.PersonKind](l.person)); err != nil {
+	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact)); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
 	}
 
@@ -149,7 +149,7 @@ func TestTheEngineAllowsAConfirmationOnItsOwnEvidence(t *testing.T) {
 func TestTheStagedMessageCarriesNoLiveLink(t *testing.T) {
 	l := setupConfirmLane(t)
 
-	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.PersonKind](l.person)); err != nil {
+	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact)); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
 	}
 	if l.vault.sealed == "" {

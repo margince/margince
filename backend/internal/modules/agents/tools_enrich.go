@@ -91,7 +91,7 @@ func (t enrichCompany) Spec() mcp.ToolSpec {
 		Description: enrichCopy.render(),
 		// Stays confirm-first, against the general rule that a passport does
 		// what its holder could do unaided. The argument does not reach this
-		// verb: a person picking a URL in the browser chose it, while here the
+		// verb: a contact picking a URL in the browser chose it, while here the
 		// MODEL names the address the server fetches — a destination nobody
 		// chose, reachable by persuading the model rather than by holding the
 		// credential. TestUrlTakingOperationsAreNeverAutoExecuteForAgents is

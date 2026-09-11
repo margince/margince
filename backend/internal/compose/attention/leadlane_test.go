@@ -227,7 +227,7 @@ func TestAnUnassignedLeadNamesThatItAnswersToNobody(t *testing.T) {
 	}
 }
 
-// A named owner's page keeps the lane. The lead lane narrowed to that person in
+// A named owner's page keeps the lane. The lead lane narrowed to that contact in
 // its own query, so the row is already theirs — judging it by the deal arm
 // would drop every one and the manager would find the lane silently missing
 // rather than empty.

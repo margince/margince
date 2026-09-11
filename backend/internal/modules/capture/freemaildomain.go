@@ -10,7 +10,7 @@ package capture
 // is right far more often than a hand-typed one and still wrong sometimes, in
 // both directions — it misses a regional provider, or it claims a domain an
 // operator's real customers mail from. Neither error can wait for a release, and
-// both are answerable by the people reading the mail.
+// both are answerable by the readers reading the mail.
 //
 // Workspace-shared, with a split write posture: ANY seat may contribute a
 // consumer domain the baseline missed (`extra` — everyday judgment about the

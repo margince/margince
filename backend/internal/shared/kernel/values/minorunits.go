@@ -86,12 +86,12 @@ func MinorUnitDigits(currency string) int {
 	return 2
 }
 
-// MajorUnits renders an amount of minor units as the figure a person would say:
+// MajorUnits renders an amount of minor units as the figure a contact would say:
 // "180000.00" for 18000000 EUR, "18000000" for the same integer in JPY.
 //
 // Fixed decimal places rather than a trimmed one, because the trailing zeroes
 // are what say which unit this is. "180000" and "180000.00" read as the same
-// number to a person and as two different claims to anything parsing them, and
+// number to a contact and as two different claims to anything parsing them, and
 // this figure's whole job is to stop a reader taking minor units for major
 // ones.
 //
@@ -194,7 +194,7 @@ func MinorUnits(major, currency string) (int64, bool) {
 	}
 	whole, frac, _ := strings.Cut(major, ".")
 	// Pad rather than reject a short fraction: "12.5" EUR is twelve euros fifty,
-	// written the way a person writes it. Padding is exact; it adds no precision
+	// written the way a contact writes it. Padding is exact; it adds no precision
 	// the document did not state.
 	frac += strings.Repeat("0", digits-len(frac))
 	scaled, err := strconv.ParseInt(whole+frac, 10, 64)

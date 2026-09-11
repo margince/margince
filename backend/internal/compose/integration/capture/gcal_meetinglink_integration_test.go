@@ -5,13 +5,13 @@
 
 package capture
 
-// A synced calendar meeting is filed under the people who were in it.
+// A synced calendar meeting is filed under the contacts who were in it.
 //
 // A meeting names no counterparty — attendance is a list — so the tiered gate
 // concludes "captured, named nobody", the ensure that files mail never runs, and
 // before this the meeting landed with participant rows and NO activity_link. It
 // was then unreachable from every surface that finds activity through links:
-// the company page's Next meeting, its last-meeting date, the person timeline.
+// the company page's Next meeting, its last-meeting date, the contact timeline.
 // 517 of 546 meetings in the dev workspace were in that state, and the account
 // you were meeting that afternoon showed nothing booked.
 //
@@ -30,23 +30,23 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// personCreator is a principal that may CREATE a contact. The shared capture
-// helper grants person:read only — deliberately, because a capture connector
-// does not create people through that path — so seeding a contact needs its own.
-// connectorCreator mints a person the way the capture sink does: under a
+// contactCreator is a principal that may CREATE a contact. The shared capture
+// helper grants contact:read only — deliberately, because a capture connector
+// does not create contacts through that path — so seeding a contact needs its own.
+// connectorCreator mints a contact the way the capture sink does: under a
 // CONNECTOR principal, so captured_by records a connector rather than a
 // colleague.
 //
-// The difference is load-bearing rather than cosmetic. completePersonName takes
+// The difference is load-bearing rather than cosmetic. completeContactName takes
 // `captured_by LIKE 'human:%'` as evidence that a human set the display name,
-// and refuses to move it — so a fixture that seeds a capture-shaped person
-// under personCreator is asserting a human typed the name it then expects to be
+// and refuses to move it — so a fixture that seeds a capture-shaped contact
+// under contactCreator is asserting a human typed the name it then expects to be
 // replaced.
 func connectorCreator(e *integration.SearchEnv) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -56,13 +56,13 @@ func connectorCreator(e *integration.SearchEnv) context.Context {
 		SeatType: principal.SeatFull,
 		Scopes:   principal.NewScopeSet(),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"person": {Create: true, Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
 }
 
-func personCreator(e *integration.SearchEnv) context.Context {
+func contactCreator(e *integration.SearchEnv) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
@@ -71,7 +71,7 @@ func personCreator(e *integration.SearchEnv) context.Context {
 		SeatType: principal.SeatFull,
 		Scopes:   principal.NewScopeSet(),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"person": {Create: true, Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -119,12 +119,12 @@ func syncOneGcalMeeting(t *testing.T, e *integration.SearchEnv) ids.ActivityID {
 
 // meetingFiling answers how the captured meeting was filed and what audience it
 // was born with — the two halves this change moves together.
-func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.ActivityID) (people []ids.UUID, companies int, audience string, reason *string) {
+func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.ActivityID) (contacts []ids.UUID, companies int, audience string, reason *string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
-			`SELECT person_id FROM activity_link
-			  WHERE activity_id = $1 AND entity_type = 'person' ORDER BY person_id`, activity)
+			`SELECT contact_id FROM activity_link
+			  WHERE activity_id = $1 AND entity_type = 'contact' ORDER BY contact_id`, activity)
 		if err != nil {
 			return err
 		}
@@ -134,7 +134,7 @@ func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.Activity
 			if err := rows.Scan(&id); err != nil {
 				return err
 			}
-			people = append(people, id)
+			contacts = append(contacts, id)
 		}
 		if err := rows.Err(); err != nil {
 			return err
@@ -149,7 +149,7 @@ func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.Activity
 	}); err != nil {
 		t.Fatal(err)
 	}
-	return people, companies, audience, reason
+	return contacts, companies, audience, reason
 }
 
 // The attendee is already a contact, so the meeting is filed under them and is
@@ -158,11 +158,11 @@ func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.Activity
 func TestACapturedMeetingIsFiledUnderTheAttendeeWhoIsAContact(t *testing.T) {
 	e := integration.SetupSearch(t)
 
-	// Through the real people store, not a hand-built INSERT: the resolution
-	// this depends on reads person_email, and a row a test invents is not the
+	// Through the real contacts store, not a hand-built INSERT: the resolution
+	// this depends on reads contact_email, and a row a test invents is not the
 	// row production writes.
-	store := people.NewStore(e.DB())
-	buyer, err := store.EnsurePersonByEmail(personCreator(e), "Buyer Example", "buyer@acme.com", "manual")
+	store := contacts.NewStore(e.DB())
+	buyer, err := store.EnsureContactByEmail(contactCreator(e), "Buyer Example", "buyer@acme.com", "manual")
 	if err != nil {
 		t.Fatalf("seeding the attendee: %v", err)
 	}
@@ -171,14 +171,14 @@ func TestACapturedMeetingIsFiledUnderTheAttendeeWhoIsAContact(t *testing.T) {
 	linked, companies, audience, reason := meetingFiling(t, e, activity)
 
 	if len(linked) != 1 || linked[0] != buyer {
-		t.Fatalf("meeting filed under %v, want exactly the attendee %s — without a link the meeting reaches no company or person page",
+		t.Fatalf("meeting filed under %v, want exactly the attendee %s — without a link the meeting reaches no company or contact page",
 			linked, buyer)
 	}
 	// A meeting may never link straight to a company: the account is reached
 	// through the attendee's employment, and the DB trigger refuses the direct
 	// link outright.
 	if companies != 0 {
-		t.Errorf("meeting carries %d company links, want 0 — a meeting is a person's, and the company is reached through their employer", companies)
+		t.Errorf("meeting carries %d company links, want 0 — a meeting is a contact's, and the company is reached through their employer", companies)
 	}
 	if audience != "workspace" || reason != nil {
 		t.Errorf("meeting born audience=%q reason=%v, want workspace/nil — it was filed under a record, so it is not the link-less mail the limiter holds",
@@ -187,12 +187,12 @@ func TestACapturedMeetingIsFiledUnderTheAttendeeWhoIsAContact(t *testing.T) {
 }
 
 // Nobody has a record for the attendee, so there is nothing to file the meeting
-// under — and a meeting filed under nothing is HELD to the people on it. It
+// under — and a meeting filed under nothing is HELD to the contacts on it. It
 // arrived from one seat's calendar without anybody choosing to share it, and
 // reading a link-less row as a workspace-shared note published that seat's
 // private diary to every account in the installation.
 //
-// An invite is still not correspondence: this path must not create a person to
+// An invite is still not correspondence: this path must not create a contact to
 // have something to link.
 func TestACapturedMeetingWithNoKnownAttendeeIsHeldToItsParticipants(t *testing.T) {
 	e := integration.SetupSearch(t)
@@ -208,14 +208,14 @@ func TestACapturedMeetingWithNoKnownAttendeeIsHeldToItsParticipants(t *testing.T
 			"and a link-less calendar row read as workspace-shared is one seat's diary published to everybody",
 			audience, reason, activities.ReasonNoCounterparty)
 	}
-	var persons int
+	var contacts int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM person_email WHERE email = 'buyer@acme.com'`).Scan(&persons)
+			`SELECT count(*) FROM contact_email WHERE email = 'buyer@acme.com'`).Scan(&contacts)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if persons != 0 {
-		t.Errorf("the capture created %d records for an unknown attendee, want 0 — an invitation is not correspondence", persons)
+	if contacts != 0 {
+		t.Errorf("the capture created %d records for an unknown attendee, want 0 — an invitation is not correspondence", contacts)
 	}
 }

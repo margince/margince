@@ -23,7 +23,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -72,13 +72,13 @@ const (
 // rows come back, so their slice cannot be a top-N LIMIT.
 //
 // What the cap bounds is the rows RETURNED and the work done per row — the §4
-// fold in people.StrengthForPeople, which joins activity and activity_link per
+// fold in contacts.StrengthForContacts, which joins activity and activity_link per
 // contact, and every node this package then builds. Both used to grow with the
 // account.
 //
 // It does NOT bound the count: the headcount rides the same statement (see
 // readEmployment for why it must), and counting means reading one account's
-// employment rows through idx_rel_company_people. That cost is deliberate. An exact
+// employment rows through idx_rel_company_contacts. That cost is deliberate. An exact
 // dropped_count is the contract's promise — a truncated graph reporting no
 // count reads as the whole neighbourhood — and one index range scan per account
 // is what keeping it exact costs.
@@ -115,19 +115,19 @@ func (s *Service) Graph(ctx context.Context, companyID ids.CompanyID) (crmcontra
 	// The custom-field catalog is read above the transaction, not inside it:
 	// it opens one of its own, and this walk holds the only connection its
 	// groups have for as long as it runs.
-	active, err := s.people.ActiveCompanyColumns(ctx)
+	active, err := s.contacts.ActiveCompanyColumns(ctx)
 	if err != nil {
 		return crmcontracts.CompanyGraph{}, err
 	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		company, err := s.people.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
+		company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
 		if err != nil {
 			return err
 		}
 		g := &graphAssembly{
 			ctx: ctx, tx: tx, companyID: companyID, now: now, out: &out,
 			nodeIndex: map[ids.UUID]int{},
-			strengths: map[ids.PersonID]people.RelationshipStrength{},
+			strengths: map[ids.ContactID]contacts.RelationshipStrength{},
 		}
 		g.addNode(crmcontracts.CompanyGraphNode{
 			Id:      openapi_types.UUID(companyID.UUID),
@@ -146,13 +146,13 @@ func (s *Service) Graph(ctx context.Context, companyID ids.CompanyID) (crmcontra
 
 // graphAssembly is one graph's working state.
 //
-// It reads in two passes on purpose. Every person the graph touches is
+// It reads in two passes on purpose. Every contact the graph touches is
 // scored in ONE batch, and the score decides both the contact order and
-// which contact the warm-intro path routes through — so every person edge
+// which contact the warm-intro path routes through — so every contact edge
 // has to be known before any of them can be placed. Scoring per group would
 // mean two passes over the same §4 inputs and a route-in ranking taken over
 // a subset of the candidates the warm room ranks over, which is exactly how
-// the card would come to name a different person than the warm room.
+// the card would come to name a different contact than the warm room.
 type graphAssembly struct {
 	ctx       context.Context
 	tx        pgx.Tx
@@ -160,19 +160,19 @@ type graphAssembly struct {
 	now       time.Time
 	out       *crmcontracts.CompanyGraph
 
-	// nodeIndex maps a record id to its position in out.Nodes, so a person
+	// nodeIndex maps a record id to its position in out.Nodes, so a contact
 	// who is both an employee and a stakeholder is one node with two edges.
 	nodeIndex map[ids.UUID]int
 
-	employees []graphPersonEdge
+	employees []graphContactEdge
 	openDeals []graphDeal
 	seats     []graphSeat
 	routeIn   []signals.RouteInEdge
 	signalID  *ids.UUID
-	strengths map[ids.PersonID]people.RelationshipStrength
+	strengths map[ids.ContactID]contacts.RelationshipStrength
 
 	// Our side of the account: who owns it, and which colleagues have actually
-	// been in contact with its people.
+	// been in contact with its contacts.
 	accountOwner *graphUser
 	ourSide      []ourSideEdge
 
@@ -189,12 +189,12 @@ type graphAssembly struct {
 	ourSideTotal int
 }
 
-// graphPersonEdge is one employment edge: who, and what they do here.
-type graphPersonEdge struct {
-	personID ids.PersonID
-	fullName string
-	title    *string
-	role     *string
+// graphContactEdge is one employment edge: who, and what they do here.
+type graphContactEdge struct {
+	contactID ids.ContactID
+	fullName  string
+	title     *string
+	role      *string
 }
 
 // graphDeal is one open deal of the account, with the figure it is ordered by.
@@ -205,11 +205,11 @@ type graphDeal struct {
 	amountMinor *int64
 }
 
-// graphSeat is one stakeholder seat: a person on one of the account's deals.
+// graphSeat is one stakeholder seat: a contact on one of the account's deals.
 type graphSeat struct {
-	dealID ids.UUID
-	person graphPersonEdge
-	role   *string
+	dealID  ids.UUID
+	contact graphContactEdge
+	role    *string
 }
 
 // graphUser is one member of THIS workspace — someone on our side of the
@@ -220,10 +220,10 @@ type graphUser struct {
 }
 
 // ourSideEdge is one colleague's recorded contact with one of the account's
-// people: who on our side, and whom they were in touch with.
+// contacts: who on our side, and whom they were in touch with.
 type ourSideEdge struct {
-	user     graphUser
-	personID ids.UUID
+	user      graphUser
+	contactID ids.UUID
 	// strength is this colleague's own relationship with this contact
 	// (PO-F-3b), computed at read from the projection's exact counts. It is
 	// per (colleague, contact) and NOT the contact's workspace-wide score:
@@ -232,7 +232,7 @@ type ourSideEdge struct {
 	strength relstrength.Score
 }
 
-// build reads the account's own groups, scores the people once, places them,
+// build reads the account's own groups, scores the contacts once, places them,
 // and only then reads our side of the account against the contacts it placed.
 //
 // Every gate is asked inside the read it belongs to, so the order below decides
@@ -257,7 +257,7 @@ func (g *graphAssembly) build() error {
 	if err != nil {
 		return err
 	}
-	if err := g.scorePeople(); err != nil {
+	if err := g.scoreContacts(); err != nil {
 		return err
 	}
 	g.placeContacts()
@@ -268,7 +268,7 @@ func (g *graphAssembly) build() error {
 	// against the contacts merely READ, the cap could spend a slot on a
 	// colleague whose only contact the contact cap then dropped, and
 	// placeOurSide would discard them again — leaving our_side and its
-	// dropped_count describing people the graph does not show.
+	// dropped_count describing contacts the graph does not show.
 	if err := g.group(graphGroupOurSide, g.readOurSide); err != nil {
 		return err
 	}

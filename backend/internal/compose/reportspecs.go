@@ -288,7 +288,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldKind:          colKind,
 			fieldDirection:     colDirection,
 			fieldMeetingStatus: colMeetingStatus,
-			// The seat hosting the meeting — the one per-person handle the
+			// The seat hosting the meeting — the one per-contact handle the
 			// activity table itself carries, set exactly for meetings. Ungated
 			// like every owner_id filter in this catalog, for the same reason:
 			// it narrows WITHIN rows the caller's activity clause already

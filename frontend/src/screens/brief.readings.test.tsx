@@ -465,7 +465,7 @@ describe("the leads reading", () => {
 // period_start and period_end are date-only wire values. Read in the viewer's
 // own clock west of UTC they parse as UTC midnight and print the day before, so
 // a rep in Los Angeles saw the third quarter labelled "30 Jun – 29 Sept" while
-// a colleague in Berlin saw "1 Jul – 30 Sept" — two people quoting one page and
+// a colleague in Berlin saw "1 Jul – 30 Sept" — two contacts quoting one page and
 // quoting different quarters. The record's zone is the only answer that is the
 // same for both.
 describe("the pipeline period", () => {

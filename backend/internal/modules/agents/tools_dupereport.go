@@ -58,7 +58,7 @@ type DuplicateCandidate struct {
 // DuplicateEvidence is one axis two records met on.
 //
 // TYPED rather than a free map, and not only because a schema needs a shape:
-// this is what a caller reads out to a person before offering a merge, and the
+// this is what a caller reads out to a contact before offering a merge, and the
 // members it can rely on ought to be the ones the contract names. The stored
 // snapshot is written by this system in exactly these five keys.
 type DuplicateEvidence struct {
@@ -78,7 +78,7 @@ type DuplicateEvidence struct {
 
 // OpenDuplicatesFor answers the open candidates naming one record, or none.
 //
-// It is a seam rather than a call into the people module because agents may not
+// It is a seam rather than a call into the contacts module because agents may not
 // import it (see .go-arch-lint.yml) — and should not: the injected reader is
 // what keeps this surface unable to reach a record table on its own.
 type OpenDuplicatesFor func(ctx context.Context, recordType string, id ids.UUID) ([]DuplicateCandidate, error)
@@ -98,7 +98,7 @@ const (
 
 // duplicateWarning renders the human-readable half. It names the count and what
 // happens next, and deliberately does NOT say the record was rejected or
-// merged: it was neither. The record exists, and a person will decide.
+// merged: it was neither. The record exists, and a contact will decide.
 func duplicateWarning(n int) Warning {
 	subject := "A record already here looks like this one"
 	if n > 1 {

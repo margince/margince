@@ -25,10 +25,10 @@ const ERRORED = [
   {
     object: "company" as const,
     id: "01a04298-2000-7000-8000-000000000001",
-    reason: "A person still references this company.",
+    reason: "A contact still references this company.",
   },
   {
-    object: "person" as const,
+    object: "contact" as const,
     id: "01a04298-2000-7000-8000-000000000002",
     reason: "Edited since the import; left exactly as it stood.",
   },

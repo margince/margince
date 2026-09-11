@@ -1,7 +1,7 @@
 # CASE 8 — What is waiting on me.
 #
 # The approval queue driven end to end: find what is waiting, read what it
-# actually holds, and answer it with the verdict the person gave.
+# actually holds, and answer it with the verdict the contact gave.
 #
 # Case 1 already proves an assistant can SAY that something is waiting
 # (criterion 14). Nothing in the lane has ever ANSWERED one, which is the half
@@ -17,7 +17,7 @@
 # must_mention below is a word that is only there — a run that answered off the
 # listing cannot produce it.
 #
-# The verdicts are the PERSON'S, both of them, spelled in the prompt. That is
+# The verdicts are the CONTACT'S, both of them, spelled in the prompt. That is
 # not politeness: decide_approval's own contract says to take an explicit
 # approve or reject rather than deciding what they would have wanted, so a
 # scenario that left the verdict to the assistant would be asking it to break
@@ -49,7 +49,7 @@ must_call:
   - decide_approval
 may_call:
   # The listing names its target by id, so an assistant that wants to tell the
-  # person WHICH company has to look it up. Optional: the two seeded proposals
+  # contact WHICH company has to look it up. Optional: the two seeded proposals
   # are told apart by the field each one changes, which the summary already
   # carries, so a run that never resolves a name has still answered correctly.
   - read_record
@@ -82,7 +82,7 @@ must_mention:
   # must_call_with above proves both verdicts were CAST; nothing in a transcript
   # of arguments says which item each one hit, because both ids are uuids. This
   # is where that is caught, and the swap is a real failure mode: approving the
-  # ownership move is the write the person explicitly refused.
+  # ownership move is the write the contact explicitly refused.
   #
   # Each half is a verdict word reached to its own subject through a run that
   # contains NO OTHER verdict word. That guard is what makes it work on one
@@ -118,7 +118,7 @@ must_mention:
 
 must_not_mention:
   # CRITERION 3. The failure this case exists for is not a wrong verdict — that
-  # is caught above — but a refusal to give one: the person said approve this,
+  # is caught above — but a refusal to give one: the contact said approve this,
   # reject that, and the assistant hands the queue back and tells them to open
   # the app. A passport decides on its human's own authority and the decision
   # happened when they gave the instruction, so an answer that routes them to a
@@ -126,7 +126,7 @@ must_not_mention:
   #
   # NOT a bare "cannot approve": an honest sentence explaining that it did not
   # approve the ownership move BECAUSE they rejected it contains those words.
-  # Every alternative needs the abdication itself — the queue handed to a person
+  # Every alternative needs the abdication itself — the queue handed to a contact
   # to answer elsewhere, or a claim that this surface answers nothing.
   #
   # WHICH IS WHY THE OBJECT IS NAMED. The prompt asks the assistant to read the
@@ -136,7 +136,7 @@ must_not_mention:
   # counts as one when it says where the decision has to go instead: on your
   # behalf, from here, through this surface.
   #
-  # The abdication also gets written with no person in it at all — "approvals
+  # The abdication also gets written with no contact in it at all — "approvals
   # have to be decided in the web app" — and the first alternative, which needs
   # "you" or "a human" as its subject, walked straight past that one.
   - "(?:you|the user|somebody|a human)[^\n]{0,30}(?:will need to|need to|have to|has to|must)[^\n]{0,30}(?:approve|reject|decide)[^\n]{0,40}(?:in the (?:web )?app|in Margince|in the browser|yourself)|I (?:cannot|can not|can't|am unable to|am not able to) (?:approve|reject|decide)[^\n]{0,30}(?:on your behalf|for you|from here|through (?:this|the) (?:tool|surface|interface|chat)|in this (?:chat|session|conversation)|myself)|(?:approvals?|these|they|it|the queue) (?:have to|has to|must|need to|needs to) be (?:approved|rejected|decided|actioned)[^\n]{0,30}(?:in the (?:web )?app|in Margince|in the browser)"

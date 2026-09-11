@@ -117,16 +117,16 @@ func TestAnUnboundFeedSendsSubjectsUnnamed(t *testing.T) {
 // Every lane's subjects reach the pass — enumerated from the same answer the
 // wire carries, so a lane the pass skipped would fail here by existing.
 func TestEveryLanesSubjectsAreNamed(t *testing.T) {
-	person, deal := ids.NewV7(), ids.NewV7()
-	names := &stubNames{labels: map[ids.UUID]string{person: "Dana Weiss", deal: "Fleet retrofit GmbH"}}
+	contact, deal := ids.NewV7(), ids.NewV7()
+	names := &stubNames{labels: map[ids.UUID]string{contact: "Dana Weiss", deal: "Fleet retrofit GmbH"}}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{rows: []Commitment{{
-			ID: ids.NewV7(), PersonID: person, Body: "a promise", Quote: "q",
+			ID: ids.NewV7(), ContactID: contact, Body: "a promise", Quote: "q",
 			OccurredAt: readInstant, DueAt: readInstant,
 		}}},
 		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}},
-		&stubDecay{rows: []QuietRelationship{{PersonID: person, Name: "Dana Weiss", QuietDays: 63, LastAt: readInstant}}},
+		&stubDecay{rows: []QuietRelationship{{ContactID: contact, Name: "Dana Weiss", QuietDays: 63, LastAt: readInstant}}},
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
 	out, err := svc.Assemble(pageReader())

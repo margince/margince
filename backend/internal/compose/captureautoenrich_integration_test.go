@@ -22,7 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -36,7 +36,7 @@ func TestAutoEnrichLaneAppliesDirectlyInsteadOfStaging(t *testing.T) {
 	// The dossier is created system-requested (as the sweep does), and its
 	// cursor armed (MarkQueued) so the worker's terminal MarkResolved has a row.
 	adminCtx := e.As(e.Rep1, nil, integration.AdminPerms)
-	read, _, err := e.People.StartSiteRead(adminCtx, companyIDOf(company), seedURL, systemAutoEnrichActor)
+	read, _, err := e.Contacts.StartSiteRead(adminCtx, companyIDOf(company), seedURL, systemAutoEnrichActor)
 	if err != nil {
 		t.Fatalf("StartSiteRead: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestAutoEnrichStoreEligibilityAndCap(t *testing.T) {
 	store := capture.NewAutoEnrichStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	// How the company was NAMED no longer decides: a person creating one is
+	// How the company was NAMED no longer decides: a contact creating one is
 	// usually the moment they want the dossier, and the old name_source='domain'
 	// rule had made this lane inert anyway (every company in the demo workspace is
 	// human-named). What still excludes a company is having a dossier already.
@@ -113,7 +113,7 @@ func TestAutoEnrichStoreEligibilityAndCap(t *testing.T) {
 	insertDomainCompany(t, e, "acme.example")
 	insertCompany(t, e, e.Rep1, "human.example", "") // name_source='human' — now DUE
 	// Give due1 a completed site read so it is excluded (already enriched).
-	if _, _, err := e.People.StartSiteRead(ctx, due1, "https://gitex.com", "human:"+e.Rep1.String()); err != nil {
+	if _, _, err := e.Contacts.StartSiteRead(ctx, due1, "https://gitex.com", "human:"+e.Rep1.String()); err != nil {
 		t.Fatalf("seed dossier: %v", err)
 	}
 
@@ -152,14 +152,14 @@ func TestAutoEnrichStoreEligibilityAndCap(t *testing.T) {
 func runReadTo(t *testing.T, e *integration.Env, companyID ids.CompanyID, seedURL, status string) {
 	t.Helper()
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	read, _, err := e.People.StartSiteRead(ctx, companyID, seedURL, systemAutoEnrichActor)
+	read, _, err := e.Contacts.StartSiteRead(ctx, companyID, seedURL, systemAutoEnrichActor)
 	if err != nil {
 		t.Fatalf("start the read: %v", err)
 	}
-	if _, err := e.People.BeginSiteRead(ctx, read.ID, time.Minute); err != nil {
+	if _, err := e.Contacts.BeginSiteRead(ctx, read.ID, time.Minute); err != nil {
 		t.Fatalf("claim the read: %v", err)
 	}
-	if err := e.People.FinishSiteRead(ctx, read.ID, people.FinishSiteReadInput{Status: status}); err != nil {
+	if err := e.Contacts.FinishSiteRead(ctx, read.ID, contacts.FinishSiteReadInput{Status: status}); err != nil {
 		t.Fatalf("report the read as %s: %v", status, err)
 	}
 }
@@ -177,7 +177,7 @@ func TestTheInstallationsOwnCompanyIsNeverSwept(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	website := "https://anchor.example"
-	if _, err := e.People.SaveCompany(ctx, people.SaveCompanyInput{
+	if _, err := e.Contacts.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Anchor", Website: &website,
 	}); err != nil {
 		t.Fatalf("describe the installation's own company: %v", err)
@@ -301,7 +301,7 @@ func TestTheOldestCompanyIsSweptFirstSoNoneWaitsForever(t *testing.T) {
 	// dossier it leaves, and the next pass takes the one behind it rather than
 	// the same row again. Without this the ordering above would be a queue that
 	// never advances.
-	if _, _, err := e.People.StartSiteRead(ctx, oldest, "https://waiting.example",
+	if _, _, err := e.Contacts.StartSiteRead(ctx, oldest, "https://waiting.example",
 		"human:"+e.Rep1.String()); err != nil {
 		t.Fatalf("seed the oldest company's dossier: %v", err)
 	}

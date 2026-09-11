@@ -19,11 +19,11 @@ func TestTheBuyingRoleReadReAsksThroughItsOwnParse(t *testing.T) {
 		// Valid JSON, refused by proposeroles.Parse alone: the site requires a
 		// proposals key and this reply carries a different one.
 		First: `{"roles":[]}`,
-		Second: `{"proposals":[{"person_id":"p-1","role":"economic_buyer",` +
+		Second: `{"proposals":[{"contact_id":"p-1","role":"economic_buyer",` +
 			`"evidence_snippet":"I sign off on this budget.","source_id":"m-1","confidence":0.8}]}`,
 	}
 	proposals, err := readProposals(t.Context(), lane, "Nordwind", []proposeroles.Candidate{
-		{PersonID: "p-1", FullName: "Sofia Brandt", Title: "CFO"},
+		{ContactID: "p-1", FullName: "Sofia Brandt", Title: "CFO"},
 	})
 	if err != nil {
 		t.Fatalf("reading: %v", err)

@@ -33,7 +33,7 @@ import (
 )
 
 // runnerFixture is the runner store plus the consumer that projects what it
-// announces, and one passport bound to a real person.
+// announces, and one passport bound to a real contact.
 type runnerFixture struct {
 	env       *Env
 	runs      *runner.Store
@@ -102,7 +102,7 @@ func (f *runnerFixture) drain(t *testing.T) {
 	}
 }
 
-// feed reads the passport owner's own view, as that person, with the day
+// feed reads the passport owner's own view, as that contact, with the day
 // boundary taken from the database that stamped the rows.
 // dbNow is the clock this suite measures and schedules against — the same one
 // that stamps the rows it asserts about.
@@ -132,7 +132,7 @@ func (f *runnerFixture) feed(t *testing.T) (live, settled []aiactivity.Item) {
 
 // A scheduled run reaches the rail through the projection, attributed to the
 // human its passport acts for — not to whoever happened to run the scheduler.
-func TestAScheduledRunReachesTheFeedAsItsOwnPersonsWork(t *testing.T) {
+func TestAScheduledRunReachesTheFeedAsItsOwnContactsWork(t *testing.T) {
 	f := newRunnerFixture(t)
 	ctx := f.env.AgentCtxWithPassport(f.passport.UUID)
 

@@ -7,7 +7,7 @@ package identity
 //
 // Distinct from the installation's base language in both what it governs and
 // who may set it. `installation.base_language` is what AI writes in when the
-// whole team reads the result, and it is admin/ops. This is what ONE person's
+// whole team reads the result, and it is admin/ops. This is what ONE contact's
 // interface is rendered in, it is theirs alone, and no seat — including admin —
 // sets it for somebody else through this API.
 //
@@ -46,7 +46,7 @@ const localeField = "locale"
 func (s *Service) SaveMyLocale(ctx context.Context, locale string) (Seat, error) {
 	// Deliberately NOT actingHuman: that resolves the human an agent is acting
 	// UNDER, which is right for attributing work and wrong here. A display
-	// language is a preference about a person's own screen, and an agent
+	// language is a preference about a contact's own screen, and an agent
 	// carrying its grantor's authority must not change what its grantor reads.
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {

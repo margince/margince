@@ -177,10 +177,10 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 			name: "a CTE that updates two tables",
 			statement: `WITH target AS (SELECT id FROM activity WHERE id = ANY($1) FOR UPDATE), ` +
 				`stripped AS (UPDATE activity a SET subject = NULL, updated_at = now() FROM target t WHERE a.id = t.id) ` +
-				`UPDATE activity_link SET person_id = NULL WHERE activity_id = ANY($1)`,
+				`UPDATE activity_link SET contact_id = NULL WHERE activity_id = ANY($1)`,
 			writes: map[string][]string{
 				"activity":      {"subject", "updated_at"},
-				"activity_link": {"person_id"},
+				"activity_link": {"contact_id"},
 			},
 		}, {
 			// The CAS the same statements are REQUIRED to carry

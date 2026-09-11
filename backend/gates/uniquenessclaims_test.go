@@ -30,7 +30,7 @@ package gates
 // a file for some other reason, months later.
 //
 // The class is broader than prose, and the sharpest example is one rung more
-// concrete: an e2e spec asserted the relink search box reads "Person,
+// concrete: an e2e spec asserted the relink search box reads "Contact,
 // Firma, Deal, Lead oder Projekt suchen". Projects joined the searchable
 // kinds, the string grew a fifth, and nothing derived either the sentence or
 // the spec's copy of it from the set they both describe. It surfaced five
@@ -589,7 +589,7 @@ func TestTheRegisterIsSortedAndFreeOfDuplicates(t *testing.T) {
 			t.Errorf("%s is registered twice — one debt, one line", key)
 		}
 		seen[key] = true
-		// Sorted, so a diff of this file is readable and two people adding the
+		// Sorted, so a diff of this file is readable and two authors adding the
 		// last removals never conflict on the same line for no reason.
 		if i > 0 && keys[i-1] > key {
 			t.Errorf("the register is out of order at line %d: %q sorts before %q", i+1, key, keys[i-1])
@@ -717,7 +717,7 @@ func TestAHyphenatedModifierIsNotAClaimAndDoesNotHideTheClaimBesideIt(t *testing
 		t.Fatal("the only-noun shape is gone, so the cases below prove nothing about it")
 	}
 	compounds := []string{
-		"letting a bare status edit set them lets a lead:update-only caller skip the person mint",
+		"letting a bare status edit set them lets a lead:update-only caller skip the contact mint",
 		"a Go-only definition of live would drift from the config layer the product reads",
 		"the empty single-row read, through a stdlib-only implementation",
 		"that is the defect the old body-only reader had in mirroring",

@@ -22,7 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -77,11 +77,11 @@ func relinkBatchWire(out activities.RelinkBatchResult) agents.RelinkBatchResult 
 	return agents.RelinkBatchResult{Relinked: out.Relinked}
 }
 
-type leadDisqualifier struct{ store *people.Store }
+type leadDisqualifier struct{ store *contacts.Store }
 
 func (l leadDisqualifier) DisqualifyLead(ctx context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error) {
-	out, err := l.store.DisqualifyLead(ctx, ids.From[ids.LeadKind](id), people.DisqualifyLeadInput{},
-		people.OnlyAtVersion(ifVersion))
+	out, err := l.store.DisqualifyLead(ctx, ids.From[ids.LeadKind](id), contacts.DisqualifyLeadInput{},
+		contacts.OnlyAtVersion(ifVersion))
 	if err != nil {
 		return nil, err
 	}
@@ -166,17 +166,17 @@ func (c companyEnricher) EnrichCompany(
 
 // lifecycleSeams builds the three adapters over one pool.
 func lifecycleSeams(pool *pgxpool.Pool) (activityRelinker, leadDisqualifier, leadDemoter, projectPhaseAdvancer) {
-	peopleStore := people.NewStore(InstallationDB(pool))
+	contactsStore := contacts.NewStore(InstallationDB(pool))
 	return activityRelinker{store: activities.NewStore(InstallationDB(pool))},
-		leadDisqualifier{store: peopleStore},
-		leadDemoter{store: peopleStore},
+		leadDisqualifier{store: contactsStore},
+		leadDemoter{store: contactsStore},
 		projectPhaseAdvancer{store: ProjectsStore(pool)}
 }
 
 // leadDemoter is the tool door's reach onto the reversal the REST handler
 // calls, and it hands the module's own answer through untouched — the shape
 // DemoteLeadResult declares a subset of.
-type leadDemoter struct{ store *people.Store }
+type leadDemoter struct{ store *contacts.Store }
 
 func (l leadDemoter) DemoteLead(ctx context.Context, id ids.UUID, reason string) (json.RawMessage, error) {
 	out, err := l.store.DemoteLead(ctx, ids.From[ids.LeadKind](id), reason)

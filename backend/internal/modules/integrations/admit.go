@@ -54,7 +54,7 @@ func (s *Store) admit(ctx context.Context, tx pgx.Tx, name string, trigger provi
 	//
 	// Automatic work stays refused: nobody is watching it, and a sweep retrying
 	// a rate limit every minute is how a transient limit becomes a sustained
-	// one. A person pressing the button on a contact is the deliberate probe
+	// one. A contact pressing the button on a contact is the deliberate probe
 	// this needs — they chose to spend it, and their run is what heals the
 	// connection for everybody else.
 	statuses := []string{"connected"}
@@ -99,7 +99,7 @@ func (s *Store) admit(ctx context.Context, tx pgx.Tx, name string, trigger provi
 }
 
 // errTriggerNotAdmitted reports that the installation does not run automatic
-// lookups. It is not an error the caller shows anybody: the person.created
+// lookups. It is not an error the caller shows anybody: the contact.created
 // consumer swallows it, because a posture switched off is the configuration
 // working, not a failure.
 var errTriggerNotAdmitted = errors.New("integrations: automatic lookups are switched off for this installation")

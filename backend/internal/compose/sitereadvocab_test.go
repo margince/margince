@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // The offering and market guidance is the only thing that stops a customer
@@ -24,7 +24,7 @@ func TestMenuGuidanceKeepsTheCustomerStoryGuardOutOfThisCompanysOwnFacts(t *test
 		mustContain []string
 	}{
 		"offering": {
-			fields: []string{people.FactService},
+			fields: []string{contacts.FactService},
 			mustContain: []string{
 				"case study, testimonial or customer story",
 				"NAMED CUSTOMER, not this company",
@@ -33,7 +33,7 @@ func TestMenuGuidanceKeepsTheCustomerStoryGuardOutOfThisCompanysOwnFacts(t *test
 			},
 		},
 		"market": {
-			fields: []string{people.FactServedIndustry},
+			fields: []string{contacts.FactServedIndustry},
 			mustContain: []string{
 				"case study, testimonial or customer story names a customer's own",
 				"never a market this company serves",

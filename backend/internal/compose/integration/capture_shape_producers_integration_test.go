@@ -9,8 +9,8 @@ package integration
 //
 // This is a fitness test, not a feature test: it owns no behaviour of its own
 // and asserts nothing about what any producer concludes. It seeds ONE workspace
-// the way a connector does — mail filed against a PERSON, the account reachable
-// only through that person's employment, and no direct company link
+// the way a connector does — mail filed against a CONTACT, the account reachable
+// only through that contact's employment, and no direct company link
 // anywhere — and requires that each producer still finds the account.
 //
 // A fixture that hand-writes a link no connector emits proves the producer
@@ -72,7 +72,7 @@ func seedAccountAsCaptureWould(t *testing.T, e *Env) ids.UUID {
 // The deterministic producer reaches an account it can only see through
 // employment. It needs no model, so this half must work on an installation
 // that bought none.
-func TestTheGhostedRuleReachesAnAccountCaptureLinkedThroughAPerson(t *testing.T) {
+func TestTheGhostedRuleReachesAnAccountCaptureLinkedThroughAContact(t *testing.T) {
 	e := Setup(t)
 	company := seedAccountAsCaptureWould(t, e)
 
@@ -92,7 +92,7 @@ func TestTheGhostedRuleReachesAnAccountCaptureLinkedThroughAPerson(t *testing.T)
 // The model producer is offered the same conversation. What it concludes is
 // the model's business and no assertion is made about it — that the
 // conversation reaches the queue at all is the invariant under test.
-func TestTheExtractorIsOfferedAConversationCaptureLinkedThroughAPerson(t *testing.T) {
+func TestTheExtractorIsOfferedAConversationCaptureLinkedThroughAContact(t *testing.T) {
 	e := Setup(t)
 	seedAccountAsCaptureWould(t, e)
 
@@ -120,7 +120,7 @@ func TestTheExtractorIsOfferedAConversationCaptureLinkedThroughAPerson(t *testin
 // arms. A hand-spelled walk here would keep passing against whatever the arms
 // used to be, which is the failure this whole file exists to prevent, wearing
 // a test's clothes.
-func TestTheAccountTimelineCountsMailCaptureLinkedThroughAPerson(t *testing.T) {
+func TestTheAccountTimelineCountsMailCaptureLinkedThroughAContact(t *testing.T) {
 	e := Setup(t)
 	company := seedAccountAsCaptureWould(t, e)
 
@@ -145,7 +145,7 @@ func TestTheAccountTimelineCountsMailCaptureLinkedThroughAPerson(t *testing.T) {
 // still be one the whole workspace sees — that is the ordinary state of a
 // promoted account with unpromoted contacts — and the summary the model writes
 // about that conversation would then be readable by everyone while the
-// correspondence behind it is readable by one person. Capture privacy does not
+// correspondence behind it is readable by one contact. Capture privacy does not
 // yield to row_scope=all, so the summary must not either.
 func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 	e := Setup(t)
@@ -154,7 +154,7 @@ func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 	e.WsExec(t, `UPDATE company SET visibility = 'workspace', lifecycle = 'opportunity'
 		 WHERE id = $1`, company)
 	contact := employeeOf(t, e, company, "Ada Unpromoted")
-	e.WsExec(t, `UPDATE person SET visibility = 'owner', owner_id = $2 WHERE id = $1`,
+	e.WsExec(t, `UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`,
 		contact, e.Rep1)
 	notice := seedMessage(t, e, contact, "thread-private", "Renewal for 2027",
 		"We have decided not to renew.", "inbound", captureShapeClock.Add(-48*time.Hour))
@@ -189,7 +189,7 @@ func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 	// cannot read a finding drawn from mail that is not theirs.
 	if kinds := openSignalKindsAs(t, e, e.Rep2, company); len(kinds) != 0 {
 		t.Fatalf("a colleague reads %v on the shared account, want nothing drawn "+
-			"from another person's private mail", kinds)
+			"from another contact's private mail", kinds)
 	}
 	if kinds := openSignalKindsAs(t, e, e.Rep1, company); len(kinds) != 1 {
 		t.Fatalf("the owner reads %v, want the finding from their own correspondence", kinds)
@@ -234,7 +234,7 @@ func TestTheGhostedRuleIsSharedAndQuotesNothing(t *testing.T) {
 // read at all — and the state it needs can no longer be built.
 //
 // The visibility decision had two answers and a gap between them. "Shared" and
-// "private to this person" are both actionable; "private to nobody in
+// "private to this contact" are both actionable; "private to nobody in
 // particular" was not — and because a signal that names no owner IS a shared
 // signal, letting the gap fall through resolved it to the widest audience
 // available.
@@ -270,7 +270,7 @@ func TestAnAccountPrivateToNobodyInParticularCannotBeBuilt(t *testing.T) {
 //
 // An account can be capture-private too, and a message filed straight against
 // one is exactly as unshareable as a message filed against a private contact.
-// Reading the owner only off the person left this case answering to nobody,
+// Reading the owner only off the contact left this case answering to nobody,
 // which the row then rendered as shared.
 func TestAPrivateAccountSuppliesTheReaderItsOwnMailAnswersTo(t *testing.T) {
 	e := Setup(t)

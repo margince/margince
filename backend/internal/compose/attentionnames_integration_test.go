@@ -6,8 +6,8 @@
 package compose
 
 // attentionNames against real Postgres and the real row scope: a label is
-// exactly as visible as the record behind it. A person this reader may see
-// answers their name; a capture-private person owned by somebody else
+// exactly as visible as the record behind it. A contact this reader may see
+// answers their name; a capture-private contact owned by somebody else
 // answers absent — never an error, and never the name — because the label
 // pass must degrade a card, not disclose a record or empty a lane.
 
@@ -17,8 +17,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,7 +28,7 @@ import (
 func namesOver(e *integration.Env) attentionNames {
 	db := InstallationDB(e.Pool)
 	return attentionNames{
-		people:     people.NewStore(db),
+		contacts:   contacts.NewStore(db),
 		deals:      deals.NewStore(db, DealsInstallation()),
 		activities: activities.NewStore(db),
 		projects:   projects.NewStore(db),
@@ -39,9 +39,9 @@ func TestALabelIsExactlyAsVisibleAsItsRecord(t *testing.T) {
 	e := integration.Setup(t)
 	names := namesOver(e)
 
-	visible := e.SeedPerson(t, "Dana Weiss", nil)
-	private := e.SeedPerson(t, "Zeta Privatkontakt", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", private, e.Rep3)
+	visible := e.SeedContact(t, "Dana Weiss", nil)
+	private := e.SeedContact(t, "Zeta Privatkontakt", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
 
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
 
@@ -49,12 +49,12 @@ func TestALabelIsExactlyAsVisibleAsItsRecord(t *testing.T) {
 	// sharper test: the visible one must come back named and the private one
 	// must not, from the same query. A batch that answered per-set rather
 	// than per-row would either name both or name neither.
-	labels, err := names.Labels(reader, "person", []ids.UUID{visible, private})
+	labels, err := names.Labels(reader, "contact", []ids.UUID{visible, private})
 	if err != nil {
-		t.Fatalf("naming a page of people: %v", err)
+		t.Fatalf("naming a page of contacts: %v", err)
 	}
 	if labels[visible] != "Dana Weiss" {
-		t.Fatalf("label = %q, want the person's name — a resolver that cannot name a readable record makes every card anonymous", labels[visible])
+		t.Fatalf("label = %q, want the contact's name — a resolver that cannot name a readable record makes every card anonymous", labels[visible])
 	}
 	if label, named := labels[private]; named {
 		t.Fatalf("label = %q for another rep's capture-private contact — the label pass just disclosed a record the row scope hides", label)
@@ -67,15 +67,15 @@ func TestALabelIsExactlyAsVisibleAsItsRecord(t *testing.T) {
 func TestARecordWithNoNameIsAbsentRatherThanBlank(t *testing.T) {
 	e := integration.Setup(t)
 	names := namesOver(e)
-	nameless := e.SeedPerson(t, "", nil)
+	nameless := e.SeedContact(t, "", nil)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
 
-	labels, err := names.Labels(reader, "person", []ids.UUID{nameless})
+	labels, err := names.Labels(reader, "contact", []ids.UUID{nameless})
 	if err != nil {
-		t.Fatalf("naming a nameless person: %v", err)
+		t.Fatalf("naming a nameless contact: %v", err)
 	}
 	if label, named := labels[nameless]; named {
-		t.Fatalf("label = %q for a person captured without a name, want absent", label)
+		t.Fatalf("label = %q for a contact captured without a name, want absent", label)
 	}
 }
 
@@ -86,7 +86,7 @@ func TestAnIdThatNamesNothingIsAbsentNotAnError(t *testing.T) {
 	names := namesOver(e)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
 
-	labels, err := names.Labels(reader, "person", []ids.UUID{ids.NewV7()})
+	labels, err := names.Labels(reader, "contact", []ids.UUID{ids.NewV7()})
 	if err != nil {
 		t.Fatalf("naming a record that does not exist: %v", err)
 	}
@@ -110,8 +110,8 @@ func TestAnUnknownSubjectTypeAnswersAbsentNotAGuess(t *testing.T) {
 func TestTheResolverHoldsNoAuthorityOfItsOwn(t *testing.T) {
 	e := integration.Setup(t)
 	names := namesOver(e)
-	person := e.SeedPerson(t, "Dana Weiss", nil)
-	labels, err := names.Labels(context.Background(), "person", []ids.UUID{person})
+	contact := e.SeedContact(t, "Dana Weiss", nil)
+	labels, err := names.Labels(context.Background(), "contact", []ids.UUID{contact})
 	if err == nil && len(labels) > 0 {
 		t.Fatal("an unauthenticated ask was answered — the resolver carries authority its callers never granted")
 	}
@@ -273,12 +273,12 @@ func TestEveryShapesLabelsAgreeWithTheirOwnSingleRead(t *testing.T) {
 	})
 
 	t.Run("archived records are absent", func(t *testing.T) {
-		gone := e.SeedPerson(t, "Archived Contact", nil)
-		e.WsExec(t, `UPDATE person SET archived_at = now() WHERE id = $1`, gone)
+		gone := e.SeedContact(t, "Archived Contact", nil)
+		e.WsExec(t, `UPDATE contact SET archived_at = now() WHERE id = $1`, gone)
 
-		labels, err := names.Labels(reader, "person", []ids.UUID{gone})
+		labels, err := names.Labels(reader, "contact", []ids.UUID{gone})
 		if err != nil {
-			t.Fatalf("naming an archived person: %v", err)
+			t.Fatalf("naming an archived contact: %v", err)
 		}
 		if label, named := labels[gone]; named {
 			t.Fatalf("label = %q for an archived record — the batch names what every live read refuses", label)
@@ -294,7 +294,7 @@ func TestATypeWithNothingToNameAsksNothing(t *testing.T) {
 	names := namesOver(e)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
-	for _, kind := range []string{"person", "company", "deal", "activity", "lead", "project"} {
+	for _, kind := range []string{"contact", "company", "deal", "activity", "lead", "project"} {
 		labels, err := names.Labels(reader, kind, nil)
 		if err != nil {
 			t.Fatalf("naming an empty set of %s: %v", kind, err)
@@ -312,20 +312,20 @@ func TestATypeWithNothingToNameAsksNothing(t *testing.T) {
 func TestAnObjectGrantTheReaderLacksCostsOnlyItsLabels(t *testing.T) {
 	e := integration.Setup(t)
 	names := namesOver(e)
-	person := e.SeedPerson(t, "Dana Weiss", nil)
+	contact := e.SeedContact(t, "Dana Weiss", nil)
 
-	// A rep holding no person grant at all.
+	// A rep holding no contact grant at all.
 	ungranted := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects:  map[string]principal.ObjectGrant{"deal": {Read: true}},
 		RowScope: principal.RowScopeTeam,
 	})
 
-	labels, err := names.Labels(ungranted, "person", []ids.UUID{person})
+	labels, err := names.Labels(ungranted, "contact", []ids.UUID{contact})
 	if err != nil {
 		t.Fatalf("a missing grant must cost the labels, not fail the page: %v", err)
 	}
 	if len(labels) != 0 {
-		t.Fatalf("labels = %v for a reader with no person grant", labels)
+		t.Fatalf("labels = %v for a reader with no contact grant", labels)
 	}
 }

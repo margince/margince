@@ -21,17 +21,17 @@ func setupCollections(t *testing.T) (*apptest.AppEnv, string) {
 	t.Helper()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Collections E2E", "company@fable.test", "Admin")
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "List Target"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "List Target"}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
-	return e, person.ID
+	return e, contact.ID
 }
 
 func TestTagsLifecycleAndApplication(t *testing.T) {
-	e, personID := setupCollections(t)
+	e, contactID := setupCollections(t)
 
 	var tag struct {
 		ID string `json:"id"`
@@ -47,12 +47,12 @@ func TestTagsLifecycleAndApplication(t *testing.T) {
 	}
 
 	if status := e.Call(t, "POST", "/v1/tags/"+tag.ID+"/apply", AnyMap{
-		"entity_type": "person", "entity_id": personID,
+		"entity_type": "contact", "entity_id": contactID,
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("apply tag → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/tags/"+tag.ID+"/apply", AnyMap{
-		"entity_type": "person", "entity_id": personID,
+		"entity_type": "contact", "entity_id": contactID,
 	}, nil, nil); status != http.StatusConflict {
 		t.Fatalf("re-apply → %d, want 409", status)
 	}
@@ -62,7 +62,7 @@ func TestTagsLifecycleAndApplication(t *testing.T) {
 	}
 	// An archived tag reads as absent for new applications.
 	if status := e.Call(t, "POST", "/v1/tags/"+tag.ID+"/apply", AnyMap{
-		"entity_type": "person", "entity_id": personID,
+		"entity_type": "contact", "entity_id": contactID,
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("apply on archived tag → %d, want 404", status)
 	}

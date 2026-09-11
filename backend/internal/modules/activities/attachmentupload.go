@@ -110,7 +110,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 	if err != nil {
 		return crmcontracts.Attachment{}, err
 	}
-	// Refused HERE, where the person still has the file in front of them and can
+	// Refused HERE, where the contact still has the file in front of them and can
 	// pick the one they meant. A file with no content is not a limit one
 	// transport dislikes — no send path anywhere can do anything with it — and
 	// the counted size is the only honest witness: a declared length can

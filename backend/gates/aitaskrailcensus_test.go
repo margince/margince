@@ -7,7 +7,7 @@ package gates
 
 // Every AI task this build can run reports into the AI-activity projection.
 //
-// The rail's claim is that it says what the AI is doing for one person. A task
+// The rail's claim is that it says what the AI is doing for one contact. A task
 // that reports nothing is AI work the product performed and then denied — and
 // for seventeen of nineteen shipped tasks that was the state of the tree, with
 // every gate green. The gates in place could not see it: they compared the

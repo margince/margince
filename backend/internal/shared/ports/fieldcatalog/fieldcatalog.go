@@ -6,7 +6,7 @@
 // directly (ADR-0054 §3: "a module NEVER imports a sibling"). The
 // catalog engine (modules/customfields) owns the custom_field table and
 // implements Reader; compose injects the concrete Reader into
-// person/company/deal store constructors — a nil Reader is the
+// contact/company/deal store constructors — a nil Reader is the
 // zero-cost pass-through a store falls back to when the seam is unwired
 // (tests, or a deployment that never mounted the module).
 //

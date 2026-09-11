@@ -8,7 +8,7 @@ package integration
 // The merge/promote concurrency guarantees, against the real migrated
 // Postgres: the pair lock keeps a merge target live to commit, and the
 // lead row lock makes promotion once-only — a lost race answers a typed
-// conflict instead of minting a duplicate person or phantom events.
+// conflict instead of minting a duplicate contact or phantom events.
 // Races are exercised by genuinely concurrent store calls (goroutines
 // against the same rows); the assertions are on the invariants that
 // must hold regardless of which side wins.
@@ -18,12 +18,12 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestConcurrentPromotesMintExactlyOnePerson(t *testing.T) {
+func TestConcurrentPromotesMintExactlyOneContact(t *testing.T) {
 	e := Setup(t)
 	leadID := seedLead(t, e, "Racy Prospect", "racy@prospect.test", nil)
 
@@ -34,15 +34,15 @@ func TestConcurrentPromotesMintExactlyOnePerson(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _, errs[i] = e.People.PromoteLead(e.Admin(), leadID,
-				people.PromoteLeadInput{Trigger: "human_qualify"})
+			_, _, errs[i] = e.Contacts.PromoteLead(e.Admin(), leadID,
+				contacts.PromoteLeadInput{Trigger: "human_qualify"})
 		}()
 	}
 	wg.Wait()
 
 	wins, conflicts := 0, 0
 	for _, err := range errs {
-		var already *people.AlreadyPromotedError
+		var already *contacts.AlreadyPromotedError
 		switch {
 		case err == nil:
 			wins++
@@ -59,9 +59,9 @@ func TestConcurrentPromotesMintExactlyOnePerson(t *testing.T) {
 		t.Errorf("%d losers answered a conflict, want %d", conflicts, racers-1)
 	}
 
-	// One lead, one person — the duplicate-mint bug this guards against.
-	if n := e.WsCount(t, `SELECT count(*) FROM person WHERE converted_from_lead_id = $1`, leadID); n != 1 {
-		t.Errorf("%d persons carry the lead's origin pointer, want exactly 1", n)
+	// One lead, one contact — the duplicate-mint bug this guards against.
+	if n := e.WsCount(t, `SELECT count(*) FROM contact WHERE converted_from_lead_id = $1`, leadID); n != 1 {
+		t.Errorf("%d contacts carry the lead's origin pointer, want exactly 1", n)
 	}
 	// And exactly one lead.promoted event: the losing transaction must
 	// not have committed its phantom events.
@@ -74,39 +74,39 @@ func TestConcurrentMergesNeverStrandChildrenOnADeadRecord(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	mkPerson := func(name, email string) ids.PersonID {
+	mkContact := func(name, email string) ids.ContactID {
 		t.Helper()
-		p, err := e.People.CreatePerson(admin, people.CreatePersonInput{
+		p, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
 			FullName: name, Source: "manual",
-			Emails: []people.PersonEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+			Emails: []contacts.ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
 		})
 		if err != nil {
 			t.Fatalf("create %s: %v", name, err)
 		}
-		return PersonIDOf(ids.UUID(p.Id))
+		return ContactIDOf(ids.UUID(p.Id))
 	}
-	a := mkPerson("Person A", "a@merge-race.test")
-	b := mkPerson("Person B", "b@merge-race.test")
-	c := mkPerson("Person C", "c@merge-race.test")
+	a := mkContact("Contact A", "a@merge-race.test")
+	b := mkContact("Contact B", "b@merge-race.test")
+	c := mkContact("Contact C", "c@merge-race.test")
 
 	// merge(A→B) races merge(C→A): without the pair lock the second
 	// merge can relink C's children onto an A that the first archives
 	// mid-flight. Whichever order the locks serialize them into, no
-	// live child may end on an archived person and every redirect must
+	// live child may end on an archived contact and every redirect must
 	// land on a live row in one hop.
 	var wg sync.WaitGroup
 	var errAB, errCA error
 	wg.Add(2)
-	go func() { defer wg.Done(); _, errAB = e.People.MergePerson(e.Admin(), a, b) }()
-	go func() { defer wg.Done(); _, errCA = e.People.MergePerson(e.Admin(), c, a) }()
+	go func() { defer wg.Done(); _, errAB = e.Contacts.MergeContact(e.Admin(), a, b) }()
+	go func() { defer wg.Done(); _, errCA = e.Contacts.MergeContact(e.Admin(), c, a) }()
 	wg.Wait()
 
 	// merge(A→B) always has a live source or answers the merged
 	// conflict; merge(C→A) may lose to A's archival (a dead target is a
 	// refusal, never a partial write).
 	for name, err := range map[string]error{"merge A->B": errAB, "merge C->A": errCA} {
-		var already *people.AlreadyMergedError
-		var deadTarget *people.MergedTargetError
+		var already *contacts.AlreadyMergedError
+		var deadTarget *contacts.MergedTargetError
 		if err != nil && !errors.As(err, &already) && !errors.As(err, &deadTarget) &&
 			!errors.Is(err, apperrors.ErrConflict) && !errors.Is(err, apperrors.ErrNotFound) {
 			t.Errorf("%s: unexpected error class %v", name, err)
@@ -114,14 +114,14 @@ func TestConcurrentMergesNeverStrandChildrenOnADeadRecord(t *testing.T) {
 	}
 
 	if n := e.WsCount(t, `
-		SELECT count(*) FROM person_email pe
-		JOIN person p ON p.id = pe.person_id
+		SELECT count(*) FROM contact_email pe
+		JOIN contact p ON p.id = pe.contact_id
 		WHERE pe.archived_at IS NULL AND p.archived_at IS NOT NULL`); n != 0 {
-		t.Errorf("%d live emails point at archived persons — a merge stranded its relinked children", n)
+		t.Errorf("%d live emails point at archived contacts — a merge stranded its relinked children", n)
 	}
 	if n := e.WsCount(t, `
-		SELECT count(*) FROM person dead
-		JOIN person hop ON hop.id = dead.merged_into_id
+		SELECT count(*) FROM contact dead
+		JOIN contact hop ON hop.id = dead.merged_into_id
 		WHERE hop.archived_at IS NOT NULL`); n != 0 {
 		t.Errorf("%d merge redirects point at archived rows — the chain must stay one live hop", n)
 	}
@@ -131,31 +131,31 @@ func TestMergeWithdrawalCarriesAConsentProofEvent(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	src, err := e.People.CreatePerson(admin, people.CreatePersonInput{FullName: "Withdrawn Src", Source: "manual"})
+	src, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{FullName: "Withdrawn Src", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create source: %v", err)
 	}
-	tgt, err := e.People.CreatePerson(admin, people.CreatePersonInput{FullName: "Granted Tgt", Source: "manual"})
+	tgt, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{FullName: "Granted Tgt", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create target: %v", err)
 	}
-	srcID, tgtID := PersonIDOf(ids.UUID(src.Id)), PersonIDOf(ids.UUID(tgt.Id))
+	srcID, tgtID := ContactIDOf(ids.UUID(src.Id)), ContactIDOf(ids.UUID(tgt.Id))
 
 	purpose := ids.NewV7()
 	e.WsExec(t, `INSERT INTO consent_purpose (id, key, label) VALUES ($1, 'marketing_email', 'Marketing')`, purpose)
-	e.WsExec(t, `INSERT INTO person_consent (id, person_id, purpose_id, state) VALUES ($1, $2, $3, 'withdrawn')`, ids.NewV7(), srcID, purpose)
-	e.WsExec(t, `INSERT INTO person_consent (id, person_id, purpose_id, state) VALUES ($1, $2, $3, 'granted')`, ids.NewV7(), tgtID, purpose)
+	e.WsExec(t, `INSERT INTO contact_consent (id, contact_id, purpose_id, state) VALUES ($1, $2, $3, 'withdrawn')`, ids.NewV7(), srcID, purpose)
+	e.WsExec(t, `INSERT INTO contact_consent (id, contact_id, purpose_id, state) VALUES ($1, $2, $3, 'granted')`, ids.NewV7(), tgtID, purpose)
 
-	if _, err := e.People.MergePerson(admin, srcID, tgtID); err != nil {
+	if _, err := e.Contacts.MergeContact(admin, srcID, tgtID); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
 	// The survivor is withdrawn (A's withdrawal wins) AND the state
 	// change is proven: a paired consent_event names the transition.
-	if n := e.WsCount(t, `SELECT count(*) FROM person_consent WHERE person_id = $1 AND purpose_id = $2 AND state = 'withdrawn'`, tgtID, purpose); n != 1 {
+	if n := e.WsCount(t, `SELECT count(*) FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2 AND state = 'withdrawn'`, tgtID, purpose); n != 1 {
 		t.Fatalf("survivor withdrawn-consent rows = %d, want exactly 1", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM consent_event WHERE person_id = $1 AND purpose_id = $2 AND new_state = 'withdrawn' AND source = 'merge'`, tgtID, purpose); n != 1 {
+	if n := e.WsCount(t, `SELECT count(*) FROM consent_event WHERE contact_id = $1 AND purpose_id = $2 AND new_state = 'withdrawn' AND source = 'merge'`, tgtID, purpose); n != 1 {
 		t.Errorf("%d merge-sourced withdrawal proof events on the survivor, want exactly 1", n)
 	}
 }

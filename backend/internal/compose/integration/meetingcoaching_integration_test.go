@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seatUserInRoom seats one of OUR people in the meeting, as against
+// seatUserInRoom seats one of OUR contacts in the meeting, as against
 // seatInRoom's counterparty.
 func seatUserInRoom(t *testing.T, owner *pgx.Conn, activity, user ids.UUID) {
 	t.Helper()
@@ -55,10 +55,10 @@ func repPerms() principal.Permissions {
 func coachingRoom(t *testing.T, e *Env, seated ids.UUID) ids.UUID {
 	t.Helper()
 	owner := OwnerConn(t)
-	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, created_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Expansion review', $2, $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", attendee)
+	LinkActivity(t, owner, meeting, "contact", attendee)
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 	seatUserInRoom(t, owner, meeting, seated)
 	return meeting
@@ -98,7 +98,7 @@ func TestALeadReadingATeammatesMeetingIsCoached(t *testing.T) {
 // permissions and no reader-specific history — it agreed with itself.
 //
 // So this holds the claim that IS this file's to make, by reading twice as one
-// person: once with the coaching seam wired and once without.
+// contact: once with the coaching seam wired and once without.
 func TestCoachingAddsAnObjectAndChangesNothingElse(t *testing.T) {
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)

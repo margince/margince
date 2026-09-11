@@ -284,7 +284,7 @@ func nativeOnlyProject360(mode overlayModeChecker, read agents.Project360Reader)
 // the REST surface: `disqualify_lead` is a record write (overlayRecordWriteTools)
 // against a mirrored type (`lead`), and it has no overlayWriteVerbs entry, so
 // the provider cannot serve it and the native `lead` table is empty in overlay
-// mode. The tool reaches the people store directly — the same entry point the
+// mode. The tool reaches the contacts store directly — the same entry point the
 // route calls, which is the point — so nothing on that path passes the
 // middleware, and without this the tool would commit to the empty native table
 // while the route refused. A tool and its route are two transports onto one
@@ -315,7 +315,7 @@ func (g disqualifierGuard) DisqualifyLead(ctx context.Context, id ids.UUID, ifVe
 
 // nativeOnlyDemoter guards demote_lead, for the reason nativeOnlyDisqualifier
 // states about its own verb: the reversal writes the mirrored `lead` type
-// through the people store directly, which is the entry point the route calls
+// through the contacts store directly, which is the entry point the route calls
 // and therefore the one that passes no overlay middleware.
 func nativeOnlyDemoter(mode overlayModeChecker, demoter agents.LeadDemoter) demoterGuard {
 	return demoterGuard{mode: mode, inner: demoter}
@@ -338,7 +338,7 @@ func (g demoterGuard) DemoteLead(ctx context.Context, id ids.UUID, reason string
 }
 
 // nativeOnlyResolver guards resolve_entities. The match ladder reads the native
-// person and company tables, and an overlay workspace's records are not in
+// contact and company tables, and an overlay workspace's records are not in
 // them — so unguarded it would answer `unresolved` for every candidate. That is
 // the most damaging well-formed empty answer on this surface: `unresolved` is
 // the one decision that tells a caller creating a record is safe, so the tool

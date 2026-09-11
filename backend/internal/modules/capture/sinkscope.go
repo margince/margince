@@ -7,7 +7,7 @@ package capture
 //
 // deferAmbiguous asks WHETHER a sender should become a record at all: nothing is
 // created until the answer comes back. askWhoseRecord asks whose the record
-// already being created is, because capture mints every person owner-scoped and
+// already being created is, because capture mints every contact owner-scoped and
 // only a verdict can widen one.
 //
 // They share recordDisposition and differ in what a full queue costs, which is
@@ -34,7 +34,7 @@ import (
 // workspace announces that the founder has a lawyer.
 //
 // So the create tiers ask the same question the deferred tier does, and the
-// `person` verdict is what widens the row (people's promoteIfWorkspaceScoped).
+// `contact` verdict is what widens the row (contacts's promoteIfWorkspaceScoped).
 // Without this the T1 record stays the mailbox owner's forever: nothing else
 // promotes, and the strongest evidence a sender is a counterparty would produce
 // the most private record.
@@ -45,8 +45,8 @@ import (
 // one is absorbed by the ledger's live-row index.
 //
 // It deliberately does NOT key on "the ladder already knows this address". The
-// person the create is about makes their own address known — priorDispositionTx
-// reads a correspondence-backed person as `real` — so that condition is true
+// contact the create is about makes their own address known — priorDispositionTx
+// reads a correspondence-backed contact as `real` — so that condition is true
 // from the moment the record exists, and using it would cancel the question
 // rather than delay it whenever the ceiling refused the first one. The record
 // would then stay the mailbox owner's for good, which is the defect this whole
@@ -85,7 +85,7 @@ func askWhoseRecordTx(ctx context.Context, tx pgx.Tx, row dispositionRow) (bool,
 // dispositionAnswered reports whether the ledger holds a settled verdict for
 // this address — any terminal status, not only the ones that create a record.
 //
-// `advisor` is the reason this asks about the ROW rather than about the person's
+// `advisor` is the reason this asks about the ROW rather than about the contact's
 // visibility: that answer resolves to `real` and deliberately leaves the record
 // owner-scoped, so a check for "still owner-scoped" would re-ask it on every
 // later message and give the classifier repeated chances to overturn a decision

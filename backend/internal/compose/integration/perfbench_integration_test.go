@@ -52,9 +52,9 @@ import (
 // 250k–1M-contact band; the SLO binds at its floor.
 type benchTierSpec struct {
 	tier            search.BenchTier
-	persons         int
+	contacts        int
 	companies       int
-	bulkActivities  int // background timeline volume, linked cyclically to persons
+	bulkActivities  int // background timeline volume, linked cyclically to contacts
 	anchorTouches   int // activities on the measured graph anchor (the hot 360)
 	relationships   int
 	warmups, sample int
@@ -62,12 +62,12 @@ type benchTierSpec struct {
 
 var benchTiers = map[search.BenchTier]benchTierSpec{
 	search.BenchTierSMB: {
-		tier: search.BenchTierSMB, persons: 10_000, companies: 1_000,
+		tier: search.BenchTierSMB, contacts: 10_000, companies: 1_000,
 		bulkActivities: 20_000, anchorTouches: 200, relationships: 5_000,
 		warmups: 3, sample: 20,
 	},
 	search.BenchTierMidMarket: {
-		tier: search.BenchTierMidMarket, persons: 250_000, companies: 10_000,
+		tier: search.BenchTierMidMarket, contacts: 250_000, companies: 10_000,
 		bulkActivities: 500_000, anchorTouches: 500, relationships: 50_000,
 		warmups: 3, sample: 20,
 	},
@@ -240,7 +240,7 @@ func benchGraphQuery(t *testing.T, retriever *search.Retriever, actx context.Con
 	t.Helper()
 	stats, err := benchRuns(search.GraphQueryName, search.Perf7Budget, spec, func() error {
 		assembled, err := retriever.AssembleContext(actx,
-			datasource.EntityRef{Type: datasource.EntityPerson, ID: anchor},
+			datasource.EntityRef{Type: datasource.EntityContact, ID: anchor},
 			retrieval.AssembleOptions{MaxItems: 5})
 		if err != nil {
 			return err
@@ -282,7 +282,7 @@ func benchRuns(name string, budget time.Duration, spec benchTierSpec, run func()
 
 func benchAdminCtx(ws ids.UUID) context.Context {
 	grants := map[string]principal.ObjectGrant{}
-	for _, object := range []string{"person", "company", "deal", "lead", "activity"} {
+	for _, object := range []string{"contact", "company", "deal", "lead", "activity"} {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
@@ -294,7 +294,7 @@ func benchAdminCtx(ws ids.UUID) context.Context {
 
 // seedBenchTier bulk-loads one volume tier through the owner
 // connection (set-based inserts — the write shape has its own suites)
-// and returns the graph-anchor person the PERF-7 query measures.
+// and returns the graph-anchor contact the PERF-7 query measures.
 // benchExec runs one seeding statement through the owner connection,
 // failing with the tier it was sizing.
 func benchExec(t *testing.T, owner *pgx.Conn, tier search.BenchTier, sql string, args ...any) {
@@ -319,20 +319,20 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 
 	exec(`INSERT INTO workspace (id) VALUES ($1)`, ws)
 
-	// Every ~97th person carries the FTS token the canonical search
+	// Every ~97th contact carries the FTS token the canonical search
 	// query hits, so the query does real ranking work over a real
 	// selectivity, not a table scan of universal matches.
-	exec(`INSERT INTO person (full_name, source, captured_by)
-	      SELECT 'Person ' || i || CASE WHEN i % 97 = 0 THEN ' Hamburg' ELSE '' END, 'manual', 'human:bench'
-	      FROM generate_series(1, $1) AS i`, spec.persons)
+	exec(`INSERT INTO contact (full_name, source, captured_by)
+	      SELECT 'Contact ' || i || CASE WHEN i % 97 = 0 THEN ' Hamburg' ELSE '' END, 'manual', 'human:bench'
+	      FROM generate_series(1, $1) AS i`, spec.contacts)
 	exec(`INSERT INTO company (display_name, source, captured_by)
 	      SELECT 'Company ' || i || CASE WHEN i % 89 = 0 THEN ' Hamburg GmbH' ELSE '' END, 'manual', 'human:bench'
 	      FROM generate_series(1, $1) AS i`, spec.companies)
-	analyze(`person`)
+	analyze(`contact`)
 	analyze(`company`)
 
 	// Background timeline volume: activities linked cyclically across
-	// the person population — the activity_link fan the recursive walk
+	// the contact population — the activity_link fan the recursive walk
 	// competes with.
 	exec(`INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
 	      SELECT CASE WHEN i % 5 = 0 THEN 'task' ELSE 'email' END,
@@ -358,30 +358,30 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 	// sides' row_numbers forces the planner into a nested loop that is
 	// pathological at the mid-market tier.
 	exec(`WITH total AS (
-	        SELECT count(*) AS n FROM person
+	        SELECT count(*) AS n FROM contact
 	      ), numbered AS (
 	        SELECT id, (row_number() OVER (ORDER BY id) - 1) % (SELECT n FROM total) + 1 AS target_rn
 	        FROM activity
-	      ), people AS (
-	        SELECT id, row_number() OVER () AS rn FROM person
+	      ), contacts AS (
+	        SELECT id, row_number() OVER () AS rn FROM contact
 	      )
-	      INSERT INTO activity_link (activity_id, entity_type, person_id)
-	      SELECT n.id, 'person', p.id
-	      FROM numbered n JOIN people p ON p.rn = n.target_rn`)
+	      INSERT INTO activity_link (activity_id, entity_type, contact_id)
+	      SELECT n.id, 'contact', p.id
+	      FROM numbered n JOIN contacts p ON p.rn = n.target_rn`)
 	analyze(`activity_link`)
 
 	// Employment edges for the ADR-0021 edge-count evidence.
 	exec(`WITH total AS (
 	        SELECT count(*) AS n FROM company
-	      ), people AS (
+	      ), contacts AS (
 	        SELECT id, (row_number() OVER () - 1) % (SELECT n FROM total) + 1 AS target_rn
-	        FROM person LIMIT $1
+	        FROM contact LIMIT $1
 	      ), companies AS (
 	        SELECT id, row_number() OVER () AS rn FROM company
 	      )
-	      INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+	      INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 	      SELECT 'employment', p.id, o.id, 'manual', 'human:bench'
-	      FROM people p JOIN companies o ON o.rn = p.target_rn`, spec.relationships)
+	      FROM contacts p JOIN companies o ON o.rn = p.target_rn`, spec.relationships)
 	// The anchor's touches reach the employer through this table, so it is
 	// the last one the seeding triggers read unanalysed.
 	analyze(`relationship`)
@@ -390,25 +390,25 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 
 	// The anchor added rows to every table the measured queries read; the
 	// statistics they plan against are these, not the ones the seed ran on.
-	exec(`ANALYZE person, company, activity, activity_link, relationship`)
+	exec(`ANALYZE contact, company, activity, activity_link, relationship`)
 	return anchor
 }
 
-// seedBenchAnchor seeds the measured anchor: one person with a hot 360
+// seedBenchAnchor seeds the measured anchor: one contact with a hot 360
 // — touches linked to it AND to companies, so hop 2 has real
 // expansion work.
 func seedBenchAnchor(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpec) ids.UUID {
 	t.Helper()
 	var anchor ids.UUID
 	if err := owner.QueryRow(context.Background(),
-		`INSERT INTO person (full_name, source, captured_by)
+		`INSERT INTO contact (full_name, source, captured_by)
 		 VALUES ('Anchor Hamburg', 'manual', 'human:bench') RETURNING id`).Scan(&anchor); err != nil {
 		t.Fatalf("seeding anchor: %v", err)
 	}
 	benchExec(t, owner, spec.tier, `WITH act AS (
 	        INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
 	        -- 'note', not 'meeting': the rows below are filed straight against
-	        -- an account, and a meeting is with a person rather than with a
+	        -- an account, and a meeting is with a contact rather than with a
 	        -- company. The bench measures fan-out, which the kind does not
 	        -- change.
 	        SELECT CASE WHEN i % 4 = 0 THEN 'task' ELSE 'note' END,
@@ -422,8 +422,8 @@ func seedBenchAnchor(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierS
 	      ), numbered AS (
 	        SELECT id, (row_number() OVER () - 1) % (SELECT n FROM total) + 1 AS target_rn FROM act
 	      ), links AS (
-	        INSERT INTO activity_link (activity_id, entity_type, person_id)
-	        SELECT id, 'person', $1 FROM numbered
+	        INSERT INTO activity_link (activity_id, entity_type, contact_id)
+	        SELECT id, 'contact', $1 FROM numbered
 	        RETURNING activity_id
 	      ), companies AS (
 	        SELECT id, row_number() OVER () AS rn FROM company

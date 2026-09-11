@@ -14,7 +14,7 @@ package company360
 //   - a section the caller may not read is OMITTED and NAMED, never
 //     returned as an empty list that reads like "there is none";
 //   - the contact list, the meeting participants and the timeline each carry
-//     the caller's read scope (capture privacy on people and accounts), so the
+//     the caller's read scope (capture privacy on contacts and accounts), so the
 //     composite cannot become the side channel;
 //   - the visit baseline moves only through the explicit acknowledgment,
 //     monotonically, and per user.
@@ -36,8 +36,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -52,7 +52,7 @@ var company360Clock = time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 // company360Service builds the composite read over the harness pool with the
 // pinned clock.
 func company360Service(e *integration.Env) *company360svc.Service {
-	return company360svc.NewService(e.Pool, people.NewStore(e.DB()), e.Deals, e.Projects, approvals.NewService(e.DB()),
+	return company360svc.NewService(e.Pool, contacts.NewStore(e.DB()), e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return company360Clock })
 }
 
@@ -72,7 +72,7 @@ var company360NoDealPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"company":               {Read: true},
-		"person":                {Read: true},
+		"contact":               {Read: true},
 		"activity":              {Read: true},
 		"relationship":          {Read: true},
 		"installation_settings": {Read: true},
@@ -146,10 +146,10 @@ func TestCompany360ContactsCarryStrengthRolesAndConsent(t *testing.T) {
 	admin := e.Admin()
 
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
-	e.WsExec(t, `INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 		VALUES ($1, 'dana@acme.test', true, 'manual', 'human:x')`, contact)
 
 	// Two qualifying interactions inside the §4 window, one each way, so
@@ -157,21 +157,21 @@ func TestCompany360ContactsCarryStrengthRolesAndConsent(t *testing.T) {
 	for _, direction := range []string{"inbound", "outbound"} {
 		activity := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
 			VALUES ($1, 'email', 'terms', '2026-05-30T09:00:00Z', '`+direction+`', 'manual', 'human:x')`)
-		integration.LinkActivity(t, owner, activity, "person", contact)
+		integration.LinkActivity(t, owner, activity, "contact", contact)
 	}
 
 	purpose := seedConsentPurpose(t, owner, "marketing_email", "Marketing email")
-	e.WsExec(t, `INSERT INTO person_consent (person_id, purpose_id, state)
+	e.WsExec(t, `INSERT INTO contact_consent (contact_id, purpose_id, state)
 		VALUES ($1, $2, 'granted')`, contact, purpose)
 
 	view, err := svc.Assemble(admin, ids.From[ids.CompanyKind](company))
 	if err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
-	if view.People == nil || len(view.People.Data) != 1 {
-		t.Fatalf("people section = %+v, want exactly one contact", view.People)
+	if view.Contacts == nil || len(view.Contacts.Data) != 1 {
+		t.Fatalf("contacts section = %+v, want exactly one contact", view.Contacts)
 	}
-	card := view.People.Data[0]
+	card := view.Contacts.Data[0]
 	if card.FullName != "Dana Buyer" {
 		t.Errorf("contact full_name = %q, want Dana Buyer", card.FullName)
 	}
@@ -192,9 +192,9 @@ func TestCompany360ContactsCarryStrengthRolesAndConsent(t *testing.T) {
 	if view.Strength.ContactCount != 1 {
 		t.Errorf("strength contact_count = %d, want 1", view.Strength.ContactCount)
 	}
-	if view.Strength.ContributorPersonId == nil || ids.UUID(*view.Strength.ContributorPersonId) != contact {
-		t.Errorf("strength contributor_person_id = %v, want the account's one contact %v",
-			view.Strength.ContributorPersonId, contact)
+	if view.Strength.ContributorContactId == nil || ids.UUID(*view.Strength.ContributorContactId) != contact {
+		t.Errorf("strength contributor_contact_id = %v, want the account's one contact %v",
+			view.Strength.ContributorContactId, contact)
 	}
 	if view.Strength.Score != card.Strength.Score {
 		t.Errorf("account strength %d disagrees with its only contact's %d",
@@ -202,7 +202,7 @@ func TestCompany360ContactsCarryStrengthRolesAndConsent(t *testing.T) {
 	}
 }
 
-// A purpose the person has no row for must still appear, as unknown:
+// A purpose the contact has no row for must still appear, as unknown:
 // outbound is default-deny per purpose, and a missing key would let a
 // caller read absence as permission.
 func TestCompany360ConsentReportsEveryPurposeEvenWithoutARow(t *testing.T) {
@@ -211,8 +211,8 @@ func TestCompany360ConsentReportsEveryPurposeEvenWithoutARow(t *testing.T) {
 	svc := company360Service(e)
 
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	contact := e.SeedPerson(t, "Silent Contact", &e.Rep1)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+	contact := e.SeedContact(t, "Silent Contact", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
 	seedConsentPurpose(t, owner, "product_updates", "Product updates")
 
@@ -220,12 +220,12 @@ func TestCompany360ConsentReportsEveryPurposeEvenWithoutARow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
-	if view.People == nil || len(view.People.Data) != 1 {
-		t.Fatalf("people section = %+v, want exactly one contact", view.People)
+	if view.Contacts == nil || len(view.Contacts.Data) != 1 {
+		t.Fatalf("contacts section = %+v, want exactly one contact", view.Contacts)
 	}
-	got, present := view.People.Data[0].Consent["product_updates"]
+	got, present := view.Contacts.Data[0].Consent["product_updates"]
 	if !present {
-		t.Fatal("consent map omits a purpose the person has no row for — absence must not read as permission")
+		t.Fatal("consent map omits a purpose the contact has no row for — absence must not read as permission")
 	}
 	if got != crmcontracts.Company360ContactConsentUnknown {
 		t.Errorf("consent[product_updates] = %q, want unknown", got)
@@ -240,23 +240,23 @@ func TestCompany360ContactsHideACapturePrivateContact(t *testing.T) {
 	svc := company360Service(e)
 
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	mine := e.SeedPerson(t, "My Contact", &e.Rep1)
-	theirs := e.SeedPerson(t, "Their Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirs, e.Rep3)
-	for _, person := range []ids.UUID{mine, theirs} {
-		e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
-			VALUES ('employment', $1, $2, 'manual', 'human:x')`, person, company)
+	mine := e.SeedContact(t, "My Contact", &e.Rep1)
+	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
+	for _, contact := range []ids.UUID{mine, theirs} {
+		e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+			VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
 	}
 
 	view, err := svc.Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), ids.From[ids.CompanyKind](company))
 	if err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
-	if view.People == nil || len(view.People.Data) != 1 {
-		t.Fatalf("people section = %+v, want only the contact the caller can read", view.People)
+	if view.Contacts == nil || len(view.Contacts.Data) != 1 {
+		t.Fatalf("contacts section = %+v, want only the contact the caller can read", view.Contacts)
 	}
-	if ids.UUID(view.People.Data[0].PersonId) != mine {
-		t.Errorf("contact = %v, want the caller's own %v", view.People.Data[0].PersonId, mine)
+	if ids.UUID(view.Contacts.Data[0].ContactId) != mine {
+		t.Errorf("contact = %v, want the caller's own %v", view.Contacts.Data[0].ContactId, mine)
 	}
 	if view.Strength != nil && view.Strength.ContactCount != 1 {
 		t.Errorf("strength contact_count = %d, want 1 — the roll-up must not out-see the contact list",
@@ -318,15 +318,15 @@ func TestCompany360NextStepsNameALinkedDealOfAnotherTeam(t *testing.T) {
 	pipeline, stage, _ := integration.DealFixture(t, e)
 
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	mine := e.SeedPerson(t, "My Contact", &e.Rep1)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+	mine := e.SeedContact(t, "My Contact", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, mine, company)
 	theirDeal := e.SeedDeal(t, "Other team deal", pipeline, stage, &e.Rep3)
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, theirDeal, company)
 
 	task := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, is_done, source, captured_by)
 		VALUES ($1, 'task', 'Send the renewal paperwork', now(), false, 'manual', 'human:x')`)
-	integration.LinkActivity(t, owner, task, "person", mine)
+	integration.LinkActivity(t, owner, task, "contact", mine)
 	integration.LinkActivity(t, owner, task, "deal", theirDeal)
 
 	view, err := svc.Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), ids.From[ids.CompanyKind](company))
@@ -341,8 +341,8 @@ func TestCompany360NextStepsNameALinkedDealOfAnotherTeam(t *testing.T) {
 		t.Errorf("linked_deal_id = %v, want %v — deals are workspace-readable, so the other team's deal is named",
 			step.LinkedDealId, theirDeal)
 	}
-	if step.LinkedPersonId == nil || ids.UUID(*step.LinkedPersonId) != mine {
-		t.Errorf("linked_person_id = %v, want the visible contact %v", step.LinkedPersonId, mine)
+	if step.LinkedContactId == nil || ids.UUID(*step.LinkedContactId) != mine {
+		t.Errorf("linked_contact_id = %v, want the visible contact %v", step.LinkedContactId, mine)
 	}
 }
 
@@ -369,18 +369,18 @@ func TestCompany360NextMeetingSeparatesNoneFromWithheld(t *testing.T) {
 		t.Error("next_meeting was named as omitted while the caller holds the activity grant — that reads as 'hidden from you' for an account that simply has no meeting")
 	}
 
-	// A meeting reaches the account through the person who is in it — it cannot
+	// A meeting reaches the account through the contact who is in it — it cannot
 	// be filed against the company itself, which is not somebody you can meet.
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
 
 	// A meeting in the past is not the next one. Seeded before the future meeting
 	// so an ordering that ignored occurred_at would return this row.
 	past := seedMeeting(t, owner, e.WS, "Kickoff, already held", company360Clock.Add(-48*time.Hour))
-	integration.LinkActivity(t, owner, past, "person", contact)
+	integration.LinkActivity(t, owner, past, "contact", contact)
 	future := seedMeeting(t, owner, e.WS, "Renewal review", company360Clock.Add(72*time.Hour))
-	integration.LinkActivity(t, owner, future, "person", contact)
+	integration.LinkActivity(t, owner, future, "contact", contact)
 
 	view, err = svc.Assemble(granted, ids.From[ids.CompanyKind](company))
 	if err != nil {
@@ -415,7 +415,7 @@ func TestCompany360NextMeetingSeparatesNoneFromWithheld(t *testing.T) {
 
 // The meeting is reachable through a visible contact, so the caller may see
 // that it exists. Who ELSE was in the room is a separate question, answered per
-// person — otherwise the composite becomes the side channel that hands out a
+// contact — otherwise the composite becomes the side channel that hands out a
 // colleague's capture-private contacts.
 func TestCompany360NextMeetingParticipantsHideACapturePrivateContact(t *testing.T) {
 	e := integration.Setup(t)
@@ -423,26 +423,26 @@ func TestCompany360NextMeetingParticipantsHideACapturePrivateContact(t *testing.
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 
-	mine := e.SeedPerson(t, "My Contact", &e.Rep1)
-	theirs := e.SeedPerson(t, "Another Rep's Private Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirs, e.Rep3)
-	for _, person := range []ids.UUID{mine, theirs} {
-		e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
-			VALUES ('employment', $1, $2, 'manual', 'human:x')`, person, company)
+	mine := e.SeedContact(t, "My Contact", &e.Rep1)
+	theirs := e.SeedContact(t, "Another Rep's Private Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
+	for _, contact := range []ids.UUID{mine, theirs} {
+		e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+			VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
 	}
 
 	meeting := seedMeeting(t, owner, e.WS, "Renewal review", company360Clock.Add(24*time.Hour))
-	integration.LinkActivity(t, owner, meeting, "person", mine)
-	for _, person := range []ids.UUID{mine, theirs} {
-		e.WsExec(t, `INSERT INTO activity_participant (activity_id, person_id, role)
-			VALUES ($1, $2, 'attendee')`, meeting, person)
+	integration.LinkActivity(t, owner, meeting, "contact", mine)
+	for _, contact := range []ids.UUID{mine, theirs} {
+		e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'attendee')`, meeting, contact)
 	}
 	// The visible contact ALSO holds a second role. uq_activity_participant is
-	// unique on (activity, role, person), so one person legitimately has several
+	// unique on (activity, role, contact), so one contact legitimately has several
 	// rows on one meeting — a captured mail makes its sender both `from` and
-	// `attendee`. Without this the fixture has one row per person and cannot
+	// `attendee`. Without this the fixture has one row per contact and cannot
 	// tell a correct answer from one that lists somebody once per role.
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, person_id, role)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role)
 		VALUES ($1, $2, 'from')`, meeting, mine)
 
 	view, err := svc.Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), ids.From[ids.CompanyKind](company))
@@ -456,42 +456,42 @@ func TestCompany360NextMeetingParticipantsHideACapturePrivateContact(t *testing.
 		t.Fatalf("participants = %+v, want the one contact this caller can read, named once however many roles they hold",
 			view.NextMeeting.Participants)
 	}
-	if ids.UUID(view.NextMeeting.Participants[0].PersonId) != mine {
+	if ids.UUID(view.NextMeeting.Participants[0].ContactId) != mine {
 		t.Errorf("participants named %q — a meeting visible through one contact must not disclose a colleague's private contact",
 			view.NextMeeting.Participants[0].DisplayName)
 	}
 }
 
-// A meeting is an ACTIVITY fact; who is in the room is a fact about PEOPLE,
+// A meeting is an ACTIVITY fact; who is in the room is a fact about CONTACTS,
 // and the activity grant does not open it.
 //
 // The section's row-scope clause narrows WHICH attendees a caller sees, never
-// whether they may see people at all — auth.ScopeClauseFor returns no
+// whether they may see contacts at all — auth.ScopeClauseFor returns no
 // predicate whatsoever for an unbounded actor, so a scope clause on its own
-// admits everybody. A reader holding activity but not person was handed every
+// admits everybody. A reader holding activity but not contact was handed every
 // attendee's full name, and the account page now links each of those names to
-// the person's own record.
+// the contact's own record.
 //
 // The meeting itself stays readable: "a meeting is booked" is the activity
 // fact this caller does hold, so the attendee list comes back empty rather
 // than the whole section disappearing.
-func TestCompany360NextMeetingWithholdsAttendeesWithoutThePersonGrant(t *testing.T) {
+func TestCompany360NextMeetingWithholdsAttendeesWithoutTheContactGrant(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
 	meeting := seedMeeting(t, owner, e.WS, "Renewal review", company360Clock.Add(24*time.Hour))
 	// Through the contact who works there: the account arm of a meeting is the
 	// employment edge, never a direct link.
-	integration.LinkActivity(t, owner, meeting, "person", contact)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, person_id, role)
+	integration.LinkActivity(t, owner, meeting, "contact", contact)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role)
 		VALUES ($1, $2, 'attendee')`, meeting, contact)
 
-	noPeople := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+	noContacts := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"company":  {Read: true},
@@ -499,15 +499,15 @@ func TestCompany360NextMeetingWithholdsAttendeesWithoutThePersonGrant(t *testing
 		},
 		RowScope: principal.RowScopeTeam,
 	})
-	view, err := svc.Assemble(noPeople, ids.From[ids.CompanyKind](company))
+	view, err := svc.Assemble(noContacts, ids.From[ids.CompanyKind](company))
 	if err != nil {
-		t.Fatalf("assemble without the person grant: %v", err)
+		t.Fatalf("assemble without the contact grant: %v", err)
 	}
 	if view.NextMeeting == nil {
 		t.Fatal("next_meeting = null — the activity grant is held, so the booking itself is readable")
 	}
 	if len(view.NextMeeting.Participants) != 0 {
-		t.Errorf("participants = %+v, want none — this caller holds no person grant",
+		t.Errorf("participants = %+v, want none — this caller holds no contact grant",
 			view.NextMeeting.Participants)
 	}
 
@@ -517,13 +517,13 @@ func TestCompany360NextMeetingWithholdsAttendeesWithoutThePersonGrant(t *testing
 	granted := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	withNames, err := svc.Assemble(granted, ids.From[ids.CompanyKind](company))
 	if err != nil {
-		t.Fatalf("assemble with the person grant: %v", err)
+		t.Fatalf("assemble with the contact grant: %v", err)
 	}
 	if withNames.NextMeeting == nil || len(withNames.NextMeeting.Participants) != 1 {
-		t.Fatalf("next_meeting = %+v, want the one attendee for a caller who may read people",
+		t.Fatalf("next_meeting = %+v, want the one attendee for a caller who may read contacts",
 			withNames.NextMeeting)
 	}
-	if ids.UUID(withNames.NextMeeting.Participants[0].PersonId) != contact {
+	if ids.UUID(withNames.NextMeeting.Participants[0].ContactId) != contact {
 		t.Errorf("attendee = %q, want the account's contact",
 			withNames.NextMeeting.Participants[0].DisplayName)
 	}
@@ -550,16 +550,16 @@ func TestCompany360ContactRoutesSeparateUntriedFromCold(t *testing.T) {
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 
-	reached := e.SeedPerson(t, "Reached Contact", &e.Rep1)
-	untried := e.SeedPerson(t, "Untried Contact", &e.Rep1)
-	for _, person := range []ids.UUID{reached, untried} {
-		e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
-			VALUES ('employment', $1, $2, 'manual', 'human:x')`, person, company)
+	reached := e.SeedContact(t, "Reached Contact", &e.Rep1)
+	untried := e.SeedContact(t, "Untried Contact", &e.Rep1)
+	for _, contact := range []ids.UUID{reached, untried} {
+		e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+			VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
 	}
 	// One colleague has a real two-way exchange with the first contact. The
 	// second has none at all, which is the state under test.
 	e.WsExec(t, `INSERT INTO graph_interaction_edge
-			(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
+			(user_id, contact_id, last_at, count_90d, in_count_90d, out_count_90d)
 		VALUES ($1, $2, $3, 20, 10, 10)`,
 		e.Rep1, reached, company360Clock.Add(-24*time.Hour))
 
@@ -567,12 +567,12 @@ func TestCompany360ContactRoutesSeparateUntriedFromCold(t *testing.T) {
 	if err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
-	byPerson := map[ids.UUID]*crmcontracts.Company360ContactRoutes{}
-	for _, contact := range view.People.Data {
-		byPerson[ids.UUID(contact.PersonId)] = contact.Routes
+	byContact := map[ids.UUID]*crmcontracts.Company360ContactRoutes{}
+	for _, contact := range view.Contacts.Data {
+		byContact[ids.UUID(contact.ContactId)] = contact.Routes
 	}
 
-	got := byPerson[reached]
+	got := byContact[reached]
 	if got == nil || got.Untried {
 		t.Fatalf("routes for the reached contact = %+v, want a route and untried=false", got)
 	}
@@ -583,7 +583,7 @@ func TestCompany360ContactRoutesSeparateUntriedFromCold(t *testing.T) {
 		t.Errorf("remainder = %d, want 0 — one colleague has an edge and none is hidden", got.Remainder)
 	}
 
-	none := byPerson[untried]
+	none := byContact[untried]
 	if none == nil || !none.Untried {
 		t.Fatalf("routes for the untried contact = %+v, want untried=true", none)
 	}
@@ -592,15 +592,15 @@ func TestCompany360ContactRoutesSeparateUntriedFromCold(t *testing.T) {
 	}
 }
 
-// A forty-person team is the case the contact-centred shape exists for: the row
+// A forty-contact team is the case the contact-centred shape exists for: the row
 // names the few worth naming and counts the rest, rather than growing a column
 // per colleague.
 func TestCompany360ContactRoutesNameThreeAndCountTheRest(t *testing.T) {
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	contact := e.SeedPerson(t, "Popular Contact", &e.Rep1)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+	contact := e.SeedContact(t, "Popular Contact", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
 
 	// Eight colleagues, each stronger than the last, so the ordering is not the
@@ -614,7 +614,7 @@ func TestCompany360ContactRoutesNameThreeAndCountTheRest(t *testing.T) {
 		user := ids.NewV7()
 		e.WsExec(t, `INSERT INTO app_user (id, email, display_name, status) VALUES ($1, $2, $3, 'active')`, user, fmt.Sprintf("colleague%d@acme.test", i), fmt.Sprintf("Colleague %d", i))
 		e.WsExec(t, `INSERT INTO graph_interaction_edge
-				(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
+				(user_id, contact_id, last_at, count_90d, in_count_90d, out_count_90d)
 			VALUES ($1, $2, $3, $4, $5, $5)`,
 			user, contact, company360Clock.Add(-24*time.Hour), (i+1)*2, i+1)
 	}
@@ -623,12 +623,12 @@ func TestCompany360ContactRoutesNameThreeAndCountTheRest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
-	if len(view.People.Data) != 1 {
-		t.Fatalf("contacts = %d, want the one seeded", len(view.People.Data))
+	if len(view.Contacts.Data) != 1 {
+		t.Fatalf("contacts = %d, want the one seeded", len(view.Contacts.Data))
 	}
-	routes := view.People.Data[0].Routes
+	routes := view.Contacts.Data[0].Routes
 	if routes == nil {
-		t.Fatal("routes withheld from a caller holding the person grant")
+		t.Fatal("routes withheld from a caller holding the contact grant")
 	}
 	if len(routes.Top) != 3 {
 		t.Fatalf("top = %d colleagues, want 3 — a row names the few worth naming", len(routes.Top))
@@ -646,7 +646,7 @@ func TestCompany360ContactRoutesNameThreeAndCountTheRest(t *testing.T) {
 
 // A route is read out of graph_interaction_edge, and an edge is derived from an
 // activity — which is why the graph surface demands activity:read before it
-// touches the same table. The people section must not become the way around
+// touches the same table. The contacts section must not become the way around
 // that grant.
 //
 // The routes go ABSENT rather than empty. An empty set is an answer — "nobody
@@ -656,13 +656,13 @@ func TestCompany360OmitsRoutesWithoutTheActivityGrant(t *testing.T) {
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	person := e.SeedPerson(t, "Reached Contact", &e.Rep1)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
-		VALUES ('employment', $1, $2, 'manual', 'human:x')`, person, company)
+	contact := e.SeedContact(t, "Reached Contact", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
 	e.WsExec(t, `INSERT INTO graph_interaction_edge
-			(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
+			(user_id, contact_id, last_at, count_90d, in_count_90d, out_count_90d)
 		VALUES ($1, $2, $3, 20, 10, 10)`,
-		e.Rep1, person, company360Clock.Add(-24*time.Hour))
+		e.Rep1, contact, company360Clock.Add(-24*time.Hour))
 
 	// With the grant, the route is there — otherwise the case below could pass
 	// because the fixture produced no route at all.
@@ -671,7 +671,7 @@ func TestCompany360OmitsRoutesWithoutTheActivityGrant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("assemble with the activity grant: %v", err)
 	}
-	if len(full.People.Data) == 0 || full.People.Data[0].Routes == nil {
+	if len(full.Contacts.Data) == 0 || full.Contacts.Data[0].Routes == nil {
 		t.Fatal("no route with the activity grant — the fixture proves nothing about withholding one")
 	}
 
@@ -680,19 +680,19 @@ func TestCompany360OmitsRoutesWithoutTheActivityGrant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("assemble without the activity grant: %v", err)
 	}
-	if len(view.People.Data) == 0 {
-		t.Fatal("the people section is empty, so the routes claim below is vacuous")
+	if len(view.Contacts.Data) == 0 {
+		t.Fatal("the contacts section is empty, so the routes claim below is vacuous")
 	}
-	for _, contact := range view.People.Data {
+	for _, contact := range view.Contacts.Data {
 		if contact.Routes != nil {
-			t.Errorf("contact %s carries routes %+v without activity:read", contact.PersonId, contact.Routes)
+			t.Errorf("contact %s carries routes %+v without activity:read", contact.ContactId, contact.Routes)
 		}
 	}
 }
 
-// A reader who may see people and companies but not activities.
+// A reader who may see contacts and companies but not activities.
 //
-// It carries the relationship grant for the same reason it carries person:
+// It carries the relationship grant for the same reason it carries contact:
 // every seeded role holds it, and the ONE thing this fixture withholds is the
 // activity grant. Without it the roster would be withheld too and the test
 // would pass for the wrong reason.
@@ -700,7 +700,7 @@ var company360NoActivityPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"company":               {Read: true},
-		"person":                {Read: true},
+		"contact":               {Read: true},
 		"deal":                  {Read: true},
 		"relationship":          {Read: true},
 		"installation_settings": {Read: true},

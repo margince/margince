@@ -10,7 +10,7 @@ package integration
 //
 // The booking handler records consent and then books. CaptureBookingConsent
 // mints the marketing confirmation link as its last act, and any refusal there
-// returns from the handler before BookMeeting is ever reached — so a person
+// returns from the handler before BookMeeting is ever reached — so a contact
 // whose primary address was archived, or a purpose archived between the
 // operator's form being published and the booking being made, loses the slot.
 //
@@ -29,10 +29,10 @@ import (
 
 // TestABookingSurvivesAMarketingQuestionThatCannotBeAsked is the slice.
 //
-// The failure is forced through a person carrying no LIVE address. That state
-// is ordinary rather than contrived: the ensure resolves an existing person by
+// The failure is forced through a contact carrying no LIVE address. That state
+// is ordinary rather than contrived: the ensure resolves an existing contact by
 // any address they hold, including an archived one, and the mint posts to their
-// live primary — which a person whose address was corrected no longer has under
+// live primary — which a contact whose address was corrected no longer has under
 // the old spelling.
 func TestABookingSurvivesAMarketingQuestionThatCannotBeAsked(t *testing.T) {
 	e := apptest.SetupApp(t)
@@ -45,16 +45,16 @@ func TestABookingSurvivesAMarketingQuestionThatCannotBeAsked(t *testing.T) {
 	// A booker whose only address is archived: the ensure will find them, and
 	// the mint will have no live mailbox to post the question to.
 	const address = "archived@visitor.example"
-	var personID string
+	var contactID string
 	if err := e.Owner.QueryRow(context.Background(), `
-		INSERT INTO person (full_name, source, captured_by)
+		INSERT INTO contact (full_name, source, captured_by)
 		VALUES ('Archie Archived', 'manual', 'human:x')
-		RETURNING id`).Scan(&personID); err != nil {
+		RETURNING id`).Scan(&contactID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by, archived_at)
-		VALUES ($1, $2, true, 'manual', 'human:x', now())`, personID, address); err != nil {
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by, archived_at)
+		VALUES ($1, $2, true, 'manual', 'human:x', now())`, contactID, address); err != nil {
 		t.Fatal(err)
 	}
 
@@ -106,9 +106,9 @@ func TestABookingSurvivesAMarketingQuestionThatCannotBeAsked(t *testing.T) {
 	// on, and it was recorded before the question was ever attempted.
 	var grants int
 	if err := e.Owner.QueryRow(context.Background(), `
-		SELECT count(*) FROM person_consent
-		 WHERE person_id = $1 AND purpose_id = $2 AND state = 'granted'`,
-		personID, transactional).Scan(&grants); err != nil {
+		SELECT count(*) FROM contact_consent
+		 WHERE contact_id = $1 AND purpose_id = $2 AND state = 'granted'`,
+		contactID, transactional).Scan(&grants); err != nil {
 		t.Fatal(err)
 	}
 	if grants != 1 {
@@ -156,13 +156,13 @@ func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
 		t.Fatalf("booking with a tick → %d, want 201", status)
 	}
 
-	personID := personIDByEmail(t, e, "stan@visitor.example")
+	contactID := contactIDByEmail(t, e, "stan@visitor.example")
 	var delivered int
 	if err := e.Owner.QueryRow(context.Background(), `
 		SELECT count(*) FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
 		  JOIN activity_link l ON l.activity_id = a.id
-		 WHERE l.person_id = $1`, personID).Scan(&delivered); err != nil {
+		 WHERE l.contact_id = $1`, contactID).Scan(&delivered); err != nil {
 		t.Fatal(err)
 	}
 

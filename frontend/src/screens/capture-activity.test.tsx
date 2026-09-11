@@ -371,7 +371,7 @@ describe("capture activity", () => {
     // still-waiting, so a tense in its label was a claim it could not support
     // and it read "Sent for a verdict" instead. The server now counts a judged
     // sender's message under the answer, so `deferred` IS the waiting — and the
-    // label a person opens this page for is the one it could not say before.
+    // label a human opens this page for is the one it could not say before.
     renderTab(
       windowBody({
         funnel: {
@@ -392,7 +392,7 @@ describe("capture activity", () => {
             reason: null,
             resolution: {
               status: "real",
-              kind: "person",
+              kind: "contact",
               resolved_at: "2026-08-15T09:13:00Z",
             },
           },
@@ -625,7 +625,7 @@ describe("capture activity", () => {
             reason: null,
             resolution: {
               status: "real",
-              kind: "person",
+              kind: "contact",
               resolved_at: "2026-08-15T09:13:00Z",
             },
           },

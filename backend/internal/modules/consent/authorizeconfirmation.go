@@ -30,9 +30,9 @@ import (
 // validateConfirmation answers a message that asks the subject to confirm
 // something — their details, or an opt-in they chose.
 //
-// The evidence is a confirm_token for THIS person, of the kind this category
+// The evidence is a confirm_token for THIS contact, of the kind this category
 // carries, still live. Live means unconsumed and unexpired, because a link that
-// can no longer be followed makes the mail a dead end for the person who gets
+// can no longer be followed makes the mail a dead end for the contact who gets
 // it.
 //
 // The basis is a legal obligation rather than consent, and that ordering
@@ -42,8 +42,8 @@ import (
 // consent cannot itself require consent, or no one could ever be asked.
 func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	if subject.Kind != entityPerson {
-		// Only a person holds a confirm_token: the table's foreign key says so.
+	if subject.Kind != entityContact {
+		// Only a contact holds a confirm_token: the table's foreign key says so.
 		// A lead has no link to show and therefore no confirmation to send.
 		return unsupported, nil
 	}
@@ -55,7 +55,7 @@ func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, ca
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		    SELECT 1 FROM confirm_token
-		    WHERE person_id = $1
+		    WHERE contact_id = $1
 		      AND kind = $2
 		      AND consumed_at IS NULL
 		      AND expires_at > now()

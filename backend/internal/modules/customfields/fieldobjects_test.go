@@ -30,8 +30,8 @@ import (
 // because carriage on only one half is the shape of the activity defect —
 // accepted on the way in, gone on the way out.
 var carriageShapes = map[string]struct{ create, read reflect.Type }{
-	string(datasource.EntityPerson): {
-		reflect.TypeFor[crmcontracts.CreatePersonRequest](), reflect.TypeFor[crmcontracts.Person](),
+	string(datasource.EntityContact): {
+		reflect.TypeFor[crmcontracts.CreateContactRequest](), reflect.TypeFor[crmcontracts.Contact](),
 	},
 	string(datasource.EntityCompany): {
 		reflect.TypeFor[crmcontracts.CreateCompanyRequest](), reflect.TypeFor[crmcontracts.Company](),

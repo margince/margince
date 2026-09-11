@@ -57,7 +57,7 @@ var claimShapes = map[string]*regexp.Regexp{
 	// The bare `two` alternative is deliberately NOT here. It matched any
 	// counting sentence — "the grace window is not two hours but three" — and a
 	// shape that reads a quantity as a uniqueness claim puts innocent prose in a
-	// closed register, which teaches people to write worse comments rather than
+	// closed register, which teaches contacts to write worse comments rather than
 	// fewer false claims.
 	//
 	// Measured cost: about twenty `not two <noun>` sites, most of them real
@@ -76,7 +76,7 @@ const namedShape = "is-every-named"
 // above cannot reach without swallowing ordinary English: a doc comment saying
 // the thing it documents is ALL of something.
 //
-//	readProfileFields is every read of person_profile_field that RENDERS it
+//	readProfileFields is every read of contact_profile_field that RENDERS it
 //	catalogFilterNames is every key a plan's `filters` object may carry
 //	ciGateTargets is every make target invoked by a job the required fan-in
 //
@@ -88,7 +88,7 @@ const namedShape = "is-every-named"
 // not name the declaration and then assert exhaustiveness about it.
 //
 // This shape is not optional politeness. The worked example the whole rule is
-// argued from — `readProfileFields is every read of person_profile_field` — is
+// argued from — `readProfileFields is every read of contact_profile_field` — is
 // lower-case, so a gate without this arm would be blind to the very claim its
 // own docblock cites.
 func namedExhaustiveness(decl string) *regexp.Regexp {
@@ -201,7 +201,7 @@ func compoundedQuantifier(text string, start, end int) bool {
 // "Flush is every bit as ordered as Write" documents a comparison and claims
 // nothing about a set, and the register is closed — so without this, an author
 // writing that innocent sentence has to delete it or invent a gate for it,
-// which is how a census teaches people to write worse comments. Two words,
+// which is how a census teaches contacts to write worse comments. Two words,
 // named as the idioms they are; Go's regexp has no negative lookahead, so the
 // exclusion is a check on the captured word rather than a hole in the pattern.
 func intensifier(word string) bool {

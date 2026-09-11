@@ -155,7 +155,7 @@ func insertTeamReps(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, reps []Te
 //
 // TWO QUESTIONS, and both have to be asked. The row scope says whether a team
 // snapshot is a question this reader may ask at all — an own-scoped reader
-// would get a page about people whose rows they cannot read. Membership says
+// would get a page about contacts whose rows they cannot read. Membership says
 // WHICH team, and without it a lead of one team reads any other team's week by
 // changing one query parameter, because the team id arrives from the request
 // and nothing else narrows the row.

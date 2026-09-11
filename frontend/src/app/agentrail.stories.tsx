@@ -261,7 +261,7 @@ const A_DAYS_WORK = [
   settled(47, {
     kind: "summarize",
     subject_label: "Ana Roth",
-    subject_type: "person",
+    subject_type: "contact",
     subject_id: "019f7e65-0000-7000-8000-0000000000b3",
   }),
   settled(190, { kind: "morning_brief" }),

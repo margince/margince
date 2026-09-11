@@ -22,7 +22,7 @@ import {
 import { ConfirmModal } from "../design-system/confirmmodal";
 // The rows here stay a real <ul>/<li>: they are a LIST of workspace users, and
 // PanelRow draws a <div>. A full-bleed row that costs a screen reader the list
-// semantics — how many people, which one of them this is — is a worse trade on
+// semantics — how many contacts, which one of them this is — is a worse trade on
 // this card than on a roster of unrelated panels.
 import { Panel, PanelBody } from "../design-system/panel";
 import {
@@ -214,8 +214,8 @@ type MappingActions = Readonly<{
 // on a phone.
 //
 // One instance, owned by the card, mounted only while a row is picking — so it
-// cannot carry one person's typed query or half-loaded candidate list onto the
-// next person's decision.
+// cannot carry one contact's typed query or half-loaded candidate list onto the
+// next contact's decision.
 function OwnerPickerModal({
   directory,
   actions,
@@ -633,7 +633,7 @@ export function MirrorUserMapCard() {
   const me = useMe();
   const meId = me.data?.user.id;
   // The LISTING is gated on update, not read: a mirror user map exposes the
-  // incumbent's directory — names and addresses of people who never consented
+  // incumbent's directory — names and addresses of contacts who never consented
   // to appear here — so the server demands the write grant merely to look
   // (overlay/usermapservice.go). Both queries below are gated on it for that
   // reason, not as a convenience.
@@ -782,7 +782,7 @@ export function MirrorUserMapCard() {
 
   // Every dialog open and close clears the previous attempt's failure. A
   // mutation error outlives the dialog it happened in, so without this the
-  // next row's picker — or the confirm for a different person — opens already
+  // next row's picker — or the confirm for a different contact — opens already
   // showing a refusal that was never about them.
   const actions: MappingActions = {
     canMap,

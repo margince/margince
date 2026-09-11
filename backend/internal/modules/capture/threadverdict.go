@@ -7,7 +7,7 @@ package capture
 // the answers that close it.
 //
 // Per seat, not per thread, for the reason capture_import exists: a thread
-// reaching two mailboxes is two people's correspondence, and each may conclude
+// reaching two mailboxes is two contacts's correspondence, and each may conclude
 // differently about it. The audience derivation takes the strictest.
 //
 // This is the WRITE side of what verdictinherit.go reads. That file states the
@@ -128,7 +128,7 @@ func (s *ThreadVerdictStore) EnsureTx(
 // row is re-opened by the next unseen sender either way, and a `cleared` answer
 // to that re-opened question maps straight to a workspace audience. The claim is
 // the one chokepoint every question passes through, whoever opened it, so the
-// promise the posture makes — held to the people on it, whatever any classifier
+// promise the posture makes — held to the contacts on it, whatever any classifier
 // concludes — is kept here rather than at each of the places a row is written.
 //
 // A row belonging to a mailbox that is no longer classified is left pending
@@ -341,7 +341,7 @@ func (s *ThreadVerdictStore) RetireExhausted(ctx context.Context, reason string)
 // stamped, and the thread re-opens pointing at it instead.
 //
 // Scoped to the seat whose verdict it is. A thread reaching two mailboxes is
-// two people's correspondence, each may conclude differently, and the
+// two contacts's correspondence, each may conclude differently, and the
 // derivation takes the strictest — so a stamp that ignored user_id would let
 // one seat's answer publish a message their colleague's mailbox is holding.
 //
@@ -403,7 +403,7 @@ func openConfidentialityQuestionTx(
 	// A message that INHERITED a verdict returns from the birth ladder before
 	// the posture is ever consulted, so birth.posture is empty for exactly the
 	// message a re-open is waiting for. Testing that empty field would open a
-	// question for an `always held` mailbox, whose mail stays with the people
+	// question for an `always held` mailbox, whose mail stays with the contacts
 	// on it whatever a classifier concludes — and a `cleared` answer publishes
 	// to the workspace, which is the one thing that posture promises will not
 	// happen.

@@ -15,7 +15,7 @@ package integration
 // had closed years earlier.
 //
 // raw_capture has no sweep of its own and cannot grow one usefully: the only
-// other purge is Art. 17 erasure, which is scoped to a PERSON, and a retention
+// other purge is Art. 17 erasure, which is scoped to a CONTACT, and a retention
 // window is scoped to time. So the sweep is the only thing that can age it out.
 //
 // Driven through compose.NewRetentionServiceFor rather than a service this test

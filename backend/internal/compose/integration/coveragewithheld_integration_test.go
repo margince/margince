@@ -9,7 +9,7 @@ package integration
 // that really does have a seat and really does carry a finding.
 //
 // The unit tests prove the refusal resolves before any statement. What only a
-// database can prove is the half that matters to a person: the SAME deal, read
+// database can prove is the half that matters to a contact: the SAME deal, read
 // by two callers who differ in one grant, comes back as a finding for one and as
 // a NAMED omission for the other — never as the clean verdict an empty risk list
 // renders as.
@@ -25,8 +25,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -38,7 +38,7 @@ import (
 func coverageReaderPerms(withEdge bool) principal.Permissions {
 	objects := map[string]principal.ObjectGrant{
 		"deal":     {Read: true},
-		"person":   {Read: true},
+		"contact":  {Read: true},
 		"company":  {Read: true},
 		"activity": {Read: true},
 	}
@@ -60,12 +60,12 @@ func TestCoverageIsWithheldRatherThanReportedCleanWithoutTheEdgeGrant(t *testing
 	// A champion whose employment has ENDED: a real finding on a real seat, so
 	// the withheld read is compared against something rather than against
 	// silence. The end date is in the past relative to the clock below.
-	gone := e.SeedPerson(t, "Departed Champion", nil)
-	personID := ids.From[ids.PersonKind](gone)
+	gone := e.SeedContact(t, "Departed Champion", nil)
+	contactID := ids.From[ids.ContactKind](gone)
 	started := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	ended := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
 		StartedAt: &started, EndedAt: &ended, Source: "manual",
 	}); err != nil {
 		t.Fatalf("recording the ended employment: %v", err)
@@ -81,8 +81,8 @@ func TestCoverageIsWithheldRatherThanReportedCleanWithoutTheEdgeGrant(t *testing
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(deal.Id))
 	champion := "champion"
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "deal_stakeholder", PersonID: &personID, DealID: &dealID,
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "deal_stakeholder", ContactID: &contactID, DealID: &dealID,
 		Role: &champion, Source: "manual",
 	}); err != nil {
 		t.Fatalf("seating the champion: %v", err)

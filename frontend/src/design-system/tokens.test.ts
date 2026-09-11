@@ -544,7 +544,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // pair. axe on the e2e routes caught two of the seventeen, which is what a
     // route sample can do: it sees the combinations those pages happened to
     // render. This derives the obligation from the palette instead, so the next
-    // person who retunes a ground finds out here rather than from a user.
+    // contact who retunes a ground finds out here rather than from a user.
     //
     // Only TEXT roles, and only against grounds they can actually sit on.
     // --textTertiary is deliberately not in the list: it is a decorative tone

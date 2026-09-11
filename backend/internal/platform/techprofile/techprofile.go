@@ -7,12 +7,12 @@
 //
 // It is pure: no network, no database, no clock. The lanes that gather the
 // observations live in platform/dnsread, platform/certlog and
-// platform/webread; the writing lives in the people module. This package is
+// platform/webread; the writing lives in the contacts module. This package is
 // the rules between them, which is what makes every rule table-testable
 // without a fixture.
 //
 // THE ALLOWLIST IS THE PRIVACY BOUNDARY. A certificate or a DNS record can
-// carry a person's name — an admin's, a developer's, whoever asked for the
+// carry a contact's name — an admin's, a developer's, whoever asked for the
 // certificate. Nothing here passes a name through: a hostname becomes a signal
 // only by matching a known service label, and everything else is dropped
 // rather than stored. That is why the whole feature stays outside personal-data
@@ -22,7 +22,7 @@ package techprofile
 import "strings"
 
 // Signal is one observation ready to be written: which field it belongs to,
-// the stable key that filters and comparisons use, the label a person reads,
+// the stable key that filters and comparisons use, the label a reader reads,
 // and the public record that proves it.
 type Signal struct {
 	Field string
@@ -134,7 +134,7 @@ const (
 //
 // The evidence names WHAT WAS FOUND rather than quoting the record, and that
 // is a privacy rule rather than brevity. A DMARC record routinely carries
-// `rua=mailto:someone@example.de`, which is a person's address; storing the
+// `rua=mailto:someone@example.de`, which is a contact's address; storing the
 // record verbatim would put it in a company fact, an audit row and a
 // installation-global cache, none of which the erasure path reaches. The
 // canonical marker is all a reader needs — the record itself is one DNS query
@@ -204,7 +204,7 @@ type dmarcLevel struct{ key, label, evidence string }
 //
 // It returns the POLICY and nothing else. The record is deliberately not
 // carried out of this function: everything after `p=` — the reporting
-// addresses in particular — is either irrelevant to the posture or a person's
+// addresses in particular — is either irrelevant to the posture or a contact's
 // email address.
 func dmarcPolicy(dmarcTXT []string) (dmarcLevel, bool) {
 	levels := map[string]dmarcLevel{

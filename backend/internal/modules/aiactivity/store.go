@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Actor scopes. 'personal' with a zero user means the person is GONE and the
+// Actor scopes. 'personal' with a zero user means the contact is GONE and the
 // occurrence is shown to nobody; 'workspace' means it belonged to nobody from
 // the start. Two facts, never one nullable column, because conflating them
 // relabels a leaver's work as a system sweep.

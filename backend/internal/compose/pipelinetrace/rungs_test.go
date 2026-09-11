@@ -55,7 +55,7 @@ func TestEveryAnsweringStageHasABranch(t *testing.T) {
 		row(trace.StageTierLadder, "captured", ""),
 	)
 	stored.ActivityID = &activityID
-	facts := &activities.PipelineFacts{HasPersonLink: true, CaptureLabel: "meeting"}
+	facts := &activities.PipelineFacts{HasContactLink: true, CaptureLabel: "meeting"}
 
 	for _, r := range trace.Registrations() {
 		if r.AbsentReason != "" {
@@ -127,7 +127,7 @@ func TestAHiddenActivityIsNotReportedAsNeverWritten(t *testing.T) {
 	stored := ladderWith(row(trace.StageTierLadder, "captured", ""))
 	v := view{stored: stored, owned: true, activityHidden: true}
 	for _, stage := range []trace.Stage{
-		trace.StageActivityWrite, trace.StagePersonCreate, trace.StageAttentionLabel,
+		trace.StageActivityWrite, trace.StageContactCreate, trace.StageAttentionLabel,
 	} {
 		got := (&Assembler{}).rung(reg(t, stage), v, nil)
 		if got.Status != trace.StatusUnknown || got.Reason != trace.ReasonRecordNotAvailable {

@@ -122,14 +122,14 @@ components:
             keeps the old name on a settled line, which is what that line was
             actually about. The corollary is that it cannot be re-gated either,
             so a source emits a label only where the occurrence's own actor is
-            the person the record was already displayed to.
+            the contact the record was already displayed to.
         quantity:
           type: integer
           minimum: 0
           description: How much the occurrence handled, in quantity_unit.
         quantity_unit:
           type: string
-          enum: [messages, records, people, documents]
+          enum: [messages, records, contacts, documents]
           x-go-type: string
           description: What quantity counts.
         degrade_reason:

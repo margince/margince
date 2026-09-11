@@ -29,7 +29,7 @@ describe("what was handled for the reader", () => {
           kind: "email_sent",
           summary: "Sent the confirmation to Kirsten",
           occurred_at: "2026-09-05T08:00:00Z",
-          subject: { type: "person", id: "p1", label: "Kirsten Vogel" },
+          subject: { type: "contact", id: "p1", label: "Kirsten Vogel" },
         },
       ],
     });

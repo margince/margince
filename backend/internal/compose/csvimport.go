@@ -7,7 +7,7 @@ package compose
 // upload a file, read what its columns hold, map them, dry-run, approve.
 //
 // It lives in compose rather than in modules/migration for the same reason the
-// flip does: driving the engine means constructing a Writers over people's
+// flip does: driving the engine means constructing a Writers over contacts's
 // stores, and a module may never import a sibling. The engine, the run record
 // and the identity map are all the module's; this file is the door.
 
@@ -164,7 +164,7 @@ func (h importHandlers) profileAndStore(
 // Open to an agent: this call writes NO domain rows, by construction (AC-M5),
 // so the worst an ungranted-but-authenticated caller could do is produce a
 // report. What commits is approveImportRun, which stays confirm-first on the
-// tool surface — a person sees the report and says yes.
+// tool surface — a contact sees the report and says yes.
 func (h importHandlers) CreateImportRun(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	// The grant is taken BEFORE the body is read: an ungranted caller must not
@@ -410,7 +410,7 @@ func (h importHandlers) staged(r *http.Request, id openapi_types.UUID) (migratio
 // Two operations keep RequireHuman, each for its own reason. uploadImportSource
 // is multipart and has no agent-shaped door at all. undoImportRun reverses a
 // committed estate-wide write, and reversing is not something a caller should
-// reach without a person present.
+// reach without a contact present.
 func (h importHandlers) stagedFor(ctx context.Context, id openapi_types.UUID) (migration.Run, error) {
 	run, err := migration.NewRunStore(h.db).GetStaged(ctx, migration.RunID(id))
 	if err != nil {

@@ -143,7 +143,7 @@
 }
 
 /* Why this decision is in front of somebody, in the words the server wrote for
-   a person. First in the body and unlabelled: an explanation under a caption
+   a contact. First in the body and unlabelled: an explanation under a caption
    reads as one more data point, and the reason has to arrive before the values
    it explains or the reader has to work the question out from the answer. */
 .dcard-lead {
@@ -210,8 +210,8 @@
 /*
  * The deck card wears PANEL CHROME, in the AI hue.
  *
- * It is the same shape as the "Today with …" card on a person record (which is
- * `Panel tone="accent"`, person360.css): a card on the page's own ground, a
+ * It is the same shape as the "Today with …" card on a contact record (which is
+ * `Panel tone="accent"`, contact360.css): a card on the page's own ground, a
  * tinted header band carrying the chips, the headline at reading size under it,
  * and a footer band the verbs stand in. Tinted end to end it read as a
  * lavender slab — the tint was doing the work of a header band across 300px of
@@ -253,7 +253,7 @@
   border-bottom: 1px solid var(--aiMed);
 }
 
-/* The headline at the same size and weight the person record's moment card sets
+/* The headline at the same size and weight the contact record's moment card sets
    it — 20px at 650, one notch above `.t-h2` — because both cards exist to be
    landed on and read rather than scanned past. Stated here rather than shared:
    the two live in different tiers (a design-system primitive and a screen), and

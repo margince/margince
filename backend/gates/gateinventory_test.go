@@ -15,7 +15,7 @@ package gates
 // prose is not.
 //
 // The declaration lives in the gate's own file, one line under the SPDX
-// header, because that is where the person editing the gate will see it. A
+// header, because that is where the contact editing the gate will see it. A
 // classification kept here instead would be a second file to remember.
 
 import (

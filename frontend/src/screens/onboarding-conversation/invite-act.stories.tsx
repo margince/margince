@@ -35,7 +35,7 @@ const meta: Meta<typeof InviteAct> = {
 export default meta;
 type Story = StoryObj<typeof InviteAct>;
 
-/** The company is confirmed; will this person work in Margince too? */
+/** The company is confirmed; will this contact work in Margince too? */
 export const Asking: Story = { render: act() };
 
 /** The German act: two answers that must read as equals, not as a step and

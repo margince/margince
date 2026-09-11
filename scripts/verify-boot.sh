@@ -11,7 +11,7 @@
 #
 # Steps:
 #   1. POST /v1/auth/login with the seeded demo admin → 200 + crm_session.
-#   2. GET /v1/people under that session → the three seeded people.
+#   2. GET /v1/contacts under that session → the three seeded contacts.
 #   3. The seeded conversations are readable, and are of a kind the server
 #      stamps participants for — everything network-shaped derives from those.
 #   4. Every composed unit's declared channel transport is published by
@@ -94,7 +94,7 @@ company_name="$(jq -r '.display_name // empty' "$workdir/company.json")"
   || fail "the installation calls itself '$company_name' where scripts/seed-dev.sh describes '$seeded_company' — the stack was seeded by something else, or the seed is stale (make seed-dev)"
 echo "  OK: the installation describes itself as $company_name"
 
-echo "== verify-boot 3/6: seeded people are visible =="
+echo "== verify-boot 3/6: seeded contacts are visible =="
 # The rule the product reads an employment by, spelled the same way
 # scripts/seed-dev.sh writes it: primary, and not ended. `ended_at` is a date and
 # ISO dates compare as strings, so a future end is still current — the reading
@@ -107,7 +107,7 @@ TODAY="$(date -u +%F)"
 # not, and a check that reads a smaller set than it means reports a pass it did
 # not earn. So every lookup here names its record, and follows the cursor to
 # exhaustion: `q` is a full-text query, and a page of its matches can be all the
-# people who merely share a word with the one being looked for.
+# contacts who merely share a word with the one being looked for.
 #
 # `select` is a jq filter over ONE row, and any further arguments go to jq — a
 # name is an `--arg`, never spliced into the filter. `$today` is bound for the
@@ -139,12 +139,12 @@ find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
   done
 }
 
-find_person() { # find_person <full-name> <email> — the row, empty when absent
+find_contact() { # find_contact <full-name> <email> — the row, empty when absent
   # `q` is full-text over name and title only, so the name narrows and the EMAIL
-  # decides. Two people can share a full name, and the address is the key the
+  # decides. Two contacts can share a full name, and the address is the key the
   # seeded row was created with — checking whichever row the query answered with
   # first would report on somebody else's record and call it this one's.
-  find_first "/people?q=$(jq -rn --arg v "$1" '$v|@uri')" \
+  find_first "/contacts?q=$(jq -rn --arg v "$1" '$v|@uri')" \
     '.full_name == $name and any(.emails[]?; .email == $email)' \
     --arg name "$1" --arg email "$2"
 }
@@ -165,20 +165,20 @@ seeded_payloads() { # seeded_payloads <resource> — one JSON body per line
   ' "$REPO_DIR/scripts/seed-dev.sh"
 }
 
-seeded_people="$(seeded_payloads person)"
-[[ -n "$seeded_people" ]] || fail "found no 'ensure \"person …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
+seeded_contacts="$(seeded_payloads contact)"
+[[ -n "$seeded_contacts" ]] || fail "found no 'ensure \"contact …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
 
 while IFS= read -r body; do
   name="$(printf '%s' "$body" | jq -r '.full_name')"
   email="$(printf '%s' "$body" | jq -r 'first(.emails[]?.email) // empty')"
   [[ -n "$email" ]] || fail "the seeder creates '$name' with no email, so this check cannot tell them from a namesake"
-  person="$(find_person "$name" "$email")"
-  if [[ -z "$person" ]]; then
-    fail "seeded person '$name' <$email> missing from GET /v1/people — seed absent or stale (make seed-dev)"
+  contact="$(find_contact "$name" "$email")"
+  if [[ -z "$contact" ]]; then
+    fail "seeded contact '$name' <$email> missing from GET /v1/contacts — seed absent or stale (make seed-dev)"
   fi
-  # And employed somewhere, on the edge the PRODUCT reads. A person who works
+  # And employed somewhere, on the edge the PRODUCT reads. A contact who works
   # nowhere shows on no company page, which is the demo dataset's own verify rule
-  # ("people work somewhere") — and the rule these records used to break, so
+  # ("contacts work somewhere") — and the rule these records used to break, so
   # `make verify-demo` could not pass after `make seed-dev` in the order the
   # runbook prescribes.
   #
@@ -187,20 +187,20 @@ while IFS= read -r body; do
   # secondary edge satisfies that census and still leaves the contact off the
   # company page, so a boot proof that accepted one would be proving something
   # nobody can see.
-  person_id="$(printf '%s' "$person" | jq -r '.id')"
-  if [[ -z "$(find_first "/relationships?kind=employment&person_id=$person_id" "$CURRENT_PRIMARY_JQ")" ]]; then
+  contact_id="$(printf '%s' "$contact" | jq -r '.id')"
+  if [[ -z "$(find_first "/relationships?kind=employment&contact_id=$contact_id" "$CURRENT_PRIMARY_JQ")" ]]; then
     echo "  their employment rows:" >&2
     cat "$workdir/page.json" >&2
-    fail "seeded person '$name' has no current primary employment — they show on no company page, and the demo dataset's verify pass refuses the installation for it"
+    fail "seeded contact '$name' has no current primary employment — they show on no company page, and the demo dataset's verify pass refuses the installation for it"
   fi
   echo "  OK: found '$name' <$email>, currently employed"
-done <<< "$seeded_people"
+done <<< "$seeded_contacts"
 
 # The other rule the seeded records used to break: an account left on the
 # default makes "who are our customers?" answer with everything.
 #
 # Looked up by the DOMAIN the seeder writes, from the seeder's own line, for the
-# same reason the people above are looked up by name: `/v1/companies` is a
+# same reason the contacts above are looked up by name: `/v1/companies` is a
 # page, this installation may carry hundreds of companies from the demo dataset,
 # and a check that reads the first hundred of them is a check that stops finding
 # what it is looking for the day the dataset grows.
@@ -228,7 +228,7 @@ while IFS= read -r body; do
 done <<< "$seeded_company_bodies"
 
 echo "== verify-boot 4/6: the seeded conversations are conversations =="
-# A LINK IS NOT A CONVERSATION. Everything network-shaped — the person graph's
+# A LINK IS NOT A CONVERSATION. Everything network-shaped — the contact graph's
 # direct and account arms, contact peers, who-knows-this-contact, the decay lane
 # — derives from activity_participant, and for a long time nothing in the seed
 # wrote a row of it: the demo stack rendered the empty state on all of them, and
@@ -236,7 +236,7 @@ echo "== verify-boot 4/6: the seeded conversations are conversations =="
 #
 # What the seed can guarantee is the KIND. The server stamps the participants
 # itself, but only for an interaction kind — a task is intent and a note is a
-# record of thinking, and neither means two people spoke — so a seed that logged
+# record of thinking, and neither means two contacts spoke — so a seed that logged
 # notes would leave every one of those surfaces exactly as empty as before while
 # every other check here still passed.
 #

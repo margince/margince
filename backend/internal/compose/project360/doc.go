@@ -3,12 +3,12 @@
 
 // Package project360 assembles the project record page in one read: the
 // project, the company it is for, its phase history with the time spent in
-// each phase, the deals rolled up to it, the people seated on it, its
+// each phase, the deals rolled up to it, the contacts seated on it, its
 // contracts and documents, the open commitments filed under it, its
 // timeline, how well its correspondence is filed, and the header figures.
 //
 // It is the company 360's sibling (compose/company360) and keeps its two
-// rules. It lives in compose because it spans deals, people, contracts and
+// rules. It lives in compose because it spans deals, contacts, contracts and
 // activities — the composition layer's charter — and it owns no table.
 //
 // One transaction, one instant. Every section reads inside a single

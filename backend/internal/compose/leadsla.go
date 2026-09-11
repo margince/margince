@@ -4,8 +4,8 @@
 package compose
 
 // The lead first-response SLA's cross-module half (formulas §18.2). The
-// people module owns the clock and the breach mark; the escalation writes a
-// task, which is an activity — a table people may not write — so the edge is
+// contacts module owns the clock and the breach mark; the escalation writes a
+// task, which is an activity — a table contacts may not write — so the edge is
 // injected here: a system workflow on lead.sla_breached that logs the task
 // through the activities store, and the scan pass that rides the clock-
 // trigger job.
@@ -23,8 +23,8 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -109,7 +109,7 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		return workflow.RunResult{}, fmt.Errorf("log sla escalation task: %w", err)
 	}
 	// The notify half RC-5 promised, now that a transport exists: the same
-	// person the task escalates to gets the durable line on their Worklist.
+	// contact the task escalates to gets the durable line on their Worklist.
 	// A breach with no named target still writes its task; there is nobody
 	// to address the notice to, and inventing one would misdeliver it.
 	if payload.EscalationTarget != nil {
@@ -117,7 +117,7 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		// THE SAME KEY THE TASK USES. The bus is at-least-once and Apply is
 		// documented idempotent on its own key, so the notice needs what the
 		// task has always had: a natural key that makes the second delivery a
-		// no-op. Without it one breach put two identical lines on one person's
+		// no-op. Without it one breach put two identical lines on one contact's
 		// Worklist while the task beside them stayed single, which reads as
 		// the notice being right and the task being lost.
 		if _, err := w.notices.Create(ctx, notices.NewNotice{
@@ -143,7 +143,7 @@ func (leadSLAEscalation) IdempotencyKey(ev workflow.Event) string {
 func scanLeadSLA(ctx context.Context, db *database.DB, now func() time.Time, log *slog.Logger) error {
 	wsCtx := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:lead-sla-scan"})
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
-	breaches, err := people.NewStore(db).ScanLeadSLA(wsCtx, now().UTC())
+	breaches, err := contacts.NewStore(db).ScanLeadSLA(wsCtx, now().UTC())
 	if err != nil {
 		return fmt.Errorf("lead sla scan: %w", err)
 	}

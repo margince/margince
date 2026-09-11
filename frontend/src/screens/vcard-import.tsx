@@ -51,7 +51,7 @@ function useImportVCards() {
       const body = new FormData();
       body.append("file", file);
       // contract-fetch:allow multipart — see the note above
-      const response = await fetch("/v1/people/vcard-import", {
+      const response = await fetch("/v1/contacts/vcard-import", {
         method: "POST",
         body,
         credentials: "include",
@@ -71,16 +71,16 @@ function useImportVCards() {
       return payload;
     },
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["people"] });
+      await client.invalidateQueries({ queryKey: ["contacts"] });
     },
   });
 }
 
 /**
- * VCardImport is the button a person presses to import address cards, and the
+ * VCardImport is the button a contact presses to import address cards, and the
  * report of what became of each one.
  *
- * A handed-over card is first-party data — the person gave it — which is what
+ * A handed-over card is first-party data — the contact gave it — which is what
  * justifies storing their details, and a human pressing this is what makes the
  * import WRITE rather than stage. So the verb lives on the contact list beside
  * the other ways a contact comes to exist, not in a settings page.

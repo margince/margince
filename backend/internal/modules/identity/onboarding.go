@@ -35,14 +35,14 @@ const (
 	OnboardingStepConfirm = "confirm"
 	// OnboardingStepBasis settles the installation's reporting basis — base
 	// currency and reporting timezone — the one installation-wide answer the
-	// setup asks for, taken before any step about the person answering.
+	// setup asks for, taken before any step about the contact answering.
 	OnboardingStepBasis = "basis"
-	// OnboardingStepInvite asks whether the person setting the installation up
+	// OnboardingStepInvite asks whether the contact setting the installation up
 	// will work in it, which decides whether the voice and connect steps are
 	// offered at all.
 	OnboardingStepInvite = "invite"
 	// OnboardingStepTeam is where a creator who will not work in the
-	// installation invites the first person who will.
+	// installation invites the first contact who will.
 	OnboardingStepTeam = "team"
 	// OnboardingStepVoice captures optional writing examples.
 	OnboardingStepVoice = "voice"
@@ -82,7 +82,7 @@ var onboardingSteps = map[string]struct{}{
 
 // creatorSteps are the steps that exist only on the creator's route: the
 // company a member's installation already has, its reporting basis, and the
-// two questions only the person setting it up can answer. A member's route
+// two questions only the contact setting it up can answer. A member's route
 // begins at Voice, so persisting any of these against a member is a state
 // nothing can reach.
 //
@@ -147,7 +147,7 @@ type PutOnboardingStateInput struct {
 }
 
 // OnboardingCompanyStateReader resolves the anchor-company state inside the
-// checkpoint transaction. Compose supplies the people-owned implementation so
+// checkpoint transaction. Compose supplies the contacts-owned implementation so
 // creator/member routing cannot race a concurrent company save.
 type OnboardingCompanyStateReader func(context.Context, pgx.Tx) (exists, complete bool, err error)
 

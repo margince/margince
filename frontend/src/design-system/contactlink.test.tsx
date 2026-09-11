@@ -9,7 +9,7 @@ import { ContactLink } from "./contactlink";
 
 afterEach(cleanup);
 
-const dana = { entityType: "person", entityId: "p-1" } as const;
+const dana = { entityType: "contact", entityId: "p-1" } as const;
 
 describe("ContactLink", () => {
   it("opens the composer on the address's record, and links a number with tel", () => {
@@ -26,7 +26,7 @@ describe("ContactLink", () => {
       screen.getByRole("button", { name: "dana@brandt.example" }),
     );
     expect(writeTo).toHaveBeenCalledWith({
-      entityType: "person",
+      entityType: "contact",
       entityId: "p-1",
       address: "dana@brandt.example",
     });

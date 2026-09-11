@@ -29,13 +29,13 @@ import (
 // approval, granted against a version this write would not check.
 func TestAnOverlayArchiveRefusesAVersionItCannotHonour(t *testing.T) {
 	pin := int64(4)
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 
 	_, err := (&Provider{}).ArchiveAt(context.Background(),
 		datasource.ArchiveInput{Ref: ref, IfVersion: &pin})
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Fatalf("archiving an overlay person at version 4 answered %v, want the unsupported-by-SoR "+
+		t.Fatalf("archiving an overlay contact at version 4 answered %v, want the unsupported-by-SoR "+
 			"refusal — a precondition this seam cannot evaluate must not read as one that held", err)
 	}
 }
@@ -44,7 +44,7 @@ func TestAnOverlayArchiveRefusesAVersionItCannotHonour(t *testing.T) {
 // call with no pin gets past this decision and on to the real work, which
 // without a mirror store is the store's own complaint rather than this one.
 func TestAnUnpinnedOverlayArchiveIsNotRefusedForThatReason(t *testing.T) {
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 
 	_, err := (&Provider{}).ArchiveAt(context.Background(), datasource.ArchiveInput{Ref: ref})
 
@@ -66,7 +66,7 @@ func TestOverlayArchivesThreeOfTheNativeSix(t *testing.T) {
 	}
 
 	want := []datasource.EntityType{
-		datasource.EntityCompany, datasource.EntityDeal, datasource.EntityPerson,
+		datasource.EntityCompany, datasource.EntityContact, datasource.EntityDeal,
 	}
 	if !slices.Equal(types, want) {
 		t.Errorf("overlay archives %v, want %v — project, relationship and activity are archived by "+

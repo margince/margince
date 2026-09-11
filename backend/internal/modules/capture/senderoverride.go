@@ -3,7 +3,7 @@
 
 package capture
 
-// What a person decided about a sender, and the rule that the machine never
+// What a human decided about a sender, and the rule that the machine never
 // takes it back.
 //
 // The verdict engine judges every new sender and is sometimes wrong — it calls
@@ -12,7 +12,7 @@ package capture
 // overwrites is not a decision, it is a suggestion, and the owner would find
 // the same sender wrong again next week with no way to tell why.
 //
-// Per SEAT. A sender is personal to the person who knows them, so one rep's
+// Per SEAT. A sender is personal to the contact who knows them, so one rep's
 // family member is another rep's customer, and a shared list would let either
 // overrule the other about their own correspondence.
 
@@ -30,7 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The decisions a person may record about a sender.
+// The decisions a contact may record about a sender.
 const (
 	// OverrideBusiness readmits a sender the machine judged noise: they are a
 	// counterparty of this business after all, and their mail belongs in the
@@ -49,7 +49,7 @@ type SenderOverride struct {
 	OverruledKind string
 }
 
-// SenderOverrideStore holds what people decided.
+// SenderOverrideStore holds what contacts decided.
 type SenderOverrideStore struct {
 	db *database.DB
 }
@@ -64,7 +64,7 @@ func NewSenderOverrideStore(db *database.DB) *SenderOverrideStore {
 //
 // Own decision only: the seat is taken from the authenticated principal and
 // never from the request, so there is no shape of this call that records one
-// person's answer under another's name.
+// contact's answer under another's name.
 func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string) (SenderOverride, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return SenderOverride{}, err
@@ -87,12 +87,12 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 	// `business` is how a contact comes to exist, so it takes create;
 	// `keep_out` is how one is refused and their mail destroyed, so it takes
 	// delete. Asking for create on a keep_out would refuse the seat who is
-	// allowed to remove people but not add them, which is backwards.
+	// allowed to remove contacts but not add them, which is backwards.
 	grant := principal.ActionCreate
 	if decision == OverrideKeepOut {
 		grant = principal.ActionDelete
 	}
-	if err := auth.Require(ctx, "person", grant); err != nil {
+	if err := auth.Require(ctx, "contact", grant); err != nil {
 		return SenderOverride{}, err
 	}
 
@@ -109,7 +109,7 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 			return err
 		}
 		// The kind the machine had reached, read BEFORE the write so the page
-		// can say what was overruled. A person who sees only their own answer
+		// can say what was overruled. A contact who sees only their own answer
 		// cannot tell a correction from a preference they set months ago.
 		kind, err := machineKindForTx(ctx, tx, actor.UserID, folded)
 		if err != nil {
@@ -142,7 +142,7 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 // List answers the caller's own decisions.
 //
 // Own rows only, and there is no id that reaches a colleague's: whose senders a
-// person keeps out is itself private, and an admin view of it would be a list
+// contact keeps out is itself private, and an admin view of it would be a list
 // of somebody's private correspondents.
 func (s *SenderOverrideStore) List(ctx context.Context) ([]SenderOverride, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
@@ -210,7 +210,7 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 // have not.
 //
 // THE VERDICT ENGINE CONSULTS THIS FIRST and never writes over it. A machine
-// that could overturn a person would make every correction temporary, and the
+// that could overturn a contact would make every correction temporary, and the
 // owner would have no way to tell a fresh mistake from one they already fixed.
 // senderOverrideEntity and senderOverrideIdentity spell the serialization key
 // ONCE. Two writers of one lock key that disagree by a character take two
@@ -260,7 +260,7 @@ func machineKindForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address str
 		 ORDER BY updated_at DESC LIMIT 1`, address, user).Scan(&kind)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			// The engine never reached this sender. A person may still decide
+			// The engine never reached this sender. A contact may still decide
 			// about them — an address they know is coming, say — and the page
 			// then shows a decision that overruled nothing.
 			return "", nil

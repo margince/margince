@@ -277,7 +277,7 @@ describe("locale switch", () => {
     );
     // English default: once the session resolves, the rail carries English labels
     expect(await screen.findByRole("link", { name: "Contacts" })).toBeTruthy();
-    // The language is a preference of this person rather than a destination, so
+    // The language is a preference of this contact rather than a destination, so
     // it lives on Settings → Account and reaching it is a navigation. Which is
     // also what makes this an app-level claim: the choice is made on one route
     // and has to hold on the next one, not just inside the card that made it.
@@ -360,7 +360,7 @@ describe("auth boundary states (login spec §4)", () => {
   });
 
   // ADR-0105: "not ready" is two product states, and only one of them has
-  // something the person in front of the browser can do.
+  // something the contact in front of the browser can do.
   it("offers the claim screen when the unready installation is waiting to be claimed", async () => {
     vi.stubGlobal(
       "fetch",

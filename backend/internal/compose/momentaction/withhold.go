@@ -5,7 +5,7 @@
 // whom.
 //
 // The card is the same card on both record pages — the contract says so, and
-// both the contact page and the account page fill `PersonMoment` and mint the
+// both the contact page and the account page fill `ContactMoment` and mint the
 // verbs under it. The grant a verb needs is a property of the VERB rather than
 // of the page that drew it, so both assemblers hand their finished card here
 // instead of deciding it for themselves. They did not always: the contact page
@@ -32,21 +32,21 @@ import (
 // that nothing here may be absent: gates/momentactionvocabulary_test.go holds
 // these keys equal to the contract's own enum, so a ninth kind cannot reach a
 // reader until somebody has said which of the two it is.
-var writesAnActivity = map[crmcontracts.PersonMomentActionKind]bool{
+var writesAnActivity = map[crmcontracts.ContactMomentActionKind]bool{
 	// The log form, under its own name and asked as a task. One POST, one grant.
-	crmcontracts.PersonMomentActionKindLogActivity:  true,
-	crmcontracts.PersonMomentActionKindCompleteTask: true,
+	crmcontracts.ContactMomentActionKindLogActivity:  true,
+	crmcontracts.ContactMomentActionKindCompleteTask: true,
 	// The composer sends through POST /emails, which is a side service rather
 	// than a record write and asks nothing of `activity.create`.
-	crmcontracts.PersonMomentActionKindDraftReply: false,
+	crmcontracts.ContactMomentActionKindDraftReply: false,
 	// Blocked wherever it is minted: nothing in the destination vocabulary
 	// opens a scheduler yet.
-	crmcontracts.PersonMomentActionKindScheduleMeeting: false,
+	crmcontracts.ContactMomentActionKindScheduleMeeting: false,
 	// Reads. They navigate; they write nothing.
-	crmcontracts.PersonMomentActionKindOpenRecord:       false,
-	crmcontracts.PersonMomentActionKindOpenMeetingBrief: false,
-	crmcontracts.PersonMomentActionKindOpenResearch:     false,
-	crmcontracts.PersonMomentActionKindAskColleague:     false,
+	crmcontracts.ContactMomentActionKindOpenRecord:       false,
+	crmcontracts.ContactMomentActionKindOpenMeetingBrief: false,
+	crmcontracts.ContactMomentActionKindOpenResearch:     false,
+	crmcontracts.ContactMomentActionKindAskColleague:     false,
 }
 
 // Withhold turns every activity-writing verb on this card into a blocked one
@@ -57,12 +57,12 @@ var writesAnActivity = map[crmcontracts.PersonMomentActionKind]bool{
 // reader without the grant opens a form whose save is refused. The destination
 // goes with the state: a blocked verb that still names a surface is a button
 // the client can still route on.
-func Withhold(ctx context.Context, moment *crmcontracts.PersonMoment) {
+func Withhold(ctx context.Context, moment *crmcontracts.ContactMoment) {
 	if auth.Require(ctx, "activity", principal.ActionCreate) == nil {
 		return
 	}
 	reason := "You do not have permission to log activities"
-	block := func(action *crmcontracts.PersonMomentAction) {
+	block := func(action *crmcontracts.ContactMomentAction) {
 		if !writesAnActivity[action.Kind] {
 			return
 		}
@@ -72,10 +72,10 @@ func Withhold(ctx context.Context, moment *crmcontracts.PersonMoment) {
 		// beneath it, not because of a grant. Relabelling it would answer a
 		// question the reader did not ask, about a control that was already
 		// unavailable.
-		if action.State == crmcontracts.PersonMomentActionStateBlocked {
+		if action.State == crmcontracts.ContactMomentActionStateBlocked {
 			return
 		}
-		action.State = crmcontracts.PersonMomentActionStateBlocked
+		action.State = crmcontracts.ContactMomentActionStateBlocked
 		action.BlockedReason = &reason
 		action.Destination = nil
 	}

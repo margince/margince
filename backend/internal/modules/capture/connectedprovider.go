@@ -3,7 +3,7 @@
 
 package capture
 
-// Whether a person's account on some provider actually reaches this product.
+// Whether a contact's account on some provider actually reaches this product.
 //
 // It is a read of capture's own table by a caller that is not capture — the
 // scheduling seam, which has to know whether a calendar backs a free/busy

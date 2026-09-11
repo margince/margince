@@ -33,7 +33,7 @@ held.
 
 **Put the escape hatch at the subject** — a `doc.go` line, a contract field, a
 `//craft:ignore <check> <reason>`. That is where the author editing the code
-sees it. A map inside the test file is invisible to exactly the person who needs
+sees it. A map inside the test file is invisible to exactly the reader who needs
 it. If you cannot get the hatch to the subject, say in the test why not.
 
 **Ratify the instance, never the category.** A waiver keyed by column, package

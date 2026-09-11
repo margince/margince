@@ -37,7 +37,7 @@ const (
 // drifts across the read/write/signal call sites. activityTarget is the type
 // all five engagement classes map onto.
 const (
-	personTarget   = "person"
+	contactTarget  = "contact"
 	companyTarget  = "company"
 	dealTarget     = "deal"
 	leadTarget     = "lead"
@@ -154,7 +154,7 @@ func ProjectionFingerprints() map[string]string {
 }
 
 // IncumbentClassesFor reverse-resolves canonical (a Margince entity-type
-// name, e.g. "person") to the HubSpot object class(es) that map onto it
+// name, e.g. "contact") to the HubSpot object class(es) that map onto it
 // (e.g. "contacts"). This is the seam's asymmetry, made explicit: every
 // Incumbent method (Backfill/Modified/Get) takes an INCUMBENT class as
 // input, while Record.ObjectClass and the mirror's own object_class column
@@ -196,15 +196,15 @@ var ownerIDField = overlay.FieldMapping{
 	Resolve: "mirror_user_map",
 }
 
-// contactsMapping is the design.md §9 contacts→person subset. full_name is
+// contactsMapping is the design.md §9 contacts→contact subset. full_name is
 // assembled from firstname/lastname (falling back to the email local part,
 // then a stable placeholder) by the full_name transform, declared AlwaysEmit
 // so a required display field is never left empty (OVA-MAP-3). first_name and
 // last_name are still mapped through as-is (nullable), and email is still
-// consumed by person_email.email — the assembler is an ADDITIONAL reader of
+// consumed by contact_email.email — the assembler is an ADDITIONAL reader of
 // those keys, so it adds no unmapped entry.
 //
-// phone and mobilephone both land in the core person_phone collection, as two
+// phone and mobilephone both land in the core contact_phone collection, as two
 // separate typed rows: no incumbent property says which number is which, so
 // the phone_type and the primary flag each row publishes are the ChildRow's
 // declaration, and a contact reachable on both keeps both numbers. Each number
@@ -224,7 +224,7 @@ var ownerIDField = overlay.FieldMapping{
 // never silently drop" policy (design §4.8) holds.
 var contactsMapping = overlay.ObjectMapping{
 	Source:         objectClassContacts,
-	Target:         personTarget,
+	Target:         contactTarget,
 	ExternalKey:    propHSObjectID,
 	Baseline:       "lastmodifieddate",
 	UnmappedPolicy: unmappedPolicyFlag,
@@ -242,17 +242,17 @@ var contactsMapping = overlay.ObjectMapping{
 		{From: []string{"createdate"}, To: "created_at", Kind: overlay.TargetColumn},
 		{
 			From:      []string{propEmail},
-			To:        "person_email.email",
+			To:        "contact_email.email",
 			Kind:      overlay.TargetChild,
 			Transform: "lowercase",
 			Child:     &overlay.ChildRow{Attrs: map[string]any{"email_type": "work", attrIsPrimary: true}, Position: 0},
 		},
 		{
-			From: []string{"phone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+			From: []string{"phone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 			Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "work", attrIsPrimary: true}, Position: 0},
 		},
 		{
-			From: []string{"mobilephone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+			From: []string{"mobilephone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 			Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "mobile", attrIsPrimary: false}, Position: 1},
 		},
 		ownerIDField,
@@ -267,7 +267,7 @@ var contactsMapping = overlay.ObjectMapping{
 
 // companiesMapping is the design.md §9 companies→company subset.
 // `domain` maps into a row of the company_domain child collection — the
-// same 1:N child shape contacts' email → person_email uses — lowercased to
+// same 1:N child shape contacts' email → contact_email uses — lowercased to
 // the canonical domain spelling (HubSpot's `domain` property is already a bare
 // host: no scheme, no www). The overlay company wire lifts it onto the contract's
 // domains[] so a mirrored company shows its domain like a native one.

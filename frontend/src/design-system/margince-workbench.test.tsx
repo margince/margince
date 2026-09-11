@@ -185,14 +185,14 @@ describe("the step rail", () => {
 // surface-level control can live. The row therefore has to hold that control
 // even while the signed-in identity beside it is still loading — a control that
 // appears one request late reads as a control that is not there.
-describe("the rail's person row", () => {
+describe("the rail's contact row", () => {
   // The variant is a parameter rather than a constant because the row's absence
   // from the split layout is a claim about the LAYOUT: it only means anything
-  // when the same person and control the rail draws are supplied and still
+  // when the same contact and control the rail draws are supplied and still
   // produce nothing.
-  function renderPersonRow(
+  function renderContactRow(
     variant: "split" | "rail",
-    person?: Readonly<{ name: string; detail: string }>,
+    contact?: Readonly<{ name: string; detail: string }>,
   ) {
     return render(
       <MarginceWorkbench
@@ -204,8 +204,8 @@ describe("the rail's person row", () => {
         locale="en"
         runtimeLabels={LABELS}
         variant={variant}
-        person={person}
-        personAction={<button type="button">Theme</button>}
+        contact={contact}
+        contactAction={<button type="button">Theme</button>}
         artifact={<p>Work</p>}
       >
         <p>Thread</p>
@@ -214,29 +214,29 @@ describe("the rail's person row", () => {
   }
 
   it("puts the caller's control after the identity it belongs beside", () => {
-    const { container } = renderPersonRow("rail", {
+    const { container } = renderContactRow("rail", {
       name: "Ada Lovelace",
       detail: "ada@example.com",
     });
 
-    const row = container.querySelector(".mw-person");
+    const row = container.querySelector(".mw-contact");
     expect(row).not.toBeNull();
     expect(row?.textContent).toContain("Ada Lovelace");
     // Last child, so the identity keeps the reading order and the control
     // stays at the row's right-hand end.
-    expect(row?.lastElementChild).toHaveClass("mw-person-action");
+    expect(row?.lastElementChild).toHaveClass("mw-contact-action");
     expect(row?.lastElementChild?.textContent).toBe("Theme");
   });
 
   it("still renders the control while the identity is unresolved", () => {
-    const { container } = renderPersonRow("rail", undefined);
+    const { container } = renderContactRow("rail", undefined);
 
-    expect(container.querySelector(".mw-person-avatar")).toBeNull();
+    expect(container.querySelector(".mw-contact-avatar")).toBeNull();
     expect(screen.getByRole("button", { name: "Theme" })).toBeInTheDocument();
   });
 
-  it("renders no person row at all in the split variant", () => {
-    const { container } = renderPersonRow("split", {
+  it("renders no contact row at all in the split variant", () => {
+    const { container } = renderContactRow("split", {
       name: "Ada Lovelace",
       detail: "ada@example.com",
     });
@@ -244,7 +244,7 @@ describe("the rail's person row", () => {
     // Given everything the rail needs to draw the row, the split layout still
     // draws none of it — the top bar carries the identity and its controls
     // there, and a second copy in the thread would be the duplicate.
-    expect(container.querySelector(".mw-person")).toBeNull();
+    expect(container.querySelector(".mw-contact")).toBeNull();
     expect(container.textContent).not.toContain("Ada Lovelace");
     expect(screen.queryByRole("button", { name: "Theme" })).toBeNull();
   });

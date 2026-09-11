@@ -15,7 +15,7 @@ type Participant = components["schemas"]["DealRoomParticipant"];
 // Two facts on this card are easy to confuse and are modelled apart, so the
 // stories keep them apart too. `delivery_state` is what happened to the LAST
 // credential we sent — it moves every time one is resent. `has_signed_in` is
-// whether this person ever exchanged one for a session, and it does not move,
+// whether this contact ever exchanged one for a session, and it does not move,
 // because that is the fact that fixes their address.
 //
 // The reading line is deliberately absent at zero. "0 documents" reads as a
@@ -146,7 +146,7 @@ export const NobodyHasOpenedIt: Story = {
 
 /**
  * The invitation bounced. Delivery is modelled apart from access for this
- * case: the person is admitted, and the credential never reached them, so the
+ * case: the contact is admitted, and the credential never reached them, so the
  * row has to say which of the two went wrong.
  */
 export const InvitationFailed: Story = {
@@ -159,8 +159,8 @@ export const InvitationFailed: Story = {
   ]),
 };
 
-/** Several people, in the states a real room mixes them in. */
-export const SeveralPeople: Story = {
+/** Several contacts, in the states a real room mixes them in. */
+export const SeveralContacts: Story = {
   render: access([
     participant({ download_count: 12, documents_downloaded: ["Terms v4"] }),
     participant({

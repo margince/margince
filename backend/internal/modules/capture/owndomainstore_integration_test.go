@@ -33,7 +33,7 @@ func adminOwnDomainContext(ctx context.Context, ws ids.UUID) context.Context {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"capture_settings": {Read: true, Update: true},
-				"person":           {Read: true},
+				"contact":          {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -193,7 +193,7 @@ func TestAValueThatIsNotADomainIsRefused(t *testing.T) {
 			t.Errorf("Add(%q) was accepted, want a refusal naming the problem", bad)
 		}
 	}
-	// A leading @ is a shape people type, not an error.
+	// A leading @ is a shape contacts type, not an error.
 	if _, err := store.Add(ctx, "@acme.com"); err != nil {
 		t.Errorf("Add(\"@acme.com\"): %v", err)
 	}

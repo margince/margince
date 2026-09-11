@@ -203,7 +203,7 @@
   outline-offset: 2px;
 }
 
-/* The person the pane is about: their chip and their name, on one line, as the
+/* The contact the pane is about: their chip and their name, on one line, as the
    panel's title. The name is a link, so the pair has to sit on a baseline the
    heading's own type sets rather than on the chip's. */
 .worklist-pane-head {

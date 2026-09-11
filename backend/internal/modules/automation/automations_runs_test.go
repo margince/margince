@@ -60,13 +60,13 @@ func TestRunOutcomeAndStatusMapsAreTotalInverses(t *testing.T) {
 func TestEveryCatalogKeyHasAPreviewDefinition(t *testing.T) {
 	defs := previewDefs()
 	renewalCatalog := fakeFieldCatalog{columns: map[string][]fieldcatalog.Column{
-		"person": {{Name: "cf_renewal_date", Type: fieldcatalog.TypeDate}},
+		"contact": {{Name: "cf_renewal_date", Type: fieldcatalog.TypeDate}},
 	}}
 	for _, entry := range Catalog() {
 		if entry.Key == renewalReminderName {
 			stored := Automation{
 				Key:    renewalReminderName,
-				Params: json.RawMessage(`{"object":"person","date_field":"cf_renewal_date","days_before":30}`),
+				Params: json.RawMessage(`{"object":"contact","date_field":"cf_renewal_date","days_before":30}`),
 			}
 			fixedNow := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
 			def, _, err := resolvePreviewRecipe(context.Background(), renewalCatalog, stored, AutomationPreviewInput{}, fixedNow)

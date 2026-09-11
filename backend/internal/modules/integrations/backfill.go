@@ -53,7 +53,7 @@ func (s *Store) BackfillSweep(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	// ONE SUBJECT PER TRANSACTION, for both halves. The eraser is subject-first,
-	// so a transaction holding two people's rows can close a cycle against it —
+	// so a transaction holding two contacts's rows can close a cycle against it —
 	// and the transaction that loses is the erasure, which is somebody's Art. 17
 	// deadline rather than a pass that simply runs again in a minute.
 	//
@@ -68,7 +68,7 @@ func (s *Store) BackfillSweep(ctx context.Context) (int, error) {
 // sweepableProvider names the one connected provider a sweep may spend
 // against, or "" when there is none to sweep for.
 //
-// More than one is not an error here the way it is for a person's own run: the
+// More than one is not an error here the way it is for a contact's own run: the
 // sweep is background work with nobody to ask, so it declines rather than
 // guessing which vendor an installation meant.
 func (s *Store) sweepableProvider(ctx context.Context, tx pgx.Tx) (string, error) {
@@ -117,8 +117,8 @@ func (s *Store) queueUncoveredSubjects(ctx context.Context, name string) (int, e
 		return 0, err
 	}
 	var queued int
-	for _, personID := range subjects {
-		landed, err := s.queueOneSwept(ctx, name, personID)
+	for _, contactID := range subjects {
+		landed, err := s.queueOneSwept(ctx, name, contactID)
 		if err != nil {
 			return queued, err
 		}
@@ -137,11 +137,11 @@ func (s *Store) queueUncoveredSubjects(ctx context.Context, name string) (int, e
 // BEFORE any row is inserted. Counting those as queued would report a sweep
 // working through the backlog while the same twenty-five contacts were selected
 // every minute and nothing was written.
-func (s *Store) queueOneSwept(ctx context.Context, name, personID string) (bool, error) {
+func (s *Store) queueOneSwept(ctx context.Context, name, contactID string) (bool, error) {
 	var landed bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		landed, err = s.queueForSweep(ctx, tx, name, personID)
+		landed, err = s.queueForSweep(ctx, tx, name, contactID)
 		return err
 	})
 	return landed, err
@@ -198,17 +198,17 @@ func (s *Store) sweepBudget(ctx context.Context, tx pgx.Tx, name string) (int, e
 // contact a cooldown row so the next tick looks past them. Anything that
 // escapes as an error costs this one contact and no other: each runs in its
 // own transaction.
-func (s *Store) queueForSweep(ctx context.Context, tx pgx.Tx, name, personID string) (bool, error) {
+func (s *Store) queueForSweep(ctx context.Context, tx pgx.Tx, name, contactID string) (bool, error) {
 	desc, err := s.registry.Descriptor(name)
 	if err != nil {
 		return false, provider.ErrNotConnected
 	}
-	// The row gate QueueRun takes, taken here for the same reason: person is an
+	// The row gate QueueRun takes, taken here for the same reason: contact is an
 	// identity table whose visibility arm answers true for everyone, and LIVE
 	// because a run's claims are new rows on the subject. The sweep's principal
 	// passes both, but a writer that relies on its caller's principal to be
 	// unbounded is one refactor away from being wrong.
-	if err := auth.EnsureWritableLive(ctx, tx, entitySubject, uuidOf(&personID)); err != nil {
+	if err := auth.EnsureWritableLive(ctx, tx, entitySubject, uuidOf(&contactID)); err != nil {
 		return false, err
 	}
 	conn, err := s.admit(ctx, tx, name, provider.TriggerAutomaticBackfill)
@@ -216,9 +216,9 @@ func (s *Store) queueForSweep(ctx context.Context, tx pgx.Tx, name, personID str
 		return false, err
 	}
 	if _, err := s.queueOne(ctx, tx, desc, conn, provider.QueueInput{
-		PersonID: personID,
-		Provider: name,
-		Trigger:  provider.TriggerAutomaticBackfill,
+		ContactID: contactID,
+		Provider:  name,
+		Trigger:   provider.TriggerAutomaticBackfill,
 	}); err != nil {
 		// A configuration that leaves an automatic run nothing to buy, and a
 		// posture switched off between the selection and now. Neither is a
@@ -234,4 +234,4 @@ func (s *Store) queueForSweep(ctx context.Context, tx pgx.Tx, name, personID str
 // entitySubject is the table the sweep's row gate names. Spelled here because
 // this package gates on it once and the string would otherwise be a literal
 // beside a call that decides whether money is spent.
-const entitySubject = "person"
+const entitySubject = "contact"

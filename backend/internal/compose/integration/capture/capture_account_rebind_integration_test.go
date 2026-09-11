@@ -5,7 +5,7 @@
 
 package capture
 
-// One human, one provider, one row — but not necessarily one mailbox. A person
+// One human, one provider, one row — but not necessarily one mailbox. A contact
 // who connects a second account over the first is not resuming the first: the
 // watermark and the import history belong to the account, and the row is only
 // where they happen to live.
@@ -185,7 +185,7 @@ func TestReconnectingTheSameAccountKeepsItsWatermark(t *testing.T) {
 
 // The signature-enrichment answer belongs to the MAILBOX, not to the row that
 // happens to hold it. A rebind points that row at somebody else's mail, so one
-// person's opt-out must not silently start governing another person's — in
+// contact's opt-out must not silently start governing another contact's — in
 // either direction.
 func TestReconnectingADifferentAccountDropsTheFirstAccountsSignatureAnswer(t *testing.T) {
 	e := integration.SetupSearch(t)
@@ -205,7 +205,7 @@ func TestReconnectingADifferentAccountDropsTheFirstAccountsSignatureAnswer(t *te
 	}
 
 	if answer := readSignatureAnswer(t, e, connID); answer != nil {
-		t.Fatalf("signature_enrich_enabled = %v, want cleared — the second mailbox never made that choice, and inheriting it applies one person's answer to another person's mail", *answer)
+		t.Fatalf("signature_enrich_enabled = %v, want cleared — the second mailbox never made that choice, and inheriting it applies one contact's answer to another contact's mail", *answer)
 	}
 }
 
@@ -226,7 +226,7 @@ func TestReconnectingTheSameAccountKeepsItsSignatureAnswer(t *testing.T) {
 		t.Fatalf("re-granting the same account: %v", err)
 	}
 
-	// A routine reauth is the same person and the same mailbox. Clearing their
+	// A routine reauth is the same contact and the same mailbox. Clearing their
 	// answer would quietly re-enable reading mail they asked us not to read.
 	answer := readSignatureAnswer(t, e, connID)
 	if answer == nil || *answer {

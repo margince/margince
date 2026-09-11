@@ -75,7 +75,7 @@ const ROWS = [
 
 function preview(rows: FilterPreview["rows"]): FilterPreview {
   return {
-    resource: "person",
+    resource: "contact",
     match_count: rows.length,
     columns: COLUMNS,
     rows,

@@ -5,7 +5,7 @@ package approvals
 
 // The track record a rep builds by deciding, one kind of proposal at a time.
 //
-// Trust is not a property of the software. It is one person's experience of one
+// Trust is not a property of the software. It is one contact's experience of one
 // kind of proposal: a rep who has approved fourteen close-date confirmations
 // unchanged has evidence about close dates and none about outbound mail. So the
 // grain is (rep, kind), and approval_autonomy_policy holds one row per pair.
@@ -205,7 +205,7 @@ const (
 // AutoApplyMode reports whether the rep this call acts for has put this kind on
 // automatic.
 //
-// NO OBJECT GATE, and it needs none: a policy row is one person's answer about
+// NO OBJECT GATE, and it needs none: a policy row is one contact's answer about
 // their own queue, and this reads the row of the principal on the context. It
 // takes no user id, so there is no row a caller could ask for but not be —
 // which is a stronger bound than a grant, because a grant could be held over
@@ -231,7 +231,7 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 	}
 	rep, ok := principal.Actor(ctx)
 	if !ok || rep.UserID.IsZero() {
-		return ModeManual, fmt.Errorf("a policy belongs to a person, and this call names none: %w",
+		return ModeManual, fmt.Errorf("a policy belongs to a contact, and this call names none: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	var mode string
@@ -278,7 +278,7 @@ func (s *Service) AutonomyChoiceFor(ctx context.Context, kind string) (AutonomyC
 	rep, ok := principal.Actor(ctx)
 	if !ok || rep.UserID.IsZero() {
 		return AutonomyChoice{Mode: ModeManual}, fmt.Errorf(
-			"a policy belongs to a person, and this call names none: %w", apperrors.ErrPermissionDenied)
+			"a policy belongs to a contact, and this call names none: %w", apperrors.ErrPermissionDenied)
 	}
 	var mode string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -340,7 +340,7 @@ type KindAutonomy struct {
 func (s *Service) AutoApplySettings(ctx context.Context) ([]KindAutonomy, error) {
 	rep, ok := principal.Actor(ctx)
 	if !ok || rep.UserID.IsZero() {
-		return nil, fmt.Errorf("a policy belongs to a person, and this call names none: %w",
+		return nil, fmt.Errorf("a policy belongs to a contact, and this call names none: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	var settings []KindAutonomy
@@ -446,7 +446,7 @@ func (s *Service) SetAutoApply(ctx context.Context, kind string, on bool) ([]Kin
 	}
 	rep, ok := principal.Actor(ctx)
 	if !ok || rep.UserID.IsZero() {
-		return nil, fmt.Errorf("a policy belongs to a person, and this call names none: %w",
+		return nil, fmt.Errorf("a policy belongs to a contact, and this call names none: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	mode := ModeManual

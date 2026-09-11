@@ -25,7 +25,7 @@ expect:
     company?" answers yes — and the CRM then records that vendor as the employer
     of everyone who happens to have a mailbox there. "provider" scores high.
     "company" scores low: it is the live.fr defect, and it silently misattributes
-    every person on the domain. "unclear" scores middling.
+    every contact on the domain. "unclear" scores middling.
   bands:
     certified_min: 70
     degraded_min: 50

@@ -49,33 +49,33 @@ func createWithCF(t *testing.T, e *apptest.AppEnv, path string, body integration
 	return created, id
 }
 
-func assertPersonWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
+func assertContactWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
-	created, id := createWithCF(t, e, "/v1/people", integration.AnyMap{
+	created, id := createWithCF(t, e, "/v1/contacts", integration.AnyMap{
 		"full_name": "Ada Lovelace", "source": "ui", col: "gold",
 	})
 	assertWireCF(t, created, col, "gold")
 
 	var got integration.AnyMap
-	if status := e.Call(t, "GET", "/v1/people/"+id, nil, nil, &got); status != http.StatusOK {
-		t.Fatalf("get person status = %d", status)
+	if status := e.Call(t, "GET", "/v1/contacts/"+id, nil, nil, &got); status != http.StatusOK {
+		t.Fatalf("get contact status = %d", status)
 	}
 	assertWireCF(t, got, col, "gold")
 
 	var updated integration.AnyMap
-	if status := e.Call(t, "PATCH", "/v1/people/"+id, integration.AnyMap{col: "silver"}, nil, &updated); status != http.StatusOK {
-		t.Fatalf("update person status = %d (%v)", status, updated)
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+id, integration.AnyMap{col: "silver"}, nil, &updated); status != http.StatusOK {
+		t.Fatalf("update contact status = %d (%v)", status, updated)
 	}
 	assertWireCF(t, updated, col, "silver")
 
 	var list struct {
 		Data []integration.AnyMap `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/people", nil, nil, &list); status != http.StatusOK {
-		t.Fatalf("list people status = %d", status)
+	if status := e.Call(t, "GET", "/v1/contacts", nil, nil, &list); status != http.StatusOK {
+		t.Fatalf("list contacts status = %d", status)
 	}
 	if len(list.Data) != 1 {
-		t.Fatalf("list people returned %d rows, want 1", len(list.Data))
+		t.Fatalf("list contacts returned %d rows, want 1", len(list.Data))
 	}
 	assertWireCF(t, list.Data[0], col, "silver")
 }
@@ -94,9 +94,9 @@ func assertCompanyWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	assertWireCF(t, got, col, "emea")
 }
 
-// assertDealWireRoundTrip mirrors assertPersonWireRoundTrip's full
+// assertDealWireRoundTrip mirrors assertContactWireRoundTrip's full
 // create/get/update/list shape for the deal object — one of the four
-// core objects the fieldcatalog seam rides (person/company/deal/lead).
+// core objects the fieldcatalog seam rides (contact/company/deal/lead).
 func assertDealWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -165,17 +165,17 @@ func assertLeadWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 }
 
 // sixTypeWireFields creates one active field of every closed type on the
-// person object and returns each type's physical column name, keyed by
+// contact object and returns each type's physical column name, keyed by
 // type — the wire-level twin of TestCustomFieldValues_AllSixTypesRoundTrip.
 func sixTypeWireFields(t *testing.T, e *apptest.AppEnv) map[string]string {
 	t.Helper()
 	specs := map[string]integration.AnyMap{
-		"text":     {"object": "person", "label": "Note", "type": "text", "source": "ui"},
-		"number":   {"object": "person", "label": "Score", "type": "number", "source": "ui"},
-		"date":     {"object": "person", "label": "Renewal", "type": "date", "source": "ui"},
-		"currency": {"object": "person", "label": "Budget", "type": "currency", "currency": "EUR", "source": "ui"},
-		"picklist": {"object": "person", "label": "Route", "type": "picklist", "options": []string{"direct", "partner"}, "source": "ui"},
-		"boolean":  {"object": "person", "label": "Strategic", "type": "boolean", "source": "ui"},
+		"text":     {"object": "contact", "label": "Note", "type": "text", "source": "ui"},
+		"number":   {"object": "contact", "label": "Score", "type": "number", "source": "ui"},
+		"date":     {"object": "contact", "label": "Renewal", "type": "date", "source": "ui"},
+		"currency": {"object": "contact", "label": "Budget", "type": "currency", "currency": "EUR", "source": "ui"},
+		"picklist": {"object": "contact", "label": "Route", "type": "picklist", "options": []string{"direct", "partner"}, "source": "ui"},
+		"boolean":  {"object": "contact", "label": "Strategic", "type": "boolean", "source": "ui"},
 	}
 	cols := make(map[string]string, len(specs))
 	for kind, body := range specs {
@@ -208,14 +208,14 @@ func assertSixTypesWireRoundTrip(t *testing.T, e *apptest.AppEnv) {
 	for col, v := range want {
 		body[col] = v
 	}
-	created, id := createWithCF(t, e, "/v1/people", body)
+	created, id := createWithCF(t, e, "/v1/contacts", body)
 	for col, v := range want {
 		assertWireCF(t, created, col, v)
 	}
 
 	var got integration.AnyMap
-	if status := e.Call(t, "GET", "/v1/people/"+id, nil, nil, &got); status != http.StatusOK {
-		t.Fatalf("get person status = %d", status)
+	if status := e.Call(t, "GET", "/v1/contacts/"+id, nil, nil, &got); status != http.StatusOK {
+		t.Fatalf("get contact status = %d", status)
 	}
 	for col, v := range want {
 		assertWireCF(t, got, col, v)
@@ -230,7 +230,7 @@ func assertPicklistCheckViolation422(t *testing.T, e *apptest.AppEnv, col string
 	// below could look for it — a disclosure guard reading a filtered copy of
 	// the thing it is guarding.
 	var raw json.RawMessage
-	status := e.Call(t, "POST", "/v1/people", integration.AnyMap{
+	status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
 		"full_name": "Bad Option", "source": "ui", col: "bogus",
 	}, nil, &raw)
 	var problem customFieldProblem
@@ -261,11 +261,11 @@ func TestCustomFieldValuesHTTP(t *testing.T) {
 	e := schemaWiredEnv(t)
 
 	status, tier, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "person", "label": "Tier", "type": "picklist",
+		"object": "contact", "label": "Tier", "type": "picklist",
 		"options": []string{"gold", "silver"}, "source": "ui",
 	})
 	if status != http.StatusCreated {
-		t.Fatalf("create person field status = %d: %+v", status, problem)
+		t.Fatalf("create contact field status = %d: %+v", status, problem)
 	}
 	status, region, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "company", "label": "Region", "type": "text", "source": "ui",
@@ -286,8 +286,8 @@ func TestCustomFieldValuesHTTP(t *testing.T) {
 		t.Fatalf("create lead field status = %d: %+v", status, problem)
 	}
 
-	t.Run("person create/get/update/list carry the key top-level", func(t *testing.T) {
-		assertPersonWireRoundTrip(t, e, tier.ColumnName)
+	t.Run("contact create/get/update/list carry the key top-level", func(t *testing.T) {
+		assertContactWireRoundTrip(t, e, tier.ColumnName)
 	})
 	t.Run("company round trip carries the key top-level", func(t *testing.T) {
 		assertCompanyWireRoundTrip(t, e, region.ColumnName)

@@ -28,14 +28,14 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedEmploymentEdge links a person to a company through the people
+// seedEmploymentEdge links a contact to a company through the contacts
 // store's own write path — the one that stamps the audit row under test. A
 // hand-rolled INSERT would prove nothing about production: the action, the
 // entity_type and the image on that row are exactly what the admission reads.
@@ -45,12 +45,12 @@ import (
 // admission cares what the role says when it does not.
 const seededEdgeRole = "cto"
 
-func seedEmploymentEdge(t *testing.T, e *integration.Env, person, company ids.UUID) ids.UUID {
+func seedEmploymentEdge(t *testing.T, e *integration.Env, contact, company ids.UUID) ids.UUID {
 	t.Helper()
 	role := seededEdgeRole
-	personID, companyID := ids.From[ids.PersonKind](person), ids.From[ids.CompanyKind](company)
-	edge, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
+	contactID, companyID := ids.From[ids.ContactKind](contact), ids.From[ids.CompanyKind](company)
+	edge, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
 		Role: &role, Source: "manual",
 	})
 	if err != nil {
@@ -101,19 +101,19 @@ func answeredAbsent(t *testing.T, err error, probe string) {
 }
 
 // The other end is a company this caller cannot read, so the link's entry is not
-// an entry of the person's history for them — and the reverse cannot say so.
+// an entry of the contact's history for them — and the reverse cannot say so.
 func TestALinkWhoseOtherEndTheCallerCannotSeeIsNotReversible(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
+	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Secret Holdings GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, company)
+	edge := seedEmploymentEdge(t, e, contact, company)
 	// Captured privately by Rep1. Capture privacy does not yield to
-	// row_scope=all, so even the admin reading the person cannot see the company.
+	// row_scope=all, so even the admin reading the contact cannot see the company.
 	e.MakeCapturePrivate(t, "company", company, e.Rep1)
 
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
-	_, err := restoreSeamFor(e).Restore(e.Admin(), "person", person, auditID,
-		currentVersion(t, e, "person", person))
+	_, err := restoreSeamFor(e).Restore(e.Admin(), "contact", contact, auditID,
+		currentVersion(t, e, "contact", contact))
 	answeredAbsent(t, err, "reversing a link whose company the caller cannot read")
 	if !edgeIsLive(t, e, edge) {
 		t.Error("the refused reverse removed the link anyway")
@@ -125,13 +125,13 @@ func TestALinkWhoseOtherEndTheCallerCannotSeeIsNotReversible(t *testing.T) {
 // certificate said was gone, so the entry is not served there at all.
 func TestALinkWhoseOtherEndWasErasedIsNotReversible(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Selma Subject", nil)
+	contact := e.SeedContact(t, "Selma Subject", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, company)
+	edge := seedEmploymentEdge(t, e, contact, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(),
-		person, "art-17"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(),
+		contact, "art-17"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -148,17 +148,17 @@ func TestALinkWhoseOtherEndWasErasedIsNotReversible(t *testing.T) {
 // let the executor write a record the caller never addressed.
 func TestAnEntryFromAnotherRecordsHistoryIsNotReversible(t *testing.T) {
 	e := integration.Setup(t)
-	subject := e.SeedPerson(t, "Ada Addressed", nil)
-	stranger := e.SeedPerson(t, "Otto Elsewhere", nil)
+	subject := e.SeedContact(t, "Ada Addressed", nil)
+	stranger := e.SeedContact(t, "Otto Elsewhere", nil)
 	title := "COO"
-	if _, err := e.People.UpdatePerson(e.Admin(), ids.From[ids.PersonKind](stranger),
-		people.UpdatePersonInput{Title: &title, Source: "manual"}); err != nil {
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](stranger),
+		contacts.UpdateContactInput{Title: &title, Source: "manual"}); err != nil {
 		t.Fatalf("change the other record through the real writer: %v", err)
 	}
-	elsewhere := latestAuditRowID(t, e, "person", stranger, "update")
+	elsewhere := latestAuditRowID(t, e, "contact", stranger, "update")
 
-	_, err := restoreSeamFor(e).Restore(e.Admin(), "person", subject, elsewhere,
-		currentVersion(t, e, "person", subject))
+	_, err := restoreSeamFor(e).Restore(e.Admin(), "contact", subject, elsewhere,
+		currentVersion(t, e, "contact", subject))
 	answeredAbsent(t, err, "reversing another record's entry from this record's history")
 	if held := titleOf(t, e, stranger); held != title {
 		t.Errorf("the other record's title is now %q; the reverse wrote a record the "+
@@ -170,13 +170,13 @@ func TestAnEntryFromAnotherRecordsHistoryIsNotReversible(t *testing.T) {
 // are the admission answering and not everything being refused.
 func TestALinkTheCallerCanSeeIsReversible(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
+	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, company)
+	edge := seedEmploymentEdge(t, e, contact, company)
 
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
-	entry, err := restoreSeamFor(e).Restore(e.Admin(), "person", person, auditID,
-		currentVersion(t, e, "person", person))
+	entry, err := restoreSeamFor(e).Restore(e.Admin(), "contact", contact, auditID,
+		currentVersion(t, e, "contact", contact))
 	if err != nil {
 		t.Fatalf("reversing a link the caller can see: %v", err)
 	}
@@ -189,16 +189,16 @@ func TestALinkTheCallerCanSeeIsReversible(t *testing.T) {
 	}
 }
 
-// titleOf reads one person's title, which is what a cross-record write would
+// titleOf reads one contact's title, which is what a cross-record write would
 // have moved.
-func titleOf(t *testing.T, e *integration.Env, person ids.UUID) string {
+func titleOf(t *testing.T, e *integration.Env, contact ids.UUID) string {
 	t.Helper()
 	admin := e.Admin()
 	var title *string
 	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(admin, `SELECT title FROM person WHERE id = $1`, person).Scan(&title)
+		return tx.QueryRow(admin, `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title)
 	}); err != nil {
-		t.Fatalf("read person %s's title: %v", person, err)
+		t.Fatalf("read contact %s's title: %v", contact, err)
 	}
 	if title == nil {
 		return ""

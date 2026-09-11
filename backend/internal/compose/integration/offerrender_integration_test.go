@@ -30,8 +30,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -177,7 +177,7 @@ func TestOfferRenderPrepareRender_DraftWithBuyerCompany_UsesLiveCompanyNotAFroze
 	dealID := e.SeedDeal(t, "Render live-company deal", pipeline, open, &e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
 
-	company, err := e.People.CreateCompany(e.Admin(), people.CreateCompanyInput{DisplayName: "Acme GmbH"})
+	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Acme GmbH"})
 	if err != nil {
 		t.Fatalf("seed company: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestOfferRenderPrepareRender_DraftWithBuyerCompany_UsesLiveCompanyNotAFroze
 	// Renaming the company must show up on the NEXT render — while still
 	// draft, the block is the live company, never a frozen copy.
 	renamed := "Acme Renamed GmbH"
-	if _, err := e.People.UpdateCompany(e.Admin(), companyID, people.UpdateCompanyInput{DisplayName: &renamed}); err != nil {
+	if _, err := e.Contacts.UpdateCompany(e.Admin(), companyID, contacts.UpdateCompanyInput{DisplayName: &renamed}); err != nil {
 		t.Fatalf("rename company: %v", err)
 	}
 	after, err := e.Deals.PrepareRender(ctx, offerID)
@@ -215,7 +215,7 @@ func TestOfferRenderPrepareRender_Sent_UsesFrozenBuyerAndIssuerSnapshot(t *testi
 	dealID := e.SeedDeal(t, "Render sent deal", pipeline, open, &e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
 
-	company, err := e.People.CreateCompany(e.Admin(), people.CreateCompanyInput{DisplayName: "Frozen Co"})
+	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Frozen Co"})
 	if err != nil {
 		t.Fatalf("seed company: %v", err)
 	}
@@ -231,7 +231,7 @@ func TestOfferRenderPrepareRender_Sent_UsesFrozenBuyerAndIssuerSnapshot(t *testi
 	// Renaming the company AFTER send must not move the sent offer's block:
 	// the frozen buyer_snapshot is the legal record from here on.
 	renamed := "Renamed After Send"
-	if _, err := e.People.UpdateCompany(e.Admin(), companyID, people.UpdateCompanyInput{DisplayName: &renamed}); err != nil {
+	if _, err := e.Contacts.UpdateCompany(e.Admin(), companyID, contacts.UpdateCompanyInput{DisplayName: &renamed}); err != nil {
 		t.Fatalf("rename company: %v", err)
 	}
 

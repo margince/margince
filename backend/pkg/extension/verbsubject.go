@@ -7,7 +7,7 @@ package extension
 //
 // A 🟡 tool's refused call is parked as an approval, and an approval is a
 // judgment about a THING: the inbox shows the row, the decision authority is
-// derived from it, and the person answering has to be someone who may see it.
+// derived from it, and the contact answering has to be someone who may see it.
 // Core verbs answer that from the record they name — a lead, a deal, an
 // activity. An extension operation names nothing the core knows about, so the
 // unit has to say which row its call is about, and where that row lives.

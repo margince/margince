@@ -228,7 +228,7 @@ describe("the openchannel screen", () => {
     expect(await screen.findByText("Accepting")).toBeTruthy();
   });
 
-  // The address is what a person hands to whoever configures the sender, so it
+  // The address is what a contact hands to whoever configures the sender, so it
   // has to be complete — and it has to say, where it is shown, that it is not
   // the thing that admits a request.
   it("shows the full inbound address and says it is not a credential", async () => {
@@ -247,7 +247,7 @@ describe("the openchannel screen", () => {
   });
 
   // THE ASSERTION THIS FILE EXISTS FOR. A `curl` that does not verify is worse
-  // than none: the person who pastes it is refused by the same opaque 401 a
+  // than none: the contact who pastes it is refused by the same opaque 401 a
   // forged request gets, and learns that the connector is broken rather than
   // that the example is. Each clause below is the verifier's own rule —
   // HMAC-SHA256 over the scope, slug, ref, unix seconds, nonce and body joined

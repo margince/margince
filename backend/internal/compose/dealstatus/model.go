@@ -58,20 +58,20 @@ Return ONLY a JSON object with these keys:
 {"story":[...],"blocker":[...],"buyer":[...],"verdict":{"standing":"...","because":[...]},"move_reason":[...]}
 Each of "story", "blocker", "buyer", "verdict.because" and "move_reason" is a list of {"text":"...","evidence":["<id>", ...]}.
 
-"story" — what happened and where it leaves things, in the order it happened. Two to four sentences. Start with the thing a reader who has forgotten this deal most needs to know. Name people, dates and what was actually said.
-"blocker" — what is HOLDING THE DEAL UP, named as something somebody can act on: an unsent mail, a question nobody answered, a person who never replied, a decision nobody has asked for. One or two sentences. Return an empty list when nothing is holding it up. "Time has passed" is not a blocker; "she asked for times on 2 June and nobody sent them" is.
+"story" — what happened and where it leaves things, in the order it happened. Two to four sentences. Start with the thing a reader who has forgotten this deal most needs to know. Name contacts, dates and what was actually said.
+"blocker" — what is HOLDING THE DEAL UP, named as something somebody can act on: an unsent mail, a question nobody answered, a contact who never replied, a decision nobody has asked for. One or two sentences. Return an empty list when nothing is holding it up. "Time has passed" is not a blocker; "she asked for times on 2 June and nobody sent them" is.
 "buyer" — what the buyer wants, read from what they have actually said: what they are optimising for, what they asked for, what they have NOT objected to. One or two sentences. Return an empty list when they have said too little to read honestly. Never guess at a motive the summary does not support.
 "verdict" — your honest call. "standing" is exactly one of: live (moving, with a next step both sides expect), drifting (nothing wrong, nothing happening, it dies of neglect if nobody acts), blocked (something specific is in the way, and you named it in "blocker"), cold (a long silence after real engagement — treat as lost unless something changes). "because" is a LIST of one or two {"text","evidence"} objects saying what the call rests on — the same shape as "story", never a bare string. Be willing to say a deal is cold. A briefing that never delivers bad news is not read twice.
 "move_reason" — a LIST of exactly one {"text","evidence"} object saying why the recommended move is the right one now, the same shape as "story". The move itself is decided elsewhere and given to you in "recommended_move": explain it, never replace it. It rests on records like every other sentence, so it cites them.
 
 Every sentence lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — never in any "text" or in "opening".
-A named stakeholder is not automatically the author of a timeline entry. Attribute a statement to a person only when that entry names them; otherwise say the customer or the team.
+A named stakeholder is not automatically the author of a timeline entry. Attribute a statement to a contact only when that entry names them; otherwise say the customer or the team.
 The room's posts carry "opener_side". A "seller" post is OUR OWN work: it is never customer engagement, never their agreement, and never their confirmation, however warmly it reads. Only a "buyer" post says what the customer thinks, and "buyer_posts": 0 means they have not written in the room at all — say that plainly rather than describing our own activity as theirs.
 KEEP EVERY QUALIFICATION. "The plan looks good, phase 1 is realistic, phase 3 still needs internal clarification" is a conditional yes with an open question in it; writing it as agreement to the plan drops the only part anybody still has to act on. If a message accepts one thing and reserves another, write both or write neither.
-Ground every word in the summary. Never invent a person, a company, a date, a number or an event. If the summary does not say it, do not write it.
+Ground every word in the summary. Never invent a contact, a company, a date, a number or an event. If the summary does not say it, do not write it.
 Every timeline entry carries "when": "past" for something that has happened, "scheduled" for something booked and still ahead. A scheduled entry is a plan, never an event — never write that it took place, and never measure silence from it.
 "open_tasks" is work NOBODY HAS DONE YET, whatever its date says. A task there carries "state": "open" or "overdue". Only state "overdue" is late. State "open" is not overdue, regardless of dates, silence or the deal's age. Never write that a task's work happened, was sent, was followed up or was delivered — an overdue task is a promise already broken, not a thing that took place, and it is the strongest reason to act rather than evidence that somebody already did. A task's own "due" is the only deadline its work has: never urge it for today, by the end of the day, or by any date the record does not carry. Completed work is on the timeline instead, as the event it became.
-"health" scores four things from 0 to 1, where low is bad: activity_recency, stage_velocity, engagement (how many people are actually talking to us) and commitments (promises we have kept). They are signals to reason from, never facts to state — never write a score, a factor name or the word "health" in the card. A low score tells you where to look in "timeline"; the timeline's dates are what you write.
+"health" scores four things from 0 to 1, where low is bad: activity_recency, stage_velocity, engagement (how many contacts are actually talking to us) and commitments (promises we have kept). They are signals to reason from, never facts to state — never write a score, a factor name or the word "health" in the card. A low score tells you where to look in "timeline"; the timeline's dates are what you write.
 Never write the same fact in two sections. Each one answers a different question.
 `
 
@@ -237,7 +237,7 @@ type ThreadIn struct {
 // that breaks the original.
 //
 // The summary carries mail subjects, body excerpts and buyer comments — text
-// written by people outside this workspace. It is fenced with a nonce the
+// written by contacts outside this workspace. It is fenced with a nonce the
 // writer has never seen, so no subject line can close the span and be read as
 // instruction.
 func StatusRequest(in StatusInput, lang string) model.Request {

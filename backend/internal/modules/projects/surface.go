@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The project reads the relationship surfaces compose: which live bodies of
-// work a company carries, and which ones a person is part of. Both are
+// work a company carries, and which ones a contact is part of. Both are
 // summaries for a record page, not a paging list — the full list with its
 // cursor vocabulary stays ListProjects.
 
@@ -25,7 +25,7 @@ import (
 
 // ProjectCard is one project as a record page shows it: enough to name it,
 // say where it stands and who holds it, never the whole row. The contract
-// shape is returned directly because the company page and the person page
+// shape is returned directly because the company page and the contact page
 // render the same rows, and one mapping is what keeps them reading alike.
 type ProjectCard = crmcontracts.Company360Project
 
@@ -127,7 +127,7 @@ func (s *Store) ListProjectsForCompanyTx(ctx context.Context, tx pgx.Tx, company
 	return cards[:projectSurfaceCap], dropped.Phase != crmcontracts.Company360ProjectPhaseClosed, nil
 }
 
-// ListProjectsForPersonTx lists the unarchived projects a person is part of:
+// ListProjectsForContactTx lists the unarchived projects a contact is part of:
 // the ones they hold a live stakeholder seat on, plus every project of the
 // company they currently work for. One row per project, work in motion first.
 //
@@ -135,13 +135,13 @@ func (s *Store) ListProjectsForCompanyTx(ctx context.Context, tx pgx.Tx, company
 // scope and the projects by the project row scope, because they answer
 // different questions: the edge bound asks which ties this caller may learn
 // of, the row scope which projects.
-func (s *Store) ListProjectsForPersonTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]ProjectCard, error) {
+func (s *Store) ListProjectsForContactTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]ProjectCard, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	personPos := arg(personID)
+	contactPos := arg(contactID)
 	scope, err := projectScopeBound(ctx, arg)
 	if err != nil {
 		return nil, err
@@ -152,7 +152,7 @@ func (s *Store) ListProjectsForPersonTx(ctx context.Context, tx pgx.Tx, personID
 	}
 	// The employment arm is an edge too, and it is bounded the same way: a
 	// caller whose relationship scope excludes the employer's company may
-	// not learn that company's projects through the person who works there.
+	// not learn that company's projects through the contact who works there.
 	employmentBound, err := edgeBound(ctx, "e", arg)
 	if err != nil {
 		return nil, err
@@ -166,11 +166,11 @@ func (s *Store) ListProjectsForPersonTx(ctx context.Context, tx pgx.Tx, personID
 		   AND (EXISTS (
 		            SELECT 1 FROM relationship r
 		             WHERE r.kind = 'project_stakeholder' AND r.project_id = p.id
-		               AND r.person_id = $%[1]d AND r.archived_at IS NULL AND r.ended_at IS NULL
+		               AND r.contact_id = $%[1]d AND r.archived_at IS NULL AND r.ended_at IS NULL
 		               AND (%[3]s))
 		        OR EXISTS (
 		            SELECT 1 FROM relationship e
-		             WHERE e.kind = 'employment' AND e.person_id = $%[1]d
+		             WHERE e.kind = 'employment' AND e.contact_id = $%[1]d
 		               AND EXISTS (
 		                   SELECT 1 FROM relationship c
 		                    WHERE c.kind = 'project_company' AND c.project_id = p.id
@@ -179,7 +179,7 @@ func (s *Store) ListProjectsForPersonTx(ctx context.Context, tx pgx.Tx, personID
 		               AND e.archived_at IS NULL
 		               AND (%[4]s)))
 		 `+projectCardOrder+`
-		 LIMIT %[5]d`, personPos, scope, seatBound, employmentBound, projectSurfaceCap), args...)
+		 LIMIT %[5]d`, contactPos, scope, seatBound, employmentBound, projectSurfaceCap), args...)
 	if err != nil {
 		return nil, err
 	}

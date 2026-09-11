@@ -271,8 +271,8 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		},
 		{
 			"a merge of a record into itself",
-			NewMergeCall(oneRecord(datasource.EntityPerson, id, `{}`, 1),
-				MergeCommand{RecordType: "person", SourceID: id, TargetID: id}),
+			NewMergeCall(oneRecord(datasource.EntityContact, id, `{}`, 1),
+				MergeCommand{RecordType: "contact", SourceID: id, TargetID: id}),
 			"must differ",
 		},
 		{
@@ -342,15 +342,15 @@ func distinctLinks(n int) []RecordLink {
 // row that is about to stop existing and describe the merge backwards.
 func TestAMergeStagesTheSurvivorAndNamesBothHalves(t *testing.T) {
 	source, survivor := ids.NewV7(), ids.NewV7()
-	sourceRef := datasource.EntityRef{Type: datasource.EntityPerson, ID: source}
-	survivorRef := datasource.EntityRef{Type: datasource.EntityPerson, ID: survivor}
+	sourceRef := datasource.EntityRef{Type: datasource.EntityContact, ID: source}
+	survivorRef := datasource.EntityRef{Type: datasource.EntityContact, ID: survivor}
 	p := &tallyingProvider{records: map[datasource.EntityRef]datasource.Record{
 		sourceRef:   nativeRecord(datasource.Record{Ref: sourceRef, Fields: json.RawMessage(`{"full_name":"Ada Old"}`), Version: 2}),
 		survivorRef: nativeRecord(datasource.Record{Ref: survivorRef, Fields: json.RawMessage(`{"full_name":"Ada New"}`), Version: 7}),
 	}}
 
 	info, err := StageSubject(context.Background(), NewMergeCall(p, MergeCommand{
-		RecordType: "person", SourceID: source, TargetID: survivor,
+		RecordType: "contact", SourceID: source, TargetID: survivor,
 	}))
 	if err != nil {
 		t.Fatalf("staging a well-formed merge answered %v", err)
@@ -378,8 +378,8 @@ func TestAMergeStagesTheSurvivorAndNamesBothHalves(t *testing.T) {
 // locally-authoritative survivor is still a change no approval could release.
 func TestAMergeRefusesEitherHalfHeldElsewhere(t *testing.T) {
 	local, external := ids.NewV7(), ids.NewV7()
-	localRef := datasource.EntityRef{Type: datasource.EntityPerson, ID: local}
-	externalRef := datasource.EntityRef{Type: datasource.EntityPerson, ID: external}
+	localRef := datasource.EntityRef{Type: datasource.EntityContact, ID: local}
+	externalRef := datasource.EntityRef{Type: datasource.EntityContact, ID: external}
 	// The external half is deliberately unstamped: its authority lives away.
 	records := map[datasource.EntityRef]datasource.Record{
 		localRef:    nativeRecord(datasource.Record{Ref: localRef, Fields: json.RawMessage(`{}`)}),
@@ -396,7 +396,7 @@ func TestAMergeRefusesEitherHalfHeldElsewhere(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			_, err := StageSubject(context.Background(), NewMergeCall(
 				&tallyingProvider{records: records},
-				MergeCommand{RecordType: "person", SourceID: c.source, TargetID: c.target}))
+				MergeCommand{RecordType: "contact", SourceID: c.source, TargetID: c.target}))
 			if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 				t.Fatalf("err = %v, want ErrUnsupportedBySoR", err)
 			}
@@ -540,10 +540,10 @@ func TestASecondCallOnTheSameResolverIsReadAfresh(t *testing.T) {
 func mergeFixture(p *tallyingProvider) MergeCommand {
 	source, survivor := ids.NewV7(), ids.NewV7()
 	for _, id := range []ids.UUID{source, survivor} {
-		ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: id}
+		ref := datasource.EntityRef{Type: datasource.EntityContact, ID: id}
 		p.records[ref] = nativeRecord(datasource.Record{Ref: ref, Fields: json.RawMessage(`{}`)})
 	}
-	return MergeCommand{RecordType: "person", SourceID: source, TargetID: survivor}
+	return MergeCommand{RecordType: "contact", SourceID: source, TargetID: survivor}
 }
 
 // linkFixture adds one authoritative company to p and returns its id.
@@ -603,7 +603,7 @@ func TestTheArchiveToolStagesEveryRecordTypeItsWritePathServes(t *testing.T) {
 	// iterates the list it is asserting on cannot notice the list shrinking,
 	// which is the regression it exists to catch.
 	for _, recordType := range []string{
-		"person", "company", "deal", "project", "relationship", "activity",
+		"contact", "company", "deal", "project", "relationship", "activity",
 	} {
 		t.Run(recordType, func(t *testing.T) {
 			id := ids.NewV7()
@@ -769,7 +769,7 @@ func TestADecisionStagesNoTargetAndSaysWhichWayItGoes(t *testing.T) {
 			}
 			if err := tc.call.Guards(context.Background()); err != nil {
 				t.Errorf("a decision's guards refused it: %v — what may be decided is the approvals "+
-					"engine's own question, answered against the deciding person", err)
+					"engine's own question, answered against the deciding contact", err)
 			}
 		})
 	}

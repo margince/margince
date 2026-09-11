@@ -23,7 +23,7 @@
 // row is placed by joining the table its entity_type names, under that table's
 // own gate:
 //
-//   - the five owner-scoped records (deal, company, person, lead, project)
+//   - the five owner-scoped records (deal, company, contact, lead, project)
 //     through auth.ScopeClauseFor, which is the row-visibility predicate every
 //     other read of them uses.
 //   - activity through auth.ActivityContentClause, because an activity's

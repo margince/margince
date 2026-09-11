@@ -20,7 +20,7 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open={false}
         onClose={vi.fn()}
-        title="Archive this person?"
+        title="Archive this contact?"
         confirmLabel="Archive"
         onConfirm={vi.fn()}
       >
@@ -35,14 +35,14 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open
         onClose={vi.fn()}
-        title="Archive this person?"
+        title="Archive this contact?"
         confirmLabel="Archive"
         onConfirm={vi.fn()}
       >
         <p>This cannot be undone.</p>
       </ConfirmModal>,
     );
-    expect(screen.getByText("Archive this person?")).toBeTruthy();
+    expect(screen.getByText("Archive this contact?")).toBeTruthy();
     expect(screen.getByText("This cannot be undone.")).toBeTruthy();
     expect(document.querySelector(".dot")).toBeNull();
   });
@@ -69,7 +69,7 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open
         onClose={vi.fn()}
-        title="Archive this person?"
+        title="Archive this contact?"
         confirmLabel="Archive"
         onConfirm={onConfirm}
       >
@@ -86,7 +86,7 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open
         onClose={onClose}
-        title="Archive this person?"
+        title="Archive this contact?"
         confirmLabel="Archive"
         onConfirm={vi.fn()}
       >
@@ -102,7 +102,7 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open
         onClose={vi.fn()}
-        title="Archive this person?"
+        title="Archive this contact?"
         confirmLabel="Archive"
         onConfirm={vi.fn()}
         error="archive failed"
@@ -120,7 +120,7 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open
         onClose={vi.fn()}
-        title="Archive this person?"
+        title="Archive this contact?"
         confirmLabel="Archive"
         onConfirm={vi.fn()}
         error={null}
@@ -142,7 +142,7 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open
         onClose={vi.fn()}
-        title="Archive this person?"
+        title="Archive this contact?"
         confirmLabel="Archive"
         onConfirm={vi.fn()}
         pending
@@ -164,7 +164,7 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open
         onClose={vi.fn()}
-        title="Archive this person?"
+        title="Archive this contact?"
         confirmLabel="Archive"
         onConfirm={onConfirm}
         pending
@@ -181,7 +181,7 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open
         onClose={vi.fn()}
-        title="Archive this person?"
+        title="Archive this contact?"
         confirmLabel="Archive"
         onConfirm={vi.fn()}
       >

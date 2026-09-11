@@ -34,7 +34,7 @@ func wordingCtx() context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Create: true, Read: true, Update: true, Delete: true},
+				"contact": {Create: true, Read: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -50,7 +50,7 @@ func TestAGrantWithoutWordingIsRefused(t *testing.T) {
 	store := NewStore(nil)
 
 	_, err := store.Record(wordingCtx(), RecordInput{
-		PersonID:  ids.New[ids.PersonKind](),
+		ContactID: ids.New[ids.ContactKind](),
 		PurposeID: ids.New[ids.PurposeKind](),
 		NewState:  "granted",
 	})
@@ -70,7 +70,7 @@ func TestWordingIsBoundedAtTheWriter(t *testing.T) {
 	huge := strings.Repeat("x", maxWordingRunes+1)
 
 	_, err := store.Record(wordingCtx(), RecordInput{
-		PersonID:   ids.New[ids.PersonKind](),
+		ContactID:  ids.New[ids.ContactKind](),
 		PurposeID:  ids.New[ids.PurposeKind](),
 		NewState:   "granted",
 		PolicyText: &huge,
@@ -97,7 +97,7 @@ func TestTheWordingVersionIsBoundedToo(t *testing.T) {
 	huge := strings.Repeat("v", maxVersionRunes+1)
 
 	_, err := store.Record(wordingCtx(), RecordInput{
-		PersonID:      ids.New[ids.PersonKind](),
+		ContactID:     ids.New[ids.ContactKind](),
 		PurposeID:     ids.New[ids.PurposeKind](),
 		NewState:      "granted",
 		PolicyText:    &grantWording,
@@ -119,7 +119,7 @@ func TestTheWordingVersionIsBoundedToo(t *testing.T) {
 // Fixtures pass one input for both states to keep a helper single-shaped, and
 // admitRecord only refuses a grant that has none — it does not strip what a
 // withdrawal supplies. Without wordingFor the row would record the sentence
-// that accompanied a GRANT as though the person had read it while opting out.
+// that accompanied a GRANT as though the contact had read it while opting out.
 func TestAWithdrawalStoresNoWordingEvenWhenGivenSome(t *testing.T) {
 	version := "v1"
 	text, gotVersion := wordingFor(StateWithdrawn, &grantWording, &version)

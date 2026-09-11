@@ -151,15 +151,15 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "screens/working-hours.test.tsx",
-    why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
+    why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
   },
   {
     file: "screens/working-hours.stories.tsx",
-    why: "Same fixture, same reason as the suite above: the story answers /me/working-hours the way the SERVER does, and a person who has chosen no zone is answered with the installation's — so the fixture names one. The card draws the name it is handed and the story asserts no instant, while a zone read off the runner would make the catalog frame describe whichever machine built it.",
+    why: "Same fixture, same reason as the suite above: the story answers /me/working-hours the way the SERVER does, and a contact who has chosen no zone is answered with the installation's — so the fixture names one. The card draws the name it is handed and the story asserts no instant, while a zone read off the runner would make the catalog frame describe whichever machine built it.",
   },
   {
     file: "screens/settings.testkit.tsx",
-    why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
+    why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
   },
   {
     file: "screens/worklist.when.test.tsx",
@@ -358,8 +358,8 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Reads back the calendar day an entry files under — backdated or logged at the moment — which needs both a named zone to pretend to be in and a named zone to compare the filing against.",
   },
   {
-    file: "screens/personfiles.test.tsx",
-    why: "Installation-settings fixture backing the person-files read.",
+    file: "screens/contactfiles.test.tsx",
+    why: "Installation-settings fixture backing the contact-files read.",
   },
   {
     file: "screens/privacy.logic.test.ts",

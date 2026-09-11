@@ -258,7 +258,7 @@ func TestEntityVisibleToClassification(t *testing.T) {
 		// mirror.* is deferred by EVENT even when its runtime object_class
 		// collides with a row-scoped entity name — caught before any probe.
 		{"mirror.conflict over deal object_class", "mirror.conflict", "deal", false},
-		{"mirror.budget_degraded over person object_class", "mirror.budget_degraded", "person", false},
+		{"mirror.budget_degraded over contact object_class", "mirror.budget_degraded", "contact", false},
 		{"mirror.deleted over company object_class", "mirror.deleted", "company", false},
 		{"mirror.write_rejected over lead object_class", "mirror.write_rejected", "lead", false},
 		// retention telemetry subjects are deferred by ENTITY.
@@ -299,7 +299,7 @@ func TestEntityVisibleToClassification(t *testing.T) {
 }
 
 // TestRowScopedSubjectsRouteToProbes guards the note that consent.changed
-// (person|lead) and retention.applied (person|lead|deal|activity) must
+// (contact|lead) and retention.applied (contact|lead|deal|activity) must
 // still hit their row-scope probes: their runtime entity type is NEITHER
 // deferred NOR workspace-level, so entityVisibleTo falls through to the
 // probe switch rather than short-circuiting. Asserting the map memberships
@@ -308,12 +308,12 @@ func TestEntityVisibleToClassification(t *testing.T) {
 // a row-scoped subject into fan-out-to-everyone or a blanket deferral.
 func TestRowScopedSubjectsRouteToProbes(t *testing.T) {
 	if _, deferred := deferredDeliveryEvents["consent.changed"]; deferred {
-		t.Error("consent.changed must NOT be event-deferred — its person/lead subject is row-scope probed")
+		t.Error("consent.changed must NOT be event-deferred — its contact/lead subject is row-scope probed")
 	}
 	if _, deferred := deferredDeliveryEvents["retention.applied"]; deferred {
-		t.Error("retention.applied must NOT be event-deferred — its person/lead/deal/activity subjects are row-scope probed")
+		t.Error("retention.applied must NOT be event-deferred — its contact/lead/deal/activity subjects are row-scope probed")
 	}
-	for _, entity := range []string{"person", "company", "deal", "lead", "activity", "voice_profile", "signal", "offer", "approval"} {
+	for _, entity := range []string{"contact", "company", "deal", "lead", "activity", "voice_profile", "signal", "offer", "approval"} {
 		if _, ws := workspaceLevelEntities[entity]; ws {
 			t.Errorf("row-scoped subject %q must not be in workspaceLevelEntities (would fan out to everyone)", entity)
 		}

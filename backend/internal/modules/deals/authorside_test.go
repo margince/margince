@@ -336,7 +336,7 @@ var (
 // Which participants are evidence that the OTHER side was there.
 //
 // "Not a seat" is the wrong test and was the bug: the manual logging path
-// writes a colleague as a person link with a NULL user_id, so an internal
+// writes a colleague as a contact link with a NULL user_id, so an internal
 // meeting would have counted a buyer and settled a criterion about the buyer
 // turning up.
 func TestOnlyARealOutsideAddressCountsAsTheBuyerBeingThere(t *testing.T) {
@@ -344,11 +344,11 @@ func TestOnlyARealOutsideAddressCountsAsTheBuyerBeingThere(t *testing.T) {
 		p    Participant
 		want bool
 	}{
-		"an outside address":            {Participant{Role: "attendee", Address: "ines@customer.example"}, true},
-		"one of our seats":              {Participant{Role: "attendee", UserID: "u1", Address: "rep@acme-sales.example"}, false},
-		"a colleague on our own domain": {Participant{Role: "attendee", Address: "colleague@acme-sales.example"}, false},
-		"a person link with no address": {Participant{Role: "attendee", PersonLinked: true}, false},
-		"a row naming nobody":           {Participant{Role: "attendee"}, false},
+		"an outside address":             {Participant{Role: "attendee", Address: "ines@customer.example"}, true},
+		"one of our seats":               {Participant{Role: "attendee", UserID: "u1", Address: "rep@acme-sales.example"}, false},
+		"a colleague on our own domain":  {Participant{Role: "attendee", Address: "colleague@acme-sales.example"}, false},
+		"a contact link with no address": {Participant{Role: "attendee", ContactLinked: true}, false},
+		"a row naming nobody":            {Participant{Role: "attendee"}, false},
 	} {
 		if got := CountsAsBuyerParticipant(tc.p, ourDomains); got != tc.want {
 			t.Errorf("%s: counted as buyer = %v, want %v", name, got, tc.want)

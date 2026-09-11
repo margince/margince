@@ -83,7 +83,7 @@ func readingsOf(
 			// decide whether to offer one: a duplicate pair reaches
 			// duplicateItem with a merge action only when the reader could write
 			// BOTH records, and an approval carries its verbs only where the
-			// inbox admits them. Counting the rest tells somebody a person is
+			// inbox admits them. Counting the rest tells somebody a contact is
 			// blocked on an answer they are not able to give.
 			//
 			// KNOWN NARROWING, and it is the safe direction rather than an

@@ -58,7 +58,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   }
 
   const usage = tag.data.usage;
-  const total = usage.people + usage.companies + usage.deals;
+  const total = usage.contacts + usage.companies + usage.deals;
 
   return (
     <div className="wrap tagresult">
@@ -108,10 +108,10 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
       ) : (
         <div className="tagresult-groups">
           <ResultGroup
-            kind="person"
+            kind="contact"
             title={t("tagResult.contacts")}
             icon={Contact}
-            count={usage.people}
+            count={usage.contacts}
             tagID={tagID}
           />
           <ResultGroup
@@ -136,7 +136,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
 
 /** What each record type is called on the wire, and where its rows live. */
 const GROUPS = {
-  person: { path: "/people", screen: "contacts" },
+  contact: { path: "/contacts", screen: "contacts" },
   company: { path: "/companies", screen: "companies" },
   deal: { path: "/deals", screen: "deals" },
 } as const;
@@ -201,7 +201,7 @@ function ResultGroup({
   // The HEADER counts the rows, not the tag's usage. The two are answers to
   // different questions and they disagree in a state a reader can reach: the
   // usage count admits a retired tag, while the list filter every record screen
-  // uses requires the tag to be live. A retired word would head "People (2)"
+  // uses requires the tag to be live. A retired word would head "Contacts (2)"
   // over an empty group. Once more rows exist than the preview shows, the total
   // is the honest ceiling and the footer says so.
   const shown = formatNumber(
@@ -265,7 +265,7 @@ function ResultGroup({
 /**
  * What to call one record.
  *
- * The three types name themselves differently on the wire — a person carries
+ * The three types name themselves differently on the wire — a contact carries
  * `full_name`, a company `display_name`, a deal `name` — and a row whose name
  * is empty is named as unnamed rather than rendered as a blank line nobody can
  * press with confidence.

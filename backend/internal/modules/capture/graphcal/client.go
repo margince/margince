@@ -93,7 +93,7 @@ type OAuthConfig struct {
 // mail connector uses, with the calendar scopes.
 //
 // It is a SEPARATE Microsoft authorization from the mailbox's, requesting the
-// calendar permission alone, so a person can connect one without the other and
+// calendar permission alone, so a contact can connect one without the other and
 // disconnect either — the same boundary the Google pair keeps. Reusing the
 // handshake is deliberate (one copy of Microsoft's consent parameters and its
 // scope-in-token-form requirement); reusing the NAME is not, so this passes its

@@ -42,7 +42,7 @@ func TestDisconnectPurgesTheMirrorTombstonesAndRetainsTheConnectionAudit(t *test
 		t.Fatalf("Connect: %v", err)
 	}
 
-	const objectClass = "person"
+	const objectClass = "contact"
 	const externalID = "5551234"
 	seedConnectedWorkspaceMirrorState(ctx, t, store, objectClass, externalID)
 	assertMirrorFixtureLanded(ctx, t, pool, ws)
@@ -90,7 +90,7 @@ func seedConnectedWorkspaceMirrorState(ctx context.Context, t *testing.T, store 
 		t.Fatalf("seeding the mirror fixture: %v", err)
 	}
 	if err := store.UpsertAssoc(ctx, Assoc{
-		FromType: "person", FromID: externalID, ToType: "deal", ToID: "999",
+		FromType: "contact", FromID: externalID, ToType: "deal", ToID: "999",
 		TypeID: 1, Category: "HUBSPOT_DEFINED", Direction: "forward",
 	}); err != nil {
 		t.Fatalf("seeding the association fixture: %v", err)
@@ -135,7 +135,7 @@ type auditImage struct {
 }
 
 // seedUnrelatedAuditRow writes a second audit_log row, unrelated to overlay
-// entirely (a plain person create), which proves teardown does not reach for
+// entirely (a plain contact create), which proves teardown does not reach for
 // audit_log at all — it is immutable by construction
 // (migrations/core/0012_audit_log.up.sql's trg_audit_no_mutate), so this row's
 // survival untouched is the negative-space proof that Disconnect never attempts
@@ -145,7 +145,7 @@ func seedUnrelatedAuditRow(ctx context.Context, t *testing.T, pool *pgxpool.Pool
 	var row auditImage
 	queryRowWS(ctx, t, pool, `
 		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, before, after)
-		VALUES ($1, 'human', 'human:test', 'create', 'person', $2, NULL, '{"first_name":"Grace"}'::jsonb)
+		VALUES ($1, 'human', 'human:test', 'create', 'contact', $2, NULL, '{"first_name":"Grace"}'::jsonb)
 		RETURNING id, before, after`, []any{ids.NewV7(), ids.NewV7()}, &row.id, &row.before, &row.after)
 	return row
 }
@@ -364,15 +364,15 @@ func TestFencedSyncWritesAbortOnceTheConnectionIsRevoked(t *testing.T) {
 	}
 	// Every fenced sync write now aborts with ErrConnectionGone — the
 	// connection row is revoked, so the FOR SHARE fence finds no active row.
-	// "person/new" was NEVER in the mirror, so no tombstone guards it: only
+	// "contact/new" was NEVER in the mirror, so no tombstone guards it: only
 	// the fence stops Ingest from landing a fresh incumbent-derived row into
 	// the now-native workspace.
 	fencedWrites := map[string]func() error{
 		"Ingest": func() error {
-			return fenced.Ingest(ctx, Record{ObjectClass: "person", ExternalID: "new", Fields: map[string]any{"firstname": "Nope"}, ModifiedAt: time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC)})
+			return fenced.Ingest(ctx, Record{ObjectClass: "contact", ExternalID: "new", Fields: map[string]any{"firstname": "Nope"}, ModifiedAt: time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC)})
 		},
 		"UpsertAssoc": func() error {
-			return fenced.UpsertAssoc(ctx, Assoc{FromType: "person", FromID: "new", ToType: "deal", ToID: "1", TypeID: 1, Category: "HUBSPOT_DEFINED", Direction: "forward"})
+			return fenced.UpsertAssoc(ctx, Assoc{FromType: "contact", FromID: "new", ToType: "deal", ToID: "1", TypeID: 1, Category: "HUBSPOT_DEFINED", Direction: "forward"})
 		},
 		"SaveBackfillCursor": func() error {
 			return fenced.SaveBackfillCursor(ctx, "contacts", "cur-stray", BackfillProgress{Done: true}, conn.ConnectedAt)
@@ -469,7 +469,7 @@ func TestIdentityFenceFailsClosedOnZeroConnectedAt(t *testing.T) {
 
 	misconfigured := store.WithFenceIdentity(time.Time{})
 	err := misconfigured.Ingest(ctx, Record{
-		ObjectClass: "person", ExternalID: "x",
+		ObjectClass: "contact", ExternalID: "x",
 		Fields: map[string]any{"firstname": "A"}, ModifiedAt: time.Date(2026, 7, 27, 0, 0, 0, 0, time.UTC),
 	})
 	if !errors.Is(err, errIdentityFenceMisconfigured) {

@@ -58,11 +58,11 @@ func TestASentenceCitingAnUnsuppliedRecordIsDroppedWhole(t *testing.T) {
 
 func TestAValidIdentityOfTheWrongKindIsStillDropped(t *testing.T) {
 	// The check is on the (kind, identity) PAIR. Keying on the id alone accepts
-	// a real deal id cited as a person, and the chip then routes the reader to
+	// a real deal id cited as a contact, and the chip then routes the reader to
 	// the wrong screen — or to a record of a kind they were never shown.
 	sentence := Sentence{
 		Text:     "The buyer replied.",
-		Evidence: []Evidence{{EntityType: "person", EntityID: dealID}},
+		Evidence: []Evidence{{EntityType: "contact", EntityID: dealID}},
 	}
 	if Grounded(sentence, supplied()) {
 		t.Error("a real id cited under the wrong kind was kept")

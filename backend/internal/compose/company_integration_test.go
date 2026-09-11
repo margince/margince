@@ -21,7 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -32,7 +32,7 @@ func strptr(s string) *string { return &s }
 
 func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	// A freshly bootstrapped installation (ADR-0061) has a company row
@@ -41,7 +41,7 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 		t.Fatalf("GetAnchorCompany on a bare installation → %v, want ErrNotFound", err)
 	}
 
-	saved, err := store.SaveCompany(ctx, people.SaveCompanyInput{
+	saved, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
 		Website:     strptr("https://www.acme.example/about"),
 		Fields: map[string]*string{
@@ -106,7 +106,7 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	}
 
 	// A second save updates the anchor rather than minting a rival company.
-	if _, err := store.SaveCompany(ctx, people.SaveCompanyInput{
+	if _, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme SE",
 		Fields:      map[string]*string{"icp": strptr("RevOps at enterprise")},
 	}); err != nil {
@@ -124,7 +124,7 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	}
 
 	// A field sent empty is cleared, not stored as the empty answer.
-	cleared, err := store.SaveCompany(ctx, people.SaveCompanyInput{
+	cleared, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme SE",
 		Fields:      map[string]*string{"icp": strptr("")},
 	})
@@ -142,10 +142,10 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 // saw a 200, and kept the old site.
 func TestCompanyWebsiteCanBeChangedAfterTheFirstSave(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	base := people.SaveCompanyInput{
+	base := contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
 		Fields: map[string]*string{
 			"legal_name": strptr("Acme GmbH"), "registered_address": strptr("Berlin"),
@@ -202,10 +202,10 @@ func TestCompanyWebsiteCanBeChangedAfterTheFirstSave(t *testing.T) {
 
 func TestCompanySavedByAHumanSurvivesALaterReadBack(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	saved, err := store.SaveCompany(human, people.SaveCompanyInput{
+	saved, err := store.SaveCompany(human, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
 		Website:     strptr("https://acme.example"),
 		Fields:      map[string]*string{"icp": strptr("What the human says we sell to")},
@@ -235,9 +235,9 @@ func TestCompanySavedByAHumanSurvivesALaterReadBack(t *testing.T) {
 		Type: principal.PrincipalSystem, ID: "agent:coldstart",
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: integration.AdminPerms,
 	})
-	companyID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
+	companyID, err := store.ApplyColdStartProfile(agent, contacts.ApplyColdStartProfileInput{
 		SourceURL: "https://acme.example",
-		Fields: []people.ColdStartFieldInput{{
+		Fields: []contacts.ColdStartFieldInput{{
 			Field: "icp", Value: "What the website says", EvidenceSnippet: "Built for RevOps",
 			SourceURL: "https://acme.example", Confidence: 0.9,
 		}},
@@ -261,11 +261,11 @@ func TestCompanySavedByAHumanSurvivesALaterReadBack(t *testing.T) {
 
 func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	// The first form save fills the empty header line from the summary.
-	saved, err := store.SaveCompany(ctx, people.SaveCompanyInput{
+	saved, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
 		Website:     strptr("https://acme.example"),
 		Fields:      map[string]*string{"offer_summary": strptr("Revenue operations software")},
@@ -288,7 +288,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 	}
 
 	// The header's inline edit is the one editor of a standing value.
-	if _, err := store.UpdateCompany(ctx, saved.CompanyID, people.UpdateCompanyInput{
+	if _, err := store.UpdateCompany(ctx, saved.CompanyID, contacts.UpdateCompanyInput{
 		Description: strptr("The RevOps platform for manufacturers"),
 	}); err != nil {
 		t.Fatalf("UpdateCompany: %v", err)
@@ -296,7 +296,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 
 	// A later form save re-sends the unchanged summary; the newer header line
 	// must survive it.
-	if _, err := store.SaveCompany(ctx, people.SaveCompanyInput{
+	if _, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
 		Fields:      map[string]*string{"offer_summary": strptr("Revenue operations software")},
 	}); err != nil {
@@ -309,7 +309,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 
 func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
 	agent := principal.WithActor(base, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "agent:coldstart",
@@ -318,9 +318,9 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 
 	// The header renders company.description; an accepted offer_summary is
 	// the one-sentence answer, so the apply writes the column.
-	companyID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
+	companyID, err := store.ApplyColdStartProfile(agent, contacts.ApplyColdStartProfileInput{
 		SourceURL: "https://summarized.example",
-		Fields: []people.ColdStartFieldInput{{
+		Fields: []contacts.ColdStartFieldInput{{
 			Field: "offer_summary", Value: "Revenue operations software for mid-market manufacturers",
 			EvidenceSnippet: "We build RevOps software", SourceURL: "https://summarized.example", Confidence: 0.9,
 		}},
@@ -348,11 +348,11 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 	// onto the evidence row. Nobody typed the standing value — one automated
 	// read replaces another, which is what lets a re-crawl correct a summary
 	// that has gone stale, or one an agent wrote from a meeting transcript.
-	// A value a PERSON authored is held instead, and the form-resave case
+	// A value a CONTACT authored is held instead, and the form-resave case
 	// above is the assertion that keeps that half honest.
-	if _, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
+	if _, err := store.ApplyColdStartProfile(agent, contacts.ApplyColdStartProfileInput{
 		SourceURL: "https://summarized.example",
-		Fields: []people.ColdStartFieldInput{{
+		Fields: []contacts.ColdStartFieldInput{{
 			Field: "offer_summary", Value: "A different sentence entirely",
 			EvidenceSnippet: "New copy", SourceURL: "https://summarized.example", Confidence: 0.9,
 		}},
@@ -389,7 +389,7 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 // characters, and a byte cut would refuse text the column accepts.
 func TestAnOverlongOfferSummaryFillsTheHeaderWithItsFirstLine(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
 	agent := principal.WithActor(base, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "agent:coldstart",
@@ -398,9 +398,9 @@ func TestAnOverlongOfferSummaryFillsTheHeaderWithItsFirstLine(t *testing.T) {
 
 	apply := func(t *testing.T, source, summary string) (*string, string) {
 		t.Helper()
-		companyID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
+		companyID, err := store.ApplyColdStartProfile(agent, contacts.ApplyColdStartProfileInput{
 			SourceURL: source,
-			Fields: []people.ColdStartFieldInput{{
+			Fields: []contacts.ColdStartFieldInput{{
 				Field: "offer_summary", Value: summary,
 				EvidenceSnippet: "We build RevOps software", SourceURL: source, Confidence: 0.9,
 			}},
@@ -471,7 +471,7 @@ func TestAnOverlongOfferSummaryFillsTheHeaderWithItsFirstLine(t *testing.T) {
 
 func TestColdStartCreateWithoutLegalNameUsesDerivedDomainName(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
 	agent := principal.WithActor(base, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "agent:coldstart",
@@ -482,9 +482,9 @@ func TestColdStartCreateWithoutLegalNameUsesDerivedDomainName(t *testing.T) {
 	// path must name the company from the domain's registrable label ("Docusign",
 	// not "eu.docusign.net") and mark it name_source='domain' so a later richer
 	// source may overwrite it (ADR-0072/A118).
-	companyID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
+	companyID, err := store.ApplyColdStartProfile(agent, contacts.ApplyColdStartProfileInput{
 		SourceURL: "https://eu.docusign.net",
-		Fields: []people.ColdStartFieldInput{{
+		Fields: []contacts.ColdStartFieldInput{{
 			Field: "icp", Value: "eSignature buyers", EvidenceSnippet: "For every agreement",
 			SourceURL: "https://eu.docusign.net", Confidence: 0.9,
 		}},
@@ -507,10 +507,10 @@ func TestColdStartCreateWithoutLegalNameUsesDerivedDomainName(t *testing.T) {
 
 func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	saved, err := store.SaveCompany(ctx, people.SaveCompanyInput{
+	saved, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
 		Website:     strptr("https://acme.example"),
 		Fields: map[string]*string{
@@ -534,13 +534,13 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 	// scopes it assembles, the provenance it carries, and the fingerprint that
 	// moves only when the profile does.
 
-	first, err := store.GetCompanyContext(ctx, []people.CompanyContextScope{
-		people.CompanyContextOffer, people.CompanyContextPositioning,
+	first, err := store.GetCompanyContext(ctx, []contacts.CompanyContextScope{
+		contacts.CompanyContextOffer, contacts.CompanyContextPositioning,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(first.Scopes) != 2 || first.Scopes[0].Scope != people.CompanyContextPositioning || first.Scopes[1].Scope != people.CompanyContextOffer {
+	if len(first.Scopes) != 2 || first.Scopes[0].Scope != contacts.CompanyContextPositioning || first.Scopes[1].Scope != contacts.CompanyContextOffer {
 		t.Fatalf("context scopes = %#v, want canonical positioning then offer", first.Scopes)
 	}
 	if len(first.Scopes[0].Items) != 1 || first.Scopes[0].Items[0].Key != "icp" || first.Scopes[0].Items[0].Source != "human" {
@@ -549,8 +549,8 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 	if len(first.Scopes[1].Items) != 2 {
 		t.Fatalf("offer context = %#v, want summary and repeatable service", first.Scopes[1].Items)
 	}
-	again, err := store.GetCompanyContext(ctx, []people.CompanyContextScope{
-		people.CompanyContextPositioning, people.CompanyContextOffer,
+	again, err := store.GetCompanyContext(ctx, []contacts.CompanyContextScope{
+		contacts.CompanyContextPositioning, contacts.CompanyContextOffer,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -559,7 +559,7 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 		t.Fatalf("unchanged context fingerprint moved from %q to %q", first.Fingerprint, again.Fingerprint)
 	}
 
-	if _, err := store.SaveCompany(ctx, people.SaveCompanyInput{
+	if _, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: saved.DisplayName,
 		Fields: map[string]*string{
 			"offer_summary": strptr("Revenue intelligence software"),
@@ -567,8 +567,8 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 	}); err != nil {
 		t.Fatal(err)
 	}
-	changed, err := store.GetCompanyContext(ctx, []people.CompanyContextScope{
-		people.CompanyContextOffer, people.CompanyContextPositioning,
+	changed, err := store.GetCompanyContext(ctx, []contacts.CompanyContextScope{
+		contacts.CompanyContextOffer, contacts.CompanyContextPositioning,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -587,9 +587,9 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 func TestTheCompanyReadSurvivesAFactNobodyScored(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 
-	saved, err := store.SaveCompany(ctx, people.SaveCompanyInput{
+	saved, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
 		Fields: map[string]*string{
 			"offer_summary": strptr("Revenue operations software"),
@@ -601,10 +601,10 @@ func TestTheCompanyReadSurvivesAFactNobodyScored(t *testing.T) {
 	}
 	// Written through the real lane, not planted: what makes this row reachable
 	// is that a production writer records no confidence for it.
-	if err := store.ApplyTechnicalEnrichment(ctx, people.TechnicalEnrichment{
+	if err := store.ApplyTechnicalEnrichment(ctx, contacts.TechnicalEnrichment{
 		CompanyID: saved.CompanyID,
-		Completed: []people.TechnicalLane{people.LaneDNS},
-		Observations: []people.TechnicalObservation{{
+		Completed: []contacts.TechnicalLane{contacts.LaneDNS},
+		Observations: []contacts.TechnicalObservation{{
 			Field: "mail_provider", ValueKey: "google", Value: "Google Workspace",
 			Evidence: "aspmx.l.google.com", SourceURL: "dns:acme.example",
 		}},

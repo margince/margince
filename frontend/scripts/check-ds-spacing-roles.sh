@@ -49,7 +49,7 @@
 # `--gapCards` rule and this gate cannot see it, because a stylesheet does not
 # know what a container holds. That question is answerable only against the TSX,
 # and a gate that guessed at it from class names would fire on correct code —
-# which teaches people to stop reading its output, and costs more than the
+# which teaches contacts to stop reading its output, and costs more than the
 # misses it prevents.
 #
 # WHOLE-TREE, unlike its diff-scoped sibling: the tree was cleared to zero

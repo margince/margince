@@ -41,7 +41,7 @@ func MultipartRefusal(err error, limit int64) *DetailedError {
 		"the request must be sent as multipart/form-data")
 }
 
-// Megabytes renders a byte ceiling the way the person it just refused will
+// Megabytes renders a byte ceiling the way the contact it just refused will
 // measure their own file: in decimal MB.
 //
 // Two rules, and the second is the one that matters. A whole number prints

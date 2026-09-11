@@ -9,7 +9,7 @@ package integration
 // keep telling one story: a human saying "this conversation was not with her,
 // it was with him" must not leave her named on it. activity_participant is
 // registered PII and is what the interaction-edge projection derives its
-// (user, person) pairs from, so a row left behind keeps feeding a
+// (user, contact) pairs from, so a row left behind keeps feeding a
 // relationship-strength signal for somebody the human just ruled out.
 //
 // Both shapes below used to break that, in opposite directions.
@@ -29,10 +29,10 @@ func seedRelinkActivity(t *testing.T, e *Env, subject string) ids.UUID {
 	return id
 }
 
-func namedOn(t *testing.T, e *Env, activity, person ids.UUID) int {
+func namedOn(t *testing.T, e *Env, activity, contact ids.UUID) int {
 	t.Helper()
 	return e.WsCount(t, `SELECT count(*) FROM activity_participant
-		 WHERE activity_id = $1 AND person_id = $2`, activity, person)
+		 WHERE activity_id = $1 AND contact_id = $2`, activity, contact)
 }
 
 // The target is ALREADY a participant. The repoint's skip left the displaced
@@ -41,19 +41,19 @@ func namedOn(t *testing.T, e *Env, activity, person ids.UUID) int {
 func TestRelinkRemovesTheDisplacedParticipantWhenTheTargetIsAlreadyOne(t *testing.T) {
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
-	her, him := e.SeedPerson(t, "Ingrid Sattler", nil), e.SeedPerson(t, "Tomas Berg", nil)
+	her, him := e.SeedContact(t, "Ingrid Sattler", nil), e.SeedContact(t, "Tomas Berg", nil)
 	act := seedRelinkActivity(t, e, "Quote follow-up")
-	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`, act, her)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, person_id) VALUES ($1, 'to', $2)`, act, her)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, act, her)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'to', $2)`, act, her)
 	// He was on it too, in ANOTHER role — a different row under
 	// uq_activity_participant, and no obstacle to the repoint, but enough to
 	// make the old guard skip it because that guard asked only about the
-	// person. The displaced row is promoted here; the same-role case below is
+	// contact. The displaced row is promoted here; the same-role case below is
 	// the one that has to delete instead.
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, person_id) VALUES ($1, 'cc', $2)`, act, him)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'cc', $2)`, act, him)
 
 	if _, err := e.Activities.RelinkActivity(admin, ids.From[ids.ActivityKind](act), activities.RelinkActivityInput{
-		EntityType: "person", EntityID: him, ReplaceExistingOfType: true,
+		EntityType: "contact", EntityID: him, ReplaceExistingOfType: true,
 	}); err != nil {
 		t.Fatalf("relink: %v", err)
 	}
@@ -73,25 +73,25 @@ func TestRelinkRemovesTheDisplacedParticipantWhenTheTargetIsAlreadyOne(t *testin
 func TestRelinkMergesSeveralDisplacedParticipantsWithoutColliding(t *testing.T) {
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
-	her, other := e.SeedPerson(t, "Ingrid Sattler", nil), e.SeedPerson(t, "Petra Lang", nil)
-	him := e.SeedPerson(t, "Tomas Berg", nil)
+	her, other := e.SeedContact(t, "Ingrid Sattler", nil), e.SeedContact(t, "Petra Lang", nil)
+	him := e.SeedContact(t, "Tomas Berg", nil)
 	act := seedRelinkActivity(t, e, "Renewal thread")
 	for _, p := range []ids.UUID{her, other} {
-		e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`, act, p)
+		e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, act, p)
 		// The SAME role, which is what makes the two collide once both are
-		// rewritten to one person.
-		e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, person_id) VALUES ($1, 'to', $2)`, act, p)
+		// rewritten to one contact.
+		e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'to', $2)`, act, p)
 	}
 
 	if _, err := e.Activities.RelinkActivity(admin, ids.From[ids.ActivityKind](act), activities.RelinkActivityInput{
-		EntityType: "person", EntityID: him, ReplaceExistingOfType: true,
+		EntityType: "contact", EntityID: him, ReplaceExistingOfType: true,
 	}); err != nil {
 		t.Fatalf("relink with two displaced participants: %v", err)
 	}
 
 	if n := namedOn(t, e, act, him); n != 1 {
 		t.Errorf("the target is named on %d participant row(s), want exactly 1 — "+
-			"two displaced rows merge onto one person, they do not each become one", n)
+			"two displaced rows merge onto one contact, they do not each become one", n)
 	}
 	for name, p := range map[string]ids.UUID{"Ingrid": her, "Petra": other} {
 		if n := namedOn(t, e, act, p); n != 0 {
@@ -107,14 +107,14 @@ func TestRelinkMergesSeveralDisplacedParticipantsWithoutColliding(t *testing.T) 
 func TestRelinkDeletesTheDisplacedParticipantWhenTheTargetHoldsItsShape(t *testing.T) {
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
-	her, him := e.SeedPerson(t, "Ingrid Sattler", nil), e.SeedPerson(t, "Tomas Berg", nil)
+	her, him := e.SeedContact(t, "Ingrid Sattler", nil), e.SeedContact(t, "Tomas Berg", nil)
 	act := seedRelinkActivity(t, e, "Quote follow-up")
-	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`, act, her)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, person_id) VALUES ($1, 'to', $2)`, act, her)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, person_id) VALUES ($1, 'to', $2)`, act, him)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, act, her)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'to', $2)`, act, her)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'to', $2)`, act, him)
 
 	if _, err := e.Activities.RelinkActivity(admin, ids.From[ids.ActivityKind](act), activities.RelinkActivityInput{
-		EntityType: "person", EntityID: him, ReplaceExistingOfType: true,
+		EntityType: "contact", EntityID: him, ReplaceExistingOfType: true,
 	}); err != nil {
 		t.Fatalf("relink: %v", err)
 	}

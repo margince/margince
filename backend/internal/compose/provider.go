@@ -18,9 +18,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -34,7 +34,7 @@ import (
 // authoritative (03e §2.3 — the overlay adapter is where that earns its
 // keep).
 type Provider struct {
-	people     *people.Provider
+	contacts   *contacts.Provider
 	deals      *deals.Provider
 	projects   *projects.Provider
 	activities *activities.Provider
@@ -59,7 +59,7 @@ func NewProviderFor(db *database.DB) *Provider {
 		// same reason the fieldcatalog seam does: the MCP surface merges and
 		// promotes records too, and an unwired carrier refuses every merge of
 		// a subject who holds a stop.
-		people: people.NewProvider(db).
+		contacts: contacts.NewProvider(db).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithStopCarrier(consent.NewStore(db)),
 		deals:      deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
@@ -92,7 +92,7 @@ const defaultSearchPageSize = 50
 // text, and a partner has no text of its own — every word a caller would
 // search for lives on the company the partner row extends. Including it
 // would return the same companies twice under two type names.
-var searchable = []datasource.EntityType{datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal, datasource.EntityLead, datasource.EntityProject}
+var searchable = []datasource.EntityType{datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal, datasource.EntityLead, datasource.EntityProject}
 
 // nameable is what a caller may ASK FOR BY NAME. It is a superset of
 // searchable, and the two are separate because they answer different
@@ -104,9 +104,9 @@ var nameable = append(append([]datasource.EntityType{}, searchable...), datasour
 
 func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	switch ref.Type {
-	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead,
+	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship, datasource.EntityPartner:
-		return p.people.Read(ctx, ref)
+		return p.contacts.Read(ctx, ref)
 	case datasource.EntityDeal:
 		return p.deals.Read(ctx, ref)
 	case datasource.EntityProject:
@@ -128,9 +128,9 @@ func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasour
 // rather than a name it would refuse.
 func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	switch t {
-	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead,
+	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
-		return p.people.ListFilters(t)
+		return p.contacts.ListFilters(t)
 	case datasource.EntityDeal:
 		return p.deals.ListFilters(t)
 	case datasource.EntityProject:
@@ -220,9 +220,9 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 		err     error
 	)
 	switch t {
-	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead,
+	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
-		records, next, _, err = p.people.SearchEntity(ctx, t, text, limit, inner, filters)
+		records, next, _, err = p.contacts.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityDeal:
 		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityProject:
@@ -337,9 +337,9 @@ func sweepResumesAt(out datasource.SearchResult, et datasource.EntityType, inner
 
 func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datasource.EntityRef, error) {
 	switch in.EntityType {
-	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead,
+	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship:
-		return p.people.Create(ctx, in)
+		return p.contacts.Create(ctx, in)
 	case datasource.EntityDeal:
 		return p.deals.Create(ctx, in)
 	case datasource.EntityProject:
@@ -353,9 +353,9 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 
 func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datasource.EntityRef, error) {
 	switch in.Ref.Type {
-	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead,
+	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship:
-		return p.people.Update(ctx, in)
+		return p.contacts.Update(ctx, in)
 	case datasource.EntityDeal:
 		return p.deals.Update(ctx, in)
 	case datasource.EntityProject:
@@ -382,8 +382,8 @@ func (p *Provider) Archive(ctx context.Context, r datasource.EntityRef) (datasou
 //nolint:ireturn // the routing IS the return: three module providers answer one question, and naming one of them here would be a fourth copy of the switch
 func (p *Provider) archiverFor(t datasource.EntityType) datasource.RecordArchiverV2 {
 	switch t {
-	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityRelationship:
-		return p.people
+	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityRelationship:
+		return p.contacts
 	case datasource.EntityDeal:
 		return p.deals
 	case datasource.EntityProject:
@@ -401,7 +401,7 @@ func (p *Provider) archiverFor(t datasource.EntityType) datasource.RecordArchive
 // list and the switch above from disagreeing.
 func (p *Provider) ArchivableTypes(ctx context.Context) ([]datasource.EntityType, error) {
 	var out []datasource.EntityType
-	for _, module := range []datasource.RecordArchiverV2{p.people, p.deals, p.projects, p.activities} {
+	for _, module := range []datasource.RecordArchiverV2{p.contacts, p.deals, p.projects, p.activities} {
 		types, err := module.ArchivableTypes(ctx)
 		if err != nil {
 			return nil, err
@@ -410,7 +410,7 @@ func (p *Provider) ArchivableTypes(ctx context.Context) ([]datasource.EntityType
 	}
 	slices.Sort(out)
 	// Compacted because this list is rendered to a model in a refusal
-	// ("it archives person, company, deal, …"), and the modules below
+	// ("it archives contact, company, deal, …"), and the modules below
 	// are disjoint today by construction rather than by anything that
 	// checks. A type two of them both claimed would read as said twice.
 	return slices.Compact(out), nil
@@ -437,8 +437,8 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 
 func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
 	switch in.Type {
-	case datasource.EntityPerson, datasource.EntityCompany:
-		return p.people.Merge(ctx, in)
+	case datasource.EntityContact, datasource.EntityCompany:
+		return p.contacts.Merge(ctx, in)
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Type)}
 	}
@@ -457,9 +457,9 @@ func (p *Provider) StageSemantic(ctx context.Context, stageID ids.UUID) (semanti
 
 // PromoteLead is the features/01 §6.4 graduation — a cross-module
 // orchestration verb of the frozen v1 seam (interfaces.md §3), owned by
-// the people module's transaction and dispatched here.
+// the contacts module's transaction and dispatched here.
 func (p *Provider) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (datasource.EntityRef, bool, error) {
-	return p.people.PromoteLead(ctx, id, trigger, evidenceNote)
+	return p.contacts.PromoteLead(ctx, id, trigger, evidenceNote)
 }
 
 // Freshness in SoR-mode is trivially authoritative: there is no mirror

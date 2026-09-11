@@ -8,7 +8,7 @@ package integrations
 // The three admission guarantees that only a real database can prove, each
 // written against a defect that actually shipped:
 //
-//   - a caller cannot buy enrichment for a person they may not see;
+//   - a caller cannot buy enrichment for a contact they may not see;
 //   - a run refused on its second credit pool holds NOTHING;
 //   - a queued run always has a job to execute it.
 //
@@ -40,13 +40,13 @@ type runsEnv struct {
 	ws    ids.UUID
 	// mine is visible AND writable by the acting principal; theirs is another
 	// rep's capture-private contact, which no other seat can read.
-	mine   ids.PersonID
-	theirs ids.PersonID
+	mine   ids.ContactID
+	theirs ids.ContactID
 	// theirsInBook is the subject the visibility probe could never refuse:
-	// another rep's PROMOTED contact. person is an identity table, so every
+	// another rep's PROMOTED contact. contact is an identity table, so every
 	// seat reads it and only the write arm separates them — which is why a run
 	// gated on visibility was gated on nothing at all.
-	theirsInBook ids.PersonID
+	theirsInBook ids.ContactID
 	owner        *pgx.Conn
 	// provider is the vendor this environment's connection and adapter are
 	// for, so a test can name it without restating the fixture's choice.
@@ -86,9 +86,9 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 
 	e := &runsEnv{
 		ws: ids.NewV7(), owner: owner,
-		mine:         ids.New[ids.PersonKind](),
-		theirs:       ids.New[ids.PersonKind](),
-		theirsInBook: ids.New[ids.PersonKind](),
+		mine:         ids.New[ids.ContactKind](),
+		theirs:       ids.New[ids.ContactKind](),
+		theirsInBook: ids.New[ids.ContactKind](),
 	}
 
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
@@ -101,7 +101,7 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 		t.Fatal(err)
 	}
 	// A SECOND user, on no shared team, to own the record the acting rep must
-	// not reach. An unowned person will not do: the own-scope predicate is
+	// not reach. An unowned contact will not do: the own-scope predicate is
 	// `owner_id IS NULL OR owner_id = me`, so a record nobody owns is visible
 	// to everybody by design — the thing that hides a record is somebody
 	// ELSE owning it.
@@ -112,7 +112,7 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 		t.Fatal(err)
 	}
 	for _, p := range []struct {
-		id         ids.PersonID
+		id         ids.ContactID
 		owner      *ids.UUID
 		visibility string
 	}{
@@ -121,7 +121,7 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 		{e.theirsInBook, &stranger, "workspace"},
 	} {
 		if _, err := owner.Exec(ctx, `
-			INSERT INTO person (id, owner_id, visibility, full_name, source, captured_by)
+			INSERT INTO contact (id, owner_id, visibility, full_name, source, captured_by)
 			VALUES ($1, $2, $3, 'Anna Muster', 'manual', 'human:test')`,
 			p.id, p.owner, p.visibility); err != nil {
 			t.Fatal(err)
@@ -187,7 +187,7 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 			return FenceVerdict{Allowed: true}, nil
 		},
 		nil,
-		func(context.Context, pgx.Tx, string) (provider.PersonIdentifiers, error) {
+		func(context.Context, pgx.Tx, string) (provider.ContactIdentifiers, error) {
 			return cfg.identifiersOf(), nil
 		},
 	)
@@ -212,7 +212,7 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 				// Update, not Read: a run does not read the subject, it writes
 				// bought facts onto them. Read alone is the read_only seat, and
 				// what that seat must not do is exactly this.
-				"person": {Read: true, Update: true},
+				"contact": {Read: true, Update: true},
 				// The EMPLOYER travels with the subject, and reading it is the
 				// company grant's question — SubjectIdentifiers withholds
 				// the company name and domain without it, which leaves an
@@ -222,10 +222,10 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 				"company": {Read: true},
 				// What enrichment COSTS is readable by any seat that may see
 				// the connection — a rep asking "are we out of credits" is
-				// asking about the installation, not about a person.
+				// asking about the installation, not about a contact.
 				"integrations": {Read: true},
 			},
-			// Own-scope on purpose: this is the scope a rep has. A person is
+			// Own-scope on purpose: this is the scope a rep has. A contact is
 			// workspace-readable identity, so what the gate must refuse is the
 			// other rep's capture-private contact, not merely one they do not own.
 			RowScope: principal.RowScopeOwn,
@@ -247,7 +247,7 @@ type runsConfig struct {
 	// identifiers replaces what the subject seam returns. Set it to model a
 	// record the provider cannot match on; nil means a name with a company,
 	// which every rule the shipped adapters declare is satisfied by.
-	identifiers *provider.PersonIdentifiers
+	identifiers *provider.ContactIdentifiers
 	// provider names the vendor this environment's connection and adapter are
 	// for. Empty means surfe, which is what almost every test wants; a test
 	// asserting that something is derived FROM the run sets it, because a
@@ -267,11 +267,11 @@ func (c runsConfig) subjectOf() string {
 // identifiersOf is what the subject seam returns. The default carries a name
 // AND a company, which is what the provider's rules require — so a test that
 // does not care about matching gets a subject the lookup can proceed on.
-func (c runsConfig) identifiersOf() provider.PersonIdentifiers {
+func (c runsConfig) identifiersOf() provider.ContactIdentifiers {
 	if c.identifiers != nil {
 		return *c.identifiers
 	}
-	return provider.PersonIdentifiers{
+	return provider.ContactIdentifiers{
 		FirstName: "Anna", LastName: c.subjectOf(), CompanyName: "Example",
 	}
 }
@@ -285,36 +285,36 @@ func (c runsConfig) providerOf() string {
 }
 
 // The defect: QueueRun checked the role grant but never the row scope, so a
-// rep could name any person id and buy data on a record outside their scope.
+// rep could name any contact id and buy data on a record outside their scope.
 func TestQueueRunRefusesASubjectTheCallerCannotSee(t *testing.T) {
 	e := setupRuns(t, runsConfig{})
 
 	if _, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: e.theirs.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.theirs.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	}); err == nil {
-		t.Fatal("queued a paid run for a person outside the caller's row scope")
+		t.Fatal("queued a paid run for a contact outside the caller's row scope")
 	}
 
 	// Nothing was written: the refusal happens before any row exists, so there
 	// is no skipped run to explain a purchase that was never authorized.
 	var runs int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM provider_run WHERE person_id = $1`, e.theirs).Scan(&runs); err != nil {
+		`SELECT count(*) FROM provider_run WHERE contact_id = $1`, e.theirs).Scan(&runs); err != nil {
 		t.Fatal(err)
 	}
 	if runs != 0 {
 		t.Errorf("%d run rows exist for an unauthorized subject", runs)
 	}
 
-	// The caller's OWN person still works, so the gate refuses the right thing.
+	// The caller's OWN contact still works, so the gate refuses the right thing.
 	if _, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	}); err != nil {
 		t.Fatalf("a visible subject was refused: %v", err)
 	}
 }
 
-// The subject a visibility probe can never refuse. person is an identity table,
+// The subject a visibility probe can never refuse. contact is an identity table,
 // so its owner arm renders TRUE for every seat: another rep's PROMOTED contact
 // is readable by the whole workspace, and a run gated on EnsureVisible admitted
 // it. The write arm is the only thing that separates two reps on that table, so
@@ -322,13 +322,13 @@ func TestQueueRunRefusesASubjectTheCallerCannotSee(t *testing.T) {
 // installation's credits to land provider claims on a colleague's record.
 //
 // ErrPermissionDenied exactly, not "an error": the caller was already told this
-// person is theirs to read, so a 404 here would hide nothing and would send
+// contact is theirs to read, so a 404 here would hide nothing and would send
 // them looking for a record that is plainly in their list.
 func TestQueueRunRefusesASubjectTheCallerMaySeeButNotChange(t *testing.T) {
 	e := setupRuns(t, runsConfig{})
 
 	_, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: e.theirsInBook.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.theirsInBook.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("queueing a run on a colleague's readable contact = %v, want ErrPermissionDenied", err)
@@ -344,25 +344,25 @@ func TestQueueRunRefusesASubjectTheCallerMaySeeButNotChange(t *testing.T) {
 	}
 
 	// The positive control, and it is not the same as the one above: the caller
-	// may still enrich their OWN person, so the gate narrowed the write scope
+	// may still enrich their OWN contact, so the gate narrowed the write scope
 	// rather than closing the feature.
 	if _, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	}); err != nil {
 		t.Fatalf("the caller's own subject was refused: %v", err)
 	}
 }
 
 // The seat whose entire purpose is that it changes nothing. read_only holds
-// person.read and not person.update, and the old object gate asked for read —
+// contact.read and not contact.update, and the old object gate asked for read —
 // so the lowest seat in the product could spend the installation's credits and
-// land provider claims on a person. The row arm cannot catch this one: the
+// land provider claims on a contact. The row arm cannot catch this one: the
 // subject here is the caller's OWN record, and it is the ACTION that is wrong.
-func TestQueueRunRefusesASeatThatMayReadPeopleButNotChangeThem(t *testing.T) {
+func TestQueueRunRefusesASeatThatMayReadContactsButNotChangeThem(t *testing.T) {
 	e := setupRuns(t, runsConfig{})
 
 	_, err := e.store.QueueRun(e.readOnlyCtx(), provider.QueueInput{
-		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a read-only seat queued a paid run = %v, want ErrPermissionDenied", err)
@@ -384,7 +384,7 @@ func (e *runsEnv) readOnlyCtx() context.Context {
 		panic("the runs environment has no actor to narrow")
 	}
 	actor.Permissions.Objects = map[string]principal.ObjectGrant{
-		"person":       {Read: true},
+		"contact":      {Read: true},
 		"integrations": {Read: true},
 	}
 	return principal.WithActor(e.ctx, actor)
@@ -392,11 +392,11 @@ func (e *runsEnv) readOnlyCtx() context.Context {
 
 // runRows counts the provider runs recorded for one subject, which is how each
 // refusal above proves it wrote nothing rather than merely answering an error.
-func (e *runsEnv) runRows(t *testing.T, person ids.PersonID) int {
+func (e *runsEnv) runRows(t *testing.T, contact ids.ContactID) int {
 	t.Helper()
 	var runs int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM provider_run WHERE person_id = $1`, person).Scan(&runs); err != nil {
+		`SELECT count(*) FROM provider_run WHERE contact_id = $1`, contact).Scan(&runs); err != nil {
 		t.Fatal(err)
 	}
 	return runs
@@ -411,7 +411,7 @@ func TestARunRefusedOnItsSecondPoolHoldsNothing(t *testing.T) {
 	e := setupRuns(t, runsConfig{ceilings: map[string]int{"email": 10, "mobile": 0}})
 
 	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -436,7 +436,7 @@ func TestAQueuedRunAlwaysHasAJob(t *testing.T) {
 	e := setupRuns(t, runsConfig{withoutEnqueue: true})
 
 	_, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	})
 	if err == nil {
 		t.Fatal("queued a run with no way to execute it")
@@ -444,7 +444,7 @@ func TestAQueuedRunAlwaysHasAJob(t *testing.T) {
 
 	var runs int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM provider_run WHERE person_id = $1 AND state = 'queued'`,
+		`SELECT count(*) FROM provider_run WHERE contact_id = $1 AND state = 'queued'`,
 		e.mine).Scan(&runs); err != nil {
 		t.Fatal(err)
 	}
@@ -455,7 +455,7 @@ func TestAQueuedRunAlwaysHasAJob(t *testing.T) {
 	// With the hand-off bound, the same call commits both.
 	e2 := setupRuns(t, runsConfig{})
 	if _, err := e2.store.QueueRun(e2.ctx, provider.QueueInput{
-		PersonID: e2.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e2.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -475,12 +475,12 @@ func TestAQueuedRunAlwaysHasAJob(t *testing.T) {
 // sweep re-breaks it on every tick. In the installation that surfaced this,
 // 214 of 1045 contacts were in exactly this state.
 func TestASubjectWithNothingToMatchOnIsNeverSent(t *testing.T) {
-	e := setupRuns(t, runsConfig{identifiers: &provider.PersonIdentifiers{
+	e := setupRuns(t, runsConfig{identifiers: &provider.ContactIdentifiers{
 		FirstName: "Lars", LastName: "Jankowfsky",
 	}})
 
 	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -508,12 +508,12 @@ func TestASubjectWithNothingToMatchOnIsNeverSent(t *testing.T) {
 // this case the one above passes against a guard that declines everybody,
 // which reads as a working feature and silences the lane completely.
 func TestASubjectWithACompanyIsStillSent(t *testing.T) {
-	e := setupRuns(t, runsConfig{identifiers: &provider.PersonIdentifiers{
+	e := setupRuns(t, runsConfig{identifiers: &provider.ContactIdentifiers{
 		FirstName: "Anna", LastName: "Muster", CompanyDomain: "example.com",
 	}})
 
 	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -529,12 +529,12 @@ func TestASubjectWithACompanyIsStillSent(t *testing.T) {
 
 // A profile link alone is the other rule, and it carries no name at all.
 func TestAProfileLinkAloneIsEnoughToBeSent(t *testing.T) {
-	e := setupRuns(t, runsConfig{identifiers: &provider.PersonIdentifiers{
+	e := setupRuns(t, runsConfig{identifiers: &provider.ContactIdentifiers{
 		LinkedInURL: "https://www.linkedin.com/in/someone",
 	}})
 
 	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	})
 	if err != nil {
 		t.Fatal(err)

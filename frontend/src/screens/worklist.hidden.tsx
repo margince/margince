@@ -10,7 +10,7 @@
 //
 // A titled panel among the LEAD's panels, in the team board's own chrome, and
 // that is the honest placement rather than a hedge. A rep whose job is to work
-// the queue is not the person who acts on a horizon that is set wrong, so this
+// the queue is not the contact who acts on a horizon that is set wrong, so this
 // sits with the rest of a lead's read of the team rather than over the day; and
 // it stands open there, because a guardrail folded shut is one nobody checks.
 // On a healthy installation the whole panel is one sentence saying nothing is

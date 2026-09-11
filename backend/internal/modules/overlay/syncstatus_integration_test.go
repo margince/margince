@@ -93,7 +93,7 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 	svc := NewService(db, keyvault.NewMemory(), store).
 		WithIncumbentClassesTranslator(func(canonical string) ([]string, bool) {
 			switch canonical {
-			case "person":
+			case "contact":
 				return []string{IncumbentClassContacts}, true
 			case "company":
 				return []string{IncumbentClassCompanies}, true
@@ -105,7 +105,7 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
 	for _, row := range []struct{ objectClass, ext, fingerprint string }{
-		{"person", "p-legacy", "contacts-declaration-superseded"},
+		{"contact", "p-legacy", "contacts-declaration-superseded"},
 		// companies has no current declaration injected, and widget has no
 		// mapping at all — neither class can be judged, so neither is stale.
 		{"company", "company-1", "companies-declaration-retired"},
@@ -130,7 +130,7 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 		states[s.Object] = s.State
 	}
 	want := map[string]string{
-		"person":  syncStateStale,
+		"contact": syncStateStale,
 		"company": syncStateFresh,
 		"widget":  syncStateFresh,
 	}

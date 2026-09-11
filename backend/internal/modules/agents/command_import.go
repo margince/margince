@@ -9,7 +9,7 @@ package agents
 // custom fields — it is a unit of work over the estate, and the estate is what
 // the approval is really about. So these commands do not go through the record
 // seam the create/patch/archive family uses; they name the run, and the run's
-// own report is what the person approving reads.
+// own report is what the contact approving reads.
 //
 // TWO OPERATIONS REACH HERE and they are asymmetric on purpose.
 // createImportRun writes no domain rows (AC-M5), so its approval is a
@@ -37,7 +37,7 @@ import (
 type ImportCommand struct {
 	Verb  string
 	RunID ids.UUID
-	// Object is what the file's rows are, carried so the summary a person
+	// Object is what the file's rows are, carried so the summary a contact
 	// reads says "import 400 companies" rather than "import a file".
 	Object string
 }
@@ -50,7 +50,7 @@ const (
 
 // NewImportCall binds one import command to the resolver that speaks it.
 //
-// The seam is REQUIRED for a commit, because the summary a person decides on
+// The seam is REQUIRED for a commit, because the summary a human decides on
 // is written from the run's report — see Subject. Both doors pass the same one,
 // so a commit staged over REST and one staged over MCP describe the import
 // identically. A preview needs no seam and may pass nil.
@@ -64,7 +64,7 @@ type importResolver struct{ imports Imports }
 
 // Subject names what the approval binds to.
 //
-// A commit binds to its run: the report a person read belongs to that id, and
+// A commit binds to its run: the report a contact read belongs to that id, and
 // an approval that named only "an import" could be redeemed against a
 // different run — one whose report nobody saw.
 //
@@ -72,7 +72,7 @@ type importResolver struct{ imports Imports }
 // create does not exist when the call is staged. That is honest rather than a
 // gap, and it is safe because a preview writes no domain rows.
 // THE SUMMARY CARRIES THE REPORT'S COUNTS for a commit, and that is the whole
-// reason this resolver holds a seam. The approval row a person sees in the
+// reason this resolver holds a seam. The approval row a contact sees in the
 // inbox IS its summary — nothing renders the report beside it — so a summary
 // saying only "import run <uuid>" asks somebody to authorise a bulk write to
 // their estate without telling them what it does. They would be clicking yes
@@ -123,7 +123,7 @@ func (r importResolver) reportFor(
 	return string(run.Object), report, nil
 }
 
-// describeImport writes the sentence a person decides on.
+// describeImport writes the sentence a human decides on.
 //
 // Plain counts, in the order that matters to somebody protecting their data:
 // what is new, what changes under them, what is left alone, and what could not
@@ -160,7 +160,7 @@ func (importResolver) Guards(context.Context, ImportCommand) error { return nil 
 //
 // Only `object` is read. The mapping and the file are what the call DOES, not
 // what an approval of it binds to, and a summary quoting a thousand-row CSV
-// back at a person is not a summary.
+// back at a contact is not a summary.
 func DecodeImportPreview(body []byte) (ImportCommand, error) {
 	var req struct {
 		Object string `json:"object"`

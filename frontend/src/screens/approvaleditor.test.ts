@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { editableSeed, editableStrings } from "./approvaleditor";
 
 // What the inline editor OFFERS. A kind that declares its editable fields is
-// saying what a person may change; everything else in the payload is what the
+// saying what a contact may change; everything else in the payload is what the
 // question is about, and offering it as a text box invites an edit the server
 // will refuse.
 

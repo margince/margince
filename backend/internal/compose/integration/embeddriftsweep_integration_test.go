@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// TestSweepWorkspaceEmbeddingDriftHealsIdentityMatchedGaps seeds two people under
+// TestSweepWorkspaceEmbeddingDriftHealsIdentityMatchedGaps seeds two contacts under
 // a matched binding — one embedded, one whose embed event was "lost" (no
 // embedding row at all) — and proves the sweep embeds exactly the missing
 // one: one model call, pending drops to 0, and the binding marker is not
@@ -40,11 +40,11 @@ func TestSweepWorkspaceEmbeddingDriftHealsIdentityMatchedGaps(t *testing.T) {
 		t.Fatalf("SeedBinding: %v", err)
 	}
 
-	embeddedID := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Embedded Person', 'manual', 'human:x')`)
-	if _, err := e.Store.UpsertEmbedding(e.Admin(), "person", embeddedID, "Embedded Person", embedder); err != nil {
+	embeddedID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Embedded Contact', 'manual', 'human:x')`)
+	if _, err := e.Store.UpsertEmbedding(e.Admin(), "contact", embeddedID, "Embedded Contact", embedder); err != nil {
 		t.Fatalf("seeding the already-embedded baseline: %v", err)
 	}
-	lostID := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Lost Event Person', 'manual', 'human:x')`)
+	lostID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Lost Event Contact', 'manual', 'human:x')`)
 	baselineCalls := len(fake.Calls())
 
 	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder)
@@ -102,7 +102,7 @@ func TestSweepWorkspaceEmbeddingDriftRefusesTheBindingChangeCase(t *testing.T) {
 	if err := e.Store.SeedBinding(ctx, "provider/model-old@1024"); err != nil {
 		t.Fatalf("SeedBinding: %v", err)
 	}
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Unswept Person', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Unswept Contact', 'manual', 'human:x')`)
 
 	// The refusal only proves anything if there was real pending work to
 	// refuse — healed==0 over an empty pending set is vacuous.
@@ -144,7 +144,7 @@ func TestSweepWorkspaceEmbeddingDriftWaitsOutARunningReindex(t *testing.T) {
 	if err := e.Store.ClaimAndEnqueueReembedding(ctx, search.ReembedClaim{Run: ids.NewV7(), TargetIdentity: identity}, func(pgx.Tx) error { return nil }); err != nil {
 		t.Fatalf("ClaimAndEnqueueReembedding: %v", err)
 	}
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Mid Reindex Person', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Mid Reindex Contact', 'manual', 'human:x')`)
 
 	// The wait-out only proves anything if the sweep had real pending work
 	// it chose not to touch — healed==0 over an empty set is vacuous.

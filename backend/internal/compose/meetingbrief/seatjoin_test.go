@@ -26,10 +26,10 @@ func asReader(objects map[string]principal.ObjectGrant) context.Context {
 //
 // FALSE rather than an error, and not a dropped attendee: failing would deny a
 // brief the caller may otherwise see in full, and dropping the attendee would
-// make a withheld ROLE look like an absent PERSON.
+// make a withheld ROLE look like an absent CONTACT.
 func TestTheSeatJoinNeverMatchesWithoutTheEdgeGrant(t *testing.T) {
 	ctx := asReader(map[string]principal.ObjectGrant{
-		"activity": {Read: true}, "person": {Read: true}, "deal": {Read: true},
+		"activity": {Read: true}, "contact": {Read: true}, "deal": {Read: true},
 	})
 	predicate, err := seatJoinPredicate(ctx, "r", func(any) int { return 1 })
 	if err != nil {

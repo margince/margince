@@ -183,7 +183,7 @@ const (
 // The abandoned arm is the reader's only way out of a read whose worker
 // died: the page polls a live row for as long as it stays live, the rail
 // calls it stalled past the lease, and neither could start anything until
-// this did. Opening the account again is what a person tries unprompted, so
+// this did. Opening the account again is what a contact tries unprompted, so
 // it is what re-arms the read.
 func decide(stored *row, fingerprint string, now time.Time, force bool) decision {
 	if stored == nil {
@@ -422,7 +422,7 @@ func merge(rules, read []crmcontracts.Company360Suggestion) ([]crmcontracts.Comp
 }
 
 // caller is the human the scan belongs to. A scan is a reading aid for a
-// person; an agent holding a passport has the records themselves.
+// contact; an agent holding a passport has the records themselves.
 func (s *Service) caller(ctx context.Context) (ids.UserID, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return ids.UserID{}, err

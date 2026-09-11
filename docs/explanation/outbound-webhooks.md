@@ -134,7 +134,7 @@ about it needs pruning:
   accepts — a catalog change cannot drift the enum and the validator apart.
 - **`PublicEventEnvelope`** — the public wire wrapper (§3c below).
 - One **`PublicEvent<Event>`** schema per subscribable event (`PublicEventDealStageChanged`,
-  `PublicEventPersonMerged`, …), each carrying `x-event-type` / `x-entity-type` / `x-version`
+  `PublicEventContactMerged`, …), each carrying `x-event-type` / `x-entity-type` / `x-version`
   extensions.
 
 **The generator.** `backend/tools/gen-payloads` reuses the `oapi-codegen` *library* (not its CLI) over
@@ -157,7 +157,7 @@ storekit.EmitEventForEntity(ctx, tx, auditID, entityType, entityID, payload)  //
 ```
 
 `EmitEvent` derives the event type and entity type FROM the payload struct (`payload.EventType()`,
-`payload.EntityType()`) — a call site cannot pair `PublicEventDealCreated` with `person.created`
+`payload.EntityType()`) — a call site cannot pair `PublicEventDealCreated` with `contact.created`
 without the code failing to *compile*, not just failing a test. `EmitEventForEntity` is the same
 guarantee for the handful of dynamic-entity types (`mirror.*`, `consent.changed`, `retention.applied`)
 whose subject is a runtime value the caller resolves rather than the payload's static type. This was
@@ -310,10 +310,10 @@ collide with a row-scoped entity name below), then by entity type:
 
 | Subject class | How it's scoped |
 |---|---|
-| `person`, `company`, `deal`, `lead`, `voice_profile` | admitted only with the owner's live **object read grant AND row scope** (`auth.Require` + `auth.EnsureVisible`) — the exact two-halves the record read path enforces, so a lingering row scope with no current read grant no longer leaks the payload |
+| `contact`, `company`, `deal`, `lead`, `voice_profile` | admitted only with the owner's live **object read grant AND row scope** (`auth.Require` + `auth.EnsureVisible`) — the exact two-halves the record read path enforces, so a lingering row scope with no current read grant no longer leaks the payload |
 | `activity`, `signal` | same object-read grant, then their bespoke link-walk / resolver row-scope gates |
 | `offer` | `offer.read` grant, then it inherits its **parent deal's** row scope (an offer carries no owner of its own) |
-| `approval` (and the `coldstart.*` echoes, entity `approval`) | **target-visibility gated** (`approvalVisibleTo`), NOT ownerless: the envelope leaks staged-change detail, so it delivers only to an owner who can see the approval's TARGET record under that record's row scope — mirroring the approvals inbox (`approvals.targetVisible`, C3). Target types `person`/`company`/`deal`/`lead`/`offer`/`signal`/`activity` scope by row; the workspace-shared `product`/`custom_field` config scope by existence; a **target-less** approval is fail-closed (not delivered) |
+| `approval` (and the `coldstart.*` echoes, entity `approval`) | **target-visibility gated** (`approvalVisibleTo`), NOT ownerless: the envelope leaks staged-change detail, so it delivers only to an owner who can see the approval's TARGET record under that record's row scope — mirroring the approvals inbox (`approvals.targetVisible`, C3). Target types `contact`/`company`/`deal`/`lead`/`offer`/`signal`/`activity` scope by row; the workspace-shared `product`/`custom_field` config scope by existence; a **target-less** approval is fail-closed (not delivered) |
 | `pipeline`, `stage`, `audit`, `user`, `passport`, `onboarding_wizard_state`, `incumbent_connection` | genuinely ownerless workspace/admin-level facts (`workspaceLevelEntities`) — a bare entity ref the receiver re-reads under its own scope, so it delivers to any live owner. `role.changed` and the `user.*` lifecycle both name entity `user`; there is no separate `role`, `coldstart`, or `mirror` key. |
 | a ratified **deferred-delivery** subject (below) | ratified **not delivered** — an explicit decision, distinct from the fail-closed default |
 | **anything else** | **DENIED** (the `default` branch) — fail-closed |
@@ -330,14 +330,14 @@ because neither has an ownership model the fan-out gate can bound delivery by:
 - **The overlay `mirror.*` family** (`mirror.conflict`, `mirror.budget_degraded`, `mirror.deleted`, the
   reserved `mirror.write_rejected`) — keyed by EVENT type (`deferredDeliveryEvents`). Each emit site
   stamps the diverged record's *runtime* canonical class (`rec.ObjectClass` / `ref.Type` /
-  `del.ObjectClass` — e.g. `"person"`, `"deal"`) as the envelope's entity type, but the entity id is a
+  `del.ObjectClass` — e.g. `"contact"`, `"deal"`) as the envelope's entity type, but the entity id is a
   mirror-synthetic key or a pre-materialization ref, **not** a live record id the owner's grants can be
   probed against. Classifying by entity type would either miss (fail-closed by accident) or — for
   `mirror.budget_degraded`, whose ref can be a real record ref — deliver to an owner who must not see
   the record. Neither is acceptable, so the whole family is deferred by event type instead.
 - **Three `retention.applied` telemetry subjects** — keyed by ENTITY type (`deferredDeliveryEntities`):
   `ai_call` (the embed-call sweep's traces), `ai_call_payload` (retained call content), and
-  `voice_learning_signal` (aged voice-learning telemetry). Most `retention.applied` subjects (`person`,
+  `voice_learning_signal` (aged voice-learning telemetry). Most `retention.applied` subjects (`contact`,
   `lead`, `deal`, `activity`) resolve through the normal row-scope probes and ARE delivered; these three
   are engine telemetry with no owner and no visibility probe — delivering them workspace-wide would leak
   which telemetry rows a retention sweep purged.
@@ -349,7 +349,7 @@ spec to grow an ownership model these subjects can be scoped by, not worked arou
 **Catalogued, never emitted.** Six schemas exist purely for whole-catalog coverage (`events.Types()` is
 completely covered by a `PublicEvent<Event>`, the fitness-test definition of "Phase 4 done") but have
 no emit site in the codebase today, so nothing is ever delivered for them regardless of the visibility
-gate: `deal.restored`, `person.restored`, `pipeline.archived`, `stage.archived`, `mirror.write_rejected`
+gate: `deal.restored`, `contact.restored`, `pipeline.archived`, `stage.archived`, `mirror.write_rejected`
 (reserved for a branch-2 overlay feature), and `audit.appended` (the audit ledger's own row is
 workspace-level and resolved back under the receiver's own scope, so an empty payload would carry no
 information a receiver doesn't already have). Each schema's description in `public-events.yaml` says so
@@ -479,7 +479,7 @@ viewer with read-only access sees the list and deliveries but not the mutating a
   `retention.applied` telemetry entities — `ai_call`, `ai_call_payload`, `voice_learning_signal`) are
   *ratified* as deferred-not-delivered pending an upstream ownership model — subscribable, catalogued,
   honestly undelivered, never a leak.
-- **Some catalogued types are never emitted at all** (`deal.restored`, `person.restored`,
+- **Some catalogued types are never emitted at all** (`deal.restored`, `contact.restored`,
   `pipeline.archived`, `stage.archived`, `mirror.write_rejected`, `audit.appended`) — published for
   whole-catalog coverage, not because a code path fires them yet.
 - **The owner is server-derived**, never a request field; a principal with no human identity cannot own

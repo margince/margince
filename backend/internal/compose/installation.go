@@ -451,7 +451,7 @@ func routingSeedFrom(declared yaml.Node) (ai.RoutingConfig, bool, error) {
 
 // seedBookingPage provisions the admin's public booking page.
 //
-// The is_agent predicate says what this lookup wants: a PERSON. A booking page
+// The is_agent predicate says what this lookup wants: a CONTACT. A booking page
 // a stranger reaches must name someone who can answer it, and "first by
 // created_at" is heap order between two rows written in one transaction.
 func seedBookingPage(ctx context.Context, tx pgx.Tx) error {

@@ -45,7 +45,7 @@ const (
 	// reports, so a consumer filtering on it sees all of them.
 	changedCommitments = "commitments"
 	proseBound         = 2000
-	// planCap bounds one week's list. A plan is what a person means to do in
+	// planCap bounds one week's list. A plan is what a contact means to do in
 	// five days; past this it is a backlog, and a backlog belongs in tasks.
 	planCap = 50
 )
@@ -74,7 +74,7 @@ const (
 // plan comes to sit beside a review of a different one.
 type WeekStartFunc func(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time, error)
 
-// Teammates answers whether the caller may read a named person's plan.
+// Teammates answers whether the caller may read a named contact's plan.
 //
 // The lead's half of this module. Declared here as the one question it asks, so
 // the edge is injected by compose rather than imported — identity owns the
@@ -165,7 +165,7 @@ func planUser(ctx context.Context) (ids.UUID, error) {
 // when they have not started one.
 //
 // It never writes. A read that created a row would put an empty plan in every
-// rep's history the first time they opened the page, and "did this person plan
+// rep's history the first time they opened the page, and "did this contact plan
 // their week" would stop being answerable.
 func (s *Store) Current(ctx context.Context, now time.Time) (Plan, error) {
 	if err := auth.Require(ctx, "weekly_plan", principal.ActionRead); err != nil {
@@ -180,12 +180,12 @@ func (s *Store) Current(ctx context.Context, now time.Time) (Plan, error) {
 
 // PlanFor answers a named rep's current plan, for their lead.
 //
-// The SECOND reader, and the only one that names a person. Gated on the same
+// The SECOND reader, and the only one that names a contact. Gated on the same
 // teammate question attention.resolveOwner and notices.RaiseCoachNotice ask,
 // through the same seam — never a fourth spelling of "is this my colleague".
 //
 // A reader who is not their lead gets ErrNotFound rather than a refusal: whether
-// a person has a plan is itself something a stranger may not learn.
+// a contact has a plan is itself something a stranger may not learn.
 func (s *Store) PlanFor(ctx context.Context, owner ids.UUID, now time.Time) (Plan, error) {
 	if err := auth.Require(ctx, "weekly_plan", principal.ActionRead); err != nil {
 		return Plan{}, err

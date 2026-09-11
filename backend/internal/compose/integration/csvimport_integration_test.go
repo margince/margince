@@ -193,15 +193,15 @@ func leadCount(t *testing.T, e *apptest.AppEnv) int {
 	return len(leads.Data)
 }
 
-func importedPersonCount(t *testing.T, e *apptest.AppEnv) int {
+func importedContactCount(t *testing.T, e *apptest.AppEnv) int {
 	t.Helper()
-	var people struct {
+	var contacts struct {
 		Data []AnyMap `json:"data"`
 	}
-	if status := e.Call(t, http.MethodGet, "/v1/people?limit=100", nil, nil, &people); status != http.StatusOK {
-		t.Fatalf("GET /v1/people → %d, want 200", status)
+	if status := e.Call(t, http.MethodGet, "/v1/contacts?limit=100", nil, nil, &contacts); status != http.StatusOK {
+		t.Fatalf("GET /v1/contacts → %d, want 200", status)
 	}
-	return len(people.Data)
+	return len(contacts.Data)
 }
 
 const prospectCSV = "Email,Full Name,Title\n" +
@@ -211,15 +211,15 @@ const prospectCSV = "Email,Full Name,Title\n" +
 
 // The two promises that make an import safe to run against a real estate: the
 // dry run writes NOTHING, and a `lead` run writes LEADS — it does not reach the
-// person table at all.
+// contact table at all.
 //
 // That second half is scoped to `object: lead` deliberately. A file the business
-// already knows imports as `object: person` and creates people, which
-// TestCSVImportOfKnownPeopleCreatesPeople below asserts. What must never happen
+// already knows imports as `object: contact` and creates contacts, which
+// TestCSVImportOfKnownContactsCreatesContacts below asserts. What must never happen
 // is one object quietly writing the other's table.
 func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 	e := setupImportApp(t)
-	peopleBefore := importedPersonCount(t, e)
+	contactsBefore := importedContactCount(t, e)
 
 	profile, status := uploadCSV(t, e, "lead", prospectCSV)
 	if status != http.StatusOK {
@@ -267,8 +267,8 @@ func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 	if got := leadCount(t, e); got != 3 {
 		t.Fatalf("leads after approval = %d, want 3", got)
 	}
-	if got := importedPersonCount(t, e); got != peopleBefore {
-		t.Fatalf("people = %d, was %d — a `lead` run writes leads and does not reach the person table", got, peopleBefore)
+	if got := importedContactCount(t, e); got != contactsBefore {
+		t.Fatalf("contacts = %d, was %d — a `lead` run writes leads and does not reach the contact table", got, contactsBefore)
 	}
 }
 
@@ -338,7 +338,7 @@ func TestCSVImportDisclosesUnidentifiableRows(t *testing.T) {
 
 	ragged := "Email,Full Name\n" +
 		",No Address Here\n" +
-		"real@example.test,Real Person\n"
+		"real@example.test,Real Contact\n"
 	profile, status := uploadCSV(t, e, "lead", ragged)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
@@ -674,7 +674,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 			"the CRM already holds; a human approving this is told nothing about the duplicate",
 			report.Disposition.Created)
 	}
-	// The number a person decides on: "1 company, 1 already here".
+	// The number a human decides on: "1 company, 1 already here".
 	if report.Disposition.Duplicates == nil || *report.Disposition.Duplicates != 1 {
 		t.Errorf("duplicates = %v, want 1 — this is the count the human is shown before approving",
 			report.Disposition.Duplicates)
@@ -875,7 +875,7 @@ func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
 // one of the companies, an earlier run lands it — and a finished report is
 // supposed to describe what happened. Counting only what the dry run saw makes
 // "0 duplicates" a statement about a database that no longer exists, and the
-// person reading it has already approved on the strength of it.
+// contact reading it has already approved on the strength of it.
 //
 // The four load-bearing counts are checked either side, because the fix must
 // not disturb them: a duplicate that lands is counted in Created and nowhere

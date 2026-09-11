@@ -26,7 +26,7 @@ import (
 func TestRecordHistoryRefusesAVerbThisInstallationDoesNotRecord(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	pid := seedPersonWithActivity(t, e)
+	pid := seedContactWithActivity(t, e)
 
 	var problem struct {
 		Code    string `json:"code"`
@@ -39,7 +39,7 @@ func TestRecordHistoryRefusesAVerbThisInstallationDoesNotRecord(t *testing.T) {
 	}
 	// `promoted` is the plausible typo for `promote` — the shape a caller
 	// actually sends, rather than a string nothing could be mistaken for.
-	status := e.Call(t, "GET", "/v1/records/person/"+pid+"/history?action=promoted", nil, nil, &problem)
+	status := e.Call(t, "GET", "/v1/records/contact/"+pid+"/history?action=promoted", nil, nil, &problem)
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want 422 — an unknown verb answered as an empty page tells a "+
 			"caller this record never saw something, which is not what they asked", status)
@@ -56,7 +56,7 @@ func TestRecordHistoryRefusesAVerbThisInstallationDoesNotRecord(t *testing.T) {
 	var page struct {
 		Data []map[string]any `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/records/person/"+pid+"/history?action=create", nil, nil, &page); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/records/contact/"+pid+"/history?action=create", nil, nil, &page); status != http.StatusOK {
 		t.Fatalf("a recorded verb = %d, want 200", status)
 	}
 	if len(page.Data) == 0 {

@@ -14,7 +14,7 @@ import {
   type WorklistItem,
 } from "./worklist.testkit";
 
-// The ranked queue, and the ways it can mislead the person reading it.
+// The ranked queue, and the ways it can mislead the reader reading it.
 //
 // Every case here is one promise the page makes: that the order is readable,
 // that a figure describes the rows beneath it, that nothing is drawn to report
@@ -130,7 +130,7 @@ describe("what the ranked queue tells a reader", () => {
           row({
             title: "Call Anna Weber about the renewal",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-000000000003",
               label: "Anna Weber",
             },
@@ -152,7 +152,7 @@ describe("what the ranked queue tells a reader", () => {
           row({
             title: "Send the proposal",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-000000000009",
               label: "Anna Weber",
             },
@@ -541,7 +541,7 @@ describe("what the ranked queue tells a reader", () => {
             category: "customer_waiting",
             consequence: "buyer_waits",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-000000000001",
             },
             actions: ["open"],
@@ -811,7 +811,7 @@ describe("an introduction ask on the queue", () => {
             detail: "Dana reopened the retrofit conversation.",
             actions: ["decide"],
             subject: {
-              type: "person",
+              type: "contact",
               id: "018f3a1b-0000-7000-8000-000000000010",
               label: "Dana Buyer",
             },
@@ -844,7 +844,7 @@ describe("an introduction ask on the queue", () => {
             title: "Send the retrofit quote",
             actions: ["decide"],
             subject: {
-              type: "person",
+              type: "contact",
               id: "018f3a1b-0000-7000-8000-000000000011",
               label: "Someone Else",
             },
@@ -967,7 +967,7 @@ describe("the address opens a queue", () => {
   });
 
   // The scope word is not an owner. Passing it as one would ask the server for
-  // a person whose id is the string "unassigned", which is a 403 or a 404 where
+  // a contact whose id is the string "unassigned", which is a 403 or a 404 where
   // the reader asked a perfectly ordinary question.
   it("asks for the unowned pile when the segment is the scope word", async () => {
     stub(day({ scope: "unassigned", scope_options: ["mine", "team"] }));
@@ -1012,7 +1012,7 @@ describe("the draft_reply verb says what the click does", () => {
   }
 
   it("names the ACT where the address opens the composer", async () => {
-    stub(day({ queue: [replyRow("person", "p-1")] }));
+    stub(day({ queue: [replyRow("contact", "p-1")] }));
     renderWorklist();
 
     const link = await screen.findByRole("link", {

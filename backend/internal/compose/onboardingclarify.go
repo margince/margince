@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -49,7 +49,7 @@ func (a companyChangeAuthorization) withSelectedOption(field, value string) comp
 // clarification accepts any non-empty value for its field; option values
 // are locale-invariant, so the check holds whatever language the options
 // were rendered in.
-func verifySelectedOption(selection crmcontracts.OnboardingClarifySelection, read *people.SiteRead, comparisons []people.SiteReadComparison, locale string) error {
+func verifySelectedOption(selection crmcontracts.OnboardingClarifySelection, read *contacts.SiteRead, comparisons []contacts.SiteReadComparison, locale string) error {
 	var clarifies []crmcontracts.OnboardingClarify
 	if read != nil {
 		clarifies = onboardingClarifies(*read, comparisons, locale)
@@ -81,7 +81,7 @@ func verifySelectedOption(selection crmcontracts.OnboardingClarifySelection, rea
 // selection verification checks against it so an already-answered
 // question's option can still be re-picked; presentation paths use
 // openOnboardingClarifies to stop re-asking what the draft resolved.
-func onboardingClarifies(read people.SiteRead, comparisons []people.SiteReadComparison, locale string) []crmcontracts.OnboardingClarify {
+func onboardingClarifies(read contacts.SiteRead, comparisons []contacts.SiteReadComparison, locale string) []crmcontracts.OnboardingClarify {
 	out := entityClarifies(read, locale)
 	return append(out, conflictClarifies(read.DraftVersion, comparisons, locale)...)
 }
@@ -95,7 +95,7 @@ func onboardingClarifies(read people.SiteRead, comparisons []people.SiteReadComp
 // matches no option deliberately leaves the question open: the server cannot
 // distinguish a human's overriding edit from a read-prefilled draft, so
 // only the provable case resolves.
-func openOnboardingClarifies(read people.SiteRead, comparisons []people.SiteReadComparison, locale string, draft identity.OnboardingCompanyDraft) []crmcontracts.OnboardingClarify {
+func openOnboardingClarifies(read contacts.SiteRead, comparisons []contacts.SiteReadComparison, locale string, draft identity.OnboardingCompanyDraft) []crmcontracts.OnboardingClarify {
 	values := onboardingDraftValues(draft)
 	all := onboardingClarifies(read, comparisons, locale)
 	open := make([]crmcontracts.OnboardingClarify, 0, len(all))
@@ -122,12 +122,12 @@ func clarifyAnsweredByDraft(clarify crmcontracts.OnboardingClarify, values map[s
 }
 
 // samePickedValue answers whether a value a human submitted or a draft holds
-// is one the question offered. Both sides meet in people.PrintedSiteReadValue,
+// is one the question offered. Both sides meet in contacts.PrintedSiteReadValue,
 // the spelling the confirmation grounds an answer in — a gate that read them
 // any other way would refuse (or keep re-asking) an answer the confirmation
 // would take as the site's own.
 func samePickedValue(submitted, offered string) bool {
-	return people.PrintedSiteReadValue(submitted) == people.PrintedSiteReadValue(offered)
+	return contacts.PrintedSiteReadValue(submitted) == contacts.PrintedSiteReadValue(offered)
 }
 
 // onboardingDraftValues maps each clarifiable profile field to its draft
@@ -178,7 +178,7 @@ const (
 // plausible options survive the filter: one survivor means there is no
 // ambiguity worth blocking a save on. Filtered candidates are logged at
 // debug for operator diagnosability, never shown.
-func entityClarifies(read people.SiteRead, locale string) []crmcontracts.OnboardingClarify {
+func entityClarifies(read contacts.SiteRead, locale string) []crmcontracts.OnboardingClarify {
 	if len(read.LegalEntities) < 2 {
 		return nil
 	}
@@ -238,7 +238,7 @@ func entityClarifies(read people.SiteRead, locale string) []crmcontracts.Onboard
 // Every presentation and verification path shares this one builder, so
 // what can be picked is exactly what was shown.
 //
-// The collapsing is people.PrintedSiteReadValue, the same spelling the
+// The collapsing is contacts.PrintedSiteReadValue, the same spelling the
 // confirmation matches an answer against — an option built one way and
 // verified another is an option the server refuses after offering it.
 func plausibleClarifyValue(raw string, maxRunes int, addressShaped bool) (string, bool) {
@@ -246,7 +246,7 @@ func plausibleClarifyValue(raw string, maxRunes int, addressShaped bool) (string
 	if trimmed == "" || strings.ContainsAny(trimmed, "\n\r") {
 		return "", false
 	}
-	value := people.PrintedSiteReadValue(trimmed)
+	value := contacts.PrintedSiteReadValue(trimmed)
 	if len([]rune(value)) > maxRunes {
 		return "", false
 	}
@@ -264,7 +264,7 @@ func plausibleClarifyValue(raw string, maxRunes int, addressShaped bool) (string
 	return value, true
 }
 
-func entityOption(value, label string, entity people.SiteReadLegalEntity, detail string) crmcontracts.OnboardingClarifyOption {
+func entityOption(value, label string, entity contacts.SiteReadLegalEntity, detail string) crmcontracts.OnboardingClarifyOption {
 	option := crmcontracts.OnboardingClarifyOption{Value: value, Label: label}
 	if url := strings.TrimSpace(entity.SourceURL); url != "" {
 		option.EvidenceUrl = &url
@@ -290,7 +290,7 @@ func capClarifyOptions(options []crmcontracts.OnboardingClarifyOption) []crmcont
 // exact stored strings, so the answer round-trips loss-free into a
 // resolution: option one is keep_current, option two accept_proposal.
 // Free text stays allowed — use_value is a legal resolution too.
-func conflictClarifies(draftVersion int, comparisons []people.SiteReadComparison, locale string) []crmcontracts.OnboardingClarify {
+func conflictClarifies(draftVersion int, comparisons []contacts.SiteReadComparison, locale string) []crmcontracts.OnboardingClarify {
 	var out []crmcontracts.OnboardingClarify
 	for _, comparison := range comparisons {
 		if crmcontracts.CompanySiteReadComparisonClassification(comparison.Classification) != crmcontracts.CompanySiteReadComparisonClassificationHumanConflict ||

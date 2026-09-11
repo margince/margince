@@ -132,7 +132,7 @@ Nine workflows sit beside the gate, deliberately outside it:
   broken lane carrying the commits that landed since the health check was last
   green, with authors ([`scripts/main-health-range.sh`](../../scripts/main-health-range.sh)).
   That range is a deliberate over-approximation: naming a dozen candidates is
-  useful, guessing one sends the wrong person looking.
+  useful, guessing one sends the wrong contact looking.
 
   It is also the **only** publisher of `main`'s SonarCloud analysis. The
   push-to-`main` scan is gone and the `merge_group` scan that replaced it only

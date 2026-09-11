@@ -14,7 +14,7 @@ package compose
 // breaks the original.
 //
 // What the expectation MEANS here: the contact fields that must reach the
-// person's record, with the values they must carry. The pass proposes fields and
+// contact's record, with the values they must carry. The pass proposes fields and
 // fills only empty ones, so what it is right or wrong about is a field — it
 // either grounds the one the scenario named, or it grounds something else, or it
 // grounds nothing. It is a subset claim, never an inventory: a real signature
@@ -32,13 +32,13 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // signatureEnrichFixture is ONE candidate in the fields the candidate read puts
-// in this prompt: the person's own name and address, and the mail whose tail the
+// in this prompt: the contact's own name and address, and the mail whose tail the
 // window comes from. The whole body, not the window — deriving it is production's
 // step, and a fixture that pre-derived it could hand the model a window the pass
 // would never have built.
@@ -92,9 +92,9 @@ func (signatureEnrichCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 		return nil, err
 	}
 	return &signatureEnrichCase{
-		// PersonID stays unset: it reaches the apply, never the prompt and never
+		// ContactID stays unset: it reaches the apply, never the prompt and never
 		// the gate, and a case carries only what it certifies.
-		cand: people.SignatureCandidate{
+		cand: contacts.SignatureCandidate{
 			FullName:   f.FullName,
 			Email:      f.Email,
 			ActivityID: ids.NewV7(),
@@ -129,7 +129,7 @@ func refuseUnenrichableExpectation(want map[string]string) error {
 // signatureEnrichCase is one candidate ready to be read, closed over the derived
 // window, the minted activity id, and the fields the scenario expects.
 type signatureEnrichCase struct {
-	cand     people.SignatureCandidate
+	cand     contacts.SignatureCandidate
 	lines    string
 	expected map[string]string
 }
@@ -158,7 +158,7 @@ func (c *signatureEnrichCase) Run(ctx context.Context, completer aitasks.Complet
 // unreadable answer, or one whose every quote is invented. Claiming NOTHING is
 // the opposite event and is reported as an abstention, because omission is what
 // this prompt asks for when there is nothing to quote — the pass applies
-// nothing, logs nothing, and picks the person up again next cycle, which is the
+// nothing, logs nothing, and picks the contact up again next cycle, which is the
 // same thing it does after a mail whose signature block held no phone number.
 //
 // A reply the FLOOR emptied is not an abstention: the model proposed fields and

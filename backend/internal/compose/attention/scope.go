@@ -14,7 +14,7 @@ package attention
 // A wider scope is OFFERED only where the reader's row scope already reaches
 // that far, and asking for one they do not hold is refused rather than quietly
 // narrowed. Silently narrowing would answer a question about the team with
-// facts about one person, and the reader would have no way to tell.
+// facts about one contact, and the reader would have no way to tell.
 
 import (
 	"context"
@@ -88,7 +88,7 @@ func resolveScope(ctx context.Context, asked string) (string, error) {
 // A manager looking at a team exception needs to open the rep's own day — the
 // exception says whose it is, and the next question is always "show me their
 // queue". Without this they can only widen to `team`, which answers a question
-// about everybody when they asked about one person.
+// about everybody when they asked about one contact.
 //
 // The rule is the one resolveScope keeps: an ask the reader's row scope does
 // not reach is a 403, never a quiet narrowing. Narrowing here would be worse
@@ -98,7 +98,7 @@ func resolveScope(ctx context.Context, asked string) (string, error) {
 // Reading somebody's queue is not reading their inbox. The per-user sources —
 // a mailbox, a notice, a promise — stay bound to the acting user inside the
 // modules that own them, exactly as they do under `team` and `all`, so what
-// this reaches is the shared record-bearing work assigned to that person. The
+// this reaches is the shared record-bearing work assigned to that contact. The
 // contract says so where the parameter is declared.
 func (s *Service) resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, error) {
 	if asked.IsZero() {
@@ -131,7 +131,7 @@ func (s *Service) resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, e
 	// TRUE, so a task carrying no record link is discoverable by anyone. Naming
 	// an out-of-team colleague would return exactly those rows, under a page
 	// headed with that colleague's name. So membership is asked here, where the
-	// question is "may I open this person's queue" rather than "may I read this
+	// question is "may I open this contact's queue" rather than "may I read this
 	// row".
 	switch actor.Permissions.RowScope {
 	case principal.RowScopeAll:
@@ -163,8 +163,8 @@ func (s *Service) resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, e
 // return what that tier reaches and `mine` narrows below it.
 //
 // The intrinsically PER-USER sources do not, and cannot: a notice is addressed
-// to one person, a mailbox belongs to one person, a promise was made by one
-// person, an approved action failed for the person who approved it. Those reads
+// to one contact, a mailbox belongs to one contact, a promise was made by one
+// contact, an approved action failed for the contact who approved it. Those reads
 // are bound to the acting user inside the modules that own them, so asking for
 // `all` does not reach a colleague's notices — nor should it, since the request
 // is for a wider view of shared work rather than a licence to read another
@@ -221,7 +221,7 @@ func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
 	return kept
 }
 
-// keepOwnedBy keeps only the rows POSITIVELY attributable to one named person.
+// keepOwnedBy keeps only the rows POSITIVELY attributable to one named contact.
 //
 // The opposite default from keepReadersOwn, and the difference is the whole
 // rule. That one keeps a row it cannot judge because the lane already bound it
@@ -250,7 +250,7 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 			continue
 		}
 		// The overnight brief is the ACTING reader's, whoever the page names.
-		// It ranks against that person's own responsibility, so its rows say
+		// It ranks against that contact's own responsibility, so its rows say
 		// nothing about the owner asked for here — and a row that happens to
 		// name them is a coincidence of the deal's owner column, not evidence
 		// the night picked it for them.
@@ -268,7 +268,7 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 // question in its own query.
 //
 // Four lanes take the scope and the owner as ARGUMENTS — tasks, owed leads and
-// the two meeting lanes — so what they return is already the right person's,
+// the two meeting lanes — so what they return is already the right contact's,
 // whichever scope this read runs at. Re-judging their rows here is not a second
 // safety net: it asks a different question of an answer that was already
 // correct, and it gets it wrong. A lead the lane returned under `mine` is the
@@ -295,8 +295,8 @@ func narrowedByItsOwnLane(row ranked) bool {
 		row.item.Source == sourceMeeting || row.item.Source == sourceMeetingOutcome
 }
 
-// boundToTheActingReader marks the lanes that narrowed to the person ASKING,
-// as opposed to the ones that narrowed to a named person.
+// boundToTheActingReader marks the lanes that narrowed to the contact ASKING,
+// as opposed to the ones that narrowed to a named contact.
 //
 // The overnight brief is the case that needs the distinction. It ranks against
 // the acting reader's own responsibility — their deal, or one they hold an open
@@ -315,7 +315,7 @@ func boundToTheActingReader(row ranked) bool {
 // keepUnowned keeps the rows that answer to nobody.
 //
 // The counterpart to keepReadersOwn, over the same evidence: a row with an owner
-// belongs to that person and not to this queue. A row with nobody to name stays,
+// belongs to that contact and not to this queue. A row with nobody to name stays,
 // which is what the scope is for.
 //
 // A promise is the exception, and it is not decorative. A conversation claim
@@ -379,7 +379,7 @@ func (s *Service) narrowToScope(
 // TRUE — so a task carrying no record link is discoverable by anyone in the
 // installation. A team-scoped reader asking for `team` was handed exactly those
 // rows, belonging to colleagues on no team of theirs, under a heading that says
-// "my team". resolveOwner refuses to open that same person's queue by name,
+// "my team". resolveOwner refuses to open that same contact's queue by name,
 // so the page contradicted the door beside it.
 //
 // Membership is asked ONCE for the page rather than per row: the roster is a
@@ -439,7 +439,7 @@ func (s *Service) keepTeams(ctx context.Context, rows []ranked) []ranked {
 // differently: a wait kept as its owner's on the first pass was judged against
 // the absorbed deal's owner on the second, and when the two disagreed — a deal
 // reassigned between the at-risk read and the waiting read — the customer landed
-// on neither person's queue and nothing said so.
+// on neither contact's queue and nothing said so.
 //
 // The lane's answer is also the better one. It resolved ownership from the
 // record the thread is actually filed under; the attached deal arrived because

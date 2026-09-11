@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The two interventions a lead makes on somebody else's queue: handing a task
-// to another person, and leaving them a note about it.
+// to another contact, and leaving them a note about it.
 //
 // Both were shipped with stories and no test. A story shows that a control
 // draws; neither of these is about drawing. Reassign moves a customer's work
-// from one person's day to another's, and coaching writes a notice that arrives
+// from one contact's day to another's, and coaching writes a notice that arrives
 // in a colleague's queue under their own name — so what has to be held is the
 // WRITE: which endpoint, and what body. A control that renamed the promise and
 // posted nothing looks identical on screen.
@@ -33,8 +33,8 @@ afterEach(() => {
 });
 
 // The roster the pickers read, and the reader themself in it. `LENA` is the
-// owner whose queue is open, so she is the person the reassign picker must NOT
-// offer — handing work to the person who already holds it is the one move that
+// owner whose queue is open, so she is the contact the reassign picker must NOT
+// offer — handing work to the contact who already holds it is the one move that
 // does nothing.
 const LENA = "u-lena";
 const MINH = "u-minh";
@@ -173,7 +173,7 @@ describe("handing a task to somebody else", () => {
     expect(sent?.url).toContain("/activities/task-1");
     expect(sent?.body).toEqual({ assignee_id: MINH });
     // Conditioned on the version the lead was looking at. Unpinned, two leads
-    // hand one task to different people and the second press wins silently —
+    // hand one task to different contacts and the second press wins silently —
     // the row then sits on one queue while the other believes they delegated it.
     expect(sent?.ifMatch).toBe("3");
     expect(
@@ -181,8 +181,8 @@ describe("handing a task to somebody else", () => {
     ).toBeTruthy();
   });
 
-  // The person who already holds the work is not a destination for it.
-  it("offers everyone except the person whose queue this is", async () => {
+  // The contact who already holds the work is not a destination for it.
+  it("offers everyone except the contact whose queue this is", async () => {
     stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
     renderUnderAToastRegion(
@@ -230,7 +230,7 @@ describe("handing a task to somebody else", () => {
 });
 
 describe("leaving a note on somebody's queue", () => {
-  it("AC-WORKLIST-MGR-03: writes the note to the person it is about", async () => {
+  it("AC-WORKLIST-MGR-03: writes the note to the contact it is about", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
     renderUnderAToastRegion(<CoachControl owner={LENA} />);
@@ -263,7 +263,7 @@ describe("leaving a note on somebody's queue", () => {
   // means it worked.
   //
   // The server answers 403 `permission_denied` where the caller may not coach
-  // this person at all. "That note could not be left" invited a retry, and
+  // this contact at all. "That note could not be left" invited a retry, and
   // every press earned the same refusal — a reader pressing four times learnt
   // nothing the first press could have told them.
   it("names the refusal a 403 states, with no completion mark", async () => {
@@ -338,7 +338,7 @@ describe("leaving a note on somebody's queue", () => {
 //
 // The control used to be gated on a rep being SELECTED, so a reader looking at
 // their own queue — where nobody is selected — had no way to pass a task along.
-// Dropping that gate is only safe if the picker still refuses the person who
+// Dropping that gate is only safe if the picker still refuses the contact who
 // already holds the task: with no selection the exclusion had nothing to
 // compare against, and the reader was offered their own name. A press on it
 // posts a reassignment from Lena to Lena, which is a write that changes
@@ -369,7 +369,7 @@ describe("a rep hands on their own task", () => {
 
   // The window between opening the picker and learning who is reading.
   //
-  // Nothing on the server refuses a reassignment to the person who already
+  // Nothing on the server refuses a reassignment to the contact who already
   // holds the task, so the client filter is the only guard — and a filter with
   // nothing to compare against is not one. A reader quick enough to open the
   // picker before `/me` lands would be offered their own name.
@@ -461,7 +461,7 @@ function stubRosterWalk(
 }
 
 describe("whose queue the page is answering", () => {
-  // An agent seat is an Agent Runner identity rather than a person: it opens no
+  // An agent seat is an Agent Runner identity rather than a contact: it opens no
   // Worklist of its own, so a lead who chose one would land on a day that comes
   // back with nothing in it and nothing saying why.
   it("offers no agent seat as an owner", async () => {

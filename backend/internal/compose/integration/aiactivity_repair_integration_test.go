@@ -127,16 +127,16 @@ func TestAReQueuedAttemptGetsALeaseThatHasNotAlreadyExpired(t *testing.T) {
 	}
 }
 
-// The repair keeps the reading with the person whose reading it is.
+// The repair keeps the reading with the contact whose reading it is.
 //
 // This runs the pass under the SYSTEM principal production gives it, not the
 // human context the rest of this suite carries — which is the whole point. The
 // write shape stamps the envelope actor from the context, and the projection
 // derives ownership from that actor, so a pass announcing under its bare system
-// principal refiles every reading it repairs as workspace work. The person
+// principal refiles every reading it repairs as workspace work. The contact
 // loses it from their display permanently, at exactly the moment the repair
 // fires, and the source is settled so no later event ever puts it back.
-func TestTheRepairKeepsTheReadingWithThePersonWhoAskedForIt(t *testing.T) {
+func TestTheRepairKeepsTheReadingWithTheContactWhoAskedForIt(t *testing.T) {
 	f := newReadingFixture(t)
 	f.drain(t)
 	before := f.projection(t)
@@ -152,7 +152,7 @@ func TestTheRepairKeepsTheReadingWithThePersonWhoAskedForIt(t *testing.T) {
 
 	got := f.projection(t)
 	if got.ActorScope != "personal" || got.ActorUserID == nil || *got.ActorUserID != f.env.AdminUser {
-		t.Fatalf("after the repair, actor = %s/%v, want personal/%s — the repair filed one person's work as a system sweep",
+		t.Fatalf("after the repair, actor = %s/%v, want personal/%s — the repair filed one contact's work as a system sweep",
 			got.ActorScope, got.ActorUserID, f.env.AdminUser)
 	}
 }

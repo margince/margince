@@ -13,7 +13,7 @@ package briefs
 //
 // What differs is the stakes. A brief run is per rep per LOCAL DAY, so this
 // lane runs five times a week where the weekly runs once, and a duplicate here
-// is not one awkward Monday — it is a person learning the product mails them
+// is not one awkward Monday — it is a contact learning the product mails them
 // twice every morning.
 
 import (

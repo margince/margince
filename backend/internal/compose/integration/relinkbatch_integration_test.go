@@ -44,17 +44,17 @@ func seedThreadFixture(t *testing.T, e *Env, owner *pgx.Conn) threadFixture {
 	e.WsExec(t, `INSERT INTO project (id, name, key, company_id, phase, source, captured_by)
 		VALUES ($1, 'ERP rollout', 'ERP27', $2, 'delivering', 'manual', 'human:x')`, f.project, company)
 
-	myPerson := e.SeedPerson(t, "My Contact", &e.Rep1)
+	myContact := e.SeedContact(t, "My Contact", &e.Rep1)
 	for i := range f.mine {
 		f.mine[i] = SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by, thread_key)
 			VALUES ($1, 'email', 'Re: milestone', 'body', now(), 'manual', 'human:x', $2)`, f.key)
-		LinkActivity(t, owner, f.mine[i], "person", myPerson)
+		LinkActivity(t, owner, f.mine[i], "contact", myContact)
 	}
-	theirPerson := e.SeedPerson(t, "Their Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirPerson, e.Rep3)
+	theirContact := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirContact, e.Rep3)
 	f.theirs = SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by, thread_key)
 		VALUES ($1, 'email', 'Re: milestone', 'body', now(), 'manual', 'human:x', $2)`, f.key)
-	LinkActivity(t, owner, f.theirs, "person", theirPerson)
+	LinkActivity(t, owner, f.theirs, "contact", theirContact)
 	return f
 }
 

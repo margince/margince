@@ -27,7 +27,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
@@ -96,7 +96,7 @@ func (w *failingFlushWriter) FlushError() error {
 func TestCompanyLogoLogsRatherThanFailsWhenTheFlushErrors(t *testing.T) {
 	e := Setup(t)
 	blob := blobstore.NewMemory()
-	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
 	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
 
@@ -117,7 +117,7 @@ func TestCompanyLogoLogsRatherThanFailsWhenTheFlushErrors(t *testing.T) {
 // read's resolve performs, in the same order.
 func seedLoggedCompany(ctx context.Context, t *testing.T, e *Env, blob blobstore.Store, logo []byte) ids.CompanyID {
 	t.Helper()
-	company, err := e.People.CreateCompany(ctx, people.CreateCompanyInput{
+	company, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{
 		DisplayName: "Voltaq Systems GmbH", Source: "manual",
 	})
 	if err != nil {
@@ -128,7 +128,7 @@ func seedLoggedCompany(ctx context.Context, t *testing.T, e *Env, blob blobstore
 	if err := blob.Put(ctx, key, bytes.NewReader(logo), int64(len(logo)), imagenorm.ContentType); err != nil {
 		t.Fatalf("store the logo bytes: %v", err)
 	}
-	written, _, err := e.People.SetCompanyLogo(ctx, companyID, key, "https://voltaq.test/touch.png")
+	written, _, err := e.Contacts.SetCompanyLogo(ctx, companyID, key, "https://voltaq.test/touch.png")
 	if err != nil {
 		t.Fatalf("SetCompanyLogo: %v", err)
 	}
@@ -141,7 +141,7 @@ func seedLoggedCompany(ctx context.Context, t *testing.T, e *Env, blob blobstore
 func TestCompanyLogoStreamsTheStoredMarkUnderNonExecutableHeaders(t *testing.T) {
 	e := Setup(t)
 	blob := blobstore.NewMemory()
-	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
 	want := logoPNG(t)
 	companyID := seedLoggedCompany(ctx, t, e, blob, want)
@@ -169,15 +169,15 @@ func TestCompanyLogoStreamsTheStoredMarkUnderNonExecutableHeaders(t *testing.T) 
 	}
 
 	// The record exposes the endpoint, never the bucket path behind it.
-	read, err := e.People.GetCompany(ctx, companyID, storekit.LiveOnly)
+	read, err := e.Contacts.GetCompany(ctx, companyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read the company: %v", err)
 	}
-	key, err := e.People.CompanyLogoKey(ctx, companyID, people.LogoWide)
+	key, err := e.Contacts.CompanyLogoKey(ctx, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("read the stored logo key: %v", err)
 	}
-	wantURL := *people.LogoURL(companyID.UUID, &key, people.LogoWide)
+	wantURL := *contacts.LogoURL(companyID.UUID, &key, contacts.LogoWide)
 	if read.LogoUrl == nil || *read.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q", read.LogoUrl, wantURL)
 	}
@@ -191,7 +191,7 @@ func TestCompanyLogoStreamsTheStoredMarkUnderNonExecutableHeaders(t *testing.T) 
 func TestTheLogoIconEndpointStreamsTheIconSlotAndNotTheWideOne(t *testing.T) {
 	e := Setup(t)
 	blob := blobstore.NewMemory()
-	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
 	wide := logoPNG(t)
 	companyID := seedLoggedCompany(ctx, t, e, blob, wide)
@@ -227,7 +227,7 @@ func TestCompanyLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *testin
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+companyID.String()+"/logo", nil).WithContext(ctx)
-	people.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID))
+	contacts.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
@@ -248,7 +248,7 @@ func TestCompanyLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *testin
 func TestCompanyLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t *testing.T) {
 	e := Setup(t)
 	blob := newCountingBlobstore()
-	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
 	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
 	for y := range 8 {
@@ -261,7 +261,7 @@ func TestCompanyLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t *test
 		t.Fatalf("encoding a legacy square-canvas logo: %v", err)
 	}
 	companyID := seedLoggedCompany(ctx, t, e, blob, legacy)
-	key, err := e.People.CompanyLogoKey(ctx, companyID, people.LogoWide)
+	key, err := e.Contacts.CompanyLogoKey(ctx, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("read the stored logo key: %v", err)
 	}
@@ -320,7 +320,7 @@ func TestCompanyLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t *test
 func TestCompanyLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasIt(t *testing.T) {
 	e := Setup(t)
 	blob := newCountingBlobstore()
-	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
 	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
 	url := "/v1/companies/" + companyID.String() + "/logo"
@@ -341,11 +341,11 @@ func TestCompanyLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasI
 	// The ETag and LogoURL's own cache-busting query token are meant to be
 	// the SAME digest of the same key (logoRevisionDigest) — pin that they
 	// still are, so the two spellings cannot silently drift apart.
-	key, err := e.People.CompanyLogoKey(ctx, companyID, people.LogoWide)
+	key, err := e.Contacts.CompanyLogoKey(ctx, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("read the stored logo key: %v", err)
 	}
-	wantURL := *people.LogoURL(companyID.UUID, &key, people.LogoWide)
+	wantURL := *contacts.LogoURL(companyID.UUID, &key, contacts.LogoWide)
 	wantDigest := wantURL[strings.LastIndex(wantURL, "=")+1:]
 	if gotDigest := strings.Trim(etag, `"`); gotDigest != wantDigest {
 		t.Fatalf("ETag digest = %q, want %q (LogoURL's own query token)", gotDigest, wantDigest)
@@ -537,7 +537,7 @@ func TestCompanyLogoWriteBackCoalescesConcurrentReadersOfTheSameUntrimmedKey(t *
 	e := Setup(t)
 	inner := newCountingBlobstore()
 	blob := newGatedBlobstore(inner)
-	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
 	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
 	for y := range 8 {
@@ -550,7 +550,7 @@ func TestCompanyLogoWriteBackCoalescesConcurrentReadersOfTheSameUntrimmedKey(t *
 		t.Fatalf("encoding a legacy square-canvas logo: %v", err)
 	}
 	companyID := seedLoggedCompany(ctx, t, e, blob, legacy)
-	key, err := e.People.CompanyLogoKey(ctx, companyID, people.LogoWide)
+	key, err := e.Contacts.CompanyLogoKey(ctx, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("read the stored logo key: %v", err)
 	}
@@ -598,7 +598,7 @@ func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *te
 	e := Setup(t)
 	inner := newCountingBlobstore()
 	blob := newGatedBlobstore(inner)
-	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
 	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
 	for y := range 8 {
@@ -615,7 +615,7 @@ func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *te
 	// and that path always targets the installation's own company rather than
 	// taking a record id (companylogo.go says why).
 	offer, icp := "Revenue operations software", "RevOps at SaaS scale-ups"
-	company, err := e.People.SaveCompany(ctx, people.SaveCompanyInput{
+	company, err := e.Contacts.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Voltaq Systems GmbH",
 		Fields:      map[string]*string{"offer_summary": &offer, "icp": &icp},
 	})
@@ -627,7 +627,7 @@ func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *te
 	if err := blob.Put(ctx, staleKey, bytes.NewReader(legacy), int64(len(legacy)), imagenorm.ContentType); err != nil {
 		t.Fatalf("store the legacy logo bytes: %v", err)
 	}
-	if written, _, err := e.People.SetCompanyLogo(ctx, companyID, staleKey, "https://voltaq.test/legacy.png"); err != nil {
+	if written, _, err := e.Contacts.SetCompanyLogo(ctx, companyID, staleKey, "https://voltaq.test/legacy.png"); err != nil {
 		t.Fatalf("SetCompanyLogo (seed): %v", err)
 	} else if !written {
 		t.Fatal("the seed write reported no change on a fresh anchor company")
@@ -646,7 +646,7 @@ func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *te
 		t.Fatal("the write-back never reached blob.Put within 2s")
 	}
 
-	// A person replaces the mark WHILE the write-back above is blocked inside
+	// A contact replaces the mark WHILE the write-back above is blocked inside
 	// blob.Put(staleKey, ...) — the exact window the after-check exists for.
 	// SetAnchorCompanyLogo never declines, unlike a second resolve against the
 	// mark this test's own seed already set — the human write is the one
@@ -655,7 +655,7 @@ func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *te
 	if err := blob.Put(ctx, replacement, bytes.NewReader(logoPNG(t)), int64(len(logoPNG(t))), imagenorm.ContentType); err != nil {
 		t.Fatalf("store the replacement logo bytes: %v", err)
 	}
-	if _, err := e.People.SetAnchorCompanyLogo(ctx, people.LogoWide, replacement, "replacement.png"); err != nil {
+	if _, err := e.Contacts.SetAnchorCompanyLogo(ctx, contacts.LogoWide, replacement, "replacement.png"); err != nil {
 		t.Fatalf("SetAnchorCompanyLogo (replacement): %v", err)
 	}
 
@@ -663,7 +663,7 @@ func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *te
 	waitForPutCount(t, inner, staleKey)
 	waitForNotFound(t, blob, staleKey)
 
-	current, err := e.People.CompanyLogoKey(ctx, companyID, people.LogoWide)
+	current, err := e.Contacts.CompanyLogoKey(ctx, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("read the stored logo key: %v", err)
 	}
@@ -679,7 +679,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenThePutErrors(t *testing.T) {
 	e := Setup(t)
 	inner := newCountingBlobstore()
 	blob := newGatedBlobstore(inner)
-	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
 	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
 	for y := range 8 {
@@ -692,7 +692,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenThePutErrors(t *testing.T) {
 		t.Fatalf("encoding a legacy square-canvas logo: %v", err)
 	}
 	companyID := seedLoggedCompany(ctx, t, e, blob, legacy)
-	key, err := e.People.CompanyLogoKey(ctx, companyID, people.LogoWide)
+	key, err := e.Contacts.CompanyLogoKey(ctx, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("read the stored logo key: %v", err)
 	}
@@ -750,7 +750,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErrors(t 
 	e := Setup(t)
 	inner := newCountingBlobstore()
 	blob := newGatedBlobstore(inner)
-	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
 	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
 	for y := range 8 {
@@ -763,7 +763,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErrors(t 
 		t.Fatalf("encoding a legacy square-canvas logo: %v", err)
 	}
 	offer, icp := "Revenue operations software", "RevOps at SaaS scale-ups"
-	company, err := e.People.SaveCompany(ctx, people.SaveCompanyInput{
+	company, err := e.Contacts.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Voltaq Systems GmbH",
 		Fields:      map[string]*string{"offer_summary": &offer, "icp": &icp},
 	})
@@ -775,7 +775,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErrors(t 
 	if err := blob.Put(ctx, staleKey, bytes.NewReader(legacy), int64(len(legacy)), imagenorm.ContentType); err != nil {
 		t.Fatalf("store the legacy logo bytes: %v", err)
 	}
-	if written, _, err := e.People.SetCompanyLogo(ctx, companyID, staleKey, "https://voltaq.test/legacy.png"); err != nil {
+	if written, _, err := e.Contacts.SetCompanyLogo(ctx, companyID, staleKey, "https://voltaq.test/legacy.png"); err != nil {
 		t.Fatalf("SetCompanyLogo (seed): %v", err)
 	} else if !written {
 		t.Fatal("the seed write reported no change on a fresh anchor company")
@@ -799,7 +799,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErrors(t 
 	if err := blob.Put(ctx, replacement, bytes.NewReader(logoPNG(t)), int64(len(logoPNG(t))), imagenorm.ContentType); err != nil {
 		t.Fatalf("store the replacement logo bytes: %v", err)
 	}
-	if _, err := e.People.SetAnchorCompanyLogo(ctx, people.LogoWide, replacement, "replacement.png"); err != nil {
+	if _, err := e.Contacts.SetAnchorCompanyLogo(ctx, contacts.LogoWide, replacement, "replacement.png"); err != nil {
 		t.Fatalf("SetAnchorCompanyLogo (replacement): %v", err)
 	}
 
@@ -813,7 +813,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErrors(t 
 	if _, _, err := blob.Get(ctx, staleKey); err != nil {
 		t.Fatalf("the object at staleKey should still exist after a failed Delete: %v", err)
 	}
-	current, err := e.People.CompanyLogoKey(ctx, companyID, people.LogoWide)
+	current, err := e.Contacts.CompanyLogoKey(ctx, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("read the stored logo key: %v", err)
 	}
@@ -827,7 +827,7 @@ func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 	blob := blobstore.NewMemory()
 	ctx := e.Admin()
 
-	bare, err := e.People.CreateCompany(ctx, people.CreateCompanyInput{
+	bare, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{
 		DisplayName: "Kein Logo GmbH", Source: "manual",
 	})
 	if err != nil {
@@ -838,7 +838,7 @@ func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 	// No logo on file: a 404 the client renders as a monogram.
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+bareID.String()+"/logo", nil).WithContext(ctx)
-	people.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(bareID.UUID))
+	contacts.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(bareID.UUID))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("GET logo of a logo-less company = %d, want 404", rec.Code)
 	}
@@ -848,7 +848,7 @@ func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 	rec = httptest.NewRecorder()
 	missing := ids.NewV7()
 	req = httptest.NewRequest(http.MethodGet, "/v1/companies/"+missing.String()+"/logo", nil).WithContext(ctx)
-	people.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(missing))
+	contacts.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(missing))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("GET logo of an unknown company = %d, want 404", rec.Code)
 	}
@@ -858,7 +858,7 @@ func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/v1/companies/"+companyID.String()+"/logo", nil).WithContext(ctx)
-	people.NewHandlers(e.DB()).GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID))
+	contacts.NewHandlers(e.DB()).GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID))
 	if rec.Code != http.StatusNotImplemented {
 		t.Fatalf("GET logo with no object store = %d, want 501", rec.Code)
 	}

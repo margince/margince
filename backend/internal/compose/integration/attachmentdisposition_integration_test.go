@@ -34,11 +34,11 @@ func TestDownloadedAttachmentIsSavedNotRendered(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
-	person := e.SeedPerson(t, "Untrusted Sender", &e.Rep1)
+	contact := e.SeedContact(t, "Untrusted Sender", &e.Rep1)
 
 	// Markup, because that is the shape that would execute: a benign PDF proves
 	// the header is set, not that the dangerous case is covered by it.
-	body, ctype := multipartAttachment(t, "person", person.String(), "invoice.html",
+	body, ctype := multipartAttachment(t, "contact", contact.String(), "invoice.html",
 		[]byte(`<html><script>document.title="xss"</script></html>`))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
@@ -68,7 +68,7 @@ func TestDownloadedAttachmentIsSavedNotRendered(t *testing.T) {
 //
 // The name is typed by whoever produced the file, and it is read back in a log
 // line, a CSV export, a list, and — since a channel reply can carry files — a
-// park reason a person reads to find out which file to fix. A name carrying a
+// park reason a reader reads to find out which file to fix. A name carrying a
 // line break rewrites whichever record quotes it, and one carrying a
 // bidirectional override renders as an extension it does not have. The capture
 // path has always run sender-supplied names through this; an upload is the same
@@ -77,11 +77,11 @@ func TestAnUploadedFilenameIsSanitizedBeforeItIsStored(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
-	person := e.SeedPerson(t, "Untrusted Name", &e.Rep1)
+	contact := e.SeedContact(t, "Untrusted Name", &e.Rep1)
 
 	// A newline, a path separator and a right-to-left override: the three classes
 	// SafeFilename exists for, in one name.
-	body, ctype := multipartAttachment(t, "person", person.String(),
+	body, ctype := multipartAttachment(t, "contact", contact.String(),
 		"../etc/quo\u202ete\nreason=sent.pdf", []byte("PDF-BYTES"))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)

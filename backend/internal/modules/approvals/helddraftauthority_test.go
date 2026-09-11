@@ -3,7 +3,7 @@
 
 package approvals
 
-// A held draft is decided by the person it would go out as.
+// A held draft is decided by the contact it would go out as.
 //
 // Releasing one SENDS it, and the send takes its identity from the approving
 // human — comms.stagingUser stamps the mailbox credential from the
@@ -50,7 +50,7 @@ func TestAHeldDraftIsDecidedByTheRepItSendsAs(t *testing.T) {
 	if byManager {
 		t.Error("a colleague holding activity.create can release another rep's held draft. Approving " +
 			"SENDS it from the approver's own mailbox, under their name and signature — so this is not " +
-			"one person authorising another's message, it is a stranger answering a live customer thread")
+			"one contact authorising another's message, it is a stranger answering a live customer thread")
 	}
 
 	byRep, err := decidable(context.Background(), nil, sendGrantHolder(rep), staged)

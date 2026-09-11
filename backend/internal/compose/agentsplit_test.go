@@ -146,11 +146,11 @@ func (allHumanOwned) HumanOwnedConflicts(_ context.Context, _ string, _ ids.UUID
 // with every field human-owned got a staged approval instead.
 func TestSplitAllHumanOwnedRefusesAnExternallyHeldRecord(t *testing.T) {
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "updatePerson", Access: accessTool, Tool: "update_record", RecordType: recordTypePerson}
-	personID := ids.NewV7()
+	pol := agentPolicy{Op: "updateContact", Access: accessTool, Tool: "update_record", RecordType: recordTypeContact}
+	contactID := ids.NewV7()
 	body := []byte(`{"full_name":"Overwritten"}`)
 
-	req := patchRequest("/v1/people", personID, body)
+	req := patchRequest("/v1/contacts", contactID, body)
 	rec := httptest.NewRecorder()
 	next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Fatal("the handler ran — every field was human-owned, so nothing should have auto-executed")

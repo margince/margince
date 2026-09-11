@@ -30,8 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -102,7 +102,7 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	tracer := &countingTracer{}
 	pool := tracedPool(t, tracer)
 	traced := database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))
-	svc := company360svc.NewService(pool, people.NewStore(traced),
+	svc := company360svc.NewService(pool, contacts.NewStore(traced),
 		deals.NewStore(traced, installseam.Deals()), integration.ProjectsStore(traced),
 		approvals.NewService(traced), func() time.Time { return company360Clock })
 	ctx := e.Admin()
@@ -143,7 +143,7 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// Raised 28 → 29 for the contacts' internal routes: ONE query for the whole
 	// contact set, not one per contact, which is the difference between a
 	// composite that costs the same on every account and one that costs most on
-	// the accounts with the most contacts. It rides the person grant the
+	// the accounts with the most contacts. It rides the contact grant the
 	// contacts section already checked, so it costs no second admission.
 	//
 	// Raised 29 → 30 for last_meeting_at: ONE query, the most recent meeting
@@ -169,7 +169,7 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// as gone, admin included) runs for everyone. One indexed read by primary
 	// key, flat in the size of the account.
 	//
-	// 34 since #1621: the company read now carries how many people work at
+	// 34 since #1621: the company read now carries how many contacts work at
 	// the account and how many deals are open on it. Two reads, both issued for
 	// the whole company set at once rather than per row — the counts arrive
 	// grouped by company_id, so they are flat in the size of the account
@@ -181,7 +181,7 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// projects under the caller's project row scope, capped at 25 rows and
 	// flat in the size of the account.
 	//
-	// 39 since the writable flag: the company, its people, its deals and
+	// 39 since the writable flag: the company, its contacts, its deals and
 	// its projects each answer "may this caller change this row" for their whole
 	// page in ONE statement — auth.StampWritable over the page's ids, plus the
 	// live filter that keeps an archived row from being reported as editable.
@@ -190,7 +190,7 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// The flatness assertion higher up is what actually protects that; this
 	// number only records where the flat cost now sits.
 	// 42 since the work-in-flight card: three reads that say why the account's
-	// deals and projects need a person — the overdue task per deal, the same
+	// deals and projects need a contact — the overdue task per deal, the same
 	// per project, and the open commitment they made to us per project. Each
 	// is one statement over the whole page's ids, so the cost is flat in the
 	// number of deals and projects exactly like the sections they decorate.
@@ -231,16 +231,16 @@ func seedAccount(t *testing.T, e *integration.Env, owner *pgx.Conn, name string,
 	t.Helper()
 	company := e.SeedCompany(t, name, &e.Rep1)
 	for range n {
-		contact := e.SeedPerson(t, name+" contact", &e.Rep1)
-		e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+		contact := e.SeedContact(t, name+" contact", &e.Rep1)
+		e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 			VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
 		activity := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
 			VALUES ($1, 'email', 'touch', '2026-05-28T09:00:00Z', 'inbound', 'manual', 'human:x')`)
-		integration.LinkActivity(t, owner, activity, "person", contact)
+		integration.LinkActivity(t, owner, activity, "contact", contact)
 
 		deal := e.SeedDeal(t, name+" deal", pipeline, stage, &e.Rep1)
 		e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company)
-		e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 			VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, contact, deal)
 	}
 	return ids.From[ids.CompanyKind](company)

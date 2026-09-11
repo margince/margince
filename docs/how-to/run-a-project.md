@@ -1,6 +1,6 @@
 # Run a project
 
-This guide is for the person working a project day to day — no code, no API.
+This guide is for the contact working a project day to day — no code, no API.
 It is the lookup page: where things are on the project page, how phases move,
 and the full set of rules by which an email finds (or fails to find) its
 project. The things you *cannot* do from the UI are at the end.
@@ -15,7 +15,7 @@ A project is **the body of work a deal is about**: started on a company,
 carrying several deals over time, alive from the first conversation through
 delivery to a deliberate close. Its page is the one place where everything
 filed under that work — mail, notes, tasks, deals, contracts, documents, the
-people seated on it — is read together, with a phase history that says when
+contacts seated on it — is read together, with a phase history that says when
 the work moved and why.
 
 Most of what lands on the page lands there without anyone filing it by hand.
@@ -51,13 +51,13 @@ another to move; see *Moving the phase* below.
 
 **Companies** (right, first card) — every company on this project with its
 role, and the **Attach company** / **Detach** verbs. See
-[set-up-projects.md](set-up-projects.md#putting-companies-and-people-on-a-project).
+[set-up-projects.md](set-up-projects.md#putting-companies-and-contacts-on-a-project).
 
 **Phase history** (right) — every phase the project has been in, with time
 spent, and each move with date, who moved it and the reason. A move made by
-the product itself — a deal win — shows the person whose action caused it.
+the product itself — a deal win — shows the contact whose action caused it.
 
-**Stakeholders**, **Contracts**, **Documents** (right) — the people seated on
+**Stakeholders**, **Contracts**, **Documents** (right) — the contacts seated on
 the project with their role, the agreements that name it, the files attached
 to it. Files attached to the project's deals stay on the deals.
 
@@ -116,7 +116,7 @@ deals and mail stay where they are; the project simply leaves the live list.
 Archiving is a manager, management, admin or ops verb.
 
 **Share** opens the sharing page for this one record: grant **Read** or
-**Write** to a person or a team, optionally with an expiry and a reason, and
+**Write** to a contact or a team, optionally with an expiry and a reason, and
 see who already has access. A share never widens anything beyond this project.
 
 ## Referencing a project from email
@@ -203,11 +203,11 @@ or let the next message in the thread carry the filing.
    project keyed `RE` from swallowing every reply in the installation. Two
    different keys in one subject cancel out: the message says nothing reliable
    and is not filed.
-4. **An offer to a person.** When none of the above answers, Margince does not
+4. **An offer to a contact.** When none of the above answers, Margince does not
    file the message — and it only *asks* when it has something worth asking
    about: exactly one live project the message could plausibly belong to, or
    one that stands out among several. Then it stages an approval — **File under
-   a project** — in **Approvals**, and a person confirms or declines. With
+   a project** — in **Approvals**, and a human confirms or declines. With
    nothing to offer it stays quiet, which is the common case. Confirm files the message exactly as a manual
    relink would; decline means the same message-and-project pairing is not
    offered again. An offer nobody answers expires, and the next message in the
@@ -220,7 +220,7 @@ timeline unfiled, which is where it belongs.
 ### When nothing matched, or the wrong thing did
 
 Press **Relink** on the message in any timeline. The dialog **Relink this
-activity** searches across people, companies, deals, leads and projects; pick
+activity** searches across contacts, companies, deals, leads and projects; pick
 the project. Two checkboxes:
 
 - **Move instead of also-link** — replace the existing link of the same type
@@ -247,7 +247,7 @@ does not say which is which. Name projects so that this does not happen.
 > **Restricted records** page with the project's name as the reason.
 
 This is why the product never files by guesswork: every rule above is either
-exact or confirmed by a person.
+exact or confirmed by a contact.
 
 ## Reports
 
@@ -264,7 +264,7 @@ it lists the deal reports only:
 
 ## Agents and MCP
 
-An agent connected over MCP sees a project exactly as the person whose
+An agent connected over MCP sees a project exactly as the contact whose
 passport it holds would. `read_project_360` returns the page above, section by
 section. `catch_me_up_on` with a `project_id`
 answers "what has been happening?" from what is filed under the project or

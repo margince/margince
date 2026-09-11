@@ -8,7 +8,7 @@ package gates
 //
 // The transmit ticket catches a delivery that reaches a provider with nothing
 // on record, but it catches it in a worker — minutes or days later, against a
-// parked row, with the person who typed the message long gone. The staging
+// parked row, with the contact who typed the message long gone. The staging
 // decision is what makes a refusal answerable, and this is what stops a new
 // send path from quietly not taking one.
 //

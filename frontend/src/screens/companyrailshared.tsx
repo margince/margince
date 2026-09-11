@@ -56,24 +56,24 @@ export function wholeCount(section?: {
 }
 
 type Company360 = components["schemas"]["Company360"];
-type People = NonNullable<Company360["people"]>;
+type Contacts = NonNullable<Company360["contacts"]>;
 
-// The people section as every surface reads it: the contacts in the server's
+// The contacts section as every surface reads it: the contacts in the server's
 // own rank, the count only while the page is whole, and whether the section
 // has answered at all. The details column's slice and the glance's chips both
 // draw this one reading rather than each taking it again.
-export function peopleSlice(
+export function contactsSlice(
   view: Company360 | undefined,
   loading: boolean,
-): { contacts: People["data"]; count?: number; state: SectionState } {
-  const contacts = view?.people?.data ?? [];
+): { contacts: Contacts["data"]; count?: number; state: SectionState } {
+  const contacts = view?.contacts?.data ?? [];
   return {
     contacts,
-    count: wholeCount(view?.people),
+    count: wholeCount(view?.contacts),
     state: sectionState(
       view,
-      "people",
-      Boolean(view?.people),
+      "contacts",
+      Boolean(view?.contacts),
       contacts.length,
       loading,
     ),

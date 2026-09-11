@@ -115,7 +115,7 @@ async function openBrief(page: Page, options?: MockApiOptions) {
   await mockApi(page, options);
   await page.goto("/#/contacts/p-anna/meetings");
   await page
-    .getByRole("button", { name: copy("person.meeting.brief") })
+    .getByRole("button", { name: copy("contact.meeting.brief") })
     .click();
   await expect(page.locator(DRAWER)).toBeVisible();
   await settleAnimations(page);
@@ -133,7 +133,7 @@ test("AC-meeting-brief-1: a rep opens the brief and meets the ask before the det
 }) => {
   await openBrief(page);
   await expect(
-    page.getByRole("heading", { name: copy("person.meeting.title") }),
+    page.getByRole("heading", { name: copy("contact.meeting.title") }),
   ).toBeVisible();
 
   // The ask, then the watch-out, then everything else. A reader who stops
@@ -142,7 +142,7 @@ test("AC-meeting-brief-1: a rep opens the brief and meets the ask before the det
   const risk = await boxOf(page, ".panel-warn");
   expect(goal.y).toBeLessThan(risk.y);
   await expect(
-    page.getByRole("heading", { name: copy("person.meeting.goal") }),
+    page.getByRole("heading", { name: copy("contact.meeting.goal") }),
   ).toBeVisible();
 });
 
@@ -188,7 +188,7 @@ test("AC-meeting-brief-5: Escape closes the brief and returns the reader", async
   await page.keyboard.press("Escape");
   await expect(page.locator(DRAWER)).toBeHidden();
   await expect(
-    page.getByRole("button", { name: copy("person.meeting.brief") }),
+    page.getByRole("button", { name: copy("contact.meeting.brief") }),
   ).toBeFocused();
 });
 
@@ -198,7 +198,7 @@ test("AC-meeting-brief-6: a withheld source says so rather than staying silent",
   await openBrief(page);
   // Background is collapsed, so the reader opens it to find what they are not
   // being shown — but it is THERE, which a silent omission would not be.
-  await page.getByText(copy("person.meeting.background")).click();
+  await page.getByText(copy("contact.meeting.background")).click();
   await expect(page.getByText(/Deal Room/i).first()).toBeVisible();
 });
 
@@ -206,7 +206,7 @@ test("AC-meeting-brief-7: a cold record says nothing is recorded yet", async ({
   page,
 }) => {
   await openBrief(page, { meetingBrief: "empty" });
-  await expect(page.getByText(copy("person.meeting.empty"))).toBeVisible();
+  await expect(page.getByText(copy("contact.meeting.empty"))).toBeVisible();
 });
 
 test("AC-meeting-brief-8: a failed read offers the reason and a retry", async ({
@@ -264,12 +264,12 @@ test.describe("for a lead reading a teammate's meeting", () => {
     const advance = await boxOf(page, ".mb-advance");
     expect(coach.y).toBeLessThan(advance.y);
     await expect(
-      page.getByRole("heading", { name: copy("person.meeting.coach.title") }),
+      page.getByRole("heading", { name: copy("contact.meeting.coach.title") }),
     ).toBeVisible();
     // It says which view this is: a lead who cannot tell they are reading the
     // manager view cannot tell what their rep is seeing.
     await expect(
-      page.getByText(copy("person.meeting.coach.eyebrow")),
+      page.getByText(copy("contact.meeting.coach.eyebrow")),
     ).toBeVisible();
   });
 
@@ -285,7 +285,7 @@ test.describe("for a lead reading a teammate's meeting", () => {
       await mockApi(own, { meetingBrief: variant });
       await own.goto("/#/contacts/p-anna/meetings");
       await own
-        .getByRole("button", { name: copy("person.meeting.brief") })
+        .getByRole("button", { name: copy("contact.meeting.brief") })
         .click();
       await expect(own.locator(DRAWER)).toBeVisible();
       const headings = await textsOf(own.locator(".modal-drawer-wide h3"));
@@ -306,7 +306,7 @@ test.describe("for a lead reading a teammate's meeting", () => {
   }) => {
     await openBrief(page, { meetingBrief: "plan" });
     await expect(
-      page.getByText(copy("person.meeting.coach.title")),
+      page.getByText(copy("contact.meeting.coach.title")),
     ).toHaveCount(0);
   });
 

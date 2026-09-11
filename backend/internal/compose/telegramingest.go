@@ -24,7 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -77,21 +77,21 @@ func (a TelegramIngestArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // specific, controlled way (a unique-constraint race) without a real
 // Postgres write path to provoke one.
 type telegramIngestWorker struct {
-	pool   *pgxpool.Pool
-	sink   connector.Sink
-	people *people.Store
-	log    *slog.Logger
+	pool     *pgxpool.Pool
+	sink     connector.Sink
+	contacts *contacts.Store
+	log      *slog.Logger
 }
 
 // newTelegramIngestWorker builds the worker over the SAME fully-guarded Sink
 // every other capture connector shares (newCaptureSink) — Telegram is one
-// more source into the one chokepoint, not a second one. people is the SAME
+// more source into the one chokepoint, not a second one. contacts is the SAME
 // module the Sink's channel ensurer resolves through (compose/capture.go's
-// peopleEnsurer) — composed here directly rather than through an interface
-// seam because this IS the composition layer people.Store already reaches
+// contactsEnsurer) — composed here directly rather than through an interface
+// seam because this IS the composition layer contacts.Store already reaches
 // into for that ensurer.
 func newTelegramIngestWorker(pool *pgxpool.Pool, cfg CaptureConfig, log *slog.Logger) *telegramIngestWorker {
-	return &telegramIngestWorker{pool: pool, sink: newCaptureSink(pool, cfg), people: people.NewStore(InstallationDB(pool)), log: log}
+	return &telegramIngestWorker{pool: pool, sink: newCaptureSink(pool, cfg), contacts: contacts.NewStore(InstallationDB(pool)), log: log}
 }
 
 // Work re-establishes the workspace context from job.Args (never inherited
@@ -254,7 +254,7 @@ func (w *telegramIngestWorker) applyMembership(actorCtx context.Context, botID s
 		}); err != nil {
 			return err
 		}
-		return w.people.SetChannelIdentityBlocked(actorCtx, tx, m.Identity, blocked, botID, m.UpdateID)
+		return w.contacts.SetChannelIdentityBlocked(actorCtx, tx, m.Identity, blocked, botID, m.UpdateID)
 	})
 	if err != nil {
 		return fmt.Errorf("telegram_ingest: applying membership status %q: %w", m.Status, err)
@@ -269,7 +269,7 @@ func (w *telegramIngestWorker) applyMembership(actorCtx context.Context, botID s
 // every captured message look like the connecting admin's own row-scoped
 // activity, which is exactly the "owned record" §4.1 forbids. Its
 // permissions are the fixed minimum this worker exercises — the activity it
-// captures, and the person the channel ensure auto-creates for an unmatched
+// captures, and the contact the channel ensure auto-creates for an unmatched
 // sender (design D1) — and workspace-wide (RowScopeAll): a channel message
 // belongs to the whole workspace a single bot serves, not to whichever human
 // happened to run Connect.
@@ -281,7 +281,7 @@ func telegramChannelPrincipal() principal.Principal {
 			RoleKeys: []string{"channel"},
 			Objects: map[string]principal.ObjectGrant{
 				tableActivity: {Create: true},
-				tablePerson:   {Create: true},
+				tableContact:  {Create: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

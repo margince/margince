@@ -18,7 +18,7 @@ export const LANGUAGE_DEPENDENT_QUERY_PREFIXES = [
   ["company-dossier"],
   ["company-growth-fit"],
   ["meetingBrief"],
-  ["personBrief"],
+  ["contactBrief"],
   ["deal-status"],
   ["brief"],
 ] as const;

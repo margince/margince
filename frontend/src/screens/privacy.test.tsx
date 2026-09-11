@@ -104,7 +104,7 @@ function stubRoutes(
       // different questions and the server asks each separately:
       //   privacy_request:read   — the subject queue (consent/dsr.go)
       //   privacy_request:update — moving a request through its statuses
-      //   person:update          — OPENING one, which writes the person named
+      //   contact:update          — OPENING one, which writes the contact named
       //   consent_config:create  — appending to the consent registry
       // The default principal holds all four. A test asserting any one refusal
       // overrides this key with the narrower set.
@@ -114,7 +114,7 @@ function stubRoutes(
             roles: ["admin"],
             allow: {
               privacy_request: ["read", "update"],
-              person: ["update"],
+              contact: ["update"],
               consent_config: ["create"],
             },
           }),
@@ -289,7 +289,7 @@ const DSRS = {
     {
       id: "d1",
       kind: "erasure",
-      subject_ref: "8f3a-person-uuid",
+      subject_ref: "8f3a-contact-uuid",
       status: "open",
       due_at: "2026-08-01T00:00:00Z",
       created_at: "2026-07-01T00:00:00Z",
@@ -329,7 +329,7 @@ async function findDsrRow(subjectRef: string) {
 
 describe("PrivacyInboxCard", () => {
   it("withholds the queue from a reader without the grant instead of asking for it", async () => {
-    // The rows name the people who exercised an Art. 15/17 right, so the read
+    // The rows name the contacts who exercised an Art. 15/17 right, so the read
     // asks `privacy_request:read`. A seat reaching this page for the consent
     // registry beside it must find the card in its place saying why it is empty
     // — an absent card would read as "no requests", a different claim entirely.
@@ -356,7 +356,7 @@ describe("PrivacyInboxCard", () => {
         jsonResponse(
           meFixture({
             roles: ["ops"],
-            allow: { privacy_request: ["read"], person: ["update"] },
+            allow: { privacy_request: ["read"], contact: ["update"] },
           }),
         ),
     });
@@ -365,7 +365,7 @@ describe("PrivacyInboxCard", () => {
     // The OPEN request, not the fulfilled one: a terminal request offers no
     // transition to anybody, so asserting their absence on it would pass
     // whatever the grant said.
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button"));
 
     // …and carries no verb that would 403. Scoped to `.dsr-actions`, the
@@ -375,10 +375,10 @@ describe("PrivacyInboxCard", () => {
     expect(document.querySelectorAll(".dsr-actions button")).toHaveLength(0);
   });
 
-  // Opening a request is a THIRD grant: the POST writes the person it names, so
-  // consent/dsr.go's CreateDSR asks `person:update` rather than anything on the
+  // Opening a request is a THIRD grant: the POST writes the contact it names, so
+  // consent/dsr.go's CreateDSR asks `contact:update` rather than anything on the
   // privacy object at all.
-  it("offers no New request to a reader who may work the queue but not write a person", async () => {
+  it("offers no New request to a reader who may work the queue but not write a contact", async () => {
     stubRoutes({
       "GET /data-subject-requests": () => jsonResponse(DSRS),
       "GET /me": () =>
@@ -409,7 +409,7 @@ describe("PrivacyInboxCard", () => {
     expect(
       await screen.findByRole("button", { name: /new request/i }),
     ).toBeInTheDocument();
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button"));
     expect(
       document.querySelectorAll(".dsr-actions button").length,
@@ -442,7 +442,7 @@ describe("PrivacyInboxCard", () => {
     stubRoutes();
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     expect(screen.getByText(/anna@acme.test/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^open$/i })).toBeInTheDocument();
@@ -461,7 +461,7 @@ describe("PrivacyInboxCard", () => {
     } as Intl.ResolvedDateTimeFormatOptions);
     stubRoutes({ "GET /data-subject-requests": () => jsonResponse(DSRS) });
     render(<PrivacyInboxCard />);
-    await screen.findByText(/8f3a-person-uuid/);
+    await screen.findByText(/8f3a-contact-uuid/);
     // This codebase's locked locale convention (format.ts's INTL_LOCALE,
     // "A100: unconfigured English is en-GB, not en-US") renders numeric
     // dates DD/MM/YYYY: New York renders 31/07/2026; a hardcoded
@@ -474,9 +474,9 @@ describe("PrivacyInboxCard", () => {
     stubRoutes();
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     expect(
       within(row).getByRole("button", { name: /in progress/i }),
     ).toBeInTheDocument();
@@ -511,9 +511,9 @@ describe("PrivacyInboxCard", () => {
     stubRoutes();
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     expect(within(row).getByRole("button", { name: /reject/i })).toBeDisabled();
     await userEvent.type(
       screen.getByLabelText(/resolution/i),
@@ -531,7 +531,7 @@ describe("PrivacyInboxCard", () => {
     vi.setSystemTime(new Date("2026-08-02T00:00:00Z"));
     stubRoutes();
     render(<PrivacyInboxCard />);
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     expect(within(row).getByText(/overdue/i)).toBeInTheDocument();
     const closedRow = await findDsrRow("anna@acme.test");
     expect(within(closedRow).queryByText(/overdue/i)).not.toBeInTheDocument();
@@ -569,9 +569,9 @@ describe("PrivacyInboxCard", () => {
     });
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.type(screen.getByLabelText(/resolution/i), "done");
     await userEvent.click(within(row).getByRole("button", { name: /reject/i }));
     expect(await screen.findByText(/moved on/i)).toBeInTheDocument();
@@ -601,9 +601,9 @@ describe("PrivacyInboxCard", () => {
     });
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.type(screen.getByLabelText(/resolution/i), "done");
     await userEvent.click(within(row).getByRole("button", { name: /reject/i }));
     expect(
@@ -640,7 +640,7 @@ describe("PrivacyInboxCard", () => {
     });
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     const picker = await screen.findByLabelText(/assignee/i);
     // The agent seat's absence is a property of the LIST, and the list only
@@ -694,7 +694,7 @@ describe("PrivacyInboxCard", () => {
     });
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     await userEvent.click(await screen.findByLabelText(/assignee/i));
     const unassigned = within(screen.getByRole("listbox")).getByRole("option", {
@@ -742,11 +742,11 @@ describe("PrivacyInboxCard", () => {
     });
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     const picker = await screen.findByLabelText(/assignee/i);
     await choose(picker, "Dana DPO");
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     expect(
       await within(row).findByText(en["common.permissionDenied"]),
     ).toBeInTheDocument();
@@ -781,7 +781,7 @@ describe("PrivacyInboxCard", () => {
 });
 
 describe("opening a DSR (G-2)", () => {
-  // An erasure fulfils by resolving subject_ref to a person id. Free text
+  // An erasure fulfils by resolving subject_ref to a contact id. Free text
   // there means the server refuses (BE-2) — so the form must not offer it.
   it("requires a picked contact for an erasure", async () => {
     stubRoutes();
@@ -833,10 +833,10 @@ describe("opening a DSR (G-2)", () => {
   });
 
   // The load-bearing property (BE-2): the erasure fulfiller resolves
-  // subject_ref to a person id, so an erasure request must be incapable of
+  // subject_ref to a contact id, so an erasure request must be incapable of
   // naming a subject the server cannot erase. The form only enforces this by
   // construction (RecordPicker, no text input) — this proves the picked
-  // person's uuid, not its display name, is what actually reaches the wire.
+  // contact's uuid, not its display name, is what actually reaches the wire.
   it("sends the picked contact's uuid as subject_ref for an erasure request", async () => {
     // Pinned to a negative-offset zone (not the host machine's own, which
     // this suite never controls): due_at must mint at end-of-day THERE, not
@@ -845,7 +845,7 @@ describe("opening a DSR (G-2)", () => {
       timeZone: "America/New_York",
     } as Intl.ResolvedDateTimeFormatOptions);
     const sent = stubRoutes({
-      "GET /people": () =>
+      "GET /contacts": () =>
         jsonResponse({
           data: [
             {
@@ -903,7 +903,7 @@ describe("opening a DSR (G-2)", () => {
 
   // The sibling of the test above: access/rectify keep the free-text field,
   // so this pins that the two kinds genuinely diverge on the wire rather
-  // than a stray shared code path silently reusing the person picker's value.
+  // than a stray shared code path silently reusing the contact picker's value.
   it("sends the typed free text as subject_ref for an access request", async () => {
     vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
       timeZone: "America/New_York",
@@ -1010,13 +1010,13 @@ describe("fulfilling an erasure", () => {
     stubRoutes();
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
     // "Fulfil" also substring-matches the facet bar's "Fulfilled" filter
     // button — scope to the row under test, same idiom as findDsrRow's other
     // callers above.
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     const confirm = await screen.findByRole("button", {
       name: /erase \+ suppress/i,
@@ -1041,17 +1041,17 @@ describe("fulfilling an erasure", () => {
             title: "Conflict",
             status: 409,
             code: "conflict",
-            detail: "erasing a person under legal hold: conflict",
+            detail: "erasing a contact under legal hold: conflict",
           },
           409,
         ),
     });
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
     await userEvent.click(
@@ -1090,10 +1090,10 @@ describe("fulfilling an erasure", () => {
     });
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
     const confirm = screen.getByRole("button", { name: /erase \+ suppress/i });
@@ -1131,10 +1131,10 @@ describe("fulfilling an erasure", () => {
     });
     render(<PrivacyInboxCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
     await userEvent.click(
@@ -1179,11 +1179,11 @@ describe("fulfilling an erasure", () => {
     });
     render(<PrivacyInboxCard />);
     const summary = await screen.findByRole("button", {
-      name: /8f3a-person-uuid/i,
+      name: /8f3a-contact-uuid/i,
     });
     await userEvent.click(summary);
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
-    const row = await findDsrRow("8f3a-person-uuid");
+    const row = await findDsrRow("8f3a-contact-uuid");
     const opener = within(row).getByRole("button", { name: /fulfil/i });
     await userEvent.click(opener);
     await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");

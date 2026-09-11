@@ -10,7 +10,7 @@ package gates
 //
 // They cannot be one table: the rep's hangs off weekly_review by foreign key
 // and the team's off team_weekly_review. That leaves two column lists which a
-// person maintains, and a figure added to one and not the other is invisible —
+// contact maintains, and a figure added to one and not the other is invisible —
 // the panel for the table that has it draws it, the other draws nothing, and
 // nothing fails.
 //

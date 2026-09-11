@@ -16,7 +16,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -25,49 +25,49 @@ import (
 
 func TestObjectLevelRBACDeniesUngrantedActions(t *testing.T) {
 	e := Setup(t)
-	target := e.SeedPerson(t, "Target", &e.Rep1)
+	target := e.SeedContact(t, "Target", &e.Rep1)
 
 	reader := e.As(e.Rep3, []ids.UUID{e.Team2}, ReadOnlyPerms)
 
-	if _, err := e.People.CreatePerson(reader, people.CreatePersonInput{FullName: "X", Source: "manual"}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.Contacts.CreateContact(reader, contacts.CreateContactInput{FullName: "X", Source: "manual"}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("read_only create → %v, want ErrPermissionDenied", err)
 	}
-	if _, err := e.People.UpdatePerson(reader, PersonIDOf(target), people.UpdatePersonInput{Title: strPtr("CEO")}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.Contacts.UpdateContact(reader, ContactIDOf(target), contacts.UpdateContactInput{Title: strPtr("CEO")}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("read_only update → %v, want ErrPermissionDenied", err)
 	}
-	if _, err := e.People.ArchivePerson(reader, PersonIDOf(target), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.Contacts.ArchiveContact(reader, ContactIDOf(target), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("read_only archive → %v, want ErrPermissionDenied", err)
 	}
 	// …but reading is granted, and row_scope=all sees the foreign-owned row.
-	if _, err := e.People.GetPerson(reader, PersonIDOf(target), storekit.LiveOnly); err != nil {
+	if _, err := e.Contacts.GetContact(reader, ContactIDOf(target), storekit.LiveOnly); err != nil {
 		t.Errorf("read_only get → %v, want success", err)
 	}
 
-	// A rep (no delete grant on person) cannot archive even an OWN record:
+	// A rep (no delete grant on contact) cannot archive even an OWN record:
 	// object-level denial precedes row scope.
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	if _, err := e.People.ArchivePerson(rep, PersonIDOf(target), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.Contacts.ArchiveContact(rep, ContactIDOf(target), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("rep archive own → %v, want ErrPermissionDenied", err)
 	}
 }
 
-// Contacts are an identity table: every seat that holds person.read reads
+// Contacts are an identity table: every seat that holds contact.read reads
 // every contact, whichever team owns it, and the team row scope binds only
 // WRITES. The one contact a seat cannot read is a capture-private one
 // belonging to somebody else — and that one answers 404, never a 403 that
 // would disclose its existence.
 func TestRowScopeTeamReadsEveryContactButWritesOnlyItsOwnTeams(t *testing.T) {
 	e := Setup(t)
-	mine := e.SeedPerson(t, "Mine", &e.Rep1)
-	teammates := e.SeedPerson(t, "Teammates", &e.Rep2)
-	foreign := e.SeedPerson(t, "Foreign", &e.Rep3)
-	shared := e.SeedPerson(t, "Shared", nil)
-	private := e.SeedPerson(t, "Their Private Capture", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", private, e.Rep3)
+	mine := e.SeedContact(t, "Mine", &e.Rep1)
+	teammates := e.SeedContact(t, "Teammates", &e.Rep2)
+	foreign := e.SeedContact(t, "Foreign", &e.Rep3)
+	shared := e.SeedContact(t, "Shared", nil)
+	private := e.SeedContact(t, "Their Private Capture", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 
-	rows, _, err := e.People.ListPeople(rep, people.ListPeopleInput{})
+	rows, _, err := e.Contacts.ListContacts(rep, contacts.ListContactsInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,46 +83,46 @@ func TestRowScopeTeamReadsEveryContactButWritesOnlyItsOwnTeams(t *testing.T) {
 
 	// Single fetch: the other team's contact is readable; the private one
 	// answers 404 — never the row, and never a 403 that would disclose it.
-	if _, err := e.People.GetPerson(rep, PersonIDOf(foreign), storekit.LiveOnly); err != nil {
+	if _, err := e.Contacts.GetContact(rep, ContactIDOf(foreign), storekit.LiveOnly); err != nil {
 		t.Errorf("get another team's contact → %v, want success", err)
 	}
-	if _, err := e.People.GetPerson(rep, PersonIDOf(private), storekit.LiveOnly); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.Contacts.GetContact(rep, ContactIDOf(private), storekit.LiveOnly); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("get another rep's private capture → %v, want ErrNotFound", err)
 	}
 	// Writes keep the team scope: the readable foreign row is refused, the
 	// hidden one stays hidden.
-	if _, err := e.People.UpdatePerson(rep, PersonIDOf(foreign), people.UpdatePersonInput{Title: strPtr("Pwned")}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.Contacts.UpdateContact(rep, ContactIDOf(foreign), contacts.UpdateContactInput{Title: strPtr("Pwned")}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("update another team's contact → %v, want ErrPermissionDenied", err)
 	}
-	if _, err := e.People.UpdatePerson(rep, PersonIDOf(private), people.UpdatePersonInput{Title: strPtr("Pwned")}); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.Contacts.UpdateContact(rep, ContactIDOf(private), contacts.UpdateContactInput{Title: strPtr("Pwned")}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("update another rep's private capture → %v, want ErrNotFound", err)
 	}
-	if _, err := e.People.UpdatePerson(rep, PersonIDOf(teammates), people.UpdatePersonInput{Title: strPtr("Lead")}); err != nil {
+	if _, err := e.Contacts.UpdateContact(rep, ContactIDOf(teammates), contacts.UpdateContactInput{Title: strPtr("Lead")}); err != nil {
 		t.Errorf("update a teammate's contact → %v, want success", err)
 	}
 
 	// The private capture's owner sees all five; a stranger with row_scope=all
 	// still sees only four, because capture privacy is not a row-scope tier.
-	all, _, err := e.People.ListPeople(e.As(e.Rep3, []ids.UUID{e.Team2}, ReadOnlyPerms), people.ListPeopleInput{})
+	all, _, err := e.Contacts.ListContacts(e.As(e.Rep3, []ids.UUID{e.Team2}, ReadOnlyPerms), contacts.ListContactsInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(all) != 5 {
-		t.Errorf("the private capture's owner with row_scope=all sees %d people, want 5", len(all))
+		t.Errorf("the private capture's owner with row_scope=all sees %d contacts, want 5", len(all))
 	}
-	stranger, _, err := e.People.ListPeople(e.As(ids.NewV7(), nil, ReadOnlyPerms), people.ListPeopleInput{})
+	stranger, _, err := e.Contacts.ListContacts(e.As(ids.NewV7(), nil, ReadOnlyPerms), contacts.ListContactsInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(stranger) != 4 {
-		t.Errorf("a stranger with row_scope=all sees %d people, want 4", len(stranger))
+		t.Errorf("a stranger with row_scope=all sees %d contacts, want 4", len(stranger))
 	}
 }
 
 func TestMutationRecordsTheGoverningRuleInAuditLog(t *testing.T) {
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	p, err := e.People.CreatePerson(rep, people.CreatePersonInput{FullName: "Audited", Source: "manual"})
+	p, err := e.Contacts.CreateContact(rep, contacts.CreateContactInput{FullName: "Audited", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,12 +131,12 @@ func TestMutationRecordsTheGoverningRuleInAuditLog(t *testing.T) {
 
 	var rule string
 	err = owner.QueryRow(context.Background(),
-		`SELECT authorization_rule FROM audit_log WHERE entity_type = 'person' AND entity_id = $1 AND action = 'create'`,
+		`SELECT authorization_rule FROM audit_log WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'create'`,
 		ids.UUID(p.Id)).Scan(&rule)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "role[rep] person.create row_scope=team"; rule != want {
+	if want := "role[rep] contact.create row_scope=team"; rule != want {
 		t.Errorf("authorization_rule = %q, want %q", rule, want)
 	}
 }
@@ -144,7 +144,7 @@ func TestMutationRecordsTheGoverningRuleInAuditLog(t *testing.T) {
 func TestZeroPermissionsFailClosed(t *testing.T) {
 	e := Setup(t)
 	nobody := e.As(ids.NewV7(), nil, principal.Permissions{})
-	if _, _, err := e.People.ListPeople(nobody, people.ListPeopleInput{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, _, err := e.Contacts.ListContacts(nobody, contacts.ListContactsInput{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("unresolved permissions list → %v, want ErrPermissionDenied (fail closed)", err)
 	}
 }

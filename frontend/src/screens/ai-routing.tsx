@@ -42,7 +42,7 @@ import "./ai-settings.css";
 // and it decides where an installation's correspondence goes.
 //
 // Editing re-points a lane. It does NOT add or remove one: the tier vocabulary
-// comes from the task contract rather than from a person, so the form offers
+// comes from the task contract rather than from a contact, so the form offers
 // the tiers the installation already binds. An installation that binds nothing
 // says so and points at where a binding is declared, rather than presenting an
 // empty form that cannot be completed here.

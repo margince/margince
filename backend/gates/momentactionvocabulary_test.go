@@ -31,12 +31,12 @@ import (
 )
 
 const (
-	momentActionSchema = "PersonMomentAction"
+	momentActionSchema = "ContactMomentAction"
 	momentActionSource = "internal/compose/momentaction/withhold.go"
 	momentActionMap    = "writesAnActivity"
 	// The constant prefix oapi-codegen mints for this enum, stripped to get
 	// back to the contract's own spelling.
-	momentActionConstPrefix = "PersonMomentActionKind"
+	momentActionConstPrefix = "ContactMomentActionKind"
 )
 
 func TestEveryMomentActionKindIsClassifiedAsWritingOrNot(t *testing.T) {
@@ -76,7 +76,7 @@ func TestEveryMomentActionKindIsClassifiedAsWritingOrNot(t *testing.T) {
 }
 
 // momentActionKindEnum reads the sorted `kind` enum off the contract's own
-// PersonMomentAction schema.
+// ContactMomentAction schema.
 func momentActionKindEnum(t *testing.T) []string {
 	t.Helper()
 	raw, err := os.ReadFile("api/crm.yaml")
@@ -151,7 +151,7 @@ func momentActionMapLiteral(spec ast.Spec) (*ast.CompositeLit, bool) {
 	return literal, ok
 }
 
-// momentActionKindOf turns a `crmcontracts.PersonMomentActionKindLogActivity`
+// momentActionKindOf turns a `crmcontracts.ContactMomentActionKindLogActivity`
 // key back into the contract's own `log_activity`.
 func momentActionKindOf(t *testing.T, key ast.Expr) string {
 	t.Helper()

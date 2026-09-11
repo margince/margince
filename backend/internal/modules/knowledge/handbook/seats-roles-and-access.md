@@ -37,14 +37,14 @@ refused. Ask an operator to raise the seat."
 and never metered.
 
 Agents get seats too. An agent seat is always a full seat and always counted,
-because an agent acts on your data exactly as a person does — excluding them
+because an agent acts on your data exactly as a contact does — excluding them
 would let an installation work without limit through agents.
 
 **Your installation does not come with one.** A new installation seeds no agent
-identity, so every seat it is billed for belongs to a person.
+identity, so every seat it is billed for belongs to a contact.
 
 Any agent identity that does exist is a **full seat and counted**, like any
-other. What it may do comes from the passports people mint for it and the
+other. What it may do comes from the passports contacts mint for it and the
 connections they approve — never from a role of its own, which is why no agent
 identity is ever granted one.
 
@@ -109,7 +109,7 @@ Admin, because neither is a tier of row scope:
 
 - **Correspondence you were not part of.** Mail and meetings carry their own
   audience, and seniority does not override it.
-- **A captured contact still private to the person whose mailbox made it.** A
+- **A captured contact still private to the contact whose mailbox made it.** A
   connector creates a contact from a message nothing has judged yet, and it
   belongs to that seat alone until a classifier judges the sender or the owner
   publishes it themselves. An admin gets a 404, which is the point: connecting
@@ -156,7 +156,7 @@ exists and is not theirs.
 
 ## Teams
 
-A team is a named group of people. Only an administrator creates one, renames it,
+A team is a named group of contacts. Only an administrator creates one, renames it,
 archives it, or changes who is in it. Anyone can see the list of teams.
 
 **A team carries no permissions of its own.** It is not a role. It does two
@@ -170,7 +170,7 @@ Archiving a team stops its memberships resolving anything.
 
 ## Sharing one record
 
-You can share a single record with a person or a team.
+You can share a single record with a contact or a team.
 
 **Five record types can be shared:** contacts, companies, deals, leads and
 projects. Configuration cannot.
@@ -201,17 +201,17 @@ Rules worth knowing:
 There are no sharing hierarchies, no rules-based sharing, and no delegating the
 right to share. Flat, explicit grants only. Every share and un-share is audited.
 
-## Inviting and removing people
+## Inviting and removing contacts
 
-Only an administrator can, and only a person — an agent may never create a human
+Only an administrator can, and only a contact — an agent may never create a human
 account.
 
-**Inviting.** You choose a role, and the person is created with no password. If
+**Inviting.** You choose a role, and the contact is created with no password. If
 your installation sends email, they get a link. If not, the administrator mints a
 one-time link and hands it over directly: "Send this link to the member over a
 channel you trust. It works once and is shown only now." The link lasts 7 days.
 
-Before you send it, you can **preview what this person will see**, computed from
+Before you send it, you can **preview what this contact will see**, computed from
 the same permission data the real gates read — so the invite screen shows the
 truth rather than a second interpretation of it.
 
@@ -246,7 +246,7 @@ is refused rather than quietly returning wrong results.
 
 ## Where the audit trail fits
 
-Everything above decides what people *can* do. The audit trail records what they
+Everything above decides what contacts *can* do. The audit trail records what they
 *did*: every action, attributed to a human, an agent or a connector, with the
 authorization rule that allowed it.
 

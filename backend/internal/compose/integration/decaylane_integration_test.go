@@ -7,7 +7,7 @@ package integration
 
 // The decay lane's two reads against a real database.
 //
-// Both claims are about the person row scope, which is SQL: the candidate read
+// Both claims are about the contact row scope, which is SQL: the candidate read
 // scopes at source so the cap is spent on rows the reader may see, and the
 // batched derivation admits only readable contacts. A unit test with
 // hand-built rows cannot fail on either — nor on a column name — so the
@@ -20,7 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,9 +35,9 @@ import (
 // fold never produced, so a test seeded that way can pass over a projection
 // that no longer writes what the read expects — which is the whole failure
 // this lane's candidate half would hide.
-func seedLapsedPair(t *testing.T, e *Env, colleague, person ids.UUID, subject string) {
+func seedLapsedPair(t *testing.T, e *Env, colleague, contact ids.UUID, subject string) {
 	t.Helper()
-	seedLapsedPairAt(t, e, colleague, person, subject, relstrength.QuietDays+35)
+	seedLapsedPairAt(t, e, colleague, contact, subject, relstrength.QuietDays+35)
 }
 
 // seedLapsedPairAt is the same, with the silence's AGE named — for the cases
@@ -53,7 +53,7 @@ func seedLapsedPair(t *testing.T, e *Env, colleague, person ids.UUID, subject st
 // The reply is dated a day EARLIER than the send, so last_at stays the instant
 // daysAgo names and the cases that turn on whose silence is oldest still turn
 // on what they say they do.
-func seedLapsedPairAt(t *testing.T, e *Env, colleague, person ids.UUID, subject string, daysAgo int) {
+func seedLapsedPairAt(t *testing.T, e *Env, colleague, contact ids.UUID, subject string, daysAgo int) {
 	t.Helper()
 	owner := OwnerConn(t)
 	ctx := context.Background()
@@ -61,9 +61,9 @@ func seedLapsedPairAt(t *testing.T, e *Env, colleague, person ids.UUID, subject 
 
 	folded := []ids.UUID{}
 	for _, message := range []struct {
-		at                        time.Time
-		direction                 string
-		colleagueRole, personRole string
+		at                         time.Time
+		direction                  string
+		colleagueRole, contactRole string
 	}{
 		{quietSince.AddDate(0, 0, -1), "inbound", "to", "from"},
 		{quietSince, "outbound", "from", "to"},
@@ -75,12 +75,12 @@ func seedLapsedPairAt(t *testing.T, e *Env, colleague, person ids.UUID, subject 
 			activity, subject, message.at, message.direction); err != nil {
 			t.Fatal(err)
 		}
-		LinkActivity(t, owner, activity, "person", person)
+		LinkActivity(t, owner, activity, "contact", contact)
 		for _, seed := range []struct {
 			column string
 			id     ids.UUID
 			role   string
-		}{{"user_id", colleague, message.colleagueRole}, {"person_id", person, message.personRole}} {
+		}{{"user_id", colleague, message.colleagueRole}, {"contact_id", contact, message.contactRole}} {
 			if _, err := owner.Exec(ctx, `
 				INSERT INTO activity_participant (activity_id, `+seed.column+`, role) VALUES ($1, $2, $3)`,
 				activity, seed.id, seed.role); err != nil {
@@ -103,9 +103,9 @@ func seedLapsedPairAt(t *testing.T, e *Env, colleague, person ids.UUID, subject 
 // lapsed contact.
 func TestQuietCandidatesCarryOnlyContactsInsideRowScope(t *testing.T) {
 	e := Setup(t)
-	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	theirs := e.SeedPerson(t, "Their Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirs, e.Rep3)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
 	seedLapsedPair(t, e, e.Rep1, mine, "the thread that lapsed")
 	seedLapsedPair(t, e, e.Rep1, theirs, "their private thread")
 
@@ -123,8 +123,8 @@ func TestQuietCandidatesCarryOnlyContactsInsideRowScope(t *testing.T) {
 	if len(quiet) != 1 {
 		t.Fatalf("candidates = %d, want only the readable lapsed contact", len(quiet))
 	}
-	if quiet[0].PersonID != mine {
-		t.Errorf("candidate is %s, want the caller's own contact %s", quiet[0].PersonID, mine)
+	if quiet[0].ContactID != mine {
+		t.Errorf("candidate is %s, want the caller's own contact %s", quiet[0].ContactID, mine)
 	}
 }
 
@@ -133,19 +133,19 @@ func TestQuietCandidatesCarryOnlyContactsInsideRowScope(t *testing.T) {
 // the readable one arrives derived and named.
 func TestBatchedChangesAdmitOnlyReadableContacts(t *testing.T) {
 	e := Setup(t)
-	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	theirs := e.SeedPerson(t, "Their Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirs, e.Rep3)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
 	seedLapsedPair(t, e, e.Rep1, mine, "the thread that lapsed")
 	seedLapsedPair(t, e, e.Rep1, theirs, "their private thread")
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
-	store := people.NewStore(e.DB())
-	var changed []people.PersonChanges
+	store := contacts.NewStore(e.DB())
+	var changed []contacts.ContactChanges
 	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		changed, err = store.RelationshipChangesForPeople(rep, tx,
-			[]ids.PersonID{ids.From[ids.PersonKind](mine), ids.From[ids.PersonKind](theirs)},
+		changed, err = store.RelationshipChangesForContacts(rep, tx,
+			[]ids.ContactID{ids.From[ids.ContactKind](mine), ids.From[ids.ContactKind](theirs)},
 			time.Now().UTC())
 		return err
 	})
@@ -155,11 +155,11 @@ func TestBatchedChangesAdmitOnlyReadableContacts(t *testing.T) {
 	if len(changed) != 1 {
 		t.Fatalf("derived contacts = %d, want only the readable one", len(changed))
 	}
-	if changed[0].PersonID.UUID != mine {
-		t.Errorf("derived %s, want the caller's own contact %s", changed[0].PersonID.UUID, mine)
+	if changed[0].ContactID.UUID != mine {
+		t.Errorf("derived %s, want the caller's own contact %s", changed[0].ContactID.UUID, mine)
 	}
 	if changed[0].DisplayName != "Anna Weber" {
-		t.Errorf("the contact is named %q, want the person record's own name", changed[0].DisplayName)
+		t.Errorf("the contact is named %q, want the contact record's own name", changed[0].DisplayName)
 	}
 	sawQuiet := false
 	for _, change := range changed[0].Changes {
@@ -187,16 +187,16 @@ func TestBatchedChangesAdmitOnlyReadableContacts(t *testing.T) {
 // after they get an empty lane.
 func TestADismissedContactDoesNotSpendACandidateSlot(t *testing.T) {
 	e := Setup(t)
-	setAside := e.SeedPerson(t, "Dana Weiss", &e.Rep1)
-	standing := e.SeedPerson(t, "Ines Sommer", &e.Rep1)
+	setAside := e.SeedContact(t, "Dana Weiss", &e.Rep1)
+	standing := e.SeedContact(t, "Ines Sommer", &e.Rep1)
 	// The dismissed contact went quiet LONGER ago, so it sorts first and is
 	// exactly the row that would fill a cap of one.
 	seedLapsedPairAt(t, e, e.Rep1, setAside, "the older thread", 120)
 	seedLapsedPairAt(t, e, e.Rep1, standing, "the newer thread", 90)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
-	store := people.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)))
-	if err := store.DismissRelationshipNudge(rep, ids.From[ids.PersonKind](setAside), 30); err != nil {
+	store := contacts.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)))
+	if err := store.DismissRelationshipNudge(rep, ids.From[ids.ContactKind](setAside), 30); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
 
@@ -207,7 +207,7 @@ func TestADismissedContactDoesNotSpendACandidateSlot(t *testing.T) {
 		quiet, err = search.QuietEdgesForUser(
 			rep, tx, now.AddDate(0, 0, -relstrength.QuietDays), 1,
 			func(arg func(any) int) (string, error) {
-				return people.NotDismissedClause(rep, "e", now, arg)
+				return contacts.NotDismissedClause(rep, "e", now, arg)
 			})
 		return err
 	})
@@ -218,8 +218,8 @@ func TestADismissedContactDoesNotSpendACandidateSlot(t *testing.T) {
 	if len(quiet) != 1 {
 		t.Fatalf("candidates = %d, want the one live lapse the budget has room for", len(quiet))
 	}
-	if quiet[0].PersonID != standing {
+	if quiet[0].ContactID != standing {
 		t.Errorf("the candidate is %s, want %s — the dismissed contact spent the slot",
-			quiet[0].PersonID, standing)
+			quiet[0].ContactID, standing)
 	}
 }

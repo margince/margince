@@ -8,7 +8,7 @@ import { sourceFileAt } from "../../scripts/lib/source-tree";
 // Fitness function for the lost update: a write to an endpoint that takes an
 // `If-Match` precondition, sent without one.
 //
-// Two people move the same deal at the same moment. Both requests carry a stage
+// Two contacts move the same deal at the same moment. Both requests carry a stage
 // and no precondition, both succeed, and the second silently replaces a change
 // its author never saw — no conflict, no 409, no trace. The server offers the
 // guard on every mutating endpoint that returns a versioned entity; omitting it
@@ -50,11 +50,11 @@ const UNPINNED_WRITES: readonly string[] = [
   // screenful of rows at once, and it was the verb of three in that bar that
   // could not lose a race it should lose.
   "screens/companyheader.tsx DELETE /companies/{id}",
-  // PersonEditMergeArchive's own archive, shared by PersonScreen (contacts.tsx)
-  // and PersonPageV2 — the entry moved here with it, the same move merge-company's
+  // ContactEditMergeArchive's own archive, shared by ContactScreen (contacts.tsx)
+  // and ContactPageV2 — the entry moved here with it, the same move merge-company's
   // own line made out of companies.tsx.
-  "screens/personeditmergearchive.tsx DELETE /people/{id}",
-  "screens/personrail.tsx DELETE /relationships/{id}",
+  "screens/contacteditmergearchive.tsx DELETE /contacts/{id}",
+  "screens/contactrail.tsx DELETE /relationships/{id}",
   "screens/relationships.tsx DELETE /relationships/{id}",
   "screens/contractform.tsx PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",

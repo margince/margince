@@ -11,7 +11,7 @@ package compose
 // asks a different question of a different table: a mailbox is one HUMAN's grant
 // of one connector, while a channel is a bot an admin bound for the whole
 // workspace. Only the credential lookup moves off the human, though — the seat
-// gate still re-reads the person who staged the message, so a rep without a
+// gate still re-reads the contact who staged the message, so a rep without a
 // live, mutating seat is refused whichever transport they staged against.
 
 import (
@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -77,7 +77,7 @@ func (r commsResolver) ResolveChannel(ctx context.Context, userID ids.UserID, pr
 	return sender, auth, nil
 }
 
-// channelReachability is the send path's other cross-module edge: the people
+// channelReachability is the send path's other cross-module edge: the contacts
 // module owns the identity binding, and the reply surface must not read its rows
 // directly. It carries no state because the answer is one query on the caller's
 // transaction — the same transaction that reads the conversation, so the
@@ -86,16 +86,16 @@ type channelReachability struct{}
 
 var _ activities.ChannelReachability = channelReachability{}
 
-// ReachableChannelIdentities forwards to people, typing the polymorphic link id
-// as the person it is. The activity link is (entity_type, entity_id) and stays
+// ReachableChannelIdentities forwards to contacts, typing the polymorphic link id
+// as the contact it is. The activity link is (entity_type, entity_id) and stays
 // untyped on the activities side by design; the type belongs at the boundary
-// where the id is finally read as a person.
-func (channelReachability) ReachableChannelIdentities(ctx context.Context, tx pgx.Tx, personID ids.UUID, provider string) ([]connector.ChannelIdentity, error) {
-	return people.ReachableChannelIdentities(ctx, tx, ids.From[ids.PersonKind](personID), provider)
+// where the id is finally read as a contact.
+func (channelReachability) ReachableChannelIdentities(ctx context.Context, tx pgx.Tx, contactID ids.UUID, provider string) ([]connector.ChannelIdentity, error) {
+	return contacts.ReachableChannelIdentities(ctx, tx, ids.From[ids.ContactKind](contactID), provider)
 }
 
 // recipientDirectory is the mail twin of the edge above: an account-started
-// send names its own addressees, and person_email is the people module's
+// send names its own addressees, and contact_email is the contacts module's
 // table. Stateless for the same reason — one query on the caller's own
 // transaction, so the addresses resolve in the same snapshot that stages
 // the message.
@@ -104,5 +104,5 @@ type recipientDirectory struct{}
 var _ activities.RecipientDirectory = recipientDirectory{}
 
 func (recipientDirectory) VisibleAddresses(ctx context.Context, tx pgx.Tx, addresses []string) (map[string]bool, error) {
-	return people.VisibleAddresses(ctx, tx, addresses)
+	return contacts.VisibleAddresses(ctx, tx, addresses)
 }

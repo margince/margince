@@ -41,8 +41,8 @@ func (f fakeFieldCatalog) ActiveColumns(_ context.Context, object string) ([]fie
 func TestResolvePreviewRecipeRenewalReminder(t *testing.T) {
 	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
 	catalog := fakeFieldCatalog{columns: map[string][]fieldcatalog.Column{
-		"person": {{Name: "cf_renewal", Type: fieldcatalog.TypeDate}},
-		"deal":   {{Name: "cf_contract_end", Type: fieldcatalog.TypeDate}},
+		"contact": {{Name: "cf_renewal", Type: fieldcatalog.TypeDate}},
+		"deal":    {{Name: "cf_contract_end", Type: fieldcatalog.TypeDate}},
 	}}
 
 	t.Run("stored instance with neither object nor date_field is refused", func(t *testing.T) {
@@ -64,7 +64,7 @@ func TestResolvePreviewRecipeRenewalReminder(t *testing.T) {
 
 	t.Run("draft override missing date_field is refused", func(t *testing.T) {
 		stored := Automation{Key: renewalReminderName, Params: json.RawMessage(`{}`)}
-		in := AutomationPreviewInput{Params: map[string]any{"object": "person"}}
+		in := AutomationPreviewInput{Params: map[string]any{"object": "contact"}}
 		if _, _, err := resolvePreviewRecipe(context.Background(), catalog, stored, in, now); err == nil {
 			t.Fatal("want a refusal — date_field is required to preview")
 		}
@@ -73,7 +73,7 @@ func TestResolvePreviewRecipeRenewalReminder(t *testing.T) {
 	t.Run("date_field naming a column absent from the live catalog is refused with a ParamError, not a database error", func(t *testing.T) {
 		stored := Automation{
 			Key:    renewalReminderName,
-			Params: json.RawMessage(`{"object":"person","date_field":"cf_does_not_exist","days_before":15}`),
+			Params: json.RawMessage(`{"object":"contact","date_field":"cf_does_not_exist","days_before":15}`),
 		}
 		_, _, err := resolvePreviewRecipe(context.Background(), catalog, stored, AutomationPreviewInput{}, now)
 		var paramErr *ParamError
@@ -87,11 +87,11 @@ func TestResolvePreviewRecipeRenewalReminder(t *testing.T) {
 
 	t.Run("date_field naming a real but non-date column is refused", func(t *testing.T) {
 		wrongType := fakeFieldCatalog{columns: map[string][]fieldcatalog.Column{
-			"person": {{Name: "cf_renewal", Type: fieldcatalog.TypeText}},
+			"contact": {{Name: "cf_renewal", Type: fieldcatalog.TypeText}},
 		}}
 		stored := Automation{
 			Key:    renewalReminderName,
-			Params: json.RawMessage(`{"object":"person","date_field":"cf_renewal","days_before":15}`),
+			Params: json.RawMessage(`{"object":"contact","date_field":"cf_renewal","days_before":15}`),
 		}
 		_, _, err := resolvePreviewRecipe(context.Background(), wrongType, stored, AutomationPreviewInput{}, now)
 		var paramErr *ParamError
@@ -103,7 +103,7 @@ func TestResolvePreviewRecipeRenewalReminder(t *testing.T) {
 	t.Run("a recurs_yearly instance refuses preview honestly instead of answering a misleading zero", func(t *testing.T) {
 		stored := Automation{
 			Key:    renewalReminderName,
-			Params: json.RawMessage(`{"object":"person","date_field":"cf_renewal","days_before":15,"recurs_yearly":true}`),
+			Params: json.RawMessage(`{"object":"contact","date_field":"cf_renewal","days_before":15,"recurs_yearly":true}`),
 		}
 		_, _, err := resolvePreviewRecipe(context.Background(), catalog, stored, AutomationPreviewInput{}, now)
 		var paramErr *ParamError
@@ -118,14 +118,14 @@ func TestResolvePreviewRecipeRenewalReminder(t *testing.T) {
 	t.Run("a fully configured instance resolves a previewDef over its own object/column", func(t *testing.T) {
 		stored := Automation{
 			Key:    renewalReminderName,
-			Params: json.RawMessage(`{"object":"person","date_field":"cf_renewal","days_before":15}`),
+			Params: json.RawMessage(`{"object":"contact","date_field":"cf_renewal","days_before":15}`),
 		}
 		def, window, err := resolvePreviewRecipe(context.Background(), catalog, stored, AutomationPreviewInput{}, now)
 		if err != nil {
 			t.Fatalf("resolvePreviewRecipe: %v", err)
 		}
-		if def.table != "person" {
-			t.Errorf("table = %q, want person", def.table)
+		if def.table != "contact" {
+			t.Errorf("table = %q, want contact", def.table)
 		}
 		if window != previewDefaultWindowDays {
 			t.Errorf("window = %d, want the default %d", window, previewDefaultWindowDays)
@@ -157,7 +157,7 @@ func TestResolvePreviewRecipeRenewalReminder(t *testing.T) {
 	t.Run("a nil catalog skips the live-column check (the seam not wired)", func(t *testing.T) {
 		stored := Automation{
 			Key:    renewalReminderName,
-			Params: json.RawMessage(`{"object":"person","date_field":"cf_whatever","days_before":15}`),
+			Params: json.RawMessage(`{"object":"contact","date_field":"cf_whatever","days_before":15}`),
 		}
 		if _, _, err := resolvePreviewRecipe(context.Background(), nil, stored, AutomationPreviewInput{}, now); err != nil {
 			t.Fatalf("resolvePreviewRecipe with a nil catalog: %v, want nil (the check is skipped, not failed closed)", err)

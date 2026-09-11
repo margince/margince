@@ -9,7 +9,7 @@
 # halves come back looking identical, because the tool returns slots either way
 # and never says whose calendar it could not see. An assistant that reports the
 # slots as times WE ARE BOTH FREE has produced a sentence the product never
-# said, about a person whose diary this installation has never had access to —
+# said, about a contact whose diary this installation has never had access to —
 # and the rep finds out by proposing a time the customer was already booked in.
 #
 # This is the case 6 shape once more: both facts are available, and the answer
@@ -53,7 +53,7 @@ may_call:
   - prep_for_meeting
 
 must_mention:
-  # CRITERION 1, MECHANICAL — real openings came back, as times a person can
+  # CRITERION 1, MECHANICAL — real openings came back, as times a contact can
   # offer. A clock time in any of the shapes an answer writes one in. An answer
   # naming only weekdays has not given the rep something to send. This half has
   # never leaked: a clock time is a mechanical fact and a regex reads it.

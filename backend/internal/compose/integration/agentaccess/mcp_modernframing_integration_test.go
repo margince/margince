@@ -92,8 +92,8 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 		// modern conversation land on any replica.
 		called := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 			`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{`+modernMeta+
-				`,"name":"create_record","arguments":{"record_type":"person",`+
-				`"fields":{"full_name":"Modern Framing Person"}}}}`,
+				`,"name":"create_record","arguments":{"record_type":"contact",`+
+				`"fields":{"full_name":"Modern Framing Contact"}}}}`,
 			modernHeaders(bearer, "tools/call", "create_record"))
 		if called.StatusCode != http.StatusOK {
 			t.Fatalf("tools/call → %d %s", called.StatusCode, called.Body)
@@ -101,7 +101,7 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 		if got := called.Header.Get("Mcp-Session-Id"); got != "" {
 			t.Errorf("a modern exchange minted the session id %q", got)
 		}
-		if text := toolText(t, rpcResult(t, called.Body)); !strings.Contains(text, "Modern Framing Person") {
+		if text := toolText(t, rpcResult(t, called.Body)); !strings.Contains(text, "Modern Framing Contact") {
 			t.Fatalf("tools/call answered %q, which does not carry the record it created", text)
 		}
 	})
@@ -124,12 +124,12 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 
 		called := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 			`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_record",`+
-				`"arguments":{"record_type":"person","fields":{"full_name":"Handshake Era Person"}}}}`,
+				`"arguments":{"record_type":"contact","fields":{"full_name":"Handshake Era Contact"}}}}`,
 			legacyHeaders(bearer, negotiated))
 		if called.StatusCode != http.StatusOK {
 			t.Fatalf("tools/call → %d %s", called.StatusCode, called.Body)
 		}
-		if text := toolText(t, rpcResult(t, called.Body)); !strings.Contains(text, "Handshake Era Person") {
+		if text := toolText(t, rpcResult(t, called.Body)); !strings.Contains(text, "Handshake Era Contact") {
 			t.Fatalf("tools/call answered %q, which does not carry the record it created", text)
 		}
 	})
@@ -157,10 +157,10 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 
 	// Both eras ended in a real effect or the assertions above were satisfied
 	// by a surface answering from nothing.
-	for _, created := range []string{"Modern Framing Person", "Handshake Era Person"} {
+	for _, created := range []string{"Modern Framing Contact", "Handshake Era Contact"} {
 		var found int
 		if err := e.Owner.QueryRow(t.Context(),
-			`SELECT count(*) FROM person WHERE full_name = $1`, created).Scan(&found); err != nil {
+			`SELECT count(*) FROM contact WHERE full_name = $1`, created).Scan(&found); err != nil {
 			t.Fatal(err)
 		}
 		if found != 1 {
@@ -202,7 +202,7 @@ func TestAModernRequestWhoseHeaderContradictsItsBodyRunsNothing(t *testing.T) {
 
 	refused := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{`+modernMeta+
-			`,"name":"create_record","arguments":{"record_type":"person",`+
+			`,"name":"create_record","arguments":{"record_type":"contact",`+
 			`"fields":{"full_name":"Never Created"}}}}`,
 		// The header names a read, the body calls a write.
 		modernHeaders(bearer, "tools/call", "read_record"))
@@ -215,7 +215,7 @@ func TestAModernRequestWhoseHeaderContradictsItsBodyRunsNothing(t *testing.T) {
 	}
 	var created int
 	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT count(*) FROM person WHERE full_name = $1`, "Never Created").Scan(&created); err != nil {
+		`SELECT count(*) FROM contact WHERE full_name = $1`, "Never Created").Scan(&created); err != nil {
 		t.Fatal(err)
 	}
 	if created != 0 {

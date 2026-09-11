@@ -85,7 +85,7 @@ func TestVerdictRequestMintsAFreshBoundaryPerCall(t *testing.T) {
 func TestValidateVerdictPayloadRejectsEveryBrokenBatchContract(t *testing.T) {
 	asked := capture.PendingCounterparty{ID: ids.NewV7()}
 	other := ids.NewV7()
-	ok := verdictResult{ID: asked.ID.String(), Verdict: capture.KindPerson, Confidence: 0.9}
+	ok := verdictResult{ID: asked.ID.String(), Verdict: capture.KindContact, Confidence: 0.9}
 
 	cases := []struct {
 		name    string
@@ -100,7 +100,7 @@ func TestValidateVerdictPayloadRejectsEveryBrokenBatchContract(t *testing.T) {
 			// An answer about someone who was not the subject of this call must
 			// never be applied.
 			name:    "an id nobody asked about",
-			results: []verdictResult{{ID: other.String(), Verdict: capture.KindPerson, Confidence: 0.9}},
+			results: []verdictResult{{ID: other.String(), Verdict: capture.KindContact, Confidence: 0.9}},
 			wantMsg: "was not requested",
 		},
 		{
@@ -117,12 +117,12 @@ func TestValidateVerdictPayloadRejectsEveryBrokenBatchContract(t *testing.T) {
 		},
 		{
 			name:    "confidence above one",
-			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindPerson, Confidence: 1.5}},
+			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindContact, Confidence: 1.5}},
 			wantMsg: "outside [0,1]",
 		},
 		{
 			name:    "confidence below zero",
-			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindPerson, Confidence: -0.1}},
+			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindContact, Confidence: -0.1}},
 			wantMsg: "outside [0,1]",
 		},
 		{
@@ -155,7 +155,7 @@ func TestValidationMessagesDoNotEchoUnboundedModelText(t *testing.T) {
 	asked := capture.PendingCounterparty{ID: ids.NewV7()}
 	flood := strings.Repeat("A", 100_000)
 	msg := validateVerdictPayload(verdictPayload{
-		Results: []verdictResult{{ID: flood, Verdict: capture.KindPerson, Confidence: 0.9}},
+		Results: []verdictResult{{ID: flood, Verdict: capture.KindContact, Confidence: 0.9}},
 	}, asked)
 
 	if msg == "" {

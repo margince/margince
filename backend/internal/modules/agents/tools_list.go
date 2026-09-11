@@ -66,7 +66,7 @@ type FilterVocabulary interface {
 // operation and a store behind the seam; `activity` is deliberately absent,
 // since a timeline is reached through the record it hangs off rather than swept.
 var listRecordTypes = []string{
-	string(datasource.EntityPerson), string(datasource.EntityCompany),
+	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityLead), string(datasource.EntityProject),
 }
 
@@ -107,9 +107,9 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		Name: "list_records", Title: "List records", Version: toolVersionV1,
 		Description:   listRecordsCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listPeople/listCompanies/listDeals/listLeads/listProjects",
+		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
-			"record_type":{"type":"string","enum":["person","company","deal","lead","project"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","project"]},
 			"filters":{"type":"object","additionalProperties":{"type":"string"},"description":` +
 			strconv.Quote(t.describeFilters()) + `},
 			"limit":{"type":"integer","minimum":1,"maximum":50},

@@ -23,8 +23,8 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 	t.Parallel()
 	present := openapi_types.UUID(ids.NewV7())
 	for field, body := range map[string]crmcontracts.DraftIntroRequestJSONRequestBody{
-		"person_id":   {ViaUserId: present},
-		"via_user_id": {PersonId: present},
+		"contact_id":  {ViaUserId: present},
+		"via_user_id": {ContactId: present},
 	} {
 		_, err := introRequestFrom(body)
 		if err == nil {
@@ -43,7 +43,7 @@ func TestAPresentButZeroDealIDIsRefusedWhileAnAbsentOneIsFine(t *testing.T) {
 	zero := openapi_types.UUID(ids.UUID{})
 
 	_, err := introRequestFrom(crmcontracts.DraftIntroRequestJSONRequestBody{
-		PersonId: present, ViaUserId: present, DealId: &zero,
+		ContactId: present, ViaUserId: present, DealId: &zero,
 	})
 	if err == nil {
 		t.Fatal("a zero deal_id was accepted")
@@ -51,7 +51,7 @@ func TestAPresentButZeroDealIDIsRefusedWhileAnAbsentOneIsFine(t *testing.T) {
 	assertNamesIntroField(t, err, "deal_id")
 
 	req, err := introRequestFrom(crmcontracts.DraftIntroRequestJSONRequestBody{
-		PersonId: present, ViaUserId: present,
+		ContactId: present, ViaUserId: present,
 	})
 	if err != nil {
 		t.Fatalf("an absent deal_id must be accepted as the whole account: %v", err)

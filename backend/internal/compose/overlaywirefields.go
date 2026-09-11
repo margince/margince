@@ -6,7 +6,7 @@ package compose
 // Field extraction for the mirror-record → typed-contract assembly
 // (overlaywire.go does the struct-shaping on top of these). The canonical
 // jsonb payload is decoded data, so every reader here — scalar field
-// readers, the person/company child-collection lookups, and the
+// readers, the contact/company child-collection lookups, and the
 // timestamp/integer parsers alike — answers absent rather than erroring on
 // a shape it did not expect: the true value always survives in `raw`, and a
 // body that drops one slot beats a read that fails outright.
@@ -105,15 +105,15 @@ func overlayChildRows(fields map[string]any, parent string) []map[string]any {
 	}
 }
 
-// overlayPersonEmail answers the mirrored contact's email alone — the first row
-// of the person_email collection holding one, so a collection whose leading row
+// overlayContactEmail answers the mirrored contact's email alone — the first row
+// of the contact_email collection holding one, so a collection whose leading row
 // carries only its declared attributes still yields the address. Its readers
 // are the display-name fallbacks, which need an address to name a contact by
 // and none of the row's attributes; a reader that publishes or imports the
-// addresses takes the whole collection instead (overlayPersonEmails,
-// flipPersonEmails).
-func overlayPersonEmail(fields map[string]any) string {
-	for _, row := range overlayChildRows(fields, "person_email") {
+// addresses takes the whole collection instead (overlayContactEmails,
+// flipContactEmails).
+func overlayContactEmail(fields map[string]any) string {
+	for _, row := range overlayChildRows(fields, "contact_email") {
 		if address := strings.TrimSpace(fieldString(row, "email")); address != "" {
 			return address
 		}
@@ -121,25 +121,25 @@ func overlayPersonEmail(fields map[string]any) string {
 	return ""
 }
 
-// overlayPersonEmails assembles the contract's email collection from the
+// overlayContactEmails assembles the contract's email collection from the
 // mirrored child rows. A row whose address is missing or blank is skipped
 // rather than published as an empty address — the true payload survives in
 // `raw` either way. The type rides only when it lands on the contract's own
 // enum (the column is CHECK-constrained on the native side too); anything
 // else reads as the work address one mapped address means.
-func overlayPersonEmails(parent openapi_types.UUID, fields map[string]any) *[]crmcontracts.PersonEmail {
-	var out []crmcontracts.PersonEmail
-	for _, row := range overlayChildRows(fields, "person_email") {
+func overlayContactEmails(parent openapi_types.UUID, fields map[string]any) *[]crmcontracts.ContactEmail {
+	var out []crmcontracts.ContactEmail
+	for _, row := range overlayChildRows(fields, "contact_email") {
 		address := strings.TrimSpace(fieldString(row, "email"))
 		if address == "" {
 			continue
 		}
-		emailType := crmcontracts.PersonEmailEmailType(strings.TrimSpace(fieldString(row, "email_type")))
+		emailType := crmcontracts.ContactEmailEmailType(strings.TrimSpace(fieldString(row, "email_type")))
 		if !emailType.Valid() {
-			emailType = crmcontracts.PersonEmailEmailTypeWork
+			emailType = crmcontracts.ContactEmailEmailTypeWork
 		}
 		position := childRowPosition(row)
-		out = append(out, crmcontracts.PersonEmail{
+		out = append(out, crmcontracts.ContactEmail{
 			Id:         overlaySyntheticID(parent, position, address),
 			Email:      openapi_types.Email(address),
 			EmailType:  emailType,
@@ -155,21 +155,21 @@ func overlayPersonEmails(parent openapi_types.UUID, fields map[string]any) *[]cr
 	return &out
 }
 
-// overlayPersonPhones is overlayPersonEmails' counterpart for numbers: a
+// overlayContactPhones is overlayContactEmails' counterpart for numbers: a
 // contact's work and mobile numbers are separate typed rows of one collection.
-func overlayPersonPhones(parent openapi_types.UUID, fields map[string]any) *[]crmcontracts.PersonPhone {
-	var out []crmcontracts.PersonPhone
-	for _, row := range overlayChildRows(fields, "person_phone") {
+func overlayContactPhones(parent openapi_types.UUID, fields map[string]any) *[]crmcontracts.ContactPhone {
+	var out []crmcontracts.ContactPhone
+	for _, row := range overlayChildRows(fields, "contact_phone") {
 		number := strings.TrimSpace(fieldString(row, "phone"))
 		if number == "" {
 			continue
 		}
-		phoneType := crmcontracts.PersonPhonePhoneType(strings.TrimSpace(fieldString(row, "phone_type")))
+		phoneType := crmcontracts.ContactPhonePhoneType(strings.TrimSpace(fieldString(row, "phone_type")))
 		if !phoneType.Valid() {
-			phoneType = crmcontracts.PersonPhonePhoneTypeWork
+			phoneType = crmcontracts.ContactPhonePhoneTypeWork
 		}
 		position := childRowPosition(row)
-		out = append(out, crmcontracts.PersonPhone{
+		out = append(out, crmcontracts.ContactPhone{
 			Id:         overlaySyntheticID(parent, position, number),
 			Phone:      number,
 			PhoneType:  phoneType,
@@ -186,7 +186,7 @@ func overlayPersonPhones(parent openapi_types.UUID, fields map[string]any) *[]cr
 }
 
 // overlayCompanyDomains assembles the contract's domain collection from
-// the mirrored child rows, as overlayPersonEmails does for a contact's
+// the mirrored child rows, as overlayContactEmails does for a contact's
 // addresses. A row whose domain is missing or blank is skipped rather than
 // published as an empty host — the true payload survives in `raw` either way.
 // The whole collection is published, not its leading row: a mapping that

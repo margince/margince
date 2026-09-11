@@ -29,7 +29,7 @@ import (
 // installation's workspace, the release's own system actor, and a correlation
 // id. A human context would be the wrong instrument — the boot has no request
 // to take one from, and every row this writes is attributed to the release
-// rather than to a person.
+// rather than to a contact.
 func handbookBootCtx(ws ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -217,7 +217,7 @@ func TestTheReconciliationLeavesAWorkspacesOwnCorpusAlone(t *testing.T) {
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 
-	// A corpus a person made, with a document in it.
+	// A corpus a contact made, with a document in it.
 	human := e.As(e.Rep1, nil, corpusAdminPerms)
 	mine, err := store.CreateCorpus(human, howTo("Our own pricing notes"))
 	if err != nil {

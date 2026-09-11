@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The lead half of the capture Sink: a captured prospect never becomes a
-// person or company directly (ADR-0008 — leads graduate, raw capture does
+// contact or company directly (ADR-0008 — leads graduate, raw capture does
 // not mint clean-core rows), and a collision with a live lead from another
 // source stages a merge proposal instead of folding the two together.
 
@@ -50,10 +50,10 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 	//
 	// An address is the only identifier this path can be given: LeadFields
 	// carries no channel identity, because a channel identity is a
-	// person-resolution key and a lead is not a person (ADR-0008 — leads
+	// contact-resolution key and a lead is not a contact (ADR-0008 — leads
 	// graduate). So the channel twin of this probe has nothing to guard here; it
 	// guards the path a channel record does take: Sink.Upsert's own transaction
-	// (sinkchannel.go), under the account's advisory lock, with people's
+	// (sinkchannel.go), under the account's advisory lock, with contacts's
 	// EnsureChannelCounterparty probing again after that commit.
 	//
 	// Note the "natural key names the skip" rule above holds for THIS path only:
@@ -97,7 +97,7 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 // leadCreatedCapturePayload builds the lead.created event for the
 // capture auto-create path — the one emit site (of the event's two)
 // that names an originating source system; the direct-create path
-// (people/lead.go) sets no fields at all.
+// (contacts/lead.go) sets no fields at all.
 func leadCreatedCapturePayload(sourceSystem string) crmcontracts.PublicEventLeadCreated {
 	return crmcontracts.PublicEventLeadCreated{SourceSystem: &sourceSystem}
 }
@@ -107,7 +107,7 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 		return ids.LeadID{}, false, err
 	}
 	var id ids.LeadID
-	// Owned by the human behind the connector, like a captured person: an
+	// Owned by the human behind the connector, like a captured contact: an
 	// ownerless lead is nobody's to change, and the connector's own replay is
 	// a write — a lead it could not write back to would be one it created and
 	// then could never resume.

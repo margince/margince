@@ -23,8 +23,8 @@ package gates
 // window: they agree right up until the moment one of them is edited.
 //
 // What the callers keep is the part that legitimately differs: their own
-// visibility gate. company360 asks `EnsureVisible`; person360 asks
-// `EnsureVisibleLive`, because Art. 17 anonymizes a person in place while
+// visibility gate. company360 asks `EnsureVisible`; contact360 asks
+// `EnsureVisibleLive`, because Art. 17 anonymizes a contact in place while
 // leaving owner_id alone and the plain probe would still admit them. That is a
 // ruling per record type. The upsert is not.
 

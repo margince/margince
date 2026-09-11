@@ -7,9 +7,9 @@ import {
   today,
 } from "./employmentcurrency";
 
-type Employment = components["schemas"]["Person360Employment"];
+type Employment = components["schemas"]["Contact360Employment"];
 
-// The client twin of people.EmploymentIsCurrentSQL. It exists because the flag is
+// The client twin of contacts.EmploymentIsCurrentSQL. It exists because the flag is
 // written once and never rewritten, so a screen that trusted it would name a
 // company the server's own contact count had already stopped counting — and it is
 // tested directly because the boundary is one day wide and a rendering test would

@@ -32,7 +32,7 @@ describe("repliesToTheSubject", () => {
   });
 
   it("a filed note is not correspondence, whatever its direction", () => {
-    // A note is something a rep wrote about the person, not to them. Treating
+    // A note is something a rep wrote about the contact, not to them. Treating
     // it as a thread would let "I met them at a fair" authorize a cold mail.
     expect(repliesToTheSubject({ kind: "note", direction: "inbound" })).toBe(
       false,

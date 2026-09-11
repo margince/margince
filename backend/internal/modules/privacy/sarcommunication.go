@@ -5,7 +5,7 @@ package privacy
 
 // The outbound half of an Art. 15 export: why each message to this subject was
 // permitted, what stood behind it, what they asked to stop, and the times a
-// named person decided a message went out despite a refusal.
+// named contact decided a message went out despite a refusal.
 //
 // Its own file because it is the half that answers "what did you do with my
 // data and why" — every other section says what is HELD, and these say what was
@@ -25,7 +25,7 @@ import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 // The lead arm is not optional here. A subject captured as a lead and promoted
 // later has decisions, bases and suppressions carrying the LEAD id — the lead
 // row survives an erasure as an anonymized shell, so those rows are still the
-// subject's own history. A person-keyed section would silently withhold the
+// subject's own history. A contact-keyed section would silently withhold the
 // earliest part of their record, which is the half they are least likely to
 // know about and most likely to be asking after.
 func sarCommunicationSections(pkg *SARPackage, leads, identities []ids.UUID) []sarSection {
@@ -51,21 +51,21 @@ func sarCommunicationSections(pkg *SARPackage, leads, identities []ids.UUID) []s
 		// merge carried and never the act behind it.
 		//
 		// identities ALREADY CONTAINS the survivor, so these two take it in
-		// place of the bare person id rather than beside it: a parameter a
+		// place of the bare contact id rather than beside it: a parameter a
 		// statement never references is one Postgres cannot infer a type for,
 		// and it refuses to prepare the statement at all.
 		{
 			&pkg.CommunicationBases, `SELECT kind, thread_key, valid_from, valid_until, note,
 		          captured_at, revoked_at
 		   FROM communication_basis
-		   WHERE person_id = ANY($1) OR lead_id = ANY($2)`,
+		   WHERE contact_id = ANY($1) OR lead_id = ANY($2)`,
 			[]any{identities, leads},
 		},
 		{
 			&pkg.CommunicationSuppression, `SELECT kind, source, address, recorded_at, revoked_at,
 		          decided_by_level
 		   FROM communication_suppression
-		   WHERE person_id = ANY($1) OR lead_id = ANY($2)`,
+		   WHERE contact_id = ANY($1) OR lead_id = ANY($2)`,
 			[]any{identities, leads},
 		},
 		// REACHED THROUGH THE REVIEW, because an instruction names no subject

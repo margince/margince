@@ -17,10 +17,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -32,7 +32,7 @@ func project360Reader(pool *pgxpool.Pool) agents.Project360Reader {
 		pool,
 		deals.NewStore(InstallationDB(pool), DealsInstallation()).WithFieldCatalog(catalog),
 		ProjectsStore(pool),
-		people.NewStore(InstallationDB(pool)).WithFieldCatalog(catalog),
+		contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(catalog),
 		contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool)),
 		activities.NewStore(InstallationDB(pool)),
 		clockNow,

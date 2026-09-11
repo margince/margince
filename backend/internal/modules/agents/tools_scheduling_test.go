@@ -264,7 +264,7 @@ func TestAnUnsetCalendarBackingStillCarriesTheCaveat(t *testing.T) {
 }
 
 // A host who is NOT the acting seat carries the same caveat and says nothing
-// about that person's account.
+// about that contact's account.
 //
 // Whether a colleague has connected a calendar is their account's business, and
 // this tool takes any host_user_id — so an answer that reported it would let

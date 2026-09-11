@@ -19,7 +19,7 @@ import {
  * The price sheet is already the list a model is CHOSEN from (`ai-models.ts`),
  * and until now its prices reached the reader only as a hint inside a dropdown
  * row — visible while the list is open, gone the moment it closes. So the
- * binding a person actually confirms was the one screen in the product that
+ * binding a contact actually confirms was the one screen in the product that
  * showed a price nowhere. This is that number, on the surface where the choice
  * is made and after it has been made.
  *
@@ -153,7 +153,7 @@ function LaneSlot({
     );
   }
   // Both halves of the same case: a model the sheet has never seen, and one it
-  // has a row for that it cannot state. They read the same to the person
+  // has a row for that it cannot state. They read the same to the contact
   // binding it, because the consequence is the same — the call runs, and the
   // usage report cannot say what it cost.
   if (rate === undefined || price === undefined) {

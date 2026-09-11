@@ -40,7 +40,7 @@ function aTask(over = {}) {
     actions: ["complete", "snooze"],
     primary_action: "complete",
     subject: {
-      type: "person",
+      type: "contact",
       id: "01a05500-0000-7000-8000-000000000011",
       label: "Alice Müller",
     },
@@ -147,7 +147,7 @@ describe("the day is one panel", () => {
             source: "customer_waiting",
             category: "customer_waiting",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-0000000000aa",
               label: "Kirsten Vogel",
             },
@@ -162,7 +162,7 @@ describe("the day is one panel", () => {
     await waitFor(() => {
       expect(screen.getByRole("complementary")).toBeTruthy();
     });
-    // Exactly one row marked, and it is the person row rather than the deal.
+    // Exactly one row marked, and it is the contact row rather than the deal.
     const marked = container.querySelectorAll(".worklist-row-selected");
     expect(marked).toHaveLength(1);
     expect(marked[0].textContent).toContain("Kirsten replied");

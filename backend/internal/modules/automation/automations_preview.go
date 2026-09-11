@@ -89,7 +89,7 @@ type previewDef struct {
 // two catalog entries genuinely do not fit that shape yet —
 // no_activity_reminder and check_in_cadence's candidate set spans every
 // linked entity type (activities/lasttouch.go's LastTouchBefore
-// coalesces person/company/deal/lead) with no single RBAC resource
+// coalesces contact/company/deal/lead) with no single RBAC resource
 // to scope a row-visibility clause against, and BOTH their own "if" is
 // relative to "now minus the instance's own N days" — a runtime value
 // this registry's static map cannot parameterize on. Fabricating either
@@ -342,7 +342,7 @@ func resolvePreviewRecipe(ctx context.Context, catalog fieldcatalog.Reader, stor
 // activity carries no owner_id (auth.ScopeClauseFor's ownerScopedTables
 // does not — and must not — include it), its visibility instead
 // inheriting from whatever it links to (auth.ActivityContentClause's own
-// doc) — the SAME link-walk rule the activities timeline and people's
+// doc) — the SAME link-walk rule the activities timeline and contacts's
 // promotion-evidence check both enforce (ADR-0054 §8: one spelling).
 // Every other previewed table is a plain owner-scoped resource.
 func (def previewDef) scopeClause(ctx context.Context, alias string, arg func(any) int) (string, error) {

@@ -36,7 +36,7 @@ const approvalStatusApproved = "approved"
 // The test is the decision's own decided_by_system marker. It used to be
 // decided_by IS NULL, inferring "nobody decided" from an empty column, and that
 // read the wrong thing twice over: no writer produces approved-with-no-decider,
-// and deleting an app_user empties decided_by on every approval that person
+// and deleting an app_user empties decided_by on every approval that contact
 // decided — which would move their decisions into a lane headed "Done for you".
 // Filtering on status alone would do the same thing to every reader's own
 // approvals, which is the one claim this lane exists to make.

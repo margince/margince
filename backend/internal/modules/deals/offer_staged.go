@@ -14,7 +14,7 @@
 //
 // Provenance: offer_line_item carries no captured_by/source column (only
 // the offer row does), so there is nothing here to stamp from a request
-// field. Instead this mirrors people's coldstart/enrich applies and
+// field. Instead this mirrors contacts's coldstart/enrich applies and
 // deals' own overnight reconciler (reconcile.go): the CALLER binds the
 // acting principal to agent:offer-drafting (a system-type actor, so
 // auth.Require's RBAC check is a no-op the same way approvals' effects

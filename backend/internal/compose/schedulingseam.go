@@ -5,7 +5,7 @@ package compose
 
 // When a host is bookable, as the scheduler reads it.
 //
-// Working hours are a fact about a PERSON and identity owns the columns;
+// Working hours are a fact about a CONTACT and identity owns the columns;
 // availability is computed in activities, which may not import a sibling. So
 // the edge is wired here like every other cross-module edge (ADR-0054 §9), and
 // what crosses is one function: given a host, the hours and the zone.

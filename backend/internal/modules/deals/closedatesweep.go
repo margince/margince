@@ -409,7 +409,7 @@ func dateString(t *time.Time) *string {
 // between them — the same window the status re-check beside it exists for. A
 // deal handed over inside that window belongs to a rep whose answer was never
 // sought, and if they had switched corrections off, or sat on veto, the sweep
-// would be writing for the one person who declined.
+// would be writing for the one contact who declined.
 //
 // Asked only when the owner actually moved, so the ordinary deal costs no
 // second query and no second authority resolution.
@@ -424,7 +424,7 @@ func (c *CloseDateCorrector) ownerStillConsents(ctx context.Context, before, now
 	return c.policy.CorrectsWithoutAsking(ctx, owner)
 }
 
-// sameOwner reports whether a deal is still held by the person the candidate
+// sameOwner reports whether a deal is still held by the contact the candidate
 // page named. Both sides are nullable — owner_id is ON DELETE SET NULL — and
 // two unowned deals are the same owner, which is what lets the re-ask below
 // stay off the ordinary path.

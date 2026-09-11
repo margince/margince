@@ -224,7 +224,7 @@ func checkLink(recordType string, id ids.UUID) error {
 	if _, ok := linkTables[recordType]; !ok {
 		return &values.ParseError{
 			Field: "linked_record_type", Code: "unknown",
-			Message: "a commitment links a deal, a lead, a person, a company or a project",
+			Message: "a commitment links a deal, a lead, a contact, a company or a project",
 		}
 	}
 	return nil
@@ -241,7 +241,7 @@ func checkLink(recordType string, id ids.UUID) error {
 var linkTables = map[string]string{
 	"deal":    "deal",
 	"lead":    "lead",
-	"person":  "person",
+	"contact": "contact",
 	"company": "company",
 	"project": "project",
 }
@@ -250,7 +250,7 @@ var linkTables = map[string]string{
 //
 // It is NOT an existence gate over ordinary contacts, and claiming so would
 // overstate it: all five linkable types are identity tables (auth/tableclass.go),
-// workspace-readable by design, so a colleague's deal or person is already
+// workspace-readable by design, so a colleague's deal or contact is already
 // open to every seat. Two narrower things are being refused, and both are real.
 //
 // The unpromoted capture. A row a connector invented is visibility='owner' —
@@ -260,10 +260,10 @@ var linkTables = map[string]string{
 // back a row out of a colleague's inbox.
 //
 // The erased subject. This is the LIVE probe rather than the plain one because
-// Art. 17 anonymizes a person in place and stamps archived_at while leaving
+// Art. 17 anonymizes a contact in place and stamps archived_at while leaving
 // owner_id alone, so the tombstone still satisfies its original owner's
 // predicate. A plain probe answers "yes, still yours" for a record every live
-// read path now refuses, and the commitment would go on naming a person the
+// read path now refuses, and the commitment would go on naming a contact the
 // installation has certified destroyed.
 func ensureLinkVisible(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID) error {
 	if recordType == "" {

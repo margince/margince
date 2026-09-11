@@ -129,14 +129,14 @@ var roleNamedReferences = map[string]string{
 	"partner_company_id":      entityCompany,
 	"parent_company_id":       entityCompany,
 	"counterparty_company_id": entityCompany,
-	"promoted_person_id":      entityPerson,
+	"promoted_contact_id":     entityContact,
 	"qualified_deal_id":       entityDeal,
 	"converted_from_lead_id":  entityLead,
 	"source_activity_id":      entityActivity,
 }
 
 // selfReferences name another row of the SAME record type, so their target is
-// whatever record carries them: a person's `merged_into_id` is a person, an
+// whatever record carries them: a contact's `merged_into_id` is a contact, an
 // company's is a company. Resolving them from the name would need
 // one entry per record type saying the same thing.
 var selfReferences = map[string]bool{"merged_into_id": true}

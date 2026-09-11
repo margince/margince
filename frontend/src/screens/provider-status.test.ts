@@ -63,7 +63,7 @@ describe("the provider status vocabulary", () => {
 
   it("gives every state its own sentence", () => {
     // Two states sharing one message is how "the budget ran out" comes to
-    // read as "this person is not eligible" — a fact about the wallet
+    // read as "this contact is not eligible" — a fact about the wallet
     // rendered as a fact about the human.
     const messages = PROFILE_STATES.map((state) => en[profileLabel(state)]);
     expect(new Set(messages).size).toBe(PROFILE_STATES.length);
@@ -119,7 +119,7 @@ describe("the provider status vocabulary", () => {
   });
 
   it("does not claim an installation-wide pause on one contact's failed run", () => {
-    // The person page's provider_error is reached two ways: the CONNECTION is
+    // The contact page's provider_error is reached two ways: the CONNECTION is
     // degraded, or this contact's newest run failed under a healthy one. The
     // copy used to assert the first for both — "Automatic lookups are paused;
     // a free check that gets through resumes them" — and on a healthy

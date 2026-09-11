@@ -48,7 +48,7 @@ func dayCaps() []struct {
 	}{
 		{
 			schema:   "DismissRelationshipNudgeRequest",
-			file:     "internal/modules/people/nudgedismissal.go",
+			file:     "internal/modules/contacts/nudgedismissal.go",
 			constant: "nudgeDismissalMaxDays",
 		},
 	}

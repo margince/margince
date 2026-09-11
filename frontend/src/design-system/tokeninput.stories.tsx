@@ -173,9 +173,9 @@ export const ListWithoutAField: Story = {
   ),
 };
 
-/** The people a composer's To line offers. A label the reader recognises over a
+/** The contacts a composer's To line offers. A label the reader recognises over a
  *  value they would have to remember, which is the whole reason the list helps. */
-const PEOPLE: readonly TokenSuggestion[] = [
+const CONTACTS: readonly TokenSuggestion[] = [
   { value: "dana@nordwand.example", label: "Dana Ellwanger", hint: "Nordwand" },
   { value: "milo@nordwand.example", label: "Milo Fenn", hint: "Nordwand" },
   {
@@ -205,7 +205,7 @@ export const Offering: Story = {
       <TokenDemo
         label="To"
         start={["dana@nordwand.example"]}
-        suggestions={PEOPLE}
+        suggestions={CONTACTS}
         placeholder="name@example.com"
         hint="Type a name or an address. The list is help — an address nobody has on file still commits."
       />
@@ -220,7 +220,7 @@ export const OfferingDark: Story = {
     <div style={column}>
       <TokenDemo
         label="To"
-        suggestions={PEOPLE}
+        suggestions={CONTACTS}
         placeholder="name@example.com"
       />
     </div>

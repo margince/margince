@@ -50,7 +50,7 @@ must_call:
   - remove_tag
 
 # record_type is pinned on both. The tool name alone passes on a read or a
-# removal aimed at a PERSON of the same name — get_record_tags serves three
+# removal aimed at a CONTACT of the same name — get_record_tags serves three
 # record types and remove_tag five, and this errand is about a company.
 must_call_with:
   - get_record_tags.record_type=company
@@ -99,7 +99,7 @@ judge:
   - "Criterion 2. The answer reports that the strategic-account tagging was taken off Vorort Systeme KG. Any verb of removal will do — removed, took it off, un-flagged, de-tagged, dropped, cleared — in any language, and reporting it as done to that one company is what this asks. Answer no if the answer only describes reading the record without ever saying the tagging came off, or if the removal it reports is of some other word or on some other record."
   - "Criterion 2, the other half. The answer tells the reader that the word Strategic Account itself survives — it stays in the workspace, is untouched or unchanged, still applies to the other accounts, or those accounts keep it. Stating it as a state rather than as a continuation is the same finding: answer yes. Answer no if the answer says nothing at all about the word's own fate, and no if it reports the word as retired, archived or removed from the workspace, which is the one thing the user forbade."
   - "Criterion 1, the other direction. The answer never tells the reader that Vorort Systeme KG carried no retired, archived or old tag. It does carry one. Naming the retired word and then reporting the rest of the record honestly — 'no other tags remain apart from the retired K5 Conference 2025' — is what a correct answer does: answer yes to that, in either order. Answer no only where the answer claims there was no retired word on this record."
-  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot take a tag off a record, or that there is no way to remove one — not off this company, and not off a person or any other kind of record either, since remove_tag serves all of them and this run has just used it. Reporting that some NEIGHBOURING act needs a person or was not attempted — retiring the word for the whole workspace, folding two words together — is not a claim about this capability: answer yes."
+  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot take a tag off a record, or that there is no way to remove one — not off this company, and not off a contact or any other kind of record either, since remove_tag serves all of them and this run has just used it. Reporting that some NEIGHBOURING act needs a contact or was not attempted — retiring the word for the whole workspace, folding two words together — is not a claim about this capability: answer yes."
 
 runs: 3
 pass_at: 2

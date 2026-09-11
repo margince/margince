@@ -6,7 +6,7 @@
 package integration
 
 // The upload ceiling, end to end: what the deployment file says, what the
-// chassis lets through, and what the refusal tells the person holding the file.
+// chassis lets through, and what the refusal tells the contact holding the file.
 //
 // These run over a composed server with a real session rather than a
 // hand-built handler, because the bug they exist to prevent IS a wiring bug —

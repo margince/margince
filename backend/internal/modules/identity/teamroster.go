@@ -19,7 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// teamRosterCap bounds one answer. A team is people, not a directory, and a
+// teamRosterCap bounds one answer. A team is contacts, not a directory, and a
 // manager reading a hundred names has a reporting question rather than a queue
 // one.
 const teamRosterCap = 100
@@ -45,7 +45,7 @@ type TeamMember struct {
 //
 // A caller on NO live team gets themselves alone rather than nothing. Empty and
 // "only you" are different answers to a manager — the first reads as "this
-// installation has no people" and sends them looking for the outage, the second
+// installation has no contacts" and sends them looking for the outage, the second
 // says plainly that nobody has been put on a team with them yet. An admin
 // reaches every row by tier and can still be on no team at all, so this is the
 // ordinary case rather than a corner.
@@ -56,16 +56,16 @@ type TeamMember struct {
 // read the 403 as a bug rather than as the seat being gone.
 //
 // Agent seats are absent, which SharesLiveTeamWithCaller does not have to say:
-// nothing puts an agent in a team, but a board is a list of people to coach and
+// nothing puts an agent in a team, but a board is a list of contacts to coach and
 // an agent is not one of them.
 //
 // The parent_team_id hierarchy is NOT walked here either, for the reason it is
 // not walked there: row scope does not walk it, so a wider answer would name
-// people whose rows the reader cannot then read.
+// contacts whose rows the reader cannot then read.
 //
 // The bool reports that the roster was CUT — more live teammates exist than the
 // answer names. A caller drawing a board says so rather than presenting a
-// hundred people as the whole team, which is the same under-reporting rule every
+// hundred contacts as the whole team, which is the same under-reporting rule every
 // bounded read here keeps: a truncation nobody is told about reads exactly like
 // a complete answer.
 func (s *Service) LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, bool, error) {

@@ -108,8 +108,8 @@ func asGhostOwner(ctx context.Context, resolver authz.Resolver, workspace, owner
 // forEachGhostOwner runs one pass per member with undecided ghosts.
 //
 // A member whose authority cannot be resolved — archived, suspended, or simply
-// holding no person grant — is SKIPPED, not fatal. One departed colleague, or
-// one seat that reads no people, must not stop every other member's network
+// holding no contact grant — is SKIPPED, not fatal. One departed colleague, or
+// one seat that reads no contacts, must not stop every other member's network
 // being matched. Any other error stops the pass, because it is not a statement
 // about one member.
 func forEachGhostOwner(ctx context.Context, pool *pgxpool.Pool, resolver authz.Resolver, workspace ids.UUID,

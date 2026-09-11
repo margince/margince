@@ -33,12 +33,12 @@ func failedLaneService(failed FailedEffects) *Service {
 }
 
 func TestAFailedDecisionComesBackToItsDecider(t *testing.T) {
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	svc := failedLaneService(&stubFailedEffects{rows: []FailedEffect{{
 		ID: ids.NewV7(), Kind: "send_email",
 		Sentence:   "this was approved, but the work it released did not run",
 		FailedAt:   readInstant,
-		TargetType: "person", TargetID: person,
+		TargetType: "contact", TargetID: contact,
 	}, {
 		ID: ids.NewV7(), Kind: "volume_release",
 		Sentence: "the agent's window could not be widened, so the approval has not taken effect",
@@ -60,7 +60,7 @@ func TestAFailedDecisionComesBackToItsDecider(t *testing.T) {
 	if targeted.Title == nil || *targeted.Title != "this was approved, but the work it released did not run" {
 		t.Errorf("the card's title = %v, want the recorded sentence", targeted.Title)
 	}
-	if targeted.Subject == nil || targeted.Subject.Type != "person" || !slices.Contains(targeted.Actions, "open") {
+	if targeted.Subject == nil || targeted.Subject.Type != "contact" || !slices.Contains(targeted.Actions, "open") {
 		t.Errorf("a failure about a named record must offer open on it: %+v", targeted)
 	}
 	// The second decision named no record, so the card points nowhere rather

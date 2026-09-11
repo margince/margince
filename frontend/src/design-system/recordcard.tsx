@@ -5,13 +5,13 @@
  * One record, listed somewhere else: its mark, its name as the way in, what it
  * is to the record around it, and the handles a reader can act on.
  *
- * A reference to a person or a company was a name and a link. That is enough
+ * A reference to a contact or a company was a name and a link. That is enough
  * to navigate and nothing else — a reader deciding which of three contacts to
- * call had to open all three, and a rail listing an account's people said only
+ * call had to open all three, and a rail listing an account's contacts said only
  * that they exist. The card carries the facts that decision needs, so the
  * decision is made before the click rather than after it.
  *
- * It is for a record LISTED as a reference — the account's people, on the
+ * It is for a record LISTED as a reference — the account's contacts, on the
  * glance and in the rail. A name appearing inline in a sentence or a fact's
  * value is not this: expanding every mention is how a page stops being
  * readable, and `EntityRef` stays the shape there.
@@ -39,10 +39,10 @@ export function RecordCard({
 }: Readonly<{
   /**
    * What the card stands for, which the mark's shape says before a word of it
-   * is read: a person is round the way a face is, a company a rounded square
+   * is read: a contact is round the way a face is, a company a rounded square
    * the way a logo is. `Avatar` owns the distinction; the card passes it on.
    */
-  kind: "person" | "company";
+  kind: "contact" | "company";
   name: string;
   // The record's own page.
   href: string;
@@ -83,7 +83,7 @@ export function RecordCard({
     <div className="record-card">
       {/* Labelled with the name alone: the monogram inside is TEXT, so it
           would otherwise lead the computed name and a screen reader would
-          announce two initials before the person they stand for. */}
+          announce two initials before the contact they stand for. */}
       <a className="record-card-open" href={href} aria-label={name}>
         {mark}
       </a>

@@ -210,7 +210,7 @@ describe("Top bar trail", () => {
 
   it("leads a record back to the list it was opened from", () => {
     const client = newClient();
-    client.setQueryData(["person", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
     renderWith(
       client,
       <TopBar

@@ -82,7 +82,7 @@ func (v *v1Archiver) Archive(_ context.Context, ref datasource.EntityRef) (datas
 
 func threeTypes() []datasource.EntityType {
 	return []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal,
+		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal,
 	}
 }
 
@@ -117,7 +117,7 @@ func TestStagingRefusesATypeTheRoutedExecutorDoesNotArchive(t *testing.T) {
 	// "project" makes it vacuous in the direction it exists for: a refusal
 	// that stopped naming both would fail the first half and pass the test
 	// having asserted nothing.
-	if !strings.Contains(err.Error(), "person") {
+	if !strings.Contains(err.Error(), "contact") {
 		t.Errorf("the refusal %q must name what this executor DOES archive: a model told only that its "+
 			"call was wrong retries the same call", err)
 	}
@@ -129,8 +129,8 @@ func TestStagingAdmitsATypeTheRoutedExecutorArchives(t *testing.T) {
 	provider := &narrowArchiver{types: threeTypes()}
 	tool := archiveRecord{p: provider}
 
-	if _, err := tool.StageInfo(context.Background(), archiveArgsJSON(t, "person", ids.NewV7())); err != nil {
-		t.Fatalf("staging a person against an executor that archives it answered %v, want it staged", err)
+	if _, err := tool.StageInfo(context.Background(), archiveArgsJSON(t, "contact", ids.NewV7())); err != nil {
+		t.Fatalf("staging a contact against an executor that archives it answered %v, want it staged", err)
 	}
 }
 
@@ -150,10 +150,10 @@ func TestStagingRefusesAProviderThatCannotCarryAnApprovedVersion(t *testing.T) {
 	provider := &v1Archiver{}
 	tool := archiveRecord{p: provider}
 
-	_, err := tool.StageInfo(context.Background(), archiveArgsJSON(t, "person", ids.NewV7()))
+	_, err := tool.StageInfo(context.Background(), archiveArgsJSON(t, "contact", ids.NewV7()))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Fatalf("staging a person against a v1-only provider answered %v, want the unsupported-by-SoR "+
+		t.Fatalf("staging a contact against a v1-only provider answered %v, want the unsupported-by-SoR "+
 			"refusal — the refusal must arrive before a human is asked, not after", err)
 	}
 	if provider.archived != nil {
@@ -188,10 +188,10 @@ func TestAV1ProviderStillRefusesAnUnarchivableTypeByName(t *testing.T) {
 // already spent the approval.
 func TestGuardsRefuseWhatTheExecutorsOwnProbesWouldRefuse(t *testing.T) {
 	provider := &narrowArchiver{types: threeTypes(), refuse: apperrors.ErrPermissionDenied}
-	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "person", ID: ids.NewV7()})
+	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 
 	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("guarding a readable-but-unwritable person answered %v, want the executor's own "+
+		t.Fatalf("guarding a readable-but-unwritable contact answered %v, want the executor's own "+
 			"refusal — otherwise the approval is spent on a call the store then refuses", err)
 	}
 }
@@ -213,7 +213,7 @@ func TestTheHeldElsewhereRefusalStillWinsOverTheExecutorProbe(t *testing.T) {
 		heldElsewhere: true,
 		refuse:        apperrors.ErrPermissionDenied,
 	}
-	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "person", ID: ids.NewV7()})
+	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 
 	err := call.Guards(context.Background())
 
@@ -223,7 +223,7 @@ func TestTheHeldElsewhereRefusalStillWinsOverTheExecutorProbe(t *testing.T) {
 			"and the deliberate unsupported-by-SoR refusal is replaced by whatever the probe says", err)
 	}
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Fatalf("guarding a mirrored person answered %v, want the unsupported-by-SoR refusal to keep "+
+		t.Fatalf("guarding a mirrored contact answered %v, want the unsupported-by-SoR refusal to keep "+
 			"its place ahead of the executor probe", err)
 	}
 }
@@ -239,7 +239,7 @@ func TestAnApprovedArchiveCarriesTheApprovedVersionIntoTheWrite(t *testing.T) {
 	tool := archiveRecord{p: provider}
 	ctx := withApprovalRedeemed(context.Background(), 4, true)
 
-	if _, err := tool.Handle(ctx, archiveArgsJSON(t, "person", ids.NewV7())); err != nil {
+	if _, err := tool.Handle(ctx, archiveArgsJSON(t, "contact", ids.NewV7())); err != nil {
 		t.Fatalf("archiving under a released approval answered %v, want the write to run", err)
 	}
 	if provider.archivedAt == nil {
@@ -262,7 +262,7 @@ func TestAnUnapprovedArchiveCarriesNoVersion(t *testing.T) {
 	provider := &narrowArchiver{types: threeTypes()}
 	tool := archiveRecord{p: provider}
 
-	if _, err := tool.Handle(context.Background(), archiveArgsJSON(t, "person", ids.NewV7())); err != nil {
+	if _, err := tool.Handle(context.Background(), archiveArgsJSON(t, "contact", ids.NewV7())); err != nil {
 		t.Fatalf("archiving without an approval answered %v, want the write to run", err)
 	}
 	if provider.archivedAt == nil {
@@ -285,7 +285,7 @@ func TestAnApprovedArchiveIsRefusedByAProviderThatCannotPinIt(t *testing.T) {
 	tool := archiveRecord{p: provider}
 	ctx := withApprovalRedeemed(context.Background(), 4, true)
 
-	_, err := tool.Handle(ctx, archiveArgsJSON(t, "person", ids.NewV7()))
+	_, err := tool.Handle(ctx, archiveArgsJSON(t, "contact", ids.NewV7()))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("archiving under a released approval against a v1 provider answered %v, want the "+

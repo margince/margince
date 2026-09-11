@@ -5,7 +5,7 @@ package compose
 
 // The nightly repair of captured mail that never reached its record.
 //
-// The cg:cohort-promote consumer fixes an ordering as it happens: a person
+// The cg:cohort-promote consumer fixes an ordering as it happens: a contact
 // arrives, their earlier mail is linked. That covers everything from the day it
 // shipped and nothing from before it, and it depends on an event actually being
 // delivered — a consumer that was down while a backfill ran leaves exactly the
@@ -33,21 +33,21 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// linkReconcilePeoplePerTick bounds one workspace's pass.
+// linkReconcileContactsPerTick bounds one workspace's pass.
 //
-// Each person costs one bounded repair transaction, so this is the ceiling on
+// Each contact costs one bounded repair transaction, so this is the ceiling on
 // what a single tick writes. A workspace with more owed than this is not
 // stranded: what the pass leaves behind still matches the selector, and the next
 // tick takes the next slice — which is the same reason the repair itself is
 // batched rather than unbounded.
-const linkReconcilePeoplePerTick = 200
+const linkReconcileContactsPerTick = 200
 
 // linkReconcileDomainsPerTick bounds the company half of one pass, for the same
 // reason: each domain is one plant transaction, and what a tick leaves behind
@@ -66,12 +66,12 @@ func (LinkReconcileArgs) FleetWide() {}
 
 type linkReconcileWorker struct {
 	pool    *pgxpool.Pool
-	store   *people.Store
+	store   *contacts.Store
 	pending *capture.PendingStore
 	log     *slog.Logger
 }
 
-func newLinkReconcileWorker(pool *pgxpool.Pool, store *people.Store, log *slog.Logger) *linkReconcileWorker {
+func newLinkReconcileWorker(pool *pgxpool.Pool, store *contacts.Store, log *slog.Logger) *linkReconcileWorker {
 	return &linkReconcileWorker{
 		pool:    pool,
 		store:   store,
@@ -94,14 +94,14 @@ const adoptStrandedPerTick = 200
 func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, workspace ids.UUID) error {
 	ctx = principal.WithWorkspaceID(ctx, workspace)
 	sweepCtx := w.systemContext(ctx, workspace)
-	owed, err := w.store.PeopleOwedACohortRepair(sweepCtx, linkReconcilePeoplePerTick)
+	owed, err := w.store.ContactsOwedACohortRepair(sweepCtx, linkReconcileContactsPerTick)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
 	var linked, promoted int64
 	var failed error
-	for _, person := range owed {
-		// Per person, each on its own transaction, so one contact whose repair
+	for _, contact := range owed {
+		// Per contact, each on its own transaction, so one contact whose repair
 		// fails — a lock it could not take, a row a concurrent merge moved —
 		// costs that contact and not the rest of the sweep.
 		//
@@ -110,9 +110,9 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 		// River recording it green would retire the only signal that a contact
 		// is permanently stuck. The retry re-walks the repaired ones for
 		// nothing, which is cheap: they no longer match the selector.
-		done, err := w.store.RepairPersonCohort(sweepCtx, person)
+		done, err := w.store.RepairContactCohort(sweepCtx, contact)
 		if err != nil {
-			failed = errors.Join(failed, fmt.Errorf("repairing %s: %w", person, err))
+			failed = errors.Join(failed, fmt.Errorf("repairing %s: %w", contact, err))
 			continue
 		}
 		linked += done.Linked
@@ -121,7 +121,7 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 	if linked > 0 || promoted > 0 {
 		w.log.InfoContext(ctx, "link reconcile: captured mail put back on its records",
 			"workspace", workspace.String(),
-			"people", len(owed), "linked", linked, "promoted", promoted)
+			"contacts", len(owed), "linked", linked, "promoted", promoted)
 	}
 	lifted, err := w.liftFiledMeetingHolds(sweepCtx)
 	if err != nil {
@@ -192,7 +192,7 @@ func (w *linkReconcileWorker) askAboutStrandedContacts(ctx context.Context) (int
 		if err != nil {
 			// One contact's failure is not the sweep's: the rest of the page is
 			// still worth asking about, and a joined error still fails the job.
-			failed = errors.Join(failed, fmt.Errorf("asking about %s: %w", c.PersonID, err))
+			failed = errors.Join(failed, fmt.Errorf("asking about %s: %w", c.ContactID, err))
 			continue
 		}
 		if opened {
@@ -214,7 +214,7 @@ const liftFiledMeetingHoldsPerTick = 200
 // captured before its attendee was a contact was held to its participants, the
 // cohort repair filed it under them a day later, and nothing re-asked the
 // question — so the meeting on a colleague's page stayed invisible to everyone
-// but the people on the invitation, while the invitation EMAILS beside it were
+// but the contacts on the invitation, while the invitation EMAILS beside it were
 // workspace-readable.
 //
 // ReasonNoCounterparty only. A judged sender's hold (ReasonNoRecord) is not
@@ -270,15 +270,15 @@ func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context) (int, e
 	return lifted, nil
 }
 
-// attachDomainBacklogs gives the people on a company's domain their employer.
+// attachDomainBacklogs gives the contacts on a company's domain their employer.
 //
 // It runs here, as the system, rather than on the create that records the
-// company: attaching a person to a company is a write about the PERSON, and the
+// company: attaching a contact to a company is a write about the CONTACT, and the
 // human typing in a company name holds no authority over contacts they may not
 // see. A rep scoped to their own records would otherwise plant employment for a
 // colleague's private contact as a side effect of naming a company.
 func (w *linkReconcileWorker) attachDomainBacklogs(sweepCtx context.Context, ws ids.UUID) error {
-	owed, err := w.store.DomainsOwedTheirPeople(sweepCtx, linkReconcileDomainsPerTick)
+	owed, err := w.store.DomainsOwedTheirContacts(sweepCtx, linkReconcileDomainsPerTick)
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func (w *linkReconcileWorker) attachDomainBacklogs(sweepCtx context.Context, ws 
 		planted += got
 	}
 	if planted > 0 {
-		w.log.InfoContext(sweepCtx, "link reconcile: a company's people were attached to it",
+		w.log.InfoContext(sweepCtx, "link reconcile: a company's contacts were attached to it",
 			"workspace", ws.String(), "domains", len(owed), "employed", planted)
 	}
 	return failed
@@ -304,7 +304,7 @@ func (w *linkReconcileWorker) attachDomainBacklogs(sweepCtx context.Context, ws 
 //
 // The mail half creates nothing — it attaches messages the workspace already
 // holds to records it already has. The company half DOES write: it plants the
-// employment edges a domain's people are owed, which is precisely the write no
+// employment edges a domain's contacts are owed, which is precisely the write no
 // human on this path may make, since a rep naming a company holds no authority
 // over contacts they cannot see. A sweep with no human behind it is the honest
 // actor for both.
@@ -334,7 +334,7 @@ const linkReconcileActor = "link-reconcile"
 // and that is exactly where a defect hid: a missing correlation id made every
 // publish refuse, so the sweep repaired nothing while looking like a job that
 // had simply not run yet.
-func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool, store *people.Store) *linkReconcileWorker {
+func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool, store *contacts.Store) *linkReconcileWorker {
 	return newLinkReconcileWorker(pool, store, slog.Default())
 }
 

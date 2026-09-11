@@ -5,7 +5,7 @@
 // response cites, so a cited message can be opened as that message.
 //
 // Every writer in this tree that grounds prose in records — the company brief, the
-// dossier, the growth fit, the person brief, the meeting brief, the deal status
+// dossier, the growth fit, the contact brief, the meeting brief, the deal status
 // card, both draft services and the account scan — emits the same citation
 // shape: a record kind and a record id. That is enough to name a message and
 // not enough to open one, so eight surfaces drew a citation a reader could

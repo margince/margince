@@ -48,15 +48,15 @@ func seedMember(t *testing.T, owner *pgx.Conn, ws ids.UUID, name string) ids.UUI
 	return id
 }
 
-// seedTouch records one activity of the given kind and links it to the person,
-// with `colleague` naming which of our people was IN it — nil for an
+// seedTouch records one activity of the given kind and links it to the contact,
+// with `colleague` naming which of our contacts was IN it — nil for an
 // interaction nobody on our side is recorded in.
 //
 // It writes participant rows and folds the projection, which is what capture
 // and the cg:graph-edge consumer do between them in production. Seeding an
 // activity alone would leave the projection empty and every assertion below
 // would pass vacuously.
-func seedTouch(t *testing.T, e *integration.Env, owner *pgx.Conn, kind string, colleague *ids.UUID, person ids.UUID) {
+func seedTouch(t *testing.T, e *integration.Env, owner *pgx.Conn, kind string, colleague *ids.UUID, contact ids.UUID) {
 	t.Helper()
 	ctx := context.Background()
 	id := ids.NewV7()
@@ -70,10 +70,10 @@ func seedTouch(t *testing.T, e *integration.Env, owner *pgx.Conn, kind string, c
 		id, kind, capturedBy); err != nil {
 		t.Fatalf("seeding a %s: %v", kind, err)
 	}
-	integration.LinkActivity(t, owner, id, "person", person)
+	integration.LinkActivity(t, owner, id, "contact", contact)
 
 	// Only a real exchange has participants. A task is intent and a note is a
-	// record of thinking; neither means the two people spoke, which is why
+	// record of thinking; neither means the two contacts spoke, which is why
 	// they draw no edge without the graph needing a kind filter of its own.
 	if kind == "email" || kind == "call" || kind == "meeting" {
 		if colleague != nil {
@@ -84,8 +84,8 @@ func seedTouch(t *testing.T, e *integration.Env, owner *pgx.Conn, kind string, c
 			}
 		}
 		if _, err := owner.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, role)
-			VALUES ($1, $2, 'to')`, id, person); err != nil {
+			INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'to')`, id, contact); err != nil {
 			t.Fatalf("seeding the counterparty participant: %v", err)
 		}
 	}
@@ -132,14 +132,14 @@ func graphEdgeTargets(graph crmcontracts.CompanyGraph, kind crmcontracts.Company
 }
 
 // The two connections, against real rows: the account's owner, and the
-// colleague who emailed one of its people.
+// colleague who emailed one of its contacts.
 func TestCompanyGraphDrawsTheOwnerAndWhoHasBeenInContact(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
 
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employ(t, e, contact, company, "cto")
 	// Rep2 shares Team1 with Rep1 and wrote to the contact; Rep1 owns the
 	// account and has written nothing.
@@ -191,7 +191,7 @@ func TestCompanyGraphDrawsNoContactEdgeForANonInteraction(t *testing.T) {
 	svc := company360Service(e)
 
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employ(t, e, contact, company, "cto")
 	seedTouch(t, e, owner, "email", nil, contact)
 	seedTouch(t, e, owner, "email", nil, contact)
@@ -232,18 +232,18 @@ func TestCompanyGraphDrawsNoContactEdgeForANonInteraction(t *testing.T) {
 // interaction edge is derived from an activity — so a caller missing either
 // grant gets the group named as withheld rather than an account that looks like
 // nobody here has ever spoken to it.
-func TestCompanyGraphOmitsOurSideWithoutThePersonOrActivityGrant(t *testing.T) {
+func TestCompanyGraphOmitsOurSideWithoutTheContactOrActivityGrant(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
 
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employ(t, e, contact, company, "cto")
 	seedTouch(t, e, owner, "email", &e.Rep2, contact)
 	companyID := ids.From[ids.CompanyKind](company)
 
-	noPeople := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+	noContacts := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"company":               {Read: true},
@@ -256,13 +256,13 @@ func TestCompanyGraphOmitsOurSideWithoutThePersonOrActivityGrant(t *testing.T) {
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"company":               {Read: true},
-			"person":                {Read: true},
+			"contact":               {Read: true},
 			"installation_settings": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	})
 	for name, ctx := range map[string]context.Context{
-		"no person grant":   noPeople,
+		"no contact grant":  noContacts,
 		"no activity grant": noActivities,
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -293,7 +293,7 @@ func TestCompanyGraphOmitsOurSideWithoutThePersonOrActivityGrant(t *testing.T) {
 	}
 }
 
-// An interaction with a person the caller cannot read (capture-private to a
+// An interaction with a contact the caller cannot read (capture-private to a
 // colleague) draws nothing: the contact is not a node, so the colleague who
 // wrote to them has nothing to point at. Anything else would leak the fact of
 // contact with a record whose existence the card is hiding.
@@ -303,9 +303,9 @@ func TestCompanyGraphDrawsNoContactEdgeForACapturePrivateContact(t *testing.T) {
 	svc := company360Service(e)
 
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	mine := e.SeedPerson(t, "My Contact", &e.Rep1)
-	theirs := e.SeedPerson(t, "Their Private Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirs, e.Rep3)
+	mine := e.SeedContact(t, "My Contact", &e.Rep1)
+	theirs := e.SeedContact(t, "Their Private Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
 	employ(t, e, mine, company, "cto")
 	employ(t, e, theirs, company, "cfo")
 	writerToMine := seedMember(t, owner, e.WS, "Writes To Mine")
@@ -323,7 +323,7 @@ func TestCompanyGraphDrawsNoContactEdgeForACapturePrivateContact(t *testing.T) {
 		t.Error("the colleague who wrote to the readable contact is missing")
 	}
 	if _, drawn := users[writerToTheirs]; drawn {
-		t.Error("a colleague was drawn for contact with a capture-private person the caller cannot read")
+		t.Error("a colleague was drawn for contact with a capture-private contact the caller cannot read")
 	}
 	targets := graphEdgeTargets(graph, crmcontracts.CompanyGraphEdgeKindInContactWith)
 	if len(targets) != 1 || targets[writerToMine] != mine {
@@ -345,7 +345,7 @@ func setMemberStatus(t *testing.T, owner *pgx.Conn, user ids.UUID, status string
 // A colleague who no longer works here is no answer to "who can introduce me",
 // and both halves of our side have to agree about that: owner_id and
 // captured_by each survive the day someone's account is closed, so the owns
-// edge and the in_contact_with edges must both drop the same person.
+// edge and the in_contact_with edges must both drop the same contact.
 //
 // The account is simply left unowned. Nothing else about the group changes — a
 // live teammate's contact edge is still drawn.
@@ -356,10 +356,10 @@ func TestCompanyGraphDrawsNoColleagueWhoNoLongerWorksHere(t *testing.T) {
 			owner := integration.OwnerConn(t)
 			svc := company360Service(e)
 
-			// Rep2 owns the account AND wrote to its contact, so one person is
+			// Rep2 owns the account AND wrote to its contact, so one contact is
 			// both would-be edges; Rep1, in the same team, is the caller.
 			company := e.SeedCompany(t, "Acme", &e.Rep2)
-			contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+			contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 			employ(t, e, contact, company, "cto")
 			seedTouch(t, e, owner, "email", &e.Rep2, contact)
 			teammate := seedMember(t, owner, e.WS, "Live Teammate")
@@ -415,7 +415,7 @@ const graphContactCapSeed = 15
 // against the scanned set they would fill the ten-user allowance, be discarded
 // again at placement for having no contact to point at, and leave the card
 // showing nobody on our side — while `our_side` and its dropped_count described
-// people the graph does not contain.
+// contacts the graph does not contain.
 func TestCompanyGraphCapsColleaguesAgainstTheContactsItDraws(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
@@ -432,7 +432,7 @@ func TestCompanyGraphCapsColleaguesAgainstTheContactsItDraws(t *testing.T) {
 	const undrawn = 12
 	outsiders := make([]ids.UUID, 0, undrawn)
 	for i := range undrawn {
-		contact := e.SeedPerson(t, fmt.Sprintf("Undrawn %02d", i), &e.Rep1)
+		contact := e.SeedContact(t, fmt.Sprintf("Undrawn %02d", i), &e.Rep1)
 		employ(t, e, contact, company, "assistant")
 		colleague := seedMember(t, owner, e.WS, fmt.Sprintf("Outsider %02d", i))
 		outsiders = append(outsiders, colleague)
@@ -446,7 +446,7 @@ func TestCompanyGraphCapsColleaguesAgainstTheContactsItDraws(t *testing.T) {
 	insiderB := seedMember(t, owner, e.WS, "Insider B")
 	var drawnContacts []ids.UUID
 	for i := range graphContactCapSeed {
-		contact := e.SeedPerson(t, fmt.Sprintf("Drawn %02d", i), &e.Rep1)
+		contact := e.SeedContact(t, fmt.Sprintf("Drawn %02d", i), &e.Rep1)
 		employ(t, e, contact, company, "cto")
 		drawnContacts = append(drawnContacts, contact)
 		for range 3 {
@@ -463,7 +463,7 @@ func TestCompanyGraphCapsColleaguesAgainstTheContactsItDraws(t *testing.T) {
 
 	drawn := map[ids.UUID]bool{}
 	for _, node := range graph.Nodes {
-		if node.Kind == crmcontracts.CompanyGraphNodeKindPerson {
+		if node.Kind == crmcontracts.CompanyGraphNodeKindContact {
 			drawn[ids.UUID(node.Id)] = true
 		}
 	}
@@ -519,7 +519,7 @@ func TestCompanyGraphUserCapCountsUsersAndReportsTheRemainder(t *testing.T) {
 	// create stamps the seeding seat as owner, so the owner is nulled explicitly.
 	company := e.SeedCompany(t, "Acme", nil)
 	e.WsExec(t, "UPDATE company SET owner_id = NULL WHERE id = $1", company)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employ(t, e, contact, company, "cto")
 	const writers = 13
 	for i := range writers {

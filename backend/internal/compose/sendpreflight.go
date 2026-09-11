@@ -7,7 +7,7 @@ package compose
 // flows write to (telegram-oa design §8.1). It sits apart from the transmit lane
 // in commsjobs.go because it answers a different question at a different moment:
 // not "which credential carries this delivery", but "is there a credential at
-// all", asked while the person who can do something about the answer is still on
+// all", asked while the contact who can do something about the answer is still on
 // the screen.
 //
 // Which table holds that credential is the whole subtlety, and it is why this is

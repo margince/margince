@@ -79,7 +79,7 @@ func TestWrite_malformedCursorIsAClientFault(t *testing.T) {
 	if err == nil {
 		t.Fatal("garbage cursor decoded")
 	}
-	status, body := writeAndDecode(t, fmt.Errorf("listing people: %w", err))
+	status, body := writeAndDecode(t, fmt.Errorf("listing contacts: %w", err))
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want 422", status)
 	}
@@ -341,7 +341,7 @@ func TestClassify_aTypedRefusalStillWinsOverTheConstraintNet(t *testing.T) {
 // version named none and told the caller to check their ids "against records
 // this workspace actually has" — advice a UAT agent followed into a dead end,
 // because the field it blamed references a user, which no tool on that surface
-// lists, and a genuinely existing person id came back with byte-identical text.
+// lists, and a genuinely existing contact id came back with byte-identical text.
 func TestClassify_theReferenceRefusalNamesTheFieldWhenTheConstraintYieldsIt(t *testing.T) {
 	for _, tc := range []struct {
 		name, constraint, wantField string

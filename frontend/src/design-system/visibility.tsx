@@ -33,7 +33,7 @@ import "./visibility.css";
  * The closed vocabulary. `team` is what a mail row and a shared contact both
  * mean — everyone the linked record already admits, which is why the word is
  * not "everyone". `private` is a captured contact's owner-only state; a message
- * has no such state, because the people on it can always read it.
+ * has no such state, because the contacts on it can always read it.
  */
 export type Visibility =
   | "team"

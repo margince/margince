@@ -14,7 +14,7 @@ package integration
 // green, which is what these two tests are here to stop.
 //
 // What a missing refusal costs is not abstract. The send stages, the activity
-// commits attesting that this installation corresponded with the person, and a
+// commits attesting that this installation corresponded with the contact, and a
 // message goes to somebody carrying an Art. 21 objection. The rep learns
 // nothing until the transmit gate parks the row in an operator lane days
 // later, by which time the outbound activity is on the timeline as evidence of
@@ -36,7 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// suppressPerson records an Art. 21 marketing objection against a person.
+// suppressContact records an Art. 21 marketing objection against a contact.
 //
 // Written directly rather than through a store method because there is no
 // production writer for communication_suppression yet — the unsubscribe path
@@ -50,7 +50,7 @@ import (
 // These two tests are about STAGING — that a refused send leaves no delivery row
 // behind — and they need a suppression that actually binds the message they
 // send. #4701 narrowed an Art. 21 marketing objection to bind marketing alone,
-// deliberately: objecting to direct marketing had been refusing that person's
+// deliberately: objecting to direct marketing had been refusing that contact's
 // invoice. Both sends below are non-marketing, so a marketing objection stopped
 // stopping them, and these tests began asserting the behaviour that change
 // existed to remove.
@@ -65,17 +65,17 @@ import (
 // that will own it lands with the preference centre. The row shape is the one
 // liveSuppression reads, and when that writer arrives this helper is what
 // should be repointed at it.
-func suppressPerson(t *testing.T, e *apptest.AppEnv, personID string) {
+func suppressContact(t *testing.T, e *apptest.AppEnv, contactID string) {
 	t.Helper()
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		// decided_by_level is stated rather than defaulted, because the column
 		// deliberately has no default: a writer names who decided or the INSERT
 		// fails where the author can see it. `subject` is what this row IS — the
-		// person's own request, the one tier no seat in the installation may
+		// contact's own request, the one tier no seat in the installation may
 		// lift.
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO communication_suppression (person_id, kind, source, captured_by, decided_by_level)
-			VALUES ($1, $3, 'test', $2, 'subject')`, personID, "test", commsauthz.ReasonSubjectRequest)
+			INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
+			VALUES ($1, $3, 'test', $2, 'subject')`, contactID, "test", commsauthz.ReasonSubjectRequest)
 		return err
 	}); err != nil {
 		t.Fatalf("recording the subject's request to stop: %v", err)
@@ -87,7 +87,7 @@ func suppressPerson(t *testing.T, e *apptest.AppEnv, personID string) {
 func TestAMailSendToASuppressedRecipientStagesNothing(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
-	suppressPerson(t, p.AppEnv, p.personID)
+	suppressContact(t, p.AppEnv, p.contactID)
 
 	status, code, _ := p.send(t)
 
@@ -106,7 +106,7 @@ func TestAMailSendToASuppressedRecipientStagesNothing(t *testing.T) {
 func TestAChannelSendToASuppressedRecipientStagesNothing(t *testing.T) {
 	c := setupChannelSend(t)
 	c.grantConsent(t, "transactional")
-	suppressPerson(t, c.AppEnv, c.personID)
+	suppressContact(t, c.AppEnv, c.contactID)
 
 	status, code, _ := c.sendReply(t, "transactional", "Yes — shipping Monday.", nil)
 

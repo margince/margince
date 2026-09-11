@@ -19,7 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedNoticeCase writes one live case for this person, owed and never sent to.
+// seedNoticeCase writes one live case for this contact, owed and never sent to.
 //
 // attempts stays 0, which is what a freshly opened case holds — the cooldown is
 // driven by discharging and then discharging again, not by dating the seed,
@@ -32,9 +32,9 @@ func seedNoticeCase(
 	var id ids.UUID
 	if err := e.owner.QueryRow(context.Background(), `
 		INSERT INTO privacy_notice_case
-		       (person_id, acquisition_id, rule, due_at, allowed_routes, state)
+		       (contact_id, acquisition_id, rule, due_at, allowed_routes, state)
 		VALUES ($1, $2, 'art14', now() + interval '30 days', $3, 'open')
-		RETURNING id`, e.person, acq, routes).Scan(&id); err != nil {
+		RETURNING id`, e.contact, acq, routes).Scan(&id); err != nil {
 		t.Fatalf("seeding the notice case: %v", err)
 	}
 	return id
@@ -60,7 +60,7 @@ func discharge(t *testing.T, e *channelConsentEnv, now time.Time) int {
 	var moved int
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		moved, err = dischargeNoticeCases(e.ctx, tx, e.person,
+		moved, err = dischargeNoticeCases(e.ctx, tx, e.contact,
 			noticeRouteRecordConfirmation, now)
 		return err
 	}); err != nil {
@@ -145,7 +145,7 @@ func TestASecondSendInsideTheCooldownMovesNothing(t *testing.T) {
 //
 // The blocked_shape CHECK also refuses that row, and the filter is what turns
 // its refusal into a no-op rather than a failed transaction: without it, one
-// blocked case on a person would make EVERY confirm mail to them fail with a
+// blocked case on a contact would make EVERY confirm mail to them fail with a
 // raw constraint violation. So the assertion is that the send SUCCEEDS and
 // moves nothing — a mutation removing the filter fails here on the error, not
 // on the state.
@@ -155,9 +155,9 @@ func TestABlockedDutyIsNotDischargedBySending(t *testing.T) {
 	var blocked ids.UUID
 	if err := e.owner.QueryRow(context.Background(), `
 		INSERT INTO privacy_notice_case
-		       (person_id, acquisition_id, rule, due_at, allowed_routes, state, blocked_reason)
+		       (contact_id, acquisition_id, rule, due_at, allowed_routes, state, blocked_reason)
 		VALUES ($1, $2, 'art14', now() + interval '30 days', $3, 'blocked', 'no live address')
-		RETURNING id`, e.person, acq, []string{noticeRouteRecordConfirmation}).Scan(&blocked); err != nil {
+		RETURNING id`, e.contact, acq, []string{noticeRouteRecordConfirmation}).Scan(&blocked); err != nil {
 		t.Fatalf("seeding the blocked case: %v", err)
 	}
 
@@ -189,7 +189,7 @@ func TestTheConfirmMailItselfDischargesTheDuty(t *testing.T) {
 	e.store = e.store.WithConfirmationLane(&recordingStager{}, &recordingVault{},
 		"https://crm.example.test/")
 
-	issued, err := e.store.IssueConfirmToken(e.ctx, e.person)
+	issued, err := e.store.IssueConfirmToken(e.ctx, e.contact)
 	if err != nil {
 		t.Fatalf("mint a confirm link: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestAConsentLinkDischargesNoDisclosureDuty(t *testing.T) {
 		Scan(&purpose); err != nil {
 		t.Fatalf("read the marketing purpose: %v", err)
 	}
-	issued, err := e.store.IssueConsentLink(e.ctx, e.person, purpose, "")
+	issued, err := e.store.IssueConsentLink(e.ctx, e.contact, purpose, "")
 	if err != nil {
 		t.Fatalf("mint a consent link: %v", err)
 	}

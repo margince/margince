@@ -146,7 +146,7 @@ func TestChangePasswordEndsEveryPriorSessionAndIssuesAFreshOne(t *testing.T) {
 		}
 	}
 	// What the caller continues on is a session the change itself minted —
-	// the person who just proved the current password is not sent to type it a
+	// the contact who just proved the current password is not sent to type it a
 	// third time — and it names the same account, not a fresh one.
 	continued, err := e.svc.Authenticate(wsCtx, freshToken)
 	if err != nil {
@@ -284,7 +284,7 @@ func TestChangePasswordOverHTTPHandsBackTheFreshSession(t *testing.T) {
 	}
 	// The session it was made with is gone, so the cookie must carry the one
 	// the change minted: left alone, the browser would hold a token that
-	// authenticates nothing; cleared, the person who just typed the current
+	// authenticates nothing; cleared, the contact who just typed the current
 	// password would be asked for it again at a login screen.
 	var issued *http.Cookie
 	for _, c := range rec.Result().Cookies() {
@@ -312,7 +312,7 @@ func TestChangePasswordOverHTTPSeparatesItsRefusals(t *testing.T) {
 
 	// A wrong current password and a new password equal to the current one are
 	// different mistakes with different fixes; a client that cannot tell them
-	// apart sends the person to retype the wrong field.
+	// apart sends the contact to retype the wrong field.
 	wrong := changeOverHTTP(ctx, t, e,
 		`{"current_password":"not-it","new_password":"`+newMemberPassword+`"}`)
 	if wrong.Code != http.StatusUnauthorized {
@@ -451,8 +451,8 @@ func TestAForcedAccountReachesNothingButTheChangeRoute(t *testing.T) {
 	next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) { reached = true })
 
 	for _, tc := range []struct{ name, path, method string }{
-		{"a read", "/v1/people", http.MethodGet},
-		{"a write", "/v1/people", http.MethodPost},
+		{"a read", "/v1/contacts", http.MethodGet},
+		{"a write", "/v1/contacts", http.MethodPost},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reached = false

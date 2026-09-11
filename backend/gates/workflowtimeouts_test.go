@@ -129,7 +129,7 @@ const unpinnedInstall = "playwright install --with-deps"
 //
 // Without one, a stalled mirror spends the job's whole budget and reports
 // "the job was cancelled" — which reads as the lane being slow, and sends the
-// next person to the change under review. The change under review is never the
+// next contact to the change under review. The change under review is never the
 // cause, because this step runs before a single test does.
 func TestTheUnpinnedInstallIsBoundedWhereverItRuns(t *testing.T) {
 	t.Parallel()

@@ -45,7 +45,7 @@ const (
 	// Nothing to fix, and something to copy. Without this a healthy rep
 	// produces no row at all, and a page promising one focus per rep would
 	// quietly shorten to the troubled ones — which reads as a team where only
-	// those people exist.
+	// those contacts exist.
 	FocusStrongWeek = "strong_week"
 	// Nothing to fix and nothing that stood out. Said plainly rather than
 	// dressed as either a problem or a triumph.
@@ -221,7 +221,7 @@ func gatherTeamWeek(
 ) error {
 	// Money is answerable only if EVERY member's week converted. One rep whose
 	// currency had no rate makes the team total unanswerable, exactly as one
-	// unconvertible deal does for that rep — a sum quietly missing a person is
+	// unconvertible deal does for that rep — a sum quietly missing a contact is
 	// worse than an absent one.
 	money := Money{Known: true}
 	for _, member := range members {
@@ -282,7 +282,7 @@ func repFrom(member TeamMember, counts Counts, help int) TeamRep {
 //
 // One per rep, always — including the rep whose week went well, whose focus is
 // what the team should copy. A page promising one focus per rep and delivering
-// rows only for the troubled ones reads as a team where only those people
+// rows only for the troubled ones reads as a team where only those contacts
 // exist, which is both untrue and demoralising to be listed in.
 //
 // The label is composed here rather than by a model: it states a stored figure

@@ -47,8 +47,8 @@ func TestOverlaySearchSweepsEveryMirroredTypeAndPagesThroughThem(t *testing.T) {
 	// One token in a string field of each record, so the sweep's substring
 	// filter reaches all five and the assertion is about the WALK rather than
 	// about matching.
-	e.seed(t, "person", "9401", map[string]any{"first_name": "Sweepable", "last_name": "One"})
-	e.seed(t, "person", "9402", map[string]any{"first_name": "Sweepable", "last_name": "Two"})
+	e.seed(t, "contact", "9401", map[string]any{"first_name": "Sweepable", "last_name": "One"})
+	e.seed(t, "contact", "9402", map[string]any{"first_name": "Sweepable", "last_name": "Two"})
 	e.seed(t, "company", "9403", map[string]any{"display_name": "Sweepable Company"})
 	e.seed(t, "deal", "9404", map[string]any{"name": "Sweepable Renewal", "currency": "EUR"})
 	e.seed(t, "lead", "9405", map[string]any{"full_name": "Sweepable Lead"})
@@ -89,7 +89,7 @@ func TestOverlaySearchSweepsEveryMirroredTypeAndPagesThroughThem(t *testing.T) {
 	if len(seen) != 6 {
 		t.Fatalf("the sweep reached %d of the 6 seeded records: %v", len(seen), seen)
 	}
-	for _, want := range []string{"person", "company", "deal", "lead", "activity"} {
+	for _, want := range []string{"contact", "company", "deal", "lead", "activity"} {
 		found := false
 		for _, recordType := range seen {
 			found = found || recordType == want
@@ -113,10 +113,10 @@ func TestTheSearchRecordsToolSweepsWithoutARecordTypeInOverlayMode(t *testing.T)
 		t.Fatalf("mapping the acting user to the incumbent owner: %v", err)
 	}
 	if err := mirror.Ingest(ctx, overlaymod.Record{
-		ObjectClass: "person", ExternalID: "100214862044", OwnerExternalID: "owner-1",
+		ObjectClass: "contact", ExternalID: "100214862044", OwnerExternalID: "owner-1",
 		Fields: map[string]any{"firstname": "Unrestricted", "lastname": "Sweep"}, ModifiedAt: seedModifiedAt,
 	}); err != nil {
-		t.Fatalf("seeding the mirrored person: %v", err)
+		t.Fatalf("seeding the mirrored contact: %v", err)
 	}
 
 	out, err := compose.NewRegistryFor(e.DBFor(ws), compose.SendPath{}).
@@ -126,7 +126,7 @@ func TestTheSearchRecordsToolSweepsWithoutARecordTypeInOverlayMode(t *testing.T)
 			"every type, and a surface that refuses what it advertises misleads the only caller that reads it", err)
 	}
 	if !strings.Contains(string(out), "Unrestricted") {
-		t.Fatalf("the sweep answered without the mirrored person, so it did not reach the person arm: %s", out)
+		t.Fatalf("the sweep answered without the mirrored contact, so it did not reach the contact arm: %s", out)
 	}
 }
 
@@ -136,13 +136,13 @@ func TestTheSearchRecordsToolSweepsWithoutARecordTypeInOverlayMode(t *testing.T)
 // truth is about the mode.
 func TestOverlaySearchRefusesATypeTheMirrorDoesNotHold(t *testing.T) {
 	e := setupOverlayWrite(t)
-	e.seed(t, "person", "9410", map[string]any{"first_name": "Present", "last_name": "Person"})
+	e.seed(t, "contact", "9410", map[string]any{"first_name": "Present", "last_name": "Contact"})
 
 	if status := e.Call(t, "GET", "/v1/search?q=Present&types=project", nil, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Errorf("GET /v1/search?types=project = %d, want 422 — an unmirrored type must be refused, not "+
 			"answered with a page that says the records do not exist", status)
 	}
-	if status := e.Call(t, "GET", "/v1/search?q=Present&types=person", nil, nil, nil); status != http.StatusOK {
-		t.Errorf("GET /v1/search?types=person = %d, want 200 — the refusal above is about the type, not the parameter", status)
+	if status := e.Call(t, "GET", "/v1/search?q=Present&types=contact", nil, nil, nil); status != http.StatusOK {
+		t.Errorf("GET /v1/search?types=contact = %d, want 200 — the refusal above is about the type, not the parameter", status)
 	}
 }

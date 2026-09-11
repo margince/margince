@@ -176,14 +176,14 @@ func countWeekLeads(
 // recorded.
 //
 // assignee_id is reserved for tasks by the activity_task_fields CHECK, so it
-// cannot answer here — but host_user_id can, and it names the person whose
-// meeting it was rather than the person or connector that filed it. Read by
+// cannot answer here — but host_user_id can, and it names the contact whose
+// meeting it was rather than the contact or connector that filed it. Read by
 // capturer alone, a meeting a colleague minuted or a calendar connector
 // imported counted for whoever recorded it and not for the rep who sat in it,
 // so the same meeting moved between reps depending on how it reached the CRM.
 //
 // The fallback is bounded to rows with NO host: a meeting that names one is
-// that person's, and letting the capturer also claim it would count one meeting
+// that contact's, and letting the capturer also claim it would count one meeting
 // twice across two reps' weeks.
 //
 // "Left a next step" is a task raised AFTER the meeting against a record the
@@ -206,12 +206,12 @@ func countWeekLeads(
 //
 // TWO readers ask it, the headline count here and the funnel in
 // weeklyscorecard.go, and they must not disagree: a meeting credited to
-// different people by the two panels is one page contradicting itself about the
+// different contacts by the two panels is one page contradicting itself about the
 // same week. The caller supplies its own placeholders because the two queries
 // number their arguments differently.
 //
 // The fallback is bounded to rows with NO host on purpose. A meeting naming one
-// is that person's, and letting its recorder also claim it would count one
+// is that contact's, and letting its recorder also claim it would count one
 // meeting twice across two reps.
 //
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
@@ -244,7 +244,7 @@ func countWeekMeetings(
 		      AND EXISTS (
 		        SELECT 1 FROM activity_link ml
 		          JOIN activity_link tl ON tl.entity_type = ml.entity_type
-		            AND tl.person_id IS NOT DISTINCT FROM ml.person_id
+		            AND tl.contact_id IS NOT DISTINCT FROM ml.contact_id
 		            AND tl.company_id IS NOT DISTINCT FROM ml.company_id
 		            AND tl.deal_id IS NOT DISTINCT FROM ml.deal_id
 		            AND tl.lead_id IS NOT DISTINCT FROM ml.lead_id

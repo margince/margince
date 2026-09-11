@@ -17,8 +17,8 @@ import { FiltersScreen } from "./filters";
 // which object, and about the three readings of the count — answered, stale, and
 // not-yet-asked, which are three different things and must not collapse into one.
 
-const PERSON_VOCAB = {
-  resource: "person",
+const CONTACT_VOCAB = {
+  resource: "contact",
   fields: [
     {
       name: "full_name",
@@ -69,11 +69,11 @@ function mount(
         return json(meFixture({}));
       }
       if (url.includes("/filters/vocabulary")) {
-        return json(url.includes("resource=deal") ? DEAL_VOCAB : PERSON_VOCAB);
+        return json(url.includes("resource=deal") ? DEAL_VOCAB : CONTACT_VOCAB);
       }
       if (url.includes("/filters/preview")) {
         return json({
-          resource: "person",
+          resource: "contact",
           match_count: preview?.match_count ?? 0,
           columns: preview?.columns ?? ["id"],
           rows: preview?.rows ?? [],
@@ -88,13 +88,13 @@ function mount(
         // client is supposed to take its filename from.
         //
         // Deliberately NOT the name the client would compose for itself
-        // (`person-export.csv`): identical strings would make the assertion pass
+        // (`contact-export.csv`): identical strings would make the assertion pass
         // whether the header was read or ignored.
         return new Response("id,full_name\np1,Ann Lee\n", {
           status: 200,
           headers: {
             "Content-Type": "text/csv",
-            "Content-Disposition": 'attachment; filename="people-slice.csv"',
+            "Content-Disposition": 'attachment; filename="contacts-slice.csv"',
           },
         });
       }
@@ -105,7 +105,7 @@ function mount(
         return json({
           id: "l-new",
           name: "Anns",
-          entity_type: "person",
+          entity_type: "contact",
           list_type: "dynamic",
         });
       }
@@ -143,7 +143,7 @@ function viewRow(name: string, query: unknown) {
   return {
     id: `v-${name}`,
     owner_id: "u-1",
-    resource: "people",
+    resource: "contacts",
     name,
     query,
     version: 1,
@@ -159,9 +159,9 @@ it("reads the vocabulary for the object the route names", async () => {
   await waitFor(() => {
     expect(seen.some((url) => url.includes("resource=deal"))).toBe(true);
   });
-  // And not the default: a route naming deals must not read the person
+  // And not the default: a route naming deals must not read the contact
   // vocabulary, or the picker offers fields the deal engine refuses.
-  expect(seen.some((url) => url.includes("resource=person"))).toBe(false);
+  expect(seen.some((url) => url.includes("resource=contact"))).toBe(false);
 });
 
 it("falls back to contacts when the route names something unknown", async () => {
@@ -169,7 +169,7 @@ it("falls back to contacts when the route names something unknown", async () => 
   render(<FiltersScreen id="widgets" />, { wrapper });
 
   await waitFor(() => {
-    expect(seen.some((url) => url.includes("resource=person"))).toBe(true);
+    expect(seen.some((url) => url.includes("resource=contact"))).toBe(true);
   });
 });
 
@@ -314,11 +314,11 @@ it("saves the tree under the key the server validates as a filter", async () => 
   await waitFor(() => {
     expect(written).toHaveLength(1);
   });
-  // `people`, not `person` — the two endpoint families spell the same object
+  // `contacts`, not `contact` — the two endpoint families spell the same object
   // differently, and sending the filter vocabulary's word here would 422.
   // And the tree goes under `filter`, carrying no editor ids.
   expect(written[0]).toEqual({
-    resource: "people",
+    resource: "contacts",
     name: "Anns",
     query: {
       filter: { and: [{ field: "full_name", op: "eq", value: "ann" }] },
@@ -375,11 +375,11 @@ it("exports the filter on screen, under the name the server gave it", async () =
   // The tree on screen, not a saved view's id: what gets exported is what the
   // count above the button just said, through the one filter engine.
   expect(written[0]).toEqual({
-    object: "person",
+    object: "contact",
     filter: { and: [{ field: "full_name", op: "eq", value: "ann" }] },
     format: "csv",
   });
-  expect(anchors[0]?.download).toBe("people-slice.csv");
+  expect(anchors[0]?.download).toBe("contacts-slice.csv");
 });
 
 it("says so when an export is refused, instead of leaving the reader waiting", async () => {
@@ -442,7 +442,7 @@ function previewRefused(body: unknown, status: number) {
       });
     }
     if (url.includes("/filters/vocabulary")) {
-      return json(PERSON_VOCAB);
+      return json(CONTACT_VOCAB);
     }
     if (url.endsWith("/v1/me")) {
       return json(meFixture({}));
@@ -539,7 +539,7 @@ it("starts a fresh tree when the object changes", async () => {
 
   await user.click(screen.getByRole("button", { name: "Deals" }));
 
-  // The person clause is gone rather than carried onto deals, where the field it
+  // The contact clause is gone rather than carried onto deals, where the field it
   // names does not exist — a filter the new vocabulary would refuse.
   expect(screen.queryByLabelText("Value")).toBeNull();
   expect(screen.getByText("Add a clause to see what it selects")).toBeTruthy();

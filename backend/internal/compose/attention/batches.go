@@ -134,7 +134,7 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 // is the safe direction: an ungrouped row is one row too many on the page,
 // while a wrongly grouped one hides a failure the reader never learns about —
 // which is why a BOUNCE sets none. A bounce is a customer consequence, not a
-// system condition: this named person did not get this message, and folding
+// system condition: this named contact did not get this message, and folding
 // three of them behind one row hides two customers.
 func systemCause(row ranked) (string, bool) {
 	if row.item.Category != categorySystem {
@@ -203,7 +203,7 @@ func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
 // The split matters because the three are answered differently: a machine
 // sender is rejected without thought, an address whose company we already know
 // is usually accepted, and the remainder is the part that actually needs a
-// person. One group of a hundred and fifty would still be a pile.
+// contact. One group of a hundred and fifty would still be a pile.
 func contactBatchKey(row ranked) crmcontracts.WorklistBatchKey {
 	switch {
 	case row.machineSender:
@@ -395,8 +395,8 @@ func groupChangedSinceBrief(members []ranked) *bool {
 // A batch is not a record and has no owner of its own; it stands for members
 // that do. Where they agree the group says what they say. Where they disagree
 // it says nothing — not the first member's answer, which would report one
-// person as holding a pile most of which is somebody else's, and not
-// `unassigned`, which would claim nobody holds work several people do.
+// contact as holding a pile most of which is somebody else's, and not
+// `unassigned`, which would claim nobody holds work several contacts do.
 //
 // Silence here is the honest answer AND a visible one: the row reaches the wire
 // with no owner, which the contract already means as "nothing is being said

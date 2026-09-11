@@ -19,7 +19,7 @@ import { PrivacyInboxCard } from "./privacy";
 // placeholder a non-breaking space in placeholder styling — which is exactly
 // what the disabled unassigned em dash looks like. So a request that IS assigned
 // read as unassigned whenever the roster could not name the holder, and the next
-// officer to open it reassigned statutory work off the person doing it.
+// officer to open it reassigned statutory work off the contact doing it.
 //
 // The roster fails to name an assignee in four different ways, and they are four
 // different facts: the walk has not answered yet, it failed or stopped short of
@@ -39,7 +39,7 @@ function dsrAssignedTo(assigneeId: string): DataSubjectRequest {
   return {
     id: "d1",
     kind: "erasure",
-    subject_ref: "8f3a-person-uuid",
+    subject_ref: "8f3a-contact-uuid",
     status: "open",
     assignee_id: assigneeId,
     due_at: "2026-08-01T00:00:00Z",
@@ -101,7 +101,7 @@ function stub(dsr: DataSubjectRequest, roster: RosterServer) {
         "https://test.local",
       );
       if (url.pathname.endsWith("/me")) {
-        // The queue reads on `privacy_request:read`: its rows name the people
+        // The queue reads on `privacy_request:read`: its rows name the contacts
         // who exercised an Art. 15/17 right, so a reader needs that grant to
         // reach any of the rows this file is about.
         return json(
@@ -145,7 +145,7 @@ async function openAssignee(): Promise<{
   const user = userEvent.setup();
   render(<PrivacyInboxCard />);
   await user.click(
-    await screen.findByRole("button", { name: /8f3a-person-uuid/i }),
+    await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
   );
   return { user, picker: await screen.findByLabelText(en["privacy.assignee"]) };
 }
@@ -167,7 +167,7 @@ describe("an assignee the picker's own list does not offer", () => {
     expect(picker).toHaveTextContent(en["ref.notInRoster"]);
     // The em dash is the face of a request assigned to NOBODY. This one is
     // assigned, and a DPO who reads it as unassigned reassigns the work off the
-    // person doing it with the statutory clock running.
+    // contact doing it with the statutory clock running.
     expect(picker).not.toHaveTextContent("—");
 
     // Legible without being offered, exactly as the unassigned entry is:

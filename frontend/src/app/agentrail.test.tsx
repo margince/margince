@@ -181,7 +181,7 @@ const COMPANY_360_VIEW = {
     updated_at: "2026-06-01T08:00:00Z",
   },
   sections_omitted: [],
-  people: { data: [], page: emptyPage },
+  contacts: { data: [], page: emptyPage },
   deals: {
     data: [],
     page: emptyPage,
@@ -1015,7 +1015,7 @@ describe("AgentRail", () => {
   const runLines = () =>
     [...panel().querySelectorAll(".arrunline")].map((el) => el.textContent);
 
-  // The work a person ASKS for, which is the case the rail was silent on until
+  // The work a contact ASKS for, which is the case the rail was silent on until
   // the router could say `running`. Asserted at RENDER and not against the map:
   // the copy existing is not the claim — the claim is that a live summarize
   // reaches the reader's own line, in their own words, through the same feed
@@ -1024,7 +1024,7 @@ describe("AgentRail", () => {
   // NAMED, because that is the line that answers the reader: the server sends
   // the record the summary is about as `subject_label`, and the rail says
   // "about Acme" rather than "about this company" — which was wrong for a
-  // person or a meeting and told a rep nothing for a company.
+  // contact or a meeting and told a rep nothing for a company.
   it("names the record a summary is about while it is still being written", async () => {
     withRuns(RUN({ kind: "summarize", subject_label: "Acme" }));
     const { container } = render(ROUTE);
@@ -1035,12 +1035,12 @@ describe("AgentRail", () => {
   });
 
   // The name is the way to the record. A company's name goes to the company,
-  // a person's to the contact, through the same address every other link in
+  // a contact's to the contact, through the same address every other link in
   // the app uses for that record — and following it is leaving for the
   // record, not opening the panel.
   it.each([
     ["company", "Acme", "#/companies/"],
-    ["person", "Ana Roth", "#/contacts/"],
+    ["contact", "Ana Roth", "#/contacts/"],
   ])(
     "links the %s a summary is about to its record",
     async (subjectType, name, page) => {
@@ -1293,7 +1293,7 @@ describe("AgentRail", () => {
     );
   });
 
-  // The crawl a person starts from a company page, reported by the dossier row
+  // The crawl a contact starts from a company page, reported by the dossier row
   // itself rather than by the settled model calls it makes — which is what lets
   // the orb hold `ingest` for the whole read instead of resting between calls.
   // The line names the company, because the source sent its name.
@@ -1319,7 +1319,7 @@ describe("AgentRail", () => {
   });
 
   // The overnight case, which is the whole reason a fault is acknowledged rather
-  // than decayed: a run fails at four in the morning and the person it ran for
+  // than decayed: a run fails at four in the morning and the contact it ran for
   // is asleep, so whatever the orb does at 04:12 is seen by nobody. It holds
   // until the panel has actually been opened.
   it("holds a failed run on the Core until the panel has been opened", async () => {

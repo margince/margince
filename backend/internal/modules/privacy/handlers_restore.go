@@ -55,7 +55,7 @@ func (h Handlers) RestoreRecordChange(w http.ResponseWriter, r *http.Request,
 	}
 	// Human-only, and checked here rather than left to the record's own write
 	// gate: an agent holding write authority on the record would otherwise pass
-	// every later check and land a `restore` row declaring a person's change
+	// every later check and land a `restore` row declaring a contact's change
 	// undone. Undoing is an act of authority over what somebody else decided,
 	// which is why the contract reserves it to a human.
 	if err := auth.RequireHuman(r.Context()); err != nil {
@@ -63,7 +63,7 @@ func (h Handlers) RestoreRecordChange(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	// If-Match is REQUIRED on this route alone. A restore is decided from a
-	// history screen the person has been reading, so the record may have moved
+	// history screen the contact has been reading, so the record may have moved
 	// under them between reading and pressing; last-write-wins is not an
 	// acceptable default for a write whose entire premise is a prior state.
 	version, err := strconv.ParseInt(params.IfMatch, 10, 64)

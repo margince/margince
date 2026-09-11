@@ -229,7 +229,7 @@ func (s *scenario) seedID(t *testing.T, sql string, args ...any) ids.UUID {
 }
 
 // recordName reads a record's display name out of its fields, for a failure
-// message a person can act on.
+// message a contact can act on.
 //
 // A record on this surface carries its fields as a raw JSON document rather
 // than as named members, so there is no Title to read. A failure naming

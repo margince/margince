@@ -5,7 +5,7 @@ package compose
 
 // The overlay-mode human read surface (design.md §4.1: "Overlay does not
 // fork the data API"). Server shadows the contract read ops for the five
-// mirror entity types — get/list for person, company, deal, lead,
+// mirror entity types — get/list for contact, company, deal, lead,
 // activity, plus search — routing them through the same Dispatcher the
 // MCP/agent seam consumers already ride when the workspace runs in
 // overlay mode, and delegating to the native module handler otherwise.
@@ -201,18 +201,18 @@ func overlayList[T any](s Server, w http.ResponseWriter, r *http.Request, et dat
 	httperr.WriteJSON(w, http.StatusOK, respond(data, page))
 }
 
-// GetPerson shadows the person read: mirror-assembled in overlay mode,
-// the native people handler otherwise. Same split for every Get/List
+// GetContact shadows the contact read: mirror-assembled in overlay mode,
+// the native contacts handler otherwise. Same split for every Get/List
 // shadow below.
-func (s Server) GetPerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	overlayGet(s, w, r, datasource.EntityPerson, id,
-		func() { s.peopleHandlers.GetPerson(w, r, id) }, overlayWirePerson)
+func (s Server) GetContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	overlayGet(s, w, r, datasource.EntityContact, id,
+		func() { s.contactsHandlers.GetContact(w, r, id) }, overlayWireContact)
 }
 
-// ListPeople shadows the person list.
-func (s Server) ListPeople(w http.ResponseWriter, r *http.Request, params crmcontracts.ListPeopleParams) {
-	overlayList(s, w, r, datasource.EntityPerson,
-		func() { s.peopleHandlers.ListPeople(w, r, params) },
+// ListContacts shadows the contact list.
+func (s Server) ListContacts(w http.ResponseWriter, r *http.Request, params crmcontracts.ListContactsParams) {
+	overlayList(s, w, r, datasource.EntityContact,
+		func() { s.contactsHandlers.ListContacts(w, r, params) },
 		[]overlayParam{
 			{paramSort, params.Sort != nil},
 			{paramOwnerID, params.OwnerId != nil},
@@ -230,22 +230,22 @@ func (s Server) ListPeople(w http.ResponseWriter, r *http.Request, params crmcon
 			{paramCapturedByKind, params.CapturedByKind != nil},
 			{paramAiWritten, params.AiWritten != nil},
 		},
-		params.Q, params.Cursor, params.Limit, overlayWirePerson,
-		func(data []crmcontracts.Person, page crmcontracts.PageInfo) any {
-			return crmcontracts.PersonListResponse{Data: data, Page: page}
+		params.Q, params.Cursor, params.Limit, overlayWireContact,
+		func(data []crmcontracts.Contact, page crmcontracts.PageInfo) any {
+			return crmcontracts.ContactListResponse{Data: data, Page: page}
 		})
 }
 
 // GetCompany shadows the company read.
 func (s Server) GetCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	overlayGet(s, w, r, datasource.EntityCompany, id,
-		func() { s.peopleHandlers.GetCompany(w, r, id) }, overlayWireCompany)
+		func() { s.contactsHandlers.GetCompany(w, r, id) }, overlayWireCompany)
 }
 
 // ListCompanies shadows the company list.
 func (s Server) ListCompanies(w http.ResponseWriter, r *http.Request, params crmcontracts.ListCompaniesParams) {
 	overlayList(s, w, r, datasource.EntityCompany,
-		func() { s.peopleHandlers.ListCompanies(w, r, params) },
+		func() { s.contactsHandlers.ListCompanies(w, r, params) },
 		[]overlayParam{
 			{paramSort, params.Sort != nil},
 			{paramOwnerID, params.OwnerId != nil},
@@ -327,13 +327,13 @@ func (s Server) ListDeals(w http.ResponseWriter, r *http.Request, params crmcont
 // GetLead shadows the lead read.
 func (s Server) GetLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	overlayGet(s, w, r, datasource.EntityLead, id,
-		func() { s.peopleHandlers.GetLead(w, r, id) }, overlayWireLead)
+		func() { s.contactsHandlers.GetLead(w, r, id) }, overlayWireLead)
 }
 
 // ListLeads shadows the lead list.
 func (s Server) ListLeads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListLeadsParams) {
 	overlayList(s, w, r, datasource.EntityLead,
-		func() { s.peopleHandlers.ListLeads(w, r, params) },
+		func() { s.contactsHandlers.ListLeads(w, r, params) },
 		[]overlayParam{
 			{paramSort, params.Sort != nil},
 			{paramStatus, params.Status != nil},

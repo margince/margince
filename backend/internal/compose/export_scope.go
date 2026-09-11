@@ -39,8 +39,8 @@ func memberScope(ctx context.Context, m exportMember, alias string, arg func(any
 		return auditExportScope(ctx, alias, arg)
 	case scopeWorkspace:
 		return "", nil
-	case scopePersonChild:
-		return personChildExportScope(ctx, alias, arg)
+	case scopeContactChild:
+		return contactChildExportScope(ctx, alias, arg)
 	case scopeMirror:
 		return mirrorExportScope(ctx, alias+".object_class", alias+".external_id", arg)
 	case scopeMirrorAssoc:
@@ -90,20 +90,20 @@ func mirrorExportScope(ctx context.Context, classCol, idCol string, arg func(any
 	), nil
 }
 
-// personChildExportScope scopes a person child row by its parent
-// person's visibility — the child discloses nothing its parent read
+// contactChildExportScope scopes a contact child row by its parent
+// contact's visibility — the child discloses nothing its parent read
 // would not.
-func personChildExportScope(ctx context.Context, alias string, arg func(any) int) (string, error) {
+func contactChildExportScope(ctx context.Context, alias string, arg func(any) int) (string, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
 	}
-	if auth.UnboundedFor(actor, "person") {
+	if auth.UnboundedFor(actor, "contact") {
 		return "", nil
 	}
-	predicate := auth.VisiblePredicate(actor, "person", arg)
+	predicate := auth.VisiblePredicate(actor, "contact", arg)
 	return fmt.Sprintf(
-		`EXISTS (SELECT 1 FROM person pp WHERE pp.id = %s.person_id AND pp.archived_at IS NULL AND %s)`,
+		`EXISTS (SELECT 1 FROM contact pp WHERE pp.id = %s.contact_id AND pp.archived_at IS NULL AND %s)`,
 		alias, predicate("pp"),
 	), nil
 }
@@ -116,7 +116,7 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
 	}
-	if auth.UnboundedFor(actor, "person", "company", "deal", "project") {
+	if auth.UnboundedFor(actor, "contact", "company", "deal", "project") {
 		return "", nil
 	}
 	// Every endpoint column the table HAS, not the ones an author remembered.
@@ -129,8 +129,8 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 	// names is agentRecordType, a different vocabulary that spells the same word, and binding
 	// this list to it would assert a correspondence that does not hold
 	for _, endpoint := range []struct{ column, table string }{
-		{"person_id", "person"},
-		{"counterparty_person_id", "person"},
+		{"contact_id", "contact"},
+		{"counterparty_contact_id", "contact"},
 		{"company_id", "company"},
 		{"counterparty_company_id", "company"},
 		{"deal_id", "deal"},
@@ -158,7 +158,7 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 // row_scope=all (auth.ActivityContentClause). An attachment's filename and an
 // audit image's before-and-after are that message's content.
 //
-// Today no HUMAN reaches the unbounded branch: person and company are
+// Today no HUMAN reaches the unbounded branch: contact and company are
 // owner-private (auth.ownerPrivateTables), so UnboundedFor is false for every
 // seat including an admin, and an admin export has always faced the audience
 // through the bounded arms below. The branch is the system principal's, and
@@ -183,13 +183,13 @@ func polymorphicVisibleWith(ctx context.Context, typeCol, idCol string, arg func
 	if err != nil {
 		return "", err
 	}
-	if auth.UnboundedFor(actor, "person", "company", "deal", "lead") {
+	if auth.UnboundedFor(actor, "contact", "company", "deal", "lead") {
 		// Every non-activity row passes; an activity row faces the audience.
 		return fmt.Sprintf("(%s <> 'activity' OR %s)", typeCol, activityArm), nil
 	}
 	var parts []string
 	for _, e := range []struct{ kind, table string }{
-		{"person", "person"},
+		{"contact", "contact"},
 		{"company", "company"},
 		{"deal", "deal"},
 		{"lead", "lead"},
@@ -254,8 +254,8 @@ func auditExportScope(ctx context.Context, alias string, arg func(any) int) (str
 	if err != nil {
 		return "", err
 	}
-	if auth.UnboundedFor(actor, "person", "company", "deal", "lead") {
-		// The system principal's branch, and only its: person and company
+	if auth.UnboundedFor(actor, "contact", "company", "deal", "lead") {
+		// The system principal's branch, and only its: contact and company
 		// are owner-private (auth.ownerPrivateTables), so UnboundedFor is false
 		// for every human including one with row_scope=all, and an admin export
 		// takes the bounded path below.

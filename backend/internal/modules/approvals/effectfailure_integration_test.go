@@ -80,7 +80,7 @@ func TestAnApprovedEffectThatRunsLeavesNoFailureMark(t *testing.T) {
 	}
 }
 
-// The failure comes back to the person who decided it, and to nobody else:
+// The failure comes back to the contact who decided it, and to nobody else:
 // FailedForDecider binds the acting user inside List, so one rep cannot read
 // another's failed decisions by asking nicely.
 func TestAFailedEffectIsListedForItsDeciderAlone(t *testing.T) {

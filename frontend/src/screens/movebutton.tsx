@@ -26,7 +26,7 @@ import { Button } from "../design-system/atoms";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
-import { PersonMeetingBrief } from "./meetingbrief";
+import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 
@@ -67,7 +67,7 @@ export function MoveButton({
 }: Readonly<{
   // The deal whose card to refresh after the verb writes, where the caller has
   // one. OPTIONAL because the worklist does not: a queue row's move may belong
-  // to a deal, a person or nothing at all, and passing an empty string would
+  // to a deal, a contact or nothing at all, and passing an empty string would
   // invalidate a key naming no deal — a call that does nothing, spelled as one
   // that does something.
   dealId?: string;
@@ -177,7 +177,7 @@ export function MoveButton({
             <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>
-          <PersonMeetingBrief
+          <ContactMeetingBrief
             activityId={activityId}
             open={briefOpen}
             onClose={() => setBriefOpen(false)}

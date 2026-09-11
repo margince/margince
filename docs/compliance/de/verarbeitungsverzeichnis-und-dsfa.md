@@ -39,7 +39,7 @@
 | Besonderheit | **Nicht verfügbar oder ohne Budget bedeutet zurückgehalten.** Ein Ausfall führt nie zu einer Freigabe |
 | Durchsetzung | `compose/captureverdict.go`, `compose/confidentialityverdict.go`; die Vorrangregel in `capture/senderoverride.go` |
 
-### A.4 Vernichtung auf Verlangen der beschäftigten Person
+### A.4 Vernichtung auf Verlangen der beschäftigten Contact
 
 | Feld | Angabe |
 | --- | --- |

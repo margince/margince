@@ -18,7 +18,7 @@ import (
 
 // Handlers is the plan's HTTP surface.
 //
-// Human-only, every operation. A plan is what a person means to do and what
+// Human-only, every operation. A plan is what a contact means to do and what
 // they say they are stuck on; an agent writing one would be the product
 // deciding a rep's week for them, and an agent reading one would put a
 // colleague's admission of being behind into a context nobody chose.

@@ -7,14 +7,14 @@ package integration
 
 // What the record-tags read hides, and what it deliberately does not.
 //
-// A first draft of this file asserted that a rep reading another rep's person
+// A first draft of this file asserted that a rep reading another rep's contact
 // gets not-found. That is NOT this product's rule: customer identity is
 // workspace-readable (auth/tableclass_test.go pins it), so every seat reads
-// every person and the WRITE arm is what keeps a row its owner's. The test
+// every contact and the WRITE arm is what keeps a row its owner's. The test
 // failed, a control showed the shared row-scope helper admitting the same
 // record, and the rule turned out to be the deliberate one.
 //
-// What actually hides a record is capture privacy: a captured person answers
+// What actually hides a record is capture privacy: a captured contact answers
 // to its owner alone until somebody promotes or shares it. That is the case
 // worth pinning here, because it is the one where this read could leak.
 
@@ -30,19 +30,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ownPersonAndTagPerms reads its own person rows and the vocabulary — narrow
+// ownContactAndTagPerms reads its own contact rows and the vocabulary — narrow
 // enough that a refusal is about the record rather than about the tags.
-func ownPersonAndTagPerms() principal.Permissions {
+func ownContactAndTagPerms() principal.Permissions {
 	return principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
-			"person": {Read: true},
-			"tag":    {Read: true},
+			"contact": {Read: true},
+			"tag":     {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,
 	}
 }
 
-// An owner-private captured person is invisible to another seat, and the tags
+// An owner-private captured contact is invisible to another seat, and the tags
 // on it must be too — otherwise this read becomes the side channel that says a
 // private contact exists and what somebody labelled them.
 //
@@ -52,11 +52,11 @@ func TestRecordTagsHidesAnOwnerPrivateCapture(t *testing.T) {
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 
-	person := e.SeedPerson(t, "A Private Capture", &e.Rep1)
-	makeCapturePrivate(t, e, person, e.Rep1)
+	contact := e.SeedContact(t, "A Private Capture", &e.Rep1)
+	makeCapturePrivate(t, e, contact, e.Rep1)
 
-	ctx := e.As(e.Rep3, nil, ownPersonAndTagPerms())
-	_, err := store.RecordTagsFor(ctx, "person", person)
+	ctx := e.As(e.Rep3, nil, ownContactAndTagPerms())
+	_, err := store.RecordTagsFor(ctx, "contact", contact)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("reading an owner-private capture answered %v, want not-found — "+
 			"the tags on a private contact are as private as the contact", err)
@@ -69,11 +69,11 @@ func TestRecordTagsAnswersForThePrivateCapturesOwner(t *testing.T) {
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 
-	person := e.SeedPerson(t, "A Private Capture", &e.Rep1)
-	makeCapturePrivate(t, e, person, e.Rep1)
+	contact := e.SeedContact(t, "A Private Capture", &e.Rep1)
+	makeCapturePrivate(t, e, contact, e.Rep1)
 
-	ctx := e.As(e.Rep1, nil, ownPersonAndTagPerms())
-	read, err := store.RecordTagsFor(ctx, "person", person)
+	ctx := e.As(e.Rep1, nil, ownContactAndTagPerms())
+	read, err := store.RecordTagsFor(ctx, "contact", contact)
 	if err != nil {
 		t.Fatalf("the owner reading their own private capture answered %v", err)
 	}
@@ -82,14 +82,14 @@ func TestRecordTagsAnswersForThePrivateCapturesOwner(t *testing.T) {
 	}
 }
 
-// makeCapturePrivate marks a person as an owner-private capture, the state a
+// makeCapturePrivate marks a contact as an owner-private capture, the state a
 // mail or business-card import produces before anybody promotes it.
-func makeCapturePrivate(t *testing.T, e *Env, person ids.UUID, owner ids.UUID) {
+func makeCapturePrivate(t *testing.T, e *Env, contact ids.UUID, owner ids.UUID) {
 	t.Helper()
 	err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
 		_, execErr := tx.Exec(e.Admin(),
-			`UPDATE person SET visibility = 'owner', owner_id = $2 WHERE id = $1`,
-			person, owner)
+			`UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`,
+			contact, owner)
 		return execErr
 	})
 	if err != nil {
@@ -113,14 +113,14 @@ func makeCapturePrivate(t *testing.T, e *Env, person ids.UUID, owner ids.UUID) {
 func TestARetiredTagCanStillBeTakenOffARecord(t *testing.T) {
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
-	ctx := e.As(e.Rep1, nil, curatePersonAndTagPerms())
+	ctx := e.As(e.Rep1, nil, curateContactAndTagPerms())
 
-	person := e.SeedPerson(t, "Still Carries A Retired Word", &e.Rep1)
+	contact := e.SeedContact(t, "Still Carries A Retired Word", &e.Rep1)
 	tag, err := store.CreateTag(ctx, "Retired Conference", nil, nil)
 	if err != nil {
 		t.Fatalf("coining the word: %v", err)
 	}
-	if _, err := store.ApplyTag(ctx, tag.ID, "person", person); err != nil {
+	if _, err := store.ApplyTag(ctx, tag.ID, "contact", contact); err != nil {
 		t.Fatalf("putting the word on the record: %v", err)
 	}
 	if _, err := store.ArchiveTag(ctx, tag.ID); err != nil {
@@ -129,7 +129,7 @@ func TestARetiredTagCanStillBeTakenOffARecord(t *testing.T) {
 
 	// The read still reports it, which is what makes the refusal a contradiction
 	// rather than merely a limitation.
-	carried, err := store.RecordTagsFor(ctx, "person", person)
+	carried, err := store.RecordTagsFor(ctx, "contact", contact)
 	if err != nil {
 		t.Fatalf("reading the record's tags: %v", err)
 	}
@@ -138,12 +138,12 @@ func TestARetiredTagCanStillBeTakenOffARecord(t *testing.T) {
 			"describes the surface: %+v", carried)
 	}
 
-	if err := store.RemoveTag(ctx, tag.ID, "person", person); err != nil {
+	if err := store.RemoveTag(ctx, tag.ID, "contact", contact); err != nil {
 		t.Fatalf("taking the retired word off the record answered %v — the read hands it back "+
 			"and nothing can remove it, so the record is stuck with it", err)
 	}
 
-	left, err := store.RecordTagsFor(ctx, "person", person)
+	left, err := store.RecordTagsFor(ctx, "contact", contact)
 	if err != nil {
 		t.Fatalf("re-reading the record's tags: %v", err)
 	}
@@ -152,16 +152,16 @@ func TestARetiredTagCanStillBeTakenOffARecord(t *testing.T) {
 	}
 }
 
-// curatePersonAndTagPerms may write the person and curate the vocabulary.
+// curateContactAndTagPerms may write the contact and curate the vocabulary.
 //
 // RowScopeAll because retiring a word is a workspace-wide act — the vocabulary
 // gate refuses a bounded seat outright — and this case is about what happens
 // AFTER the word is retired, not about who may retire one.
-func curatePersonAndTagPerms() principal.Permissions {
+func curateContactAndTagPerms() principal.Permissions {
 	return principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
-			"person": {Read: true, Create: true, Update: true},
-			"tag":    {Read: true, Create: true, Update: true, Delete: true},
+			"contact": {Read: true, Create: true, Update: true},
+			"tag":     {Read: true, Create: true, Update: true, Delete: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}

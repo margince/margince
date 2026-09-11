@@ -6,8 +6,8 @@ package surfe
 // The four calls the Adapter contract names, over Surfe's v2 asynchronous
 // bulk-enrichment API:
 //
-//	POST /v2/people/enrich      → an enrichment id (202)
-//	GET  /v2/people/enrich/{id} → IN_PROGRESS, or COMPLETED with the people
+//	POST /v2/contacts/enrich      → an enrichment id (202)
+//	GET  /v2/contacts/enrich/{id} → IN_PROGRESS, or COMPLETED with the contacts
 //	GET  /v1/credits            → the balance, which is also the credential check
 //
 // Every failure classifies into the port's closed Outcome vocabulary. The one
@@ -34,7 +34,7 @@ type (
 	enrichRequest struct {
 		EnrichmentOptions enrichOptions `json:"enrichmentOptions"`
 		Include           includeFlags  `json:"include"`
-		People            []wirePerson  `json:"people"`
+		Contacts          []wireContact `json:"contacts"`
 	}
 	enrichOptions struct {
 		// AcceptedEmailType is how the frozen cascade reaches the vendor:
@@ -51,7 +51,7 @@ type (
 		LinkedInURL bool `json:"linkedInUrl"`
 		Mobile      bool `json:"mobile"`
 	}
-	wirePerson struct {
+	wireContact struct {
 		FirstName     string `json:"firstName,omitempty"`
 		LastName      string `json:"lastName,omitempty"`
 		LinkedInURL   string `json:"linkedinUrl,omitempty"`
@@ -63,8 +63,8 @@ type (
 		EnrichmentID string `json:"enrichmentID"`
 	}
 	enrichResult struct {
-		Status string       `json:"status"`
-		People []wireResult `json:"people"`
+		Status   string       `json:"status"`
+		Contacts []wireResult `json:"contacts"`
 	}
 	wireResult struct {
 		Status        string       `json:"status"`
@@ -147,7 +147,7 @@ func (a *Adapter) Credits(ctx context.Context, cred provider.Credential) (provid
 	}, nil
 }
 
-// Submit starts one person's enrichment.
+// Submit starts one contact's enrichment.
 //
 // The correlation id rides as externalID: it is an opaque handle carrying no
 // subject identity, which is what makes it safe to hand a third party, and it
@@ -162,7 +162,7 @@ func (a *Adapter) Submit(ctx context.Context, cred provider.Credential, req prov
 			SkipMobileEnrichmentIfNoEmailFound: true,
 		},
 		Include: includeFor(req.Categories),
-		People: []wirePerson{{
+		Contacts: []wireContact{{
 			FirstName:     req.Identifiers.FirstName,
 			LastName:      req.Identifiers.LastName,
 			LinkedInURL:   req.Identifiers.LinkedInURL,
@@ -172,7 +172,7 @@ func (a *Adapter) Submit(ctx context.Context, cred provider.Credential, req prov
 		}},
 	}
 	var accepted enrichAccepted
-	status, err := a.call(ctx, cred, http.MethodPost, "/v2/people/enrich", body, &accepted)
+	status, err := a.call(ctx, cred, http.MethodPost, "/v2/contacts/enrich", body, &accepted)
 	if err != nil {
 		// The request LEFT and its fate is unknown — a timeout, a dropped
 		// connection, an unreadable answer. That is an OUTCOME, not a
@@ -200,7 +200,7 @@ func (a *Adapter) Submit(ctx context.Context, cred provider.Credential, req prov
 // the platform park no payload between hand-off attempts.
 func (a *Adapter) Poll(ctx context.Context, cred provider.Credential, providerJobID string) (provider.PollStatus, error) {
 	var out enrichResult
-	status, err := a.call(ctx, cred, http.MethodGet, "/v2/people/enrich/"+providerJobID, nil, &out)
+	status, err := a.call(ctx, cred, http.MethodGet, "/v2/contacts/enrich/"+providerJobID, nil, &out)
 	if err != nil {
 		// A failed poll costs nothing and settles nothing, so it reads as
 		// PENDING rather than as an error: the sweep asks again on its next
@@ -221,11 +221,11 @@ func (a *Adapter) Poll(ctx context.Context, cred provider.Credential, providerJo
 	if out.Status != statusCompleted {
 		return provider.PollStatus{Outcome: provider.OutcomePending}, nil
 	}
-	if len(out.People) == 0 {
+	if len(out.Contacts) == 0 {
 		return provider.PollStatus{Outcome: provider.OutcomeNoMatch, SafeStatusCode: "no_match"}, nil
 	}
-	person := out.People[0]
-	claims, err := claimsFor(person)
+	contact := out.Contacts[0]
+	claims, err := claimsFor(contact)
 	if err != nil {
 		// A result we cannot encode is NOT a no-match: the run completed and
 		// was charged. Surfacing the error leaves it in progress for the
@@ -241,7 +241,7 @@ func (a *Adapter) Poll(ctx context.Context, cred provider.Credential, providerJo
 	}
 	return provider.PollStatus{
 		Outcome: provider.OutcomeCompleted,
-		Result:  &provider.Result{Claims: claims, PoolSpend: spendFor(person)},
+		Result:  &provider.Result{Claims: claims, PoolSpend: spendFor(contact)},
 	}, nil
 }
 

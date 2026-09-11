@@ -5,8 +5,8 @@
 
 package gates
 
-// A nightly agent acts FOR A PERSON, and the identity of one night's work has
-// to say which person. This gate holds the half that fails silently.
+// A nightly agent acts FOR A CONTACT, and the identity of one night's work has
+// to say which contact. This gate holds the half that fails silently.
 //
 // Two uniqueness rules stop a scheduled occurrence running twice:
 // agent_run_trigger_unique on trigger_ref alone, and runner_job_trigger_unique
@@ -18,7 +18,7 @@ package gates
 // NOTHING ERRORS WHEN THAT HAPPENS. One row inserting and the rest conflicting
 // is byte-for-byte what a correct re-seed looks like — ON CONFLICT DO NOTHING
 // is the intended path, the tick returns nil, and the log is quiet. The team
-// simply does not get briefs, and the first person to notice is a rep who
+// simply does not get briefs, and the first contact to notice is a rep who
 // wonders where theirs went. That is why this is a gate and not a test: the
 // defect's signature is the absence of work, and absence is what a passing
 // suite looks like.

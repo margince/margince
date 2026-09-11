@@ -47,11 +47,11 @@ function coreState(phase: AuthPhase): MarginceCoreState {
   if (phase === "unavailable") {
     // The installation cannot be reached, which is the same shape of failure as
     // a source the agent cannot get to: nothing is wrong, nothing is reachable,
-    // and that is a person's problem to resolve, not the agent's.
+    // and that is a contact's problem to resolve, not the agent's.
     return "warning";
   }
   // idle and quiet both: nothing is running and nothing is staged. The surface
-  // is waiting on a person, and the Core does not claim to be listening for
+  // is waiting on a contact, and the Core does not claim to be listening for
   // them — the agent reads captured activity, it holds no conversation.
   return "idle";
 }

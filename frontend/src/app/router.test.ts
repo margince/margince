@@ -109,7 +109,7 @@ describe("routeHash", () => {
 // What a screen's subtree is keyed on (App.tsx), so these are the claims that
 // decide whether a navigation is a remount or a re-render.
 describe("routeIdentity", () => {
-  it("drops the person page's tab: six tabs, one identity", () => {
+  it("drops the contact page's tab: six tabs, one identity", () => {
     const overview = routeIdentity({
       screen: "contacts",
       id: "p-1",
@@ -129,13 +129,13 @@ describe("routeIdentity", () => {
     }
   });
 
-  it("keeps the person apart from the next person", () => {
+  it("keeps the contact apart from the next contact", () => {
     expect(
       routeIdentity({ screen: "contacts", id: "p-1", id2: "deals" }),
     ).not.toBe(routeIdentity({ screen: "contacts", id: "p-2", id2: "deals" }));
   });
 
-  it("keeps the contacts list apart from a person on it", () => {
+  it("keeps the contacts list apart from a contact on it", () => {
     expect(routeIdentity({ screen: "contacts" })).toBe("#/contacts");
     expect(routeIdentity({ screen: "contacts", id: "p-1" })).toBe(
       "#/contacts/p-1",
@@ -215,16 +215,16 @@ it("answers the old reports address, carrying the segment across", () => {
 });
 
 // The account's contact tab is addressed `contacts`. Every link already sent
-// names it `people`, and one that lands on Overview has kept the reader on the
+// names it `contacts`, and one that lands on Overview has kept the reader on the
 // account and still lost them the roster.
 it("answers the old company contacts tab, keeping the account and what is under it", () => {
-  expect(parseHash("#/companies/o-1/people")).toEqual({
+  expect(parseHash("#/companies/o-1/contacts")).toEqual({
     screen: "companies",
     id: "o-1",
     id2: "contacts",
     id3: undefined,
   });
-  expect(parseHash("#/companies/o-1/people/p-2")).toEqual({
+  expect(parseHash("#/companies/o-1/contacts/p-2")).toEqual({
     screen: "companies",
     id: "o-1",
     id2: "contacts",
@@ -232,14 +232,14 @@ it("answers the old company contacts tab, keeping the account and what is under 
   });
   // A query on the hash belongs to the screen, not the route, so the tab still
   // resolves for an address carrying paging keys.
-  expect(parseHash("#/companies/o-1/people?cursor=x").id2).toBe("contacts");
+  expect(parseHash("#/companies/o-1/contacts?cursor=x").id2).toBe("contacts");
 });
 
 // The tab is a VIEW of the account (IDENTITY_DEPTH), so the old address and the
 // new one are the same thing on screen: were they two identities, arriving on a
 // bookmark would throw the page away and lose the reader's scroll.
 it("gives the old and new company contacts addresses one identity", () => {
-  expect(routeIdentity(parseHash("#/companies/o-1/people"))).toBe(
+  expect(routeIdentity(parseHash("#/companies/o-1/contacts"))).toBe(
     routeIdentity(parseHash("#/companies/o-1/contacts")),
   );
 });

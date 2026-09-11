@@ -55,8 +55,8 @@ func TestAWalkResumesForTheReaderWhoStartedIt(t *testing.T) {
 // TestAColleaguesWalkIsNotResumable is the one that matters most.
 //
 // A snapshot id is an opaque uuid a client holds, and nothing stops one being
-// pasted into another person's request. The row is keyed on its reader, and
-// this proves the SELECT is too — a walk is one person's position and reading
+// pasted into another contact's request. The row is keyed on its reader, and
+// this proves the SELECT is too — a walk is one contact's position and reading
 // somebody else's would hand over the order their day was ranked in.
 func TestAColleaguesWalkIsNotResumable(t *testing.T) {
 	e := integration.Setup(t)

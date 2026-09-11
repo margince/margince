@@ -130,7 +130,7 @@ describe("history field labels", () => {
       "company",
       "deal",
       "lead",
-      "person",
+      "contact",
       "project",
     ]);
     expect(byType.get("deal")).toContain("amount_minor");

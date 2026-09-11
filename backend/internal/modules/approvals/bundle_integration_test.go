@@ -29,7 +29,7 @@ import (
 
 // The two kinds a site read stages together, and the grants deciding each one
 // takes: a company update for the company's own facts, a lead create for
-// each person the site published. They differ on purpose — that difference is
+// each contact the site published. They differ on purpose — that difference is
 // what the authority test below turns on.
 const (
 	kindDeepRead = "deepread"
@@ -518,8 +518,8 @@ func backendPID(t *testing.T, tx pgx.Tx) int {
 //
 // decideInTx takes the row lock, so this call waits for the competing decision
 // and then finds a verdict it must not overwrite — and reports it as an ERROR.
-// Absorbing that error is what keeps one person's click from turning another
-// person's whole bundle into a failed request, and re-reading the row is what
+// Absorbing that error is what keeps one contact's click from turning another
+// contact's whole bundle into a failed request, and re-reading the row is what
 // makes the answer say which verdict actually won.
 func TestABundleMemberDecidedMidFlightIsAbsorbedRatherThanFailingTheBundle(t *testing.T) {
 	e := setupStaging(t)

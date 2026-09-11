@@ -121,7 +121,7 @@ describe("the handoff view renders what it was given", () => {
 
   // "Who to call" answered as a UUID restates the question. The name is what
   // the tool promises on this list, so it is what the panel shows.
-  it("names the people to call, and falls to the id for one it cannot name", () => {
+  it("names the contacts to call, and falls to the id for one it cannot name", () => {
     const el = root();
     render(el, handoffFixture.data, []);
     expect(el.textContent).toContain("Alice Müller");
@@ -131,7 +131,7 @@ describe("the handoff view renders what it was given", () => {
       {
         project_id: "5c4d3e2f-1a0b-4c9d-8e7f-6a5b4c3d2e1f",
         gaps: [],
-        stakeholders: [{ person_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7" }],
+        stakeholders: [{ contact_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7" }],
       },
       [],
     );

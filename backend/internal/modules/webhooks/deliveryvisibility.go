@@ -65,7 +65,7 @@ var selfOnlyEvents = map[string]struct{}{
 	"linkedin_account.changed":  {},
 	"linkedin_match.decided":    {},
 	"linkedin_network.imported": {},
-	// A notice is addressed to ONE person; fanning its lifecycle to every
+	// A notice is addressed to ONE contact; fanning its lifecycle to every
 	// subscription owner would tell colleagues who was notified of what.
 	"notice.created": {},
 	"notice.read":    {},
@@ -128,7 +128,7 @@ var workspaceLevelEntities = map[string]struct{}{
 // (not entity type) because their runtime subject class collides with the
 // row-scoped entity names above. The overlay mirror.* events stamp the
 // diverged record's RUNTIME canonical class (rec.ObjectClass / ref.Type /
-// del.ObjectClass — e.g. "person", "deal") as their entity type, but the
+// del.ObjectClass — e.g. "contact", "deal") as their entity type, but the
 // id they carry is a mirror-synthetic key (externalIDToUUID) or a
 // pre-materialization EntityRef — NOT a live record id the owner's grants
 // can be probed against. An entity-type probe would therefore either miss
@@ -151,7 +151,7 @@ var deferredDeliveryEvents = map[string]string{
 
 // deferredDeliveryEntities are subscribable subjects keyed by RUNTIME
 // entity type whose row scope has no probe today. retention.applied is a
-// dynamic-entity event: its person/lead/deal/activity subjects DO resolve
+// dynamic-entity event: its contact/lead/deal/activity subjects DO resolve
 // through the row-scope probes below, but the nightly retention sweep also
 // ages out engine telemetry — ai_call (embedding traces, privacy/
 // retention.go's eraseEmbedCall), ai_call_payload (retained call content),
@@ -207,7 +207,7 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 	// name other concepts that spell the same word — an approval target, a mirror
 	// object class — and hiding these behind one would assert a correspondence no
 	// gate holds.
-	case "person", "company", "deal", "lead", "project", "voice_profile":
+	case "contact", "company", "deal", "lead", "project", "voice_profile":
 		return s.rowScopedVisible(ctx, entityType, func(c context.Context, tx pgx.Tx) error {
 			return auth.EnsureVisible(c, tx, entityType, entityID)
 		})

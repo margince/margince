@@ -16,7 +16,7 @@ import (
 //
 // The two `*_attachment` values are the library's answer to "where did this come
 // from", derived by capture from the message that carried the file. A hand
-// upload came from the person uploading it, so asserting either on one mints a
+// upload came from the contact uploading it, so asserting either on one mints a
 // claim every later reader takes for a derived fact — and unlike a wrong title,
 // nothing downstream can tell it from the real thing.
 //
@@ -59,7 +59,7 @@ func TestOnlyACapturedFileCanCarryAProvenanceCategory(t *testing.T) {
 }
 
 // The refusal says what to do instead, and carries the machine code the contract
-// publishes — a client that shows the message to a person and a client that
+// publishes — a client that shows the message to a contact and a client that
 // branches on the code both need it to be this one.
 func TestTheProvenanceRefusalNamesTheFieldAndWhatToDo(t *testing.T) {
 	category := "message_attachment"

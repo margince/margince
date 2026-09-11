@@ -72,7 +72,7 @@ export function contextFor(args: {
  *
  * Only where nothing else answers it. A reply derives, so asking would be
  * asking a reader to restate what the thread in front of them already says —
- * and a question with an obvious answer trains people to answer without
+ * and a question with an obvious answer trains contacts to answer without
  * reading, which is how the purpose dropdown this replaces came to be set to
  * whatever was first in the list.
  */

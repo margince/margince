@@ -40,7 +40,7 @@ type Story = StoryObj;
 // "en", so the English strings stand in for that already-resolved text.
 const contactFields: CreateField[] = [
   { key: "full_name", label: "create.fullName", required: true },
-  { key: "title", label: "create.personTitle" },
+  { key: "title", label: "create.contactTitle" },
   {
     key: "size_band",
     label: "create.sizeBand",

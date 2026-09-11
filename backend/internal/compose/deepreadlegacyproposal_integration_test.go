@@ -32,7 +32,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -43,11 +43,11 @@ func stageLegacyDeepReadProposal(
 	svc *approvals.Service,
 	company ids.UUID,
 	readID ids.UUID,
-	fields []people.DeepReadField,
-	facts []people.DeepReadFact,
+	fields []contacts.DeepReadField,
+	facts []contacts.DeepReadFact,
 ) ids.UUID {
 	t.Helper()
-	proposedChange, err := json.Marshal(people.DeepReadProposal{
+	proposedChange, err := json.Marshal(contacts.DeepReadProposal{
 		CompanyID:  ids.From[ids.CompanyKind](company),
 		SourceURL:  seedURL,
 		SiteReadID: readID,

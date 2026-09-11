@@ -40,26 +40,26 @@ func seedProvisionalCompany(t *testing.T, e *integration.Env, name, nameSource s
 	return company
 }
 
-// seedSigningEmployee plants one person employed by company whose accepted
+// seedSigningEmployee plants one contact employed by company whose accepted
 // signature evidence names signedName as their company.
 func seedSigningEmployee(t *testing.T, e *integration.Env, company ids.UUID, fullName, signedName string) {
 	t.Helper()
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO person (id, full_name, source, captured_by)
-			VALUES ($1, $2, 'gmail:seed', 'connector:gmail')`, person, fullName); err != nil {
+			INSERT INTO contact (id, full_name, source, captured_by)
+			VALUES ($1, $2, 'gmail:seed', 'connector:gmail')`, contact, fullName); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO relationship (kind, person_id, company_id, is_current_primary, source, captured_by)
-			VALUES ('employment', $1, $2, true, 'gmail:seed', 'connector:gmail')`, person, company); err != nil {
+			INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by)
+			VALUES ('employment', $1, $2, true, 'gmail:seed', 'connector:gmail')`, contact, company); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO person_profile_field (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
-			VALUES ($1, 'company_name', $2, $2, 'activity:seed', 0.9, 'capture_enrich', 'agent:enrich')`, person, signedName)
+			INSERT INTO contact_profile_field (contact_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
+			VALUES ($1, 'company_name', $2, $2, 'activity:seed', 0.9, 'capture_enrich', 'agent:enrich')`, contact, signedName)
 		return err
 	})
 	if err != nil {
@@ -297,8 +297,8 @@ func declineTheStagedRename(t *testing.T, e *integration.Env, promoter *CompanyN
 }
 
 // The refusal must survive the EVIDENCE moving. The offer's payload carries the
-// corroborating persons and the record's current name, so a memory keyed on a
-// hash of that payload is forgotten the moment a second person signs — and the
+// corroborating contacts and the record's current name, so a memory keyed on a
+// hash of that payload is forgotten the moment a second contact signs — and the
 // rename a human refused is offered again, every night, until someone clicks
 // approve. The identity of the decision is the record and the proposed name;
 // nothing else.
@@ -310,7 +310,7 @@ func TestCompanyNamePromotionRemembersADeclineAfterTheEvidenceMoves(t *testing.T
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
 	declineTheStagedRename(t, e, promoter, company)
 
-	// A second sender signs with the same company name: a different persons
+	// A second sender signs with the same company name: a different contacts
 	// list, so a different payload and a different diff hash — the same
 	// question.
 	seedSigningEmployee(t, e, company, "Bob Signer", "Gitex Global")
@@ -329,7 +329,7 @@ func TestCompanyNamePromotionRemembersADeclineAfterTheEvidenceMoves(t *testing.T
 }
 
 // Evidence moving while an offer is STILL PENDING must refresh the question,
-// not duplicate it. The offer's payload carries the corroborating persons, so a
+// not duplicate it. The offer's payload carries the corroborating contacts, so a
 // new signer changes the diff hash and JoinPending — which joins on that hash —
 // finds nothing to join. Only the staging Identity collapses the two: the
 // fresher offer supersedes the stale one instead of competing with it in the
@@ -359,17 +359,17 @@ func TestCompanyNamePromotionSupersedesAStalePendingOffer(t *testing.T) {
 		t.Fatalf("%d live offers after the evidence moved, want exactly 1 — a human must be asked this question once, not once per signer", live)
 	}
 	// The survivor is the FRESH one: it cites both signers.
-	var persons int
+	var contacts int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT jsonb_array_length(proposed_change -> 'persons') FROM approval
+			SELECT jsonb_array_length(proposed_change -> 'contacts') FROM approval
 			 WHERE kind = 'company_name_promotion' AND target_entity_id = $1
-			   AND status = 'pending' AND expires_at > now()`, company).Scan(&persons)
+			   AND status = 'pending' AND expires_at > now()`, company).Scan(&contacts)
 	}); err != nil {
 		t.Fatalf("reading the surviving offer: %v", err)
 	}
-	if persons != 2 {
-		t.Errorf("the surviving offer cites %d signer(s), want the fresher 2 — the stale offer outlived the fresh one", persons)
+	if contacts != 2 {
+		t.Errorf("the surviving offer cites %d signer(s), want the fresher 2 — the stale offer outlived the fresh one", contacts)
 	}
 }
 

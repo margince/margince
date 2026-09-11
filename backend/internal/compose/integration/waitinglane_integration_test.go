@@ -29,38 +29,38 @@ var waitingInstant = time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC)
 // seedMessage writes one captured message through the owner connection, the
 // way capture would leave it: a thread key, an audience, a direction.
 //
-// It also files the message under a PERSON, because that is what makes it sales
+// It also files the message under a CONTACT, because that is what makes it sales
 // mail. The lane requires a link to a record the workspace sells to, so a
 // message seeded without one is a rep's private correspondence and correctly
 // never appears — every case in this file that is about something else has to
 // clear that bar first or it would pass for the wrong reason.
 //
 // Returns the activity id so a caller can link it to a further record — the
-// entity-filter tests below file the same message under a second person or
+// entity-filter tests below file the same message under a second contact or
 // deal on top of the one seeded here.
 func seedWaitingMessage(t *testing.T, e *Env, thread, direction, subject string, at time.Time) ids.UUID {
 	t.Helper()
-	return seedWaitingMessageLinked(t, e, thread, direction, subject, at, seedWaitingPerson(t, e))
+	return seedWaitingMessageLinked(t, e, thread, direction, subject, at, seedWaitingContact(t, e))
 }
 
-// seedWaitingPerson creates one person for a message to be filed under.
-func seedWaitingPerson(t *testing.T, e *Env) ids.UUID {
+// seedWaitingContact creates one contact for a message to be filed under.
+func seedWaitingContact(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := OwnerConn(t).Exec(context.Background(), `
-		INSERT INTO person (id, full_name, source, captured_by, version, created_at, updated_at)
+		INSERT INTO contact (id, full_name, source, captured_by, version, created_at, updated_at)
 		VALUES ($1, 'Waiting Customer', 'system', $2, 1, now(), now())`,
 		id, "human:"+e.AdminUser.String()); err != nil {
-		t.Fatalf("seeding the person a thread is filed under: %v", err)
+		t.Fatalf("seeding the contact a thread is filed under: %v", err)
 	}
 	return id
 }
 
-// seedWaitingMessageLinked writes the message and files it under one person.
-// Pass a zero person to seed mail linked to NOTHING, which is how the personal
+// seedWaitingMessageLinked writes the message and files it under one contact.
+// Pass a zero contact to seed mail linked to NOTHING, which is how the personal
 // -mail case is built.
 func seedWaitingMessageLinked(
-	t *testing.T, e *Env, thread, direction, subject string, at time.Time, person ids.UUID,
+	t *testing.T, e *Env, thread, direction, subject string, at time.Time, contact ids.UUID,
 ) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
@@ -73,13 +73,13 @@ func seedWaitingMessageLinked(
 		id, direction, subject, at, "human:"+e.AdminUser.String(), thread); err != nil {
 		t.Fatalf("seeding a %s message: %v", direction, err)
 	}
-	if person.IsZero() {
+	if contact.IsZero() {
 		return id
 	}
 	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, id, person); err != nil {
-		t.Fatalf("filing the message under a person: %v", err)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, id, contact); err != nil {
+		t.Fatalf("filing the message under a contact: %v", err)
 	}
 	return id
 }
@@ -202,10 +202,10 @@ func TestAWaitOlderThanTheHorizonIsNotReported(t *testing.T) {
 // with nothing to act on.
 func TestAnOldWaitWithAnOpenDealSurvivesTheHorizon(t *testing.T) {
 	e := Setup(t)
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	deal := seedWaitingDeal(t, "open")
 	seedWaitingMessageLinked(t, e, "thread-old-funded", "inbound", "Still open",
-		waitingInstant.Add(-200*24*time.Hour), person)
+		waitingInstant.Add(-200*24*time.Hour), contact)
 	linkActivityToDeal(t, "Still open", deal)
 
 	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
@@ -225,13 +225,13 @@ func TestAnOldWaitWithAnOpenDealSurvivesTheHorizon(t *testing.T) {
 // that is the answer that keeps every ancient thread in the day forever.
 func TestAWaitReportsWhetherAnOpenDealIsOnIt(t *testing.T) {
 	e := Setup(t)
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	deal := seedWaitingDeal(t, "open")
 	seedWaitingMessageLinked(t, e, "thread-funded", "inbound", "Funded thread",
-		waitingInstant.Add(-2*24*time.Hour), person)
+		waitingInstant.Add(-2*24*time.Hour), contact)
 	linkActivityToDeal(t, "Funded thread", deal)
 	seedWaitingMessageLinked(t, e, "thread-unfunded", "inbound", "Unfunded thread",
-		waitingInstant.Add(-2*24*time.Hour), person)
+		waitingInstant.Add(-2*24*time.Hour), contact)
 
 	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
 	if err != nil {
@@ -246,10 +246,10 @@ func TestAWaitReportsWhetherAnOpenDealIsOnIt(t *testing.T) {
 // predicate every closed deal would keep its thread in the day forever.
 func TestAClosedDealIsNotAnOpenOne(t *testing.T) {
 	e := Setup(t)
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	deal := seedWaitingDeal(t, "won")
 	seedWaitingMessageLinked(t, e, "thread-won", "inbound", "Won thread",
-		waitingInstant.Add(-2*24*time.Hour), person)
+		waitingInstant.Add(-2*24*time.Hour), contact)
 	linkActivityToDeal(t, "Won thread", deal)
 
 	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
@@ -320,23 +320,23 @@ func containsSubject(rows []activities.WaitingReply, subject string) bool {
 // parallel one.
 
 // The entity filter and the wait narrow to an intersection: only the message
-// that is BOTH linked to this person AND still unanswered comes back — not
+// that is BOTH linked to this contact AND still unanswered comes back — not
 // every unanswered thread in the workspace, and not every message on this
-// person.
+// contact.
 func TestWaitingReplyListFilterFindsTheEntitysUnansweredThread(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	admin := e.Admin()
 
-	dana := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
-	someoneElse := e.SeedPerson(t, "Someone Else", &e.Rep1)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	someoneElse := e.SeedContact(t, "Someone Else", &e.Rep1)
 	theirs := seedWaitingMessage(t, e, "thread-entity-mine", "inbound", "Re: contract", waitingInstant.Add(-3*24*time.Hour))
-	LinkActivity(t, owner, theirs, "person", dana)
+	LinkActivity(t, owner, theirs, "contact", dana)
 	notTheirs := seedWaitingMessage(t, e, "thread-entity-other", "inbound", "Re: unrelated", waitingInstant.Add(-3*24*time.Hour))
-	LinkActivity(t, owner, notTheirs, "person", someoneElse)
+	LinkActivity(t, owner, notTheirs, "contact", someoneElse)
 
 	asOf := waitingInstant
-	et := "person"
+	et := "contact"
 	got, _, err := e.Activities.ListActivities(admin, activities.ListActivitiesInput{
 		EntityType: &et, EntityID: &dana, WaitingReplyAsOf: &asOf,
 	})
@@ -344,7 +344,7 @@ func TestWaitingReplyListFilterFindsTheEntitysUnansweredThread(t *testing.T) {
 		t.Fatalf("listing waiting replies for the entity: %v", err)
 	}
 	if len(got) != 1 || ids.UUID(got[0].Id) != theirs {
-		t.Fatalf("waiting_reply on person %v = %v, want the one unanswered message linked to them", dana, got)
+		t.Fatalf("waiting_reply on contact %v = %v, want the one unanswered message linked to them", dana, got)
 	}
 }
 
@@ -355,14 +355,14 @@ func TestWaitingReplyListFilterOmitsAnAnsweredThread(t *testing.T) {
 	owner := OwnerConn(t)
 	admin := e.Admin()
 
-	dana := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	inbound := seedWaitingMessage(t, e, "thread-entity-answered", "inbound", "Re: timing", waitingInstant.Add(-10*24*time.Hour))
-	LinkActivity(t, owner, inbound, "person", dana)
+	LinkActivity(t, owner, inbound, "contact", dana)
 	outbound := seedWaitingMessage(t, e, "thread-entity-answered", "outbound", "Re: timing", waitingInstant.Add(-9*24*time.Hour))
-	LinkActivity(t, owner, outbound, "person", dana)
+	LinkActivity(t, owner, outbound, "contact", dana)
 
 	asOf := waitingInstant
-	et := "person"
+	et := "contact"
 	got, _, err := e.Activities.ListActivities(admin, activities.ListActivitiesInput{
 		EntityType: &et, EntityID: &dana, WaitingReplyAsOf: &asOf,
 	})
@@ -382,14 +382,14 @@ func TestWaitingReplyListFilterDropsRowsOutOfCallersScope(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 
-	theirPrivate := e.SeedPerson(t, "Their Private Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirPrivate, e.Rep3)
-	// Zero person: no auto-link, so the ONLY sales link this message carries
+	theirPrivate := e.SeedContact(t, "Their Private Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirPrivate, e.Rep3)
+	// Zero contact: no auto-link, so the ONLY sales link this message carries
 	// is the one below — otherwise the message would still be admitted
 	// through a public link and this would test nothing.
 	hidden := seedWaitingMessageLinked(t, e, "thread-entity-private", "inbound", "Re: private deal",
 		waitingInstant.Add(-3*24*time.Hour), ids.UUID{})
-	LinkActivity(t, owner, hidden, "person", theirPrivate)
+	LinkActivity(t, owner, hidden, "contact", theirPrivate)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLinkRepPerms)
 	asOf := waitingInstant
@@ -410,12 +410,12 @@ func TestWaitingReplyListFilterDropsRowsOutOfCallersScope(t *testing.T) {
 func TestWaitingReplyListFilterRefusesAnOutOfScopeEntity(t *testing.T) {
 	e := Setup(t)
 
-	theirPrivate := e.SeedPerson(t, "Their Private Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirPrivate, e.Rep3)
+	theirPrivate := e.SeedContact(t, "Their Private Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirPrivate, e.Rep3)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLinkRepPerms)
 	asOf := waitingInstant
-	et := "person"
+	et := "contact"
 	_, _, err := e.Activities.ListActivities(rep, activities.ListActivitiesInput{
 		EntityType: &et, EntityID: &theirPrivate, WaitingReplyAsOf: &asOf,
 	})
@@ -435,14 +435,14 @@ func TestWaitingReplyListFilterRefusesAnOutOfScopeEntity(t *testing.T) {
 // rather than leaving it to be re-derived.
 func TestAMessageFiledUnderTwoRecordsIsOneWaitingRowCarryingItsKind(t *testing.T) {
 	e := Setup(t)
-	first := seedWaitingPerson(t, e)
+	first := seedWaitingContact(t, e)
 	id := seedWaitingMessageLinked(t, e, "thread-two-links", "inbound", "Filed twice",
 		waitingInstant.Add(-3*24*time.Hour), first)
-	second := seedWaitingPerson(t, e)
+	second := seedWaitingContact(t, e)
 	if _, err := OwnerConn(t).Exec(context.Background(), `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, id, second); err != nil {
-		t.Fatalf("filing the message under a second person: %v", err)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, id, second); err != nil {
+		t.Fatalf("filing the message under a second contact: %v", err)
 	}
 
 	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)

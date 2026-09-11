@@ -50,14 +50,14 @@ func ghostedPass(t *testing.T, e *Env, now time.Time) compose.GhostedPass {
 }
 
 // mailViaEmployee logs one interaction with a contact who works at the account
-// — the shape capture writes, where the message names a PERSON and the account
+// — the shape capture writes, where the message names a CONTACT and the account
 // is reached only through their employment. Each call is a different contact,
 // so two calls are two colleagues at the same account.
 func mailViaEmployee(t *testing.T, e *Env, company ids.UUID, subject, direction string, at time.Time) {
 	t.Helper()
 	owner := OwnerConn(t)
 	id := AccountMailDirectedAt(t, owner, e.WS, subject, direction, at)
-	LinkActivity(t, owner, id, "person", employeeOf(t, e, company, subject+" contact"))
+	LinkActivity(t, owner, id, "contact", employeeOf(t, e, company, subject+" contact"))
 }
 
 func openSignalKinds(t *testing.T, e *Env, company ids.UUID) []string {
@@ -135,10 +135,10 @@ func TestGhostedStaysQuietWhenTheyWroteLastOrNobodyIsWorkingTheAccount(t *testin
 	e := Setup(t)
 	now := time.Now().UTC()
 
-	// They answered — and a COLLEAGUE of the person we wrote to answered, which
+	// They answered — and a COLLEAGUE of the contact we wrote to answered, which
 	// is the ordinary way a company replies. Resolving the account through a
 	// direct link on the message could not see that at all: the reply named a
-	// different person, so the account looked unanswered and the rule fired on
+	// different contact, so the account looked unanswered and the rule fired on
 	// a relationship that was in fact alive.
 	answered := e.SeedCompany(t, "They Replied", &e.Rep1)
 	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, answered)

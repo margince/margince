@@ -8,7 +8,7 @@ package integration
 // The owner-identity endpoints over the wire.
 //
 // The store's own suite proves what a claim DOES to captured mail; this proves
-// the surface a person reaches it through: that a claim round-trips, that a
+// the surface a contact reaches it through: that a claim round-trips, that a
 // malformed one is refused rather than stored, and that withdrawing somebody
 // else's answers not-found rather than confirming it exists.
 
@@ -33,7 +33,7 @@ func TestTheOwnerIdentityEndpointsRoundTripAClaim(t *testing.T) {
 		Value  string `json:"value"`
 		Source string `json:"source"`
 	}
-	// Declared with capitals, because that is what a person types. It comes
+	// Declared with capitals, because that is what a human types. It comes
 	// back folded: one stored form is what lets the capture gates compare
 	// without a runtime case fold.
 	if status := e.Call(t, "POST", "/v1/capture/owner-identities",

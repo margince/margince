@@ -104,7 +104,7 @@ func (e *mailEnv) seedReview(t *testing.T, week time.Time) ids.UUID {
 // every one of them, so the week's message is offered to the relay many times
 // over. Exactly one of those may reach it.
 //
-// A weekly retrospective delivered twice is a person told their own week twice
+// A weekly retrospective delivered twice is a contact told their own week twice
 // on the one morning the mail exists to make calm.
 func TestTheWeeklyMailIsAttemptedOnce(t *testing.T) {
 	e := setupWeeklyMail(t)

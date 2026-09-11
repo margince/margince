@@ -17,8 +17,8 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -28,16 +28,16 @@ func TestCompanyCounts_ListAndSingleReadAgreeWithTheEdges(t *testing.T) {
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Acme Counts", nil)
 	quiet := e.SeedCompany(t, "Quiet Counts", nil)
-	staff := e.SeedPerson(t, "Works At Acme", nil)
-	second := e.SeedPerson(t, "Also At Acme", nil)
-	leaver := e.SeedPerson(t, "Left Acme", nil)
+	staff := e.SeedContact(t, "Works At Acme", nil)
+	second := e.SeedContact(t, "Also At Acme", nil)
+	leaver := e.SeedContact(t, "Left Acme", nil)
 
-	employ := func(person, company ids.UUID, ended *time.Time) {
+	employ := func(contact, company ids.UUID, ended *time.Time) {
 		t.Helper()
-		personID := ids.From[ids.PersonKind](person)
+		contactID := ids.From[ids.ContactKind](contact)
 		companyID := ids.From[ids.CompanyKind](company)
-		if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-			Kind: "employment", PersonID: &personID, CompanyID: &companyID,
+		if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+			Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
 			IsCurrentPrimary: boolPtr(ended == nil), EndedAt: ended, Source: "manual",
 		}); err != nil {
 			t.Fatalf("seeding the employment edge: %v", err)
@@ -48,7 +48,7 @@ func TestCompanyCounts_ListAndSingleReadAgreeWithTheEdges(t *testing.T) {
 	employ(second, acme, nil)
 	// A past employer is not a contact: the column answers who works here. Dated
 	// as over, because that is what past is — an undated non-primary job cannot
-	// say it, now that a person's only employment is their current primary one.
+	// say it, now that a contact's only employment is their current primary one.
 	employ(leaver, acme, &left)
 
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
@@ -71,7 +71,7 @@ func TestCompanyCounts_ListAndSingleReadAgreeWithTheEdges(t *testing.T) {
 		t.Fatalf("company %s missing from the page", id)
 		return crmcontracts.Company{}
 	}
-	page, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{})
+	page, _, err := e.Contacts.ListCompanies(e.Admin(), contacts.ListCompaniesInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestCompanyCounts_ListAndSingleReadAgreeWithTheEdges(t *testing.T) {
 	// "no contacts" from "not shown".
 	assertCounts(t, "list quiet", byID(page, quiet), 0, 0)
 
-	single, err := e.People.GetCompany(e.Admin(), companyIDOf(acme), storekit.LiveOnly)
+	single, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(acme), storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,22 +93,22 @@ func TestCompanyCounts_ListAndSingleReadAgreeWithTheEdges(t *testing.T) {
 func TestCompanyCounts_UngatedRoleSeesContactsButNoDealCount(t *testing.T) {
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Gated Counts", nil)
-	staff := e.SeedPerson(t, "Works At Gated", nil)
-	pID := ids.From[ids.PersonKind](staff)
+	staff := e.SeedContact(t, "Works At Gated", nil)
+	pID := ids.From[ids.ContactKind](staff)
 	oID := ids.From[ids.CompanyKind](acme)
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &pID, CompanyID: &oID, IsCurrentPrimary: boolPtr(true), Source: "manual",
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &pID, CompanyID: &oID, IsCurrentPrimary: boolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	// person:read, deal:read and relationship:read granted, computed_field:read
+	// contact:read, deal:read and relationship:read granted, computed_field:read
 	// not: this is the STATE-4 case for the deal count ALONE, so every grant the
 	// contact count needs is present — the edge one included, since the count is
 	// over employment pairs.
 	perms := principal.Permissions{
 		RoleKeys: computedFieldNoGrantPerms.RoleKeys,
 		Objects: map[string]principal.ObjectGrant{
-			"company": {Read: true}, "person": {Read: true}, "deal": {Read: true},
+			"company": {Read: true}, "contact": {Read: true}, "deal": {Read: true},
 			"relationship":          {Read: true},
 			"installation_settings": {Read: true},
 		},
@@ -116,7 +116,7 @@ func TestCompanyCounts_UngatedRoleSeesContactsButNoDealCount(t *testing.T) {
 	}
 	ctx := e.As(e.Rep1, nil, perms)
 
-	page, _, err := e.People.ListCompanies(ctx, people.ListCompaniesInput{})
+	page, _, err := e.Contacts.ListCompanies(ctx, contacts.ListCompaniesInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestCompanyCounts_UngatedRoleSeesContactsButNoDealCount(t *testing.T) {
 	}
 }
 
-// The contact count is a read under the caller's person row scope: a number
+// The contact count is a read under the caller's contact row scope: a number
 // that moved when a colleague captured a private contact would disclose that
 // contact. The deal count is the account's whole open pipeline, as the
 // company page's tile sums it (PO-EXT-10, founder decision 2026-08-18).
@@ -162,14 +162,14 @@ func TestCompanyCounts_FollowTheCallersRowScope(t *testing.T) {
 	e := Setup(t)
 	// The account is unowned, so it is visible at every scope tier.
 	acme := e.SeedCompany(t, "Shared Counts", nil)
-	mine := e.SeedPerson(t, "Rep1 Contact", &e.Rep1)
-	theirs := e.SeedPerson(t, "Rep3 Contact", &e.Rep3)
-	employ := func(person ids.UUID) {
+	mine := e.SeedContact(t, "Rep1 Contact", &e.Rep1)
+	theirs := e.SeedContact(t, "Rep3 Contact", &e.Rep3)
+	employ := func(contact ids.UUID) {
 		t.Helper()
-		personID := ids.From[ids.PersonKind](person)
+		contactID := ids.From[ids.ContactKind](contact)
 		companyID := ids.From[ids.CompanyKind](acme)
-		if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-			Kind: "employment", PersonID: &personID, CompanyID: &companyID,
+		if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+			Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
 			IsCurrentPrimary: boolPtr(true), Source: "manual",
 		}); err != nil {
 			t.Fatalf("seeding the employment edge: %v", err)
@@ -177,10 +177,10 @@ func TestCompanyCounts_FollowTheCallersRowScope(t *testing.T) {
 	}
 	employ(mine)
 	employ(theirs)
-	// Ownership alone no longer narrows a person; capture privacy does.
+	// Ownership alone no longer narrows a contact; capture privacy does.
 	// Applied after the edge is seeded, since the seeding admin is not the
 	// captor and could not link to a private contact.
-	e.MakeCapturePrivate(t, "person", theirs, e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
 
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	for _, owner := range []ids.UUID{e.Rep1, e.Rep3} {
@@ -195,7 +195,7 @@ func TestCompanyCounts_FollowTheCallersRowScope(t *testing.T) {
 	}
 
 	// The captor reads both contacts: their own private one and the shared one.
-	captor, err := e.People.GetCompany(e.As(e.Rep3, []ids.UUID{e.Team2}, AdminPerms), companyIDOf(acme), storekit.LiveOnly)
+	captor, err := e.Contacts.GetCompany(e.As(e.Rep3, []ids.UUID{e.Team2}, AdminPerms), companyIDOf(acme), storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,14 +203,14 @@ func TestCompanyCounts_FollowTheCallersRowScope(t *testing.T) {
 
 	perms := rollupCompanyReadPerms(principal.RowScopeOwn)
 	perms.Objects["computed_field"] = principal.ObjectGrant{Read: true}
-	perms.Objects["person"] = principal.ObjectGrant{Read: true}
+	perms.Objects["contact"] = principal.ObjectGrant{Read: true}
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
-	own, err := e.People.GetCompany(rep, companyIDOf(acme), storekit.LiveOnly)
+	own, err := e.Contacts.GetCompany(rep, companyIDOf(acme), storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assertCounts(t, "own-scope rep: readable contacts, whole pipeline", own, 1, 2)
-	page, _, err := e.People.ListCompanies(rep, people.ListCompaniesInput{})
+	page, _, err := e.Contacts.ListCompanies(rep, contacts.ListCompaniesInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,17 +224,17 @@ func TestCompanyCounts_FollowTheCallersRowScope(t *testing.T) {
 }
 
 // The object grant comes first: no deal:read, no deal count — even with
-// computed_field:read — and no person:read, no contact count. Absent, not 0.
+// computed_field:read — and no contact:read, no contact count. Absent, not 0.
 func TestCompanyCounts_ObjectGrantGatesEachCount(t *testing.T) {
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Grant Gated", nil)
 	perms := rollupCompanyReadPerms(principal.RowScopeAll)
 	perms.Objects["computed_field"] = principal.ObjectGrant{Read: true}
-	// deal:read is in rollupCompanyReadPerms; person:read is not.
+	// deal:read is in rollupCompanyReadPerms; contact:read is not.
 	delete(perms.Objects, "deal")
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 
-	got, err := e.People.GetCompany(ctx, companyIDOf(acme), storekit.LiveOnly)
+	got, err := e.Contacts.GetCompany(ctx, companyIDOf(acme), storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +242,7 @@ func TestCompanyCounts_ObjectGrantGatesEachCount(t *testing.T) {
 		t.Fatalf("open_deal_count = %d, want it withheld without deal:read", *got.OpenDealCount)
 	}
 	if got.ContactCount != nil {
-		t.Fatalf("contact_count = %d, want it withheld without person:read", *got.ContactCount)
+		t.Fatalf("contact_count = %d, want it withheld without contact:read", *got.ContactCount)
 	}
 }
 

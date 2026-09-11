@@ -30,7 +30,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
 // dialog behind its meta line, and the inline staged-draft editor. They sit
 // apart from the row because neither is about deciding — one reads the whole
-// proposal, the other rewrites the part of it this installation lets a person
+// proposal, the other rewrites the part of it this installation lets a contact
 // change — and the row is already the longest thing on the surface.
 
 /**
@@ -149,7 +149,7 @@ export function ApprovalDetailModal({
 /**
  * What "view everything" shows.
  *
- * Ordered the way a person reads a decision rather than the way the row is
+ * Ordered the way a reader reads a decision rather than the way the row is
  * stored: the sentence saying what is being asked, then what the proposal says
  * in named fields, then when it was asked, then the quoted evidence behind it.
  *
@@ -162,7 +162,7 @@ export function ApprovalDetailModal({
  * already said what its fields mean — there it is reference material for
  * somebody checking what the server actually staged. The target version and the
  * `agent:<id>` that proposed it are gone from this surface entirely: neither
- * names a person or describes a change, so a reader can do nothing with them,
+ * names a contact or describes a change, so a reader can do nothing with them,
  * and one click away rather than zero does not make them useful.
  */
 function ApprovalDetailBody({
@@ -244,7 +244,7 @@ function RawPayload({
  * arrived on the wire next to it.
  *
  * The rest of that block is gone from this surface rather than moved. A target
- * version and a `proposed_by` of `agent:<id>` name no person and describe no
+ * version and a `proposed_by` of `agent:<id>` name no contact and describe no
  * change — there is nothing a reader can do with either, and putting them one
  * click away rather than zero does not make them useful.
  */
@@ -270,7 +270,7 @@ function askedOn(
 }
 
 // `mono` marks a value the WIRE spells — a uuid, a version, a payload path.
-// A named field carries a person's own words and a date they recognise, and
+// A named field carries a contact's own words and a date they recognise, and
 // setting those in mono would dress a business fact as machine output.
 function FieldLine({
   name,
@@ -371,7 +371,7 @@ function isoOrBlank(staged: string | undefined): ISODate | "" {
  * gate from scratch on the server (re-tiered, re-RBAC'd, new diff_hash —
  * ADR-0036), so what it may offer is a question about THIS kind and this
  * contract, which is screen knowledge. The card knows how to draw a decision;
- * it does not know what this installation lets a person change.
+ * it does not know what this installation lets a contact change.
  */
 export function StagedEditor({
   fields,

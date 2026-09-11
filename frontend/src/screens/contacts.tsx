@@ -29,6 +29,21 @@ import {
   useViewerId,
 } from "./common";
 import { ConsentSection } from "./consent";
+import {
+  type Contact360,
+  IdentityRail,
+  RelationshipPulse,
+  ThinState,
+  thinRecord,
+  useContact360,
+  WhoKnowsThem,
+} from "./contact360";
+import { EnrichedFields } from "./contactcorrections";
+import { ContactDealRooms } from "./contactdealrooms";
+import { ContactEditMergeArchive } from "./contacteditmergearchive";
+import { contactCreateFields, mapContactBody } from "./contactformfields";
+import { ContactNetworkTab } from "./contactnetwork";
+import { ContactProjects } from "./contactprojects";
 import { RecordContextPanel } from "./context";
 import { CreateAction, type CreateField, type FormRows } from "./create";
 import { CustomFieldsPanel } from "./customfields.card";
@@ -49,21 +64,6 @@ import {
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import {
-  IdentityRail,
-  type Person360,
-  RelationshipPulse,
-  ThinState,
-  thinRecord,
-  usePerson360,
-  WhoKnowsThem,
-} from "./person360";
-import { EnrichedFields } from "./personcorrections";
-import { PersonDealRooms } from "./persondealrooms";
-import { PersonEditMergeArchive } from "./personeditmergearchive";
-import { contactCreateFields, mapPersonBody } from "./personformfields";
-import { PersonNetworkTab } from "./personnetwork";
-import { PersonProjects } from "./personprojects";
-import {
   createdColumn,
   lastActivityColumn,
   mineEmptyNote,
@@ -80,20 +80,20 @@ import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import { VCardImport } from "./vcard-import";
 
-// Contacts list + person 360 (B-EP09.10a/b). Every row carries its
+// Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the
 // per-purpose consent card and evidence-or-omit fields — absent data is
 // omitted, never guessed. Search/filter/sort/pagination (P-14), the rich
 // create modal (P-15), the If-Match edit form (P-1), and the dedupe
 // view-existing link (P-16) are the four shared blocks wired in here.
 
-type Person = components["schemas"]["Person"];
+type Contact = components["schemas"]["Contact"];
 
-async function fetchPeoplePage(
+async function fetchContactsPage(
   query: ListQuery,
   cursor: string | null,
-): Promise<ListPage<Person>> {
-  const { data, error } = await api.GET("/people", {
+): Promise<ListPage<Contact>> {
+  const { data, error } = await api.GET("/contacts", {
     params: {
       query: {
         q: query.q || undefined,
@@ -124,9 +124,9 @@ async function createContact(
   rows: FormRows | undefined,
   customFields: Record<string, unknown>,
   t: (key: MessageKey) => string,
-): Promise<Person> {
-  const { data, error } = await api.POST("/people", {
-    body: { ...mapPersonBody(values, rows ?? {}), ...customFields },
+): Promise<Contact> {
+  const { data, error } = await api.POST("/contacts", {
+    body: { ...mapContactBody(values, rows ?? {}), ...customFields },
   });
   if (error) {
     throwProblem(error, t);
@@ -146,7 +146,7 @@ async function createContact(
 function quickCaptureFields(): CreateField[] {
   return [
     { key: "full_name", label: "create.fullName", required: true },
-    { key: "title", label: "create.personTitle" },
+    { key: "title", label: "create.contactTitle" },
     { key: "company_name", label: "create.companyName" },
     { key: "profile_url", label: "create.linkedin" },
     { key: "email", label: "create.email", type: "email" },
@@ -162,16 +162,16 @@ function statedValue(values: Record<string, string>, key: string) {
   return value ? value : undefined;
 }
 
-async function quickCapturePerson(
+async function quickCaptureContact(
   values: Record<string, string>,
   t: (key: MessageKey) => string,
-): Promise<Person> {
-  const { data, error } = await api.POST("/people/quick-capture", {
+): Promise<Contact> {
+  const { data, error } = await api.POST("/contacts/quick-capture", {
     body: {
       full_name: values.full_name?.trim() ?? "",
       title: statedValue(values, "title"),
       company_name: statedValue(values, "company_name"),
-      // Normalized here rather than server-side for the same reason the person
+      // Normalized here rather than server-side for the same reason the contact
       // rail normalizes on save: a bare `linkedin.com/in/jdoe` is an address
       // somebody typed, and storing it unusable makes the row permanently
       // unlinkable on every surface that reads it.
@@ -183,7 +183,7 @@ async function quickCapturePerson(
   if (error) {
     throwProblem(error, t);
   }
-  return data.person;
+  return data.contact;
 }
 
 function profileUrlOrUndefined(raw: string | undefined) {
@@ -192,7 +192,7 @@ function profileUrlOrUndefined(raw: string | undefined) {
 }
 
 /**
- * PersonAside is the relationship column, and in overlay mode it SAYS it
+ * ContactAside is the relationship column, and in overlay mode it SAYS it
  * cannot answer rather than disappearing.
  *
  * Both panels read the interaction projection, which is folded from natively
@@ -200,10 +200,10 @@ function profileUrlOrUndefined(raw: string | undefined) {
  * nothing would let the page read as "nobody here knows them", which is a lie
  * about the relationship rather than an empty answer about the data.
  */
-function PersonAside({
+function ContactAside({
   view,
   overlay,
-}: Readonly<{ view?: Person360; overlay: boolean }>) {
+}: Readonly<{ view?: Contact360; overlay: boolean }>) {
   if (overlay) {
     return (
       <>
@@ -218,17 +218,17 @@ function PersonAside({
   // Every address the contact has: a seat may have been invited on a
   // secondary one, and a card that checked only the primary would tell an
   // admin the contact is out of every room when they are not.
-  const emails = (view.person.emails ?? []).map((e) => e.email);
+  const emails = (view.contact.emails ?? []).map((e) => e.email);
   return (
     <>
       <RelationshipPulse view={view} />
-      <PersonProjects
-        personId={view.person.id}
+      <ContactProjects
+        contactId={view.contact.id}
         projects={view.projects}
-        readOnly={Boolean(view.person.archived_at)}
+        readOnly={Boolean(view.contact.archived_at)}
       />
       <WhoKnowsThem view={view} />
-      {emails.length > 0 ? <PersonDealRooms emails={emails} /> : null}
+      {emails.length > 0 ? <ContactDealRooms emails={emails} /> : null}
     </>
   );
 }
@@ -243,15 +243,15 @@ export function ContactsScreen() {
   const viewerId = useViewerId();
   const ownerChips = useOwnerChips();
   const tagChips = useTagChips();
-  const savedViews = useSavedViewTabs("people");
-  const cf = useObjectCustomFields("person");
+  const savedViews = useSavedViewTabs("contacts");
+  const cf = useObjectCustomFields("contact");
   // The form that never closes gives no other feedback: without this, six
-  // saved people look exactly like six that failed silently.
+  // saved contacts look exactly like six that failed silently.
   const toast = useToast();
-  const state = useListQuery<Person>({
-    key: "people",
+  const state = useListQuery<Contact>({
+    key: "contacts",
     initialSort: "-created_at",
-    fetchPage: fetchPeoplePage,
+    fetchPage: fetchContactsPage,
   });
 
   return (
@@ -265,14 +265,14 @@ export function ContactsScreen() {
           <>
             <CreateAction
               label={t("create.quickCapture")}
-              invalidate="people"
+              invalidate="contacts"
               screen="contacts"
               testId="quick-capture"
               keepOpen
-              create={(values) => quickCapturePerson(values, t)}
-              onCreated={(person) =>
+              create={(values) => quickCaptureContact(values, t)}
+              onCreated={(contact) =>
                 toast.show(
-                  t("create.quickCaptureSaved", { name: person.full_name }),
+                  t("create.quickCaptureSaved", { name: contact.full_name }),
                 )
               }
               resolveExisting={(_code, id) => ({ screen: "contacts", id })}
@@ -280,7 +280,7 @@ export function ContactsScreen() {
             />
             <CreateAction
               label={t("create.contact")}
-              invalidate="people"
+              invalidate="contacts"
               screen="contacts"
               create={(values, rows) =>
                 createContact(values, rows, cf.toBody(values), t)
@@ -299,14 +299,14 @@ export function ContactsScreen() {
         columns={[
           {
             key: "name",
-            header: t("people.name"),
-            cell: (person: Person) => (
+            header: t("contacts.name"),
+            cell: (contact: Contact) => (
               <span>
-                <strong>{person.full_name}</strong>
-                {person.title && (
-                  <span className="t-caption"> · {person.title}</span>
+                <strong>{contact.full_name}</strong>
+                {contact.title && (
+                  <span className="t-caption"> · {contact.title}</span>
                 )}
-                {person.archived_at && (
+                {contact.archived_at && (
                   <Badge tone="warn">{t("record.archived")}</Badge>
                 )}
               </span>
@@ -316,17 +316,17 @@ export function ContactsScreen() {
           },
           {
             key: "email",
-            header: t("people.email"),
+            header: t("contacts.email"),
             // The SERVER's pick, not a rule re-made here. Which of a
             // contact's addresses they are reachable at is one question, and
             // answering it in the browser meant the list could not be ordered
             // by it and each surface that needed the address answered again.
             //
-            // An address is words a person reads, so it takes the body face
+            // An address is words a reader reads, so it takes the body face
             // like every other value in the row. The mono face is for a
             // machine name — a name and a domain set in it read as an
             // identifier rather than as somebody a reader could write to.
-            cell: (person: Person) => person.primary_email ?? "",
+            cell: (contact: Contact) => contact.primary_email ?? "",
             sort: "primary_email",
           },
           {
@@ -344,31 +344,31 @@ export function ContactsScreen() {
             // By the company's NAME, walking the same edge the row walked. A
             // reader who may see no employer at all is ordered by none.
             sort: "employer",
-            cell: (person: Person) =>
-              person.employer ? (
+            cell: (contact: Contact) =>
+              contact.employer ? (
                 // A real link to the COMPANY, in a cell that is not the row's
                 // identity cell — so it nests inside no other anchor and the
                 // markup stays valid. It used to be text, on the reasoning that
                 // the row already links somewhere; but the row links to the
-                // CONTACT, and a reader looking at a list of people who works
+                // CONTACT, and a reader looking at a list of contacts who works
                 // for whom had no way to reach the company without opening a
-                // person first. The name comes with the row, so this resolves
+                // contact first. The name comes with the row, so this resolves
                 // nothing.
                 <EntityRef
                   kind="company"
-                  id={person.employer.company_id}
-                  name={person.employer.company_name}
+                  id={contact.employer.company_id}
+                  name={contact.employer.company_name}
                 />
               ) : null,
           },
-          tagsColumn<Person>(t),
-          ownerColumn<Person>(t),
-          lastActivityColumn<Person>(t, locale, recordZone),
-          createdColumn<Person>(t, locale, recordZone),
+          tagsColumn<Contact>(t),
+          ownerColumn<Contact>(t),
+          lastActivityColumn<Contact>(t, locale, recordZone),
+          createdColumn<Contact>(t, locale, recordZone),
         ]}
-        tools={<SaveViewAction resource="people" query={state.query} />}
-        rowKey={(person) => person.id}
-        rowRoute={(person) => ({ screen: "contacts", id: person.id })}
+        tools={<SaveViewAction resource="contacts" query={state.query} />}
+        rowKey={(contact) => contact.id}
+        rowRoute={(contact) => ({ screen: "contacts", id: contact.id })}
         dataChips={[...ownerChips, ...tagChips]}
         dataViews={savedViews}
         views={[...standardViews(viewerId)]}
@@ -377,21 +377,21 @@ export function ContactsScreen() {
   );
 }
 
-const PERSON_TABS = ["overview", "relationships", "history"] as const;
-type PersonTab = (typeof PERSON_TABS)[number];
+const CONTACT_TABS = ["overview", "relationships", "history"] as const;
+type ContactTab = (typeof CONTACT_TABS)[number];
 
-// The verbs a person record offers, and the two the overlay withholds.
+// The verbs a contact record offers, and the two the overlay withholds.
 //
 // Extracted from the 360 render so that render carries the record's SHAPE and
 // this carries what may be done to it: the mode branch and the archive branch
 // are both about the verbs, and reading either one no longer means holding the
 // whole page.
-function PersonActionBadges({
-  person,
+function ContactActionBadges({
+  contact,
   cf,
   archivedReasonId,
 }: Readonly<{
-  person: Person;
+  contact: Contact;
   cf: ObjectCustomFields;
   // Minted once for the page by the caller, because the archive is a fact
   // about the record rather than about any one verb that refuses.
@@ -400,32 +400,32 @@ function PersonActionBadges({
   const t = useT();
   const overlay = useSorMode() === "overlay";
   const viewerId = useViewerId();
-  const disabledReasonId = person.archived_at ? archivedReasonId : undefined;
+  const disabledReasonId = contact.archived_at ? archivedReasonId : undefined;
   return (
     <>
-      <ProvenanceTag provenance={provenanceOf(person.captured_by, viewerId)} />
+      <ProvenanceTag provenance={provenanceOf(contact.captured_by, viewerId)} />
       {/* Where this contact came from, when it came from a lead
-          (ADR-0119). The pointer runs person → lead and the
+          (ADR-0119). The pointer runs contact → lead and the
           lead's page is a terminal record of the promotion, so the
           chip is a link rather than a label: a rep asking "was this
           a merge or a new contact?" reads the answer there. */}
-      {person.converted_from_lead_id && (
+      {contact.converted_from_lead_id && (
         <Badge tone="accent">
-          {t("person.fromLead")}{" "}
-          <EntityRef kind="lead" id={person.converted_from_lead_id} />
+          {t("contact.fromLead")}{" "}
+          <EntityRef kind="lead" id={contact.converted_from_lead_id} />
         </Badge>
       )}
-      {person.archived_at && <Badge tone="warn">{t("record.archived")}</Badge>}
+      {contact.archived_at && <Badge tone="warn">{t("record.archived")}</Badge>}
       {/* The record's verbs behind one control, the shape the contact page
-          carries (personactions.tsx). An archived record is read-only: the
+          carries (contactactions.tsx). An archived record is read-only: the
           backend rejects edit/merge/archive on a non-live row (there is no
           unarchive path). The verbs stay VISIBLE and refused inside the menu,
           pointing at the page's one sentence about the archive (STATE-4a): a
           missing control says nothing about the record, while a refused one
           names the reason. */}
       <OverflowMenu label={t("record.moreActions")}>
-        <PersonEditMergeArchive
-          person={person}
+        <ContactEditMergeArchive
+          contact={contact}
           cf={cf}
           disabledReasonId={disabledReasonId}
           overlay={overlay}
@@ -436,8 +436,8 @@ function PersonActionBadges({
             // deals.tsx's DealBadges).
             !overlay && (
               <ShareAction
-                recordType="person"
-                recordId={person.id}
+                recordType="contact"
+                recordId={contact.id}
                 disabledReasonId={disabledReasonId}
               />
             )
@@ -451,17 +451,17 @@ function PersonActionBadges({
 // What the chosen tab shows. One component per screen rather than one per tab:
 // the panels share the record and differ only in which of it they draw, and a
 // component apiece would put five files between a reader and that fact.
-function PersonTabPanels({
+function ContactTabPanels({
   tab,
-  person,
+  contact,
   view,
 }: Readonly<{
-  tab: PersonTab;
-  person: Person;
-  view?: Person360;
+  tab: ContactTab;
+  contact: Contact;
+  view?: Contact360;
 }>) {
   const queryClient = useQueryClient();
-  const id = person.id;
+  const id = contact.id;
   return (
     // The rhythm between the tab's panels belongs to the column that holds
     // them, not to the panels: the work column is an `.arrive-stack` and
@@ -475,32 +475,32 @@ function PersonTabPanels({
           but a guard — what you may send is a live fact whether or
           not anyone has written to them yet. */}
       {tab === "overview" && (
-        <ConsentSection personId={person.id} person={person} />
+        <ConsentSection contactId={contact.id} contact={contact} />
       )}
       {tab === "overview" && view && (
-        <EnrichedFields personId={id} view={view} />
+        <EnrichedFields contactId={id} view={view} />
       )}
       {tab === "overview" && !thinRecord(view) && (
         <>
-          <CustomFieldsPanel object="person" record={person} />
-          <RecordContextPanel entityType="person" id={person.id} />
-          <LogActivity entityType="person" entityId={person.id} />
+          <CustomFieldsPanel object="contact" record={contact} />
+          <RecordContextPanel entityType="contact" id={contact.id} />
+          <LogActivity entityType="contact" entityId={contact.id} />
         </>
       )}
       {tab === "relationships" && (
         <div style={{ display: "grid", gap: "var(--space-4)" }}>
-          <PersonNetworkTab personId={id} />
-          <RelationshipsTab scope={{ person_id: person.id }} />
+          <ContactNetworkTab contactId={id} />
+          <RelationshipsTab scope={{ contact_id: contact.id }} />
         </div>
       )}
       {tab === "history" && (
         <RecordHistoryTab
-          kind="person"
-          id={person.id}
+          kind="contact"
+          id={contact.id}
           restore={{
-            version: person.version,
+            version: contact.version,
             onRestored: () =>
-              invalidateRecord(queryClient, "person", person.id),
+              invalidateRecord(queryClient, "contact", contact.id),
           }}
         />
       )}
@@ -508,19 +508,19 @@ function PersonTabPanels({
   );
 }
 
-export function PersonScreen({ id }: Readonly<{ id: string }>) {
+export function ContactScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const recordZone = useRecordZone();
-  const cf = useObjectCustomFields("person");
+  const cf = useObjectCustomFields("contact");
   // ONE sentence about this contact being archived, minted here and pointed at
   // by every verb the archive refuses. Said once for the page rather than
   // beside each of four buttons.
   const archivedReasonId = useId();
-  const [tab, setTab] = useState<PersonTab>("overview");
-  const personQuery = useQuery({
-    queryKey: ["person", id],
+  const [tab, setTab] = useState<ContactTab>("overview");
+  const contactQuery = useQuery({
+    queryKey: ["contact", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/people/{id}", {
+      const { data, error } = await api.GET("/contacts/{id}", {
         params: { path: { id } },
       });
       if (error) {
@@ -530,14 +530,14 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
     },
   });
   const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
-  const timelineQuery = useRecordTimeline("person", id, {
+  const timelineQuery = useRecordTimeline("contact", id, {
     filters: timelineFilters,
   });
-  const view360 = usePerson360(id);
+  const view360 = useContact360(id);
   // The composite is only usable once it carries its mandatory root record.
   // Guarding on the whole payload would let a partial or error-shaped body
-  // through and crash the rail on a person that is not there.
-  const view = view360.data?.person ? view360.data : undefined;
+  // through and crash the rail on a contact that is not there.
+  const view = view360.data?.contact ? view360.data : undefined;
   const overlay = useSorMode() === "overlay";
   const viewerId = useViewerId();
   // Which message the drawer is showing. The page owns it rather than the row,
@@ -551,9 +551,9 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
     (activity) => (
       <TimelineActions
         activity={activity}
-        entityType="person"
+        entityType="contact"
         entityId={id}
-        personId={id}
+        contactId={id}
       />
     ),
   ).map((entry) =>
@@ -564,15 +564,15 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={personQuery} pendingLabel={t("nav.contacts")}>
-        {(person) => (
+      <QueryGate query={contactQuery} pendingLabel={t("nav.contacts")}>
+        {(contact) => (
           <RecordView
-            name={person.full_name}
-            subtitle={person.title ?? undefined}
+            name={contact.full_name}
+            subtitle={contact.title ?? undefined}
             zone={recordZone}
             badges={
-              <PersonActionBadges
-                person={person}
+              <ContactActionBadges
+                contact={contact}
                 cf={cf}
                 archivedReasonId={archivedReasonId}
               />
@@ -580,14 +580,14 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
             // The archive is a fact about the whole record, so it is stated
             // once across the header rather than repeated beside each verb it
             // refuses. The rail says the same thing about its own inline
-            // edits (personrail.tsx) off this same key, so the two cannot
+            // edits (contactrail.tsx) off this same key, so the two cannot
             // drift into two spellings of one fact. Absent while the contact
             // is live: a line always reserved would read as a record with
             // something to say about itself and nothing said.
             band={
-              person.archived_at ? (
+              contact.archived_at ? (
                 <p id={archivedReasonId} className="t-caption">
-                  {t("person.rail.archivedReadOnly")}
+                  {t("contact.rail.archivedReadOnly")}
                 </p>
               ) : undefined
             }
@@ -612,11 +612,11 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
             timelineFooter={<LoadMoreButton query={timelineQuery} />}
             timelineNotice={overlay ? <OverlayUnavailable /> : undefined}
             rail={view ? <IdentityRail view={view} /> : undefined}
-            aside={<PersonAside view={view} overlay={overlay} />}
+            aside={<ContactAside view={view} overlay={overlay} />}
           >
             <div style={{ marginBottom: "var(--space-4)" }}>
               <SegmentedControl
-                options={PERSON_TABS}
+                options={CONTACT_TABS}
                 value={tab}
                 onChange={setTab}
                 labels={{
@@ -626,7 +626,7 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
                 }}
               />
             </div>
-            <PersonTabPanels tab={tab} person={person} view={view} />
+            <ContactTabPanels tab={tab} contact={contact} view={view} />
           </RecordView>
         )}
       </QueryGate>

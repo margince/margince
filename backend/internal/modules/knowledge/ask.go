@@ -75,7 +75,7 @@ type Passage struct {
 // none — the whole value of a citation is that following it lands you on the
 // sentence.
 //
-// The column is in CHARACTERS, not bytes: a person counts across a line by what
+// The column is in CHARACTERS, not bytes: a contact counts across a line by what
 // they can see, and a byte offset would put them past the mark on any line with
 // an accent in it.
 func (p Passage) Locate(span string) (line, column int) {

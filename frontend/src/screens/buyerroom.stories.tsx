@@ -11,7 +11,7 @@ import {
 } from "./story-utils";
 
 // The buyer's Deal Room, one story per access state, so the five screens an
-// outside person can land on are exercised without a backend in any state.
+// outside contact can land on are exercised without a backend in any state.
 
 const PARTICIPANT = {
   id: "p-1",

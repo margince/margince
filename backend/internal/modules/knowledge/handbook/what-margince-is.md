@@ -1,6 +1,6 @@
 # What Margince is
 
-Margince is a CRM — a place to keep track of the people you sell to, the
+Margince is a CRM — a place to keep track of the contacts you sell to, the
 companies they work for, the deals you are working on, and the work you deliver
 afterwards.
 
@@ -18,11 +18,11 @@ attributed.
 
 The governing rule is one sentence:
 
-> An agent can do what the person behind it could do unaided — and nothing more.
-> It is checked against that person on every call.
+> An agent can do what the contact behind it could do unaided — and nothing more.
+> It is checked against that contact on every call.
 
-An agent has no identity of its own. It acts on behalf of a person, using a
-credential that person minted and can revoke. If you cannot see a record, neither
+An agent has no identity of its own. It acts on behalf of a contact, using a
+credential that contact minted and can revoke. If you cannot see a record, neither
 can your agent. If you are not allowed to do something, it cannot do it for you.
 
 And there is a short list of things it can never do at all, however it is
@@ -70,7 +70,7 @@ You are meant to be able to check it. That is the design.
 
 Five kinds of record:
 
-- **Contacts** — people
+- **Contacts** — contacts
 - **Companies** — the companies they work for
 - **Leads** — prospects, kept deliberately apart from contacts
 - **Deals** — pieces of business moving toward won or lost
@@ -95,7 +95,7 @@ all of them, and the documents that accumulate along the way.
 
 Two screens are worth knowing on day one.
 
-**Worklist** is your day, and the only door to work that waits on a person:
+**Worklist** is your day, and the only door to work that waits on a contact:
 decisions to answer, tasks to finish, duplicates to merge, today's meetings,
 deals going quiet, promises you made, and what ran on its own overnight. When
 there is nothing, it says "Your day is clear" rather than showing you an empty
@@ -120,9 +120,9 @@ like upload limits and whether sends need confirming.
 it and shows through on a few screens, which is confusing; when a search result
 group says "Companies", it means companies.
 
-**Passport** — the credential a person mints so an AI agent can act as them.
+**Passport** — the credential a contact mints so an AI agent can act as them.
 
-**Staged** — an action that has not happened, and is waiting for a person to
+**Staged** — an action that has not happened, and is waiting for a contact to
 decide.
 
 **Archived** — removed from the live lists, still there. Almost everything in

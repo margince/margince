@@ -81,7 +81,7 @@ describe("conversationReducer happy path", () => {
       state,
     );
     // The installation's reporting basis comes right after the company,
-    // before anything about the person answering.
+    // before anything about the contact answering.
     expect(state).toMatchObject({ act: "basis", phase: "bs.ask" });
     // The read terminal appends nothing: it is silent success, and the
     // outcome right after COMPANY_CONFIRMED proves no bubble sits between

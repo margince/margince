@@ -11,7 +11,7 @@ package gates
 // worse than no preset: it is a file in the repository telling somebody to write
 // something that will not boot. Nothing loads this directory at runtime — that
 // is deliberate, and it is exactly why a test has to, because otherwise the only
-// thing checking these files is the next person to paste one into production.
+// thing checking these files is the next contact to paste one into production.
 //
 // The corpus is DERIVED from the directory rather than listed here, so a preset
 // added later is covered by this gate without anybody remembering to add it.

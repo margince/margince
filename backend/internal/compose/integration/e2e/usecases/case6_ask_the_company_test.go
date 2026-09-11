@@ -7,11 +7,11 @@ package usecases
 
 // CASE 6 — Ask the company.
 //
-// The prompt, spoken, naming no company, no person, no date and no record:
+// The prompt, spoken, naming no company, no contact, no date and no record:
 //
 //	We are about to change the account manager on one of our major
 //	accounts, and in the past customers complained if we swapped the
-//	responsible people too much. Did we have it in the past, what happened,
+//	responsible contacts too much. Did we have it in the past, what happened,
 //	how did we react, what should I be prepared for? Is there something we
 //	can learn? Check in our CRM.
 //
@@ -82,13 +82,13 @@ func (s *scenario) seedContradiction(t *testing.T) pastCase {
 		(id, owner_id, display_name, industry, source, captured_by)
 		VALUES ($1, $2, $3, 'Managed Services', 'manual', 'human:x')`,
 		s.Colleague, "Reply Deutschland "+sharedAccountWord)
-	person := s.seedPerson(t, "Katrin Sommer", c.company)
+	contact := s.seedContact(t, "Katrin Sommer", c.company)
 
 	// The email, dated. This is the record.
-	c.complaint = s.seedCompanyActivity(t, "email", "inbound", person, c.company,
+	c.complaint = s.seedCompanyActivity(t, "email", "inbound", contact, c.company,
 		daysAgo(complaintDaysAgo), theRecordSays)
 	// The note, written later, wrong about the month. This is the prose.
-	c.postMortem = s.seedCompanyActivity(t, "note", "", person, c.company,
+	c.postMortem = s.seedCompanyActivity(t, "note", "", contact, c.company,
 		daysAgo(complaintDaysAgo-90), thePostMortemSays)
 	return c
 }
@@ -106,16 +106,16 @@ func (s *scenario) seedTwoMorePastCases(t *testing.T) []pastCase {
 			(id, owner_id, display_name, industry, source, captured_by)
 			VALUES ($1, $2, $3, 'Managed Services', 'manual', 'human:x')`,
 			s.Colleague, account.company+" "+sharedAccountWord)
-		person := s.seedPerson(t, "Kontakt "+account.company, company)
+		contact := s.seedContact(t, "Kontakt "+account.company, company)
 		out = append(out, pastCase{
 			company:   company,
-			complaint: s.seedCompanyActivity(t, "email", "inbound", person, company, daysAgo(200), account.complaint),
+			complaint: s.seedCompanyActivity(t, "email", "inbound", contact, company, daysAgo(200), account.complaint),
 		})
 	}
 	return out
 }
 
-// seedCompanyActivity logs one dated activity against a company and a person.
+// seedCompanyActivity logs one dated activity against a company and a contact.
 //
 // No deal here, unlike case 5's helper: this case is about a company's history
 // rather than about a deal's coverage, and a deal the scenario never asks about
@@ -123,12 +123,12 @@ func (s *scenario) seedTwoMorePastCases(t *testing.T) []pastCase {
 //
 // The provenance is SYNTHETIC and deliberately so. A real write derives
 // captured_by from the authenticated principal and stamps an actor participant
-// beside the linked people; this fixture writes neither, because what case 6
+// beside the linked contacts; this fixture writes neither, because what case 6
 // asserts is retrieval and dates rather than provenance. Case 1 is where the
 // write path itself is under test, and it inserts nothing by hand. Say it here
 // so a later assertion about who captured a record is not built on this.
 func (s *scenario) seedCompanyActivity(
-	t *testing.T, kind, direction string, person, company ids.UUID, occurredAt time.Time, body string,
+	t *testing.T, kind, direction string, contact, company ids.UUID, occurredAt time.Time, body string,
 ) ids.UUID {
 	t.Helper()
 	var id ids.UUID
@@ -140,13 +140,13 @@ func (s *scenario) seedCompanyActivity(
 			(id, kind, direction, occurred_at, body, source, captured_by)
 			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, kind, direction, occurredAt, body)
 	}
-	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), id, person)
+	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), id, contact)
 	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, company_id)
 		VALUES ($1, $2, 'company', $3)`, ids.NewV7(), id, company)
 	if direction != "" {
-		s.seed(t, `INSERT INTO activity_participant (id, activity_id, person_id, role)
-			VALUES ($1, $2, $3, $4)`, ids.NewV7(), id, person, participantRoleFor(direction))
+		s.seed(t, `INSERT INTO activity_participant (id, activity_id, contact_id, role)
+			VALUES ($1, $2, $3, $4)`, ids.NewV7(), id, contact, participantRoleFor(direction))
 	}
 	return id
 }

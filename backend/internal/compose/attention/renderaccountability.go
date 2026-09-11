@@ -16,7 +16,7 @@ import (
 )
 
 // failedItem is one approved decision whose released work did not run,
-// carried back to the person who approved it. The sentence was written for
+// carried back to the contact who approved it. The sentence was written for
 // the reader when the failure was recorded; `open` is offered only when the
 // decision named a record the client can route to.
 func failedItem(failed FailedEffect) crmcontracts.AttentionItem {
@@ -44,7 +44,7 @@ func failedItem(failed FailedEffect) crmcontracts.AttentionItem {
 //
 // NO SUBJECT AND NO VERBS, deliberately, for both. The card's whole subject is
 // the obligation rather than a record with a page, and meeting it happens on
-// another screen — the case queue for a request, the person's own screen for a
+// another screen — the case queue for a request, the contact's own screen for a
 // disclosure. A verb here would promise something this queue cannot complete.
 //
 // `kind` carries what a reader needs to decide anything: for a request, what was
@@ -71,19 +71,19 @@ func dsrItem(request DSRCase, asOf time.Time) crmcontracts.AttentionItem {
 
 // noticeCaseItem is one disclosure duty whose deadline is running.
 //
-// IT NAMES THE PERSON AND OFFERS `open`, where the DSR card beside it does
+// IT NAMES THE CONTACT AND OFFERS `open`, where the DSR card beside it does
 // neither, and the difference is not a style choice: a subject request is worked
 // on the case queue's own screen, and a notice case has no screen — the
-// disclosure is sent from the person's own page. A card carrying only the
+// disclosure is sent from the contact's own page. A card carrying only the
 // article and the deadline would prompt a privacy admin with nowhere to go, and
 // several such cards would be indistinguishable from each other.
 //
 // A BLOCKED case draws exactly like any other. A duty nobody can discharge is
 // the one most worth a reader's attention, and drawing it differently would
-// invite a client to filter it out; the obstacle is read on the person's page.
+// invite a client to filter it out; the obstacle is read on the contact's page.
 func noticeCaseItem(owed NoticeCase, asOf time.Time) crmcontracts.AttentionItem {
 	item := legalDeadlineItem(owed.ID, owed.Rule, owed.DueAt, "notice_case", asOf)
-	item.Subject = subjectOf("person", owed.PersonID)
+	item.Subject = subjectOf("contact", owed.ContactID)
 	if openableSubject(item.Subject) {
 		item.Actions = []crmcontracts.AttentionItemActions{actionOpen}
 	}

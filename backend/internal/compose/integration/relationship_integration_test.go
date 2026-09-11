@@ -7,7 +7,7 @@ package integration
 
 // Relationship edges + the partner extension over HTTP: endpoint
 // visibility gates reads and writes (an edge never out-sees its ends),
-// one current-primary employer per person, optimistic concurrency on
+// one current-primary employer per contact, optimistic concurrency on
 // update, and partner promotion flipping the company's classification.
 
 import (
@@ -30,7 +30,7 @@ import (
 
 type relEnv struct {
 	*apptest.AppEnv
-	personID  string
+	contactID string
 	companyID string
 }
 
@@ -38,16 +38,16 @@ func setupRelationships(t *testing.T) *relEnv {
 	t.Helper()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Rel E2E", "rel@fable.test", "Admin")
-	var person, company struct {
+	var contact, company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Edge Person"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Edge Contact"}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Edge Company"}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
-	return &relEnv{AppEnv: e, personID: person.ID, companyID: company.ID}
+	return &relEnv{AppEnv: e, contactID: contact.ID, companyID: company.ID}
 }
 
 func TestRelationshipLifecycle(t *testing.T) {
@@ -58,7 +58,7 @@ func TestRelationshipLifecycle(t *testing.T) {
 		Version int64  `json:"version"`
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "person_id": e.personID, "company_id": e.companyID,
+		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
 		"role": "cto", "is_current_primary": true, "source": "ui",
 	}, nil, &first); status != http.StatusCreated {
 		t.Fatalf("create employment → %d", status)
@@ -72,7 +72,7 @@ func TestRelationshipLifecycle(t *testing.T) {
 		t.Fatalf("create company2 → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "person_id": e.personID, "company_id": company2.ID,
+		"kind": "employment", "contact_id": e.contactID, "company_id": company2.ID,
 		"is_current_primary": true, "source": "ui",
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("second employment → %d", status)
@@ -83,7 +83,7 @@ func TestRelationshipLifecycle(t *testing.T) {
 			IsCurrentPrimary bool   `json:"is_current_primary"`
 		} `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/relationships?person_id="+e.personID+"&kind=employment", nil, nil, &listed); status != http.StatusOK || len(listed.Data) != 2 {
+	if status := e.Call(t, "GET", "/v1/relationships?contact_id="+e.contactID+"&kind=employment", nil, nil, &listed); status != http.StatusOK || len(listed.Data) != 2 {
 		t.Fatalf("list → %d %+v", status, listed)
 	}
 	primaries := 0
@@ -115,13 +115,13 @@ func TestRelationshipLifecycle(t *testing.T) {
 
 	// A malformed endpoint shape is a 422, not a DB error.
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "person_id": e.personID, "source": "ui",
+		"kind": "employment", "contact_id": e.contactID, "source": "ui",
 	}, nil, nil); status != 422 {
 		t.Fatalf("shape-violating edge → %d, want 422", status)
 	}
 	// An invisible endpoint reads as absent (H1).
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "person_id": "00000000-0000-7000-8000-00000000dead",
+		"kind": "employment", "contact_id": "00000000-0000-7000-8000-00000000dead",
 		"company_id": e.companyID, "source": "ui",
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("invisible endpoint → %d, want 404", status)
@@ -148,7 +148,7 @@ func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
 		Version int64  `json:"version"`
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "person_id": e.personID, "company_id": e.companyID,
+		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
 		"role": "cto", "source": "ui",
 	}, nil, &edge); status != http.StatusCreated {
 		t.Fatalf("create employment → %d", status)
@@ -174,7 +174,7 @@ func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
 			ArchivedAt *string `json:"archived_at"`
 		} `json:"data"`
 	}
-	if got := e.Call(t, "GET", "/v1/relationships?person_id="+e.personID+"&kind=employment", nil, nil, &listed); got != http.StatusOK {
+	if got := e.Call(t, "GET", "/v1/relationships?contact_id="+e.contactID+"&kind=employment", nil, nil, &listed); got != http.StatusOK {
 		t.Fatalf("list after the archive → %d", got)
 	}
 	for _, rel := range listed.Data {
@@ -207,7 +207,7 @@ func TestAFlooredEdgeArchiveStagesWithItsVersionPinned(t *testing.T) {
 		Version int64  `json:"version"`
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "person_id": e.personID, "company_id": e.companyID,
+		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
 		"role": "cto", "source": "ui",
 	}, nil, &edge); status != http.StatusCreated {
 		t.Fatalf("create employment → %d", status)
@@ -251,7 +251,7 @@ func TestAFlooredEdgeArchiveStagesWithItsVersionPinned(t *testing.T) {
 			ArchivedAt *string `json:"archived_at"`
 		} `json:"data"`
 	}
-	if got := e.Call(t, "GET", "/v1/relationships?person_id="+e.personID+"&kind=employment",
+	if got := e.Call(t, "GET", "/v1/relationships?contact_id="+e.contactID+"&kind=employment",
 		nil, nil, &parked); got != http.StatusOK {
 		t.Fatalf("list while parked → %d", got)
 	}
@@ -293,7 +293,7 @@ func TestAnApprovedEdgeArchiveRefusesAfterTheEdgeMoves(t *testing.T) {
 		Version int64  `json:"version"`
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "person_id": e.personID, "company_id": e.companyID,
+		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
 		"role": "cto", "source": "ui",
 	}, nil, &edge); status != http.StatusCreated {
 		t.Fatalf("create employment → %d", status)

@@ -48,7 +48,7 @@ const (
 	// one would suppress the very re-issue it is waiting for.
 	sweptJobMaxAttempts = 3
 
-	// oneOffJobMaxAttempts is for a kind nothing re-issues: a person pressed a
+	// oneOffJobMaxAttempts is for a kind nothing re-issues: a contact pressed a
 	// button, or a message arrived once. The ladder carries BOTH failure shapes
 	// alone — a dependency down for a minute, worth the retries, and a
 	// malformed input or a code defect, worth none — which is the headroom

@@ -40,7 +40,7 @@ const RENAMED_PAGES: Readonly<Record<string, SettingsPageId>> = Object.assign(
   {
     general: "company",
     users: "members",
-    people: "members",
+    contacts: "members",
     "data-model": "fields",
     ai: "models",
     maintenance: "system-health",
@@ -63,7 +63,7 @@ const LEGACY_ADMIN_SEGMENT = "admin";
 const LEGACY_ADMIN_IDS: readonly string[] = [
   "general",
   "users",
-  "people",
+  "contacts",
   "integrations",
   "extensions",
   "capture",

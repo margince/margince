@@ -82,7 +82,7 @@ export function RecordPicker({
   //
   // The TERM survives on purpose: the same words usually mean the same search
   // in the new space, and the effect below re-runs on searchTargets anyway, so
-  // the list refills without the person retyping.
+  // the list refills without the contact retyping.
   // Both halves take the FUNCTIONAL form because the value is a function:
   // useState(fn) reads fn as a lazy initializer and calls it, and
   // setState(fn) reads it as an updater — so the plain spellings store the

@@ -451,6 +451,11 @@ const (
 	ConsentChanged                        SubscribableEventType = "consent.changed"
 	ConsentSuppressed                     SubscribableEventType = "consent.suppressed"
 	ConsentSuppressionLifted              SubscribableEventType = "consent.suppression_lifted"
+	ContactArchived                       SubscribableEventType = "contact.archived"
+	ContactCreated                        SubscribableEventType = "contact.created"
+	ContactMerged                         SubscribableEventType = "contact.merged"
+	ContactRestored                       SubscribableEventType = "contact.restored"
+	ContactUpdated                        SubscribableEventType = "contact.updated"
 	ContractArchived                      SubscribableEventType = "contract.archived"
 	ContractCreated                       SubscribableEventType = "contract.created"
 	ContractStatusChanged                 SubscribableEventType = "contract.status_changed"
@@ -515,11 +520,6 @@ const (
 	OfferSuperseded                       SubscribableEventType = "offer.superseded"
 	OnboardingStateChanged                SubscribableEventType = "onboarding.state_changed"
 	PassportRevoked                       SubscribableEventType = "passport.revoked"
-	PersonArchived                        SubscribableEventType = "person.archived"
-	PersonCreated                         SubscribableEventType = "person.created"
-	PersonMerged                          SubscribableEventType = "person.merged"
-	PersonRestored                        SubscribableEventType = "person.restored"
-	PersonUpdated                         SubscribableEventType = "person.updated"
 	PipelineArchived                      SubscribableEventType = "pipeline.archived"
 	PipelineCreated                       SubscribableEventType = "pipeline.created"
 	PipelineUpdated                       SubscribableEventType = "pipeline.updated"
@@ -598,6 +598,16 @@ func (e SubscribableEventType) Valid() bool {
 	case ConsentSuppressed:
 		return true
 	case ConsentSuppressionLifted:
+		return true
+	case ContactArchived:
+		return true
+	case ContactCreated:
+		return true
+	case ContactMerged:
+		return true
+	case ContactRestored:
+		return true
+	case ContactUpdated:
 		return true
 	case ContractArchived:
 		return true
@@ -727,16 +737,6 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case PassportRevoked:
 		return true
-	case PersonArchived:
-		return true
-	case PersonCreated:
-		return true
-	case PersonMerged:
-		return true
-	case PersonRestored:
-		return true
-	case PersonUpdated:
-		return true
 	case PipelineArchived:
 		return true
 	case PipelineCreated:
@@ -843,7 +843,7 @@ type PublicEventActivityCaptured struct {
 	SourceSystem *string `json:"source_system,omitempty"`
 }
 
-// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
 type PublicEventActivityChangedFields struct {
 	// AssigneeId The activity's new assignee (absent when this update did not touch it).
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -898,13 +898,13 @@ type PublicEventActivityRelinkedRef struct {
 	// EntityId The relink target's id.
 	EntityId openapi_types.UUID `json:"entity_id"`
 
-	// EntityType The relink target's kind (person | company | deal | lead).
+	// EntityType The relink target's kind (contact | company | deal | lead).
 	EntityType string `json:"entity_type"`
 }
 
-// PublicEventActivityUpdated Payload for activity.updated — a BOUNDED delta (unlike the person/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
+// PublicEventActivityUpdated Payload for activity.updated — a BOUNDED delta (unlike the contact/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
 type PublicEventActivityUpdated struct {
-	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
 	ChangedFields PublicEventActivityChangedFields `json:"changed_fields"`
 }
 
@@ -916,10 +916,10 @@ type PublicEventActor struct {
 
 // PublicEventApprovalDecided Payload for approval.decided — a staged approval reached a verdict (approvals/decide.go, approvals/expiresweep.go). kind, verdict and edited_change are decoded BY NAME outside this module — automation's run consumer matches BOTH verdict and kind (automation/engine_blocked.go), the Surface-B runner's resume consumer reads edited_change (compose/runnerservice.go) — see the JSON-tag regression tests in internal/modules/webhooks. edited/diff_hash/edited_change are present only on the ADR-0036 §4 modify-then-approve arm, where the human's edited payload replaced the staged change under a freshly computed diff_hash.
 type PublicEventApprovalDecided struct {
-	// DecidedBy The deciding human's user id. ABSENT on the `expired` verdict, and that absence is the payload's own statement that nobody decided this — a zero or placeholder id here would put a phantom user's name on a refusal no person made.
+	// DecidedBy The deciding human's user id. ABSENT on the `expired` verdict, and that absence is the payload's own statement that nobody decided this — a zero or placeholder id here would put a phantom user's name on a refusal no contact made.
 	DecidedBy *openapi_types.UUID `json:"decided_by,omitempty"`
 
-	// DecidedBySystem True when the product applied this itself under a governing policy rather than putting it to a person. It is NOT the complement of `decided_by`: the `expired` verdict also carries no decider, and those two are opposite facts — one is the product acting, the other is nobody acting. A consumer measuring whether people agree with what is proposed must exclude an automatic apply from its denominator, because the autopilot agreeing with itself is not evidence that anyone agreed.
+	// DecidedBySystem True when the product applied this itself under a governing policy rather than putting it to a contact. It is NOT the complement of `decided_by`: the `expired` verdict also carries no decider, and those two are opposite facts — one is the product acting, the other is nobody acting. A consumer measuring whether contacts agree with what is proposed must exclude an automatic apply from its denominator, because the autopilot agreeing with itself is not evidence that anyone agreed.
 	DecidedBySystem *bool `json:"decided_by_system,omitempty"`
 
 	// DiffHash The edited change's freshly computed diff_hash (present only on the modify-then-approve arm).
@@ -1081,7 +1081,7 @@ type PublicEventCompanyUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
-// PublicEventConsentChanged Payload for consent.changed — a subject's per-purpose consent state was recorded (consent/store.go's Record). The subject is a person XOR a lead (data-model §7, before promotion) — a RUNTIME choice Record resolves via consentSubject, not a fixed type this schema can name, so this is the first dynamic-entity event (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
+// PublicEventConsentChanged Payload for consent.changed — a subject's per-purpose consent state was recorded (consent/store.go's Record). The subject is a contact XOR a lead (data-model §7, before promotion) — a RUNTIME choice Record resolves via consentSubject, not a fixed type this schema can name, so this is the first dynamic-entity event (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
 type PublicEventConsentChanged struct {
 	// NewState The state now on record (granted | withdrawn).
 	NewState string `json:"new_state"`
@@ -1094,7 +1094,7 @@ type PublicEventConsentChanged struct {
 }
 
 // PublicEventConsentSuppressed Payload for consent.suppressed — somebody recorded that we may not write to a subject (consent/suppress.go's Suppress). Its own event rather than a consent.changed, because a suppression is not the absence of consent: it outranks a grant, it does not expire on its own, and a later re-grant must not silently erase it. A consumer that folded the two would resume mail the subject asked us to stop.
-// The subject is a person and only a person: the write door names that object as a literal, so this is a static entity whose delivery scope the fan-out gate proves mechanically rather than by hand-ratification.
+// The subject is a contact and only a contact: the write door names that object as a literal, so this is a static entity whose delivery scope the fan-out gate proves mechanically rather than by hand-ratification.
 // It names WHAT was recorded and at WHICH authority, never the reason the subject gave: that is their words about themselves, and an event fans out further than the record it describes.
 type PublicEventConsentSuppressed struct {
 	// DecidedByLevel Whose decision it is, which is what says who may lift it (machine | user | admin | subject).
@@ -1105,10 +1105,10 @@ type PublicEventConsentSuppressed struct {
 }
 
 // PublicEventConsentSuppressionLifted Payload for consent.suppression_lifted — somebody with the authority to do so took back ONE stop.
-// That is not the same as "mail may resume", and a consumer must not read it that way. A person can carry several stops at once — their own objection and a rep's separate note — and lifting one says nothing about the others. `remaining_suppressions` is the field that answers the question a consumer actually has, and `still_suppressed` is that answer stated plainly: true means this person is STILL not writable, however many stops were just taken back.
+// That is not the same as "mail may resume", and a consumer must not read it that way. A contact can carry several stops at once — their own objection and a rep's separate note — and lifting one says nothing about the others. `remaining_suppressions` is the field that answers the question a consumer actually has, and `still_suppressed` is that answer stated plainly: true means this contact is STILL not writable, however many stops were just taken back.
 // Margince itself never relied on this event to decide a send — the engine re-reads the strongest live stop inside the sending transaction — so these fields exist for the readers outside it.
 // It carries BOTH levels: the one the stop was recorded at and the one that lifted it. A reader auditing this later needs to see that the second outranked the first, and a single "lifted_by" would leave that unanswerable without joining the row that no longer says it.
-// It never carries the reason either party gave. Those words belong to the people who wrote them, and an event reaches readers the explanation was not given to.
+// It never carries the reason either party gave. Those words belong to the contacts who wrote them, and an event reaches readers the explanation was not given to.
 type PublicEventConsentSuppressionLifted struct {
 	// LiftedByLevel The authority that lifted it. Always strictly above the level above.
 	LiftedByLevel string `json:"lifted_by_level"`
@@ -1116,14 +1116,59 @@ type PublicEventConsentSuppressionLifted struct {
 	// RecordedAtLevel The authority the stop was recorded at (machine | user | admin | subject).
 	RecordedAtLevel string `json:"recorded_at_level"`
 
-	// RemainingSuppressions How many stops are still live for this person after the lift, counted inside the same transaction that did the lifting.
+	// RemainingSuppressions How many stops are still live for this contact after the lift, counted inside the same transaction that did the lifting.
 	RemainingSuppressions *int `json:"remaining_suppressions,omitempty"`
 
-	// StillSuppressed Whether this person is still not writable. Equivalent to remaining_suppressions > 0, stated as its own field so a consumer cannot get the comparison wrong in the direction that resumes mail.
+	// StillSuppressed Whether this contact is still not writable. Equivalent to remaining_suppressions > 0, stated as its own field so a consumer cannot get the comparison wrong in the direction that resumes mail.
 	StillSuppressed *bool `json:"still_suppressed,omitempty"`
 
-	// SuppressionId Which stop was lifted. Without it a consumer holding two stops for one person cannot tell which one this event describes.
+	// SuppressionId Which stop was lifted. Without it a consumer holding two stops for one contact cannot tell which one this event describes.
 	SuppressionId *openapi_types.UUID `json:"suppression_id,omitempty"`
+}
+
+// PublicEventContactArchived Payload for contact.archived — a contact was archived. Carries no data.
+type PublicEventContactArchived struct{}
+
+// PublicEventContactCreated Payload for contact.created — a contact was created.
+type PublicEventContactCreated struct {
+	// FullName The contact's name at creation.
+	FullName string `json:"full_name"`
+}
+
+// PublicEventContactMerged Payload for contact.merged — two contact records collapsed into one (the §1.3 merge); neither contact.updated nor contact.archived can say this, so it is its own verb.
+type PublicEventContactMerged struct {
+	// MergedFromId The merged-away (source) contact, retired but still fetchable by id.
+	MergedFromId openapi_types.UUID `json:"merged_from_id"`
+
+	// MergedIntoId The survivor (target) contact.
+	MergedIntoId openapi_types.UUID `json:"merged_into_id"`
+
+	// Relinked How many child rows on each side were repointed from the merged- away contact onto the survivor (contacts/merge.go relinkCounts).
+	Relinked PublicEventContactMergedRelinkCounts `json:"relinked"`
+}
+
+// PublicEventContactMergedRelinkCounts How many child rows on each side were repointed from the merged- away contact onto the survivor (contacts/merge.go relinkCounts).
+type PublicEventContactMergedRelinkCounts struct {
+	// ActivityLinks activity_link rows relinked.
+	ActivityLinks int64 `json:"activity_links"`
+
+	// Emails contact_email rows relinked.
+	Emails int64 `json:"emails"`
+
+	// Phones contact_phone rows relinked.
+	Phones int64 `json:"phones"`
+
+	// Relationships relationship edge rows relinked.
+	Relationships int64 `json:"relationships"`
+}
+
+// PublicEventContactRestored Payload for contact.restored. Never emitted today (no restore path exists for contact); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
+type PublicEventContactRestored struct{}
+
+// PublicEventContactUpdated Payload for contact.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat column patch, a lead-promotion conversion note, a signature-enrichment fill, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
+type PublicEventContactUpdated struct {
+	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form.
+	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
 // PublicEventContractArchived Payload for contract.archived — the agreement left the surfaces that count it.
@@ -1166,7 +1211,7 @@ type PublicEventContractUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
-// PublicEventConversationClaimCaptured Payload for conversation_claim.captured — something promised, asked or decided in a captured conversation was written to the record (ADR-0097 D1). The entity is the PERSON the claim is about: a subscriber reacting to what a contact said wants the contact, and the claim id rides the payload for the reader that needs the row itself.
+// PublicEventConversationClaimCaptured Payload for conversation_claim.captured — something promised, asked or decided in a captured conversation was written to the record (ADR-0097 D1). The entity is the CONTACT the claim is about: a subscriber reacting to what a contact said wants the contact, and the claim id rides the payload for the reader that needs the row itself.
 type PublicEventConversationClaimCaptured struct {
 	ClaimId openapi_types.UUID `json:"claim_id"`
 
@@ -1291,7 +1336,7 @@ type PublicEventDealRoomParticipantCredentialReissued struct {
 	Reason string `json:"reason"`
 }
 
-// PublicEventDealRoomParticipantInvited Payload for deal_room.participant_invited — an outside person was admitted to a
+// PublicEventDealRoomParticipantInvited Payload for deal_room.participant_invited — an outside contact was admitted to a
 // Deal Room.
 //
 // The event names the participant and the room, never the credential or its hash:
@@ -1304,7 +1349,7 @@ type PublicEventDealRoomParticipantInvited struct {
 	ParticipantId openapi_types.UUID `json:"participant_id"`
 }
 
-// PublicEventDealRoomParticipantRevoked Payload for deal_room.participant_revoked — an outside person's access to a Deal
+// PublicEventDealRoomParticipantRevoked Payload for deal_room.participant_revoked — an outside contact's access to a Deal
 // Room was taken away. Their live session ended and any unconsumed credential was
 // retired at the same moment.
 type PublicEventDealRoomParticipantRevoked struct {
@@ -1384,7 +1429,7 @@ type PublicEventDealUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
-// PublicEventEmailSignatureChanged Payload for email_signature.changed — a member wrote, edited or cleared the sign-off appended to every message they send (people/emailsignature.go's SaveMyEmailSignature). How a person is represented on outbound mail is a fact worth answering later, so the change is audited and published rather than written quietly. The signature TEXT is NOT in the payload: it is the member's own words about themselves, often carrying a direct line or an address, and a subscriber needs to know the sign-off moved rather than what it says.
+// PublicEventEmailSignatureChanged Payload for email_signature.changed — a member wrote, edited or cleared the sign-off appended to every message they send (contacts/emailsignature.go's SaveMyEmailSignature). How a contact is represented on outbound mail is a fact worth answering later, so the change is audited and published rather than written quietly. The signature TEXT is NOT in the payload: it is the member's own words about themselves, often carrying a direct line or an address, and a subscriber needs to know the sign-off moved rather than what it says.
 type PublicEventEmailSignatureChanged struct {
 	// HasSignature Whether mail from this member now carries a sign-off. False after a member empties the field, which is a deliberate "send unsigned".
 	HasSignature bool `json:"has_signature"`
@@ -1395,7 +1440,7 @@ type PublicEventEngagementReply struct {
 	// Channel The medium the reply arrived on and must be answered on: `email` for the mail connectors (gmail, imap, graph all reach one inbox), the channel provider itself for a messaging connector (e.g. `telegram`).
 	Channel string `json:"channel"`
 
-	// ContactId The already-known person behind the counterparty — resolved from the address on the mail path and from the channel identity on a messaging one (absent when the counterparty resolves only in a follow-up ensure).
+	// ContactId The already-known contact behind the counterparty — resolved from the address on the mail path and from the channel identity on a messaging one (absent when the counterparty resolves only in a follow-up ensure).
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
 	// IdempotencyKey The capture natural key (source_system:source_id) this reply was detected from.
@@ -1413,7 +1458,7 @@ type PublicEventEntityRef struct {
 	// Id Stable identifier of the entity.
 	Id openapi_types.UUID `json:"id"`
 
-	// Type Entity kind (e.g. deal, person, company).
+	// Type Entity kind (e.g. deal, contact, company).
 	Type string `json:"type"`
 }
 
@@ -1464,7 +1509,7 @@ type PublicEventForecastAssuranceCreatedReadiness string
 // PublicEventForecastAssuranceCreatedStatus `incomplete` means an upstream was unavailable. The run still happened and still recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
 type PublicEventForecastAssuranceCreatedStatus string
 
-// PublicEventForecastCreated Payload for forecast.created — somebody accountable for a number said what they believe will close. The entity is the AUTHOR rather than a deal or a team, because a call is an assertion by a person and that person is who it is attributable to.
+// PublicEventForecastCreated Payload for forecast.created — somebody accountable for a number said what they believe will close. The entity is the AUTHOR rather than a deal or a team, because a call is an assertion by a contact and that contact is who it is attributable to.
 // A call supersedes rather than overwrites, so `supersedes_id` names the one it replaces and is absent for the first call of a period. The amount rides along because a consumer reacting to a forecast change needs the figure that changed; the note does not, since a subscriber acting on prose is acting on something the author may edit for a human reader.
 type PublicEventForecastCreated struct {
 	AmountMinor  int64              `json:"amount_minor"`
@@ -1480,7 +1525,7 @@ type PublicEventForecastCreated struct {
 
 // PublicEventForecastExceptionResolved Payload for forecast.exception_resolved — somebody answered a finding from the nightly input check. The entity is the AUTHOR, because an answer is attributable to whoever gave it.
 // `outcome` says what KIND of answer it was, and consumers must not treat the six alike. `value_correct` and `not_relevant` HIDE the finding from the screens a revenue commitment is made from, so a surface counting open findings has to drop them; `remind_later` leaves the finding open and it comes back.
-// The reason does not ride along. It is prose a person wrote for another person, and a subscriber acting on it is acting on something the author may edit.
+// The reason does not ride along. It is prose a contact wrote for another contact, and a subscriber acting on it is acting on something the author may edit.
 type PublicEventForecastExceptionResolved struct {
 	ActorUserId openapi_types.UUID `json:"actor_user_id"`
 	ExceptionId openapi_types.UUID `json:"exception_id"`
@@ -1509,7 +1554,7 @@ type PublicEventForecastShareIssued struct {
 // PublicEventForecastShareIssuedKind defines model for PublicEventForecastShareIssued.Kind.
 type PublicEventForecastShareIssuedKind string
 
-// PublicEventForecastShareRevoked Payload for forecast.share_revoked — a share link was closed before its expiry. The entity is the person who revoked it.
+// PublicEventForecastShareRevoked Payload for forecast.share_revoked — a share link was closed before its expiry. The entity is the contact who revoked it.
 // A consumer that recorded the issue must record this too: the two together are the window during which a number was reachable by whoever held the link, and that window is what an access review asks for.
 type PublicEventForecastShareRevoked struct {
 	RevokedAt time.Time          `json:"revoked_at"`
@@ -1561,8 +1606,8 @@ type PublicEventIncumbentDisconnected struct {
 
 // PublicEventIntroRequestClosed Payload for intro_request.closed — the ask ended without a handshake: withdrawn by the requester, or run out of time. `reason` says which, because a rep withdrawing and a queue timing out call for different follow-ups.
 type PublicEventIntroRequestClosed struct {
+	ContactId      openapi_types.UUID                  `json:"contact_id"`
 	IntroRequestId openapi_types.UUID                  `json:"intro_request_id"`
-	PersonId       openapi_types.UUID                  `json:"person_id"`
 	Reason         PublicEventIntroRequestClosedReason `json:"reason"`
 }
 
@@ -1571,59 +1616,59 @@ type PublicEventIntroRequestClosedReason string
 
 // PublicEventIntroRequestCompleted Payload for intro_request.completed — the handshake happened, or the rep used the name they were lent. `outcome` keeps the two apart: an introduction and a name-drop are different events, and a consumer that collapsed them would report doors opened that nobody opened.
 type PublicEventIntroRequestCompleted struct {
+	ContactId      openapi_types.UUID                      `json:"contact_id"`
 	IntroRequestId openapi_types.UUID                      `json:"intro_request_id"`
 	Outcome        PublicEventIntroRequestCompletedOutcome `json:"outcome"`
-	PersonId       openapi_types.UUID                      `json:"person_id"`
 }
 
 // PublicEventIntroRequestCompletedOutcome defines model for PublicEventIntroRequestCompleted.Outcome.
 type PublicEventIntroRequestCompletedOutcome string
 
-// PublicEventIntroRequestCreated Payload for intro_request.created — a rep asked a colleague to open a door to this contact (introductions/store.go's Create). The entity is the CONTACT, because that is what the ask is about and what a consumer ranking a person's open work reads it against. The prose stays on the row: the internal reason and the forwardable note have different audiences, and neither belongs on a bus.
+// PublicEventIntroRequestCreated Payload for intro_request.created — a rep asked a colleague to open a door to this contact (introductions/store.go's Create). The entity is the CONTACT, because that is what the ask is about and what a consumer ranking a contact's open work reads it against. The prose stays on the row: the internal reason and the forwardable note have different audiences, and neither belongs on a bus.
 type PublicEventIntroRequestCreated struct {
+	ContactId        openapi_types.UUID `json:"contact_id"`
 	IntroRequestId   openapi_types.UUID `json:"intro_request_id"`
 	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
-	PersonId         openapi_types.UUID `json:"person_id"`
 	RequesterUserId  openapi_types.UUID `json:"requester_user_id"`
 }
 
 // PublicEventIntroRequestDecided Payload for intro_request.decided — the colleague gave one of the four bounded answers. `decision` carries which, because a consumer that had to re-read the row to tell an acceptance from a refusal would be deciding on state that may already have moved.
 type PublicEventIntroRequestDecided struct {
+	ContactId        openapi_types.UUID                     `json:"contact_id"`
 	Decision         PublicEventIntroRequestDecidedDecision `json:"decision"`
 	IntroRequestId   openapi_types.UUID                     `json:"intro_request_id"`
 	IntroducerUserId openapi_types.UUID                     `json:"introducer_user_id"`
-	PersonId         openapi_types.UUID                     `json:"person_id"`
 }
 
 // PublicEventIntroRequestDecidedDecision defines model for PublicEventIntroRequestDecided.Decision.
 type PublicEventIntroRequestDecidedDecision string
 
-// PublicEventIntroRequestReplied Payload for intro_request.replied — the contact answered, observed from captured activity rather than asserted by a person. `source_activity_id` is the evidence, so a reader can open the message the claim rests on.
+// PublicEventIntroRequestReplied Payload for intro_request.replied — the contact answered, observed from captured activity rather than asserted by a contact. `source_activity_id` is the evidence, so a reader can open the message the claim rests on.
 type PublicEventIntroRequestReplied struct {
+	ContactId        openapi_types.UUID  `json:"contact_id"`
 	IntroRequestId   openapi_types.UUID  `json:"intro_request_id"`
-	PersonId         openapi_types.UUID  `json:"person_id"`
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 }
 
-// PublicEventLeadCreated Payload for lead.created — a lead was created. Two emit sites: a direct create (people/lead.go) that sets no fields, and the capture auto-create engine (capture/sink.go) that names its originating source system; source_system is therefore optional.
+// PublicEventLeadCreated Payload for lead.created — a lead was created. Two emit sites: a direct create (contacts/lead.go) that sets no fields, and the capture auto-create engine (capture/sink.go) that names its originating source system; source_system is therefore optional.
 type PublicEventLeadCreated struct {
 	// SourceSystem The originating source system (capture auto-create only; absent on a direct create).
 	SourceSystem *string `json:"source_system,omitempty"`
 }
 
-// PublicEventLeadDemoted Payload for lead.demoted — the audited reverse of lead.promoted (formulas §26): the lead is back in the segregated pool and the person-side lineage is nulled. Its own verb, because a lead.updated cannot say a person node lost its lineage.
+// PublicEventLeadDemoted Payload for lead.demoted — the audited reverse of lead.promoted (formulas §26): the lead is back in the segregated pool and the contact-side lineage is nulled. Its own verb, because a lead.updated cannot say a contact node lost its lineage.
 type PublicEventLeadDemoted struct {
-	// FromPersonId The person the promotion had created or merged into.
-	FromPersonId openapi_types.UUID `json:"from_person_id"`
+	// FromContactId The contact the promotion had created or merged into.
+	FromContactId openapi_types.UUID `json:"from_contact_id"`
 
-	// Unwind reversed (the created person is archived) or merge_lineage_only (the pre-existing person is untouched; only lineage pointers are nulled).
+	// Unwind reversed (the created contact is archived) or merge_lineage_only (the pre-existing contact is untouched; only lineage pointers are nulled).
 	Unwind string `json:"unwind"`
 }
 
 // PublicEventLeadDisqualified Payload for lead.disqualified — a lead was disqualified. Carries no data.
 type PublicEventLeadDisqualified struct{}
 
-// PublicEventLeadDisqualifyReasonChanged Payload for lead_disqualify_reason.changed — a disqualification reason was added, edited or removed (people/leaddisqualifyreason.go). It rides the lead stream for the reason its source sibling does: a subscriber reporting on why leads were disqualified re-reads the catalog on this.
+// PublicEventLeadDisqualifyReasonChanged Payload for lead_disqualify_reason.changed — a disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream for the reason its source sibling does: a subscriber reporting on why leads were disqualified re-reads the catalog on this.
 // It carries `label` where the source carries `key`, because a reason has no key — the label IS its identity, and after `deleted` it is the only thing naming what went away.
 type PublicEventLeadDisqualifyReasonChanged struct {
 	Change PublicEventLeadDisqualifyReasonChangedChange `json:"change"`
@@ -1645,21 +1690,21 @@ type PublicEventLeadMerged struct {
 	MergedIntoId openapi_types.UUID `json:"merged_into_id"`
 }
 
-// PublicEventLeadPromoted Payload for lead.promoted — the lead's genuine-engagement promotion into the context graph (events.md §5.5); its own verb, never a lead.updated, since neither person.created nor person.updated on its own says a lead crossed this line.
+// PublicEventLeadPromoted Payload for lead.promoted — the lead's genuine-engagement promotion into the context graph (events.md §5.5); its own verb, never a lead.updated, since neither contact.created nor contact.updated on its own says a lead crossed this line.
 type PublicEventLeadPromoted struct {
-	// CarriedActivityIds The activities whose link this promotion moved from the lead onto the person — what carryLeadActivities re-pointed, which is the lead's own timeline and nothing the survivor already had.
-	// It names them because the person id cannot. A promotion that MERGES lands the lead's follow-up task on a person that may already carry its own unrelated reminders, so "the open system tasks on this person" is not the same set as "the tasks this promotion carried" — and a consumer completing the first would tick off work the promotion never touched.
-	// Absent on an event written before this field existed, and a consumer replaying one has no worse an answer than it had then: for a freshly created person the two sets coincide, which is why that case worked without it.
+	// CarriedActivityIds The activities whose link this promotion moved from the lead onto the contact — what carryLeadActivities re-pointed, which is the lead's own timeline and nothing the survivor already had.
+	// It names them because the contact id cannot. A promotion that MERGES lands the lead's follow-up task on a contact that may already carry its own unrelated reminders, so "the open system tasks on this contact" is not the same set as "the tasks this promotion carried" — and a consumer completing the first would tick off work the promotion never touched.
+	// Absent on an event written before this field existed, and a consumer replaying one has no worse an answer than it had then: for a freshly created contact the two sets coincide, which is why that case worked without it.
 	CarriedActivityIds *[]openapi_types.UUID `json:"carried_activity_ids,omitempty"`
 
-	// DedupeOutcome Whether promotion created a new person or merged into an existing one: created or merged.
+	// DedupeOutcome Whether promotion created a new contact or merged into an existing one: created or merged.
 	DedupeOutcome string `json:"dedupe_outcome"`
 
 	// EvidenceRef The inbound activity that evidenced the trigger (absent for a human_qualify with no linked activity).
 	EvidenceRef *openapi_types.UUID `json:"evidence_ref,omitempty"`
 
-	// PromotedPersonId The person this lead promoted into (fresh or an existing survivor).
-	PromotedPersonId openapi_types.UUID `json:"promoted_person_id"`
+	// PromotedContactId The contact this lead promoted into (fresh or an existing survivor).
+	PromotedContactId openapi_types.UUID `json:"promoted_contact_id"`
 
 	// Trigger The genuine-engagement trigger that authorized promotion: inbound_reply, meeting_booked, meeting_held, or human_qualify.
 	Trigger string `json:"trigger"`
@@ -1677,7 +1722,7 @@ type PublicEventLeadSlaBreached struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 }
 
-// PublicEventLeadSourceChanged Payload for lead_source.changed — a lead source was added, edited or removed (people/leadsource.go). It rides the lead stream because the source is a value every lead carries, so a subscriber that renders or groups by source re-reads the catalog on this.
+// PublicEventLeadSourceChanged Payload for lead_source.changed — a lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because the source is a value every lead carries, so a subscriber that renders or groups by source re-reads the catalog on this.
 // `key` and not `label`: the key is what leads carry and what a subscriber keys its own cache by, and it is the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists, so publishing it here would invite a subscriber to trust a copy that can go stale.
 type PublicEventLeadSourceChanged struct {
 	Change PublicEventLeadSourceChangedChange `json:"change"`
@@ -1696,7 +1741,7 @@ type PublicEventLeadUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
-// PublicEventLinkedinAccountChanged Payload for linkedin_account.changed — a member recorded or corrected their OWN LinkedIn authorization (people/linkedinaccount.go's SaveMyLinkedInAccount). Consent to read a professional network is the same class of fact as consent.changed, so it is auditable and published rather than written quietly. The profile URL itself is NOT in the payload: it is the member's own identifier and a subscriber needs to know that the authorization moved, not what their LinkedIn address is.
+// PublicEventLinkedinAccountChanged Payload for linkedin_account.changed — a member recorded or corrected their OWN LinkedIn authorization (contacts/linkedinaccount.go's SaveMyLinkedInAccount). Consent to read a professional network is the same class of fact as consent.changed, so it is auditable and published rather than written quietly. The profile URL itself is NOT in the payload: it is the member's own identifier and a subscriber needs to know that the authorization moved, not what their LinkedIn address is.
 type PublicEventLinkedinAccountChanged struct {
 	// Connected Whether an authorization is on record after this change.
 	Connected bool `json:"connected"`
@@ -1729,7 +1774,7 @@ type PublicEventMirrorBudgetDegraded struct {
 	Band string `json:"band"`
 }
 
-// PublicEventMirrorConflict Payload for mirror.conflict — the reconcile poller (overlay/ reconcile.go's emitMirrorConflict) observed the incumbent CRM had moved a record the mirror's own baseline still called current, an overwrite-worthy divergence (OVA-EVT-1). object_class is the RUNTIME canonical class of the record involved (e.g. "person", "deal") — not a fixed type this schema can name — so this is a dynamic-entity event (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
+// PublicEventMirrorConflict Payload for mirror.conflict — the reconcile poller (overlay/ reconcile.go's emitMirrorConflict) observed the incumbent CRM had moved a record the mirror's own baseline still called current, an overwrite-worthy divergence (OVA-EVT-1). object_class is the RUNTIME canonical class of the record involved (e.g. "contact", "deal") — not a fixed type this schema can name — so this is a dynamic-entity event (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
 type PublicEventMirrorConflict struct {
 	// ExternalId The record's incumbent-side natural key.
 	ExternalId string `json:"external_id"`
@@ -1759,7 +1804,7 @@ type PublicEventMirrorDeleted struct {
 // PublicEventMirrorWriteRejected Payload for mirror.write_rejected. Never emitted today — reserved for branch 2 (writes to an overlay-mode workspace's incumbent CRM, currently declared unsupported_by_sor); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
 type PublicEventMirrorWriteRejected struct{}
 
-// PublicEventNoticeCreated Payload for notice.created — a durable informational notice was recorded for one person (notices/store.go's Create). Recording the row IS the delivery on this transport; the entity is the recipient. The content stays on the row: an event fan-out of subject and body would put the same prose on two wires to drift.
+// PublicEventNoticeCreated Payload for notice.created — a durable informational notice was recorded for one contact (notices/store.go's Create). Recording the row IS the delivery on this transport; the entity is the recipient. The content stays on the row: an event fan-out of subject and body would put the same prose on two wires to drift.
 type PublicEventNoticeCreated struct {
 	// Kind The producing flow's own label (automation, lead_sla).
 	Kind            string             `json:"kind"`
@@ -1892,51 +1937,6 @@ type PublicEventPassportRevoked struct {
 	PassportId openapi_types.UUID `json:"passport_id"`
 }
 
-// PublicEventPersonArchived Payload for person.archived — a person was archived. Carries no data.
-type PublicEventPersonArchived struct{}
-
-// PublicEventPersonCreated Payload for person.created — a person was created.
-type PublicEventPersonCreated struct {
-	// FullName The person's name at creation.
-	FullName string `json:"full_name"`
-}
-
-// PublicEventPersonMerged Payload for person.merged — two person records collapsed into one (the §1.3 merge); neither person.updated nor person.archived can say this, so it is its own verb.
-type PublicEventPersonMerged struct {
-	// MergedFromId The merged-away (source) person, retired but still fetchable by id.
-	MergedFromId openapi_types.UUID `json:"merged_from_id"`
-
-	// MergedIntoId The survivor (target) person.
-	MergedIntoId openapi_types.UUID `json:"merged_into_id"`
-
-	// Relinked How many child rows on each side were repointed from the merged- away person onto the survivor (people/merge.go relinkCounts).
-	Relinked PublicEventPersonMergedRelinkCounts `json:"relinked"`
-}
-
-// PublicEventPersonMergedRelinkCounts How many child rows on each side were repointed from the merged- away person onto the survivor (people/merge.go relinkCounts).
-type PublicEventPersonMergedRelinkCounts struct {
-	// ActivityLinks activity_link rows relinked.
-	ActivityLinks int64 `json:"activity_links"`
-
-	// Emails person_email rows relinked.
-	Emails int64 `json:"emails"`
-
-	// Phones person_phone rows relinked.
-	Phones int64 `json:"phones"`
-
-	// Relationships relationship edge rows relinked.
-	Relationships int64 `json:"relationships"`
-}
-
-// PublicEventPersonRestored Payload for person.restored. Never emitted today (no restore path exists for person); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
-type PublicEventPersonRestored struct{}
-
-// PublicEventPersonUpdated Payload for person.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat column patch, a lead-promotion conversion note, a signature-enrichment fill, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
-type PublicEventPersonUpdated struct {
-	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form.
-	ChangedFields map[string]interface{} `json:"changed_fields"`
-}
-
 // PublicEventPipelineArchived Payload for pipeline.archived — a pipeline was retired as a choice. It leaves the pickers and the new-deal flows; the deals on it keep their stage, their history and their forecast contribution, so a subscriber acting on this must not treat it as work moving. The payload is empty because the entity id is the whole fact.
 type PublicEventPipelineArchived struct{}
 
@@ -2007,21 +2007,21 @@ type PublicEventProjectUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
-// PublicEventRelationshipNudgeDecided Payload for relationship_nudge.decided — a rep set a lapsed contact aside so their own Worklist stops raising them, or put them back (people's nudge dismissal). The entity is the CONTACT, which is what the judgement is about.
+// PublicEventRelationshipNudgeDecided Payload for relationship_nudge.decided — a rep set a lapsed contact aside so their own Worklist stops raising them, or put them back (contacts's nudge dismissal). The entity is the CONTACT, which is what the judgement is about.
 // WHOSE morning it was is not on the wire, and the omission is the same one activity.disposition_recorded makes: a dismissal binds ONE reader, and a consumer reading this as a workspace-wide fact would report one rep's private decision as the contact's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventRelationshipNudgeDecided struct {
 	// Action What was decided. `restored` is the undo, carried rather than left to be inferred from a row going quiet: a decision withdrawn is itself a decision, and a consumer counting how often reps put relationships down has to see it happen.
-	Action PublicEventRelationshipNudgeDecidedAction `json:"action"`
+	Action    PublicEventRelationshipNudgeDecidedAction `json:"action"`
+	ContactId openapi_types.UUID                        `json:"contact_id"`
 
 	// DismissedUntil When the contact comes back to the lane. Present on `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. It is never absent on a dismissal: a dismissal with no end is the shape this feature refuses to have.
-	DismissedUntil *time.Time         `json:"dismissed_until,omitempty"`
-	PersonId       openapi_types.UUID `json:"person_id"`
+	DismissedUntil *time.Time `json:"dismissed_until,omitempty"`
 }
 
 // PublicEventRelationshipNudgeDecidedAction What was decided. `restored` is the undo, carried rather than left to be inferred from a row going quiet: a decision withdrawn is itself a decision, and a consumer counting how often reps put relationships down has to see it happen.
 type PublicEventRelationshipNudgeDecidedAction string
 
-// PublicEventRetentionApplied Payload for retention.applied — a retention/erasure action ran against one record. Four emit sites, four different runtime subjects: the embed-call sweep (ai_call), the voice-learning-signal content sweep (voice_learning_signal), a workspace's configured retention policy's object type (activity | deal | lead | person | ai_call_payload), and Art. 17 erasure (person) — none fixed enough for this schema to name, so this is dynamic-entity (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. policy/reason are a union across the sites — both telemetry sweeps set neither, the policy-driven sweep sets policy only, Art. 17 erasure sets reason only.
+// PublicEventRetentionApplied Payload for retention.applied — a retention/erasure action ran against one record. Four emit sites, four different runtime subjects: the embed-call sweep (ai_call), the voice-learning-signal content sweep (voice_learning_signal), a workspace's configured retention policy's object type (activity | deal | lead | contact | ai_call_payload), and Art. 17 erasure (contact) — none fixed enough for this schema to name, so this is dynamic-entity (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. policy/reason are a union across the sites — both telemetry sweeps set neither, the policy-driven sweep sets policy only, Art. 17 erasure sets reason only.
 type PublicEventRetentionApplied struct {
 	// Action The action that ran. A CLOSED set, so a subscriber can switch on it exhaustively — which is the whole reason for closing it: an open field leaves a consumer to either branch on values nobody has defined or drop what it does not recognise, and a silent drop looks exactly like no event. `retention_policy.action` carries the same three under a CHECK, and a gate holds the two spellings together. Restriction is NOT a fourth action here: it emits retention.restricted, whose own action is a different closed set.
 	Action PublicEventRetentionAppliedAction `json:"action"`
@@ -2047,7 +2047,7 @@ type PublicEventRetentionRestricted struct {
 	// RestrictedUntil When the obligation ends and the suspended erasure completes. Present for restrict and pin, absent for release. Pinned at restriction time, so it never moves once stated.
 	RestrictedUntil *time.Time `json:"restricted_until,omitempty"`
 
-	// RetentionClass The statutory class that holds it (e.g. commercial_correspondence). No free text and no reason string: the administrator's reason is audit-log material, and a public event is not the place to publish why a named person decided something about a named record.
+	// RetentionClass The statutory class that holds it (e.g. commercial_correspondence). No free text and no reason string: the administrator's reason is audit-log material, and a public event is not the place to publish why a named contact decided something about a named record.
 	RetentionClass *string `json:"retention_class,omitempty"`
 }
 
@@ -2069,12 +2069,12 @@ type PublicEventRoleChanged struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
-// PublicEventSignalDetected Payload for signal.detected — a signal was created (signals/signal.go's CreateSignal). entity_type/entity_id are DATA fields naming the signal's subject (deal | company | person) when one is already known at creation time — not the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver; resolution_confidence is set only when the signal was created already resolved.
+// PublicEventSignalDetected Payload for signal.detected — a signal was created (signals/signal.go's CreateSignal). entity_type/entity_id are DATA fields naming the signal's subject (deal | company | contact) when one is already known at creation time — not the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver; resolution_confidence is set only when the signal was created already resolved.
 type PublicEventSignalDetected struct {
 	// SubjectEntityId The subject record's id — a payload data field, absent until a raw signal resolves.
 	SubjectEntityId *openapi_types.UUID `json:"entity_id,omitempty"`
 
-	// SubjectEntityType The subject record's type (deal | company | person) — a payload data field, absent until a raw signal resolves (both entity fields set together). x-go-name avoids colliding with the generated EntityType() method, which names the ENVELOPE'S entity (always "signal"), not this data field.
+	// SubjectEntityType The subject record's type (deal | company | contact) — a payload data field, absent until a raw signal resolves (both entity fields set together). x-go-name avoids colliding with the generated EntityType() method, which names the ENVELOPE'S entity (always "signal"), not this data field.
 	SubjectEntityType *string `json:"entity_type,omitempty"`
 
 	// Kind The signal kind (stalled_deal | champion_left | reengagement | buying_intent | risk | other).
@@ -2096,7 +2096,7 @@ type PublicEventSignalDetected struct {
 	SourceChannel string `json:"source_channel"`
 }
 
-// PublicEventSignalResolved Payload for signal.resolved — the resolver ran over a signal (signals/resolver.go's Resolve). The verdict IS the candidate count (P12): zero candidates drops the signal (resolved_company_id, resolved_person_id, matched_on, match_confidence all absent); exactly one resolves it to that company (resolved_company_id set, resolved_person_id set only under a recorded consent grant); several flags it low_confidence for review (matched_on/ match_confidence describe the top candidate, resolved_company_id stays absent).
+// PublicEventSignalResolved Payload for signal.resolved — the resolver ran over a signal (signals/resolver.go's Resolve). The verdict IS the candidate count (P12): zero candidates drops the signal (resolved_company_id, resolved_contact_id, matched_on, match_confidence all absent); exactly one resolves it to that company (resolved_company_id set, resolved_contact_id set only under a recorded consent grant); several flags it low_confidence for review (matched_on/ match_confidence describe the top candidate, resolved_company_id stays absent).
 type PublicEventSignalResolved struct {
 	// MatchConfidence The top candidate's match confidence (0–1).
 	MatchConfidence *float32 `json:"match_confidence,omitempty"`
@@ -2110,8 +2110,8 @@ type PublicEventSignalResolved struct {
 	// ResolvedCompanyId The company the signal resolved to (absent when dropped or ambiguous).
 	ResolvedCompanyId *openapi_types.UUID `json:"resolved_company_id,omitempty"`
 
-	// ResolvedPersonId The consent-gated person the signal resolved to (absent unless an existing person under a recorded consent grant matched).
-	ResolvedPersonId *openapi_types.UUID `json:"resolved_person_id,omitempty"`
+	// ResolvedContactId The consent-gated contact the signal resolved to (absent unless an existing contact under a recorded consent grant matched).
+	ResolvedContactId *openapi_types.UUID `json:"resolved_contact_id,omitempty"`
 
 	// SignalId The signal the resolver ran over.
 	SignalId openapi_types.UUID `json:"signal_id"`
@@ -2190,13 +2190,13 @@ type PublicEventUserDeactivated struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
-// PublicEventUserDeliveryChanged Payload for user_delivery.changed — a member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way; this is about the nudge toward them, which is the one part a person is entitled to switch off. It names WHAT moved and not what it moved to. What somebody chose about their own inbox is theirs, and a fan-out carrying the values would tell every subscription owner who had turned their mail off — so the values stay on the row, which only that person and the job reads.
+// PublicEventUserDeliveryChanged Payload for user_delivery.changed — a member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way; this is about the nudge toward them, which is the one part a contact is entitled to switch off. It names WHAT moved and not what it moved to. What somebody chose about their own inbox is theirs, and a fan-out carrying the values would tell every subscription owner who had turned their mail off — so the values stay on the row, which only that contact and the job reads.
 type PublicEventUserDeliveryChanged struct {
 	// ChangedFields Which settings moved. Never empty: this event fires on a change, and a save that moved nothing writes nothing and publishes nothing.
 	ChangedFields []string `json:"changed_fields"`
 }
 
-// PublicEventUserDisplayNameChanged Payload for user_display_name.changed — a member changed the name their colleagues see them by (identity/userdisplayname.go's SaveMyDisplayName). Always their own: this API offers no way to rename somebody else. A subscriber holding a copy of the roster needs it, because the name is read from app_user wherever it is shown and a cached copy would keep addressing the person by a name they have corrected.
+// PublicEventUserDisplayNameChanged Payload for user_display_name.changed — a member changed the name their colleagues see them by (identity/userdisplayname.go's SaveMyDisplayName). Always their own: this API offers no way to rename somebody else. A subscriber holding a copy of the roster needs it, because the name is read from app_user wherever it is shown and a cached copy would keep addressing the contact by a name they have corrected.
 type PublicEventUserDisplayNameChanged struct {
 	// DisplayName The name now in force, trimmed. Never empty: a name of only whitespace is refused, and a save that moved nothing writes nothing and publishes nothing.
 	DisplayName string `json:"display_name"`
@@ -2217,7 +2217,7 @@ type PublicEventUserInvited struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
-// PublicEventUserLocaleChanged Payload for user_locale.changed — a member chose the language their own interface is rendered in (identity/userlocale.go's SaveMyLocale). It is a change to the member's own seat rather than to anything the installation is measured in: the language AI writes for the whole team is the installation's base_language, which is an admin setting and publishes separately. A subscriber that renders anything for this person needs to know which catalog to reach for.
+// PublicEventUserLocaleChanged Payload for user_locale.changed — a member chose the language their own interface is rendered in (identity/userlocale.go's SaveMyLocale). It is a change to the member's own seat rather than to anything the installation is measured in: the language AI writes for the whole team is the installation's base_language, which is an admin setting and publishes separately. A subscriber that renders anything for this contact needs to know which catalog to reach for.
 type PublicEventUserLocaleChanged struct {
 	// Locale The language now chosen — one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event.
 	Locale string `json:"locale"`
@@ -2408,7 +2408,7 @@ type PublicEventWeeklyPlanUpdated struct {
 	PlanId        openapi_types.UUID `json:"plan_id"`
 }
 
-// SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/company, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
+// SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, contact/company, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
 type SubscribableEventType string
 
 // UserReactivatedStatus The status a reactivated member was restored to.
@@ -2491,11 +2491,31 @@ func (PublicEventConsentChanged) EntityType() string { return "dynamic" }
 
 func (PublicEventConsentSuppressed) EventType() string { return "consent.suppressed" }
 
-func (PublicEventConsentSuppressed) EntityType() string { return "person" }
+func (PublicEventConsentSuppressed) EntityType() string { return "contact" }
 
 func (PublicEventConsentSuppressionLifted) EventType() string { return "consent.suppression_lifted" }
 
-func (PublicEventConsentSuppressionLifted) EntityType() string { return "person" }
+func (PublicEventConsentSuppressionLifted) EntityType() string { return "contact" }
+
+func (PublicEventContactArchived) EventType() string { return "contact.archived" }
+
+func (PublicEventContactArchived) EntityType() string { return "contact" }
+
+func (PublicEventContactCreated) EventType() string { return "contact.created" }
+
+func (PublicEventContactCreated) EntityType() string { return "contact" }
+
+func (PublicEventContactMerged) EventType() string { return "contact.merged" }
+
+func (PublicEventContactMerged) EntityType() string { return "contact" }
+
+func (PublicEventContactRestored) EventType() string { return "contact.restored" }
+
+func (PublicEventContactRestored) EntityType() string { return "contact" }
+
+func (PublicEventContactUpdated) EventType() string { return "contact.updated" }
+
+func (PublicEventContactUpdated) EntityType() string { return "contact" }
 
 func (PublicEventContractArchived) EventType() string { return "contract.archived" }
 
@@ -2515,11 +2535,11 @@ func (PublicEventContractUpdated) EntityType() string { return "contract" }
 
 func (PublicEventConversationClaimCaptured) EventType() string { return "conversation_claim.captured" }
 
-func (PublicEventConversationClaimCaptured) EntityType() string { return "person" }
+func (PublicEventConversationClaimCaptured) EntityType() string { return "contact" }
 
 func (PublicEventConversationClaimChanged) EventType() string { return "conversation_claim.changed" }
 
-func (PublicEventConversationClaimChanged) EntityType() string { return "person" }
+func (PublicEventConversationClaimChanged) EntityType() string { return "contact" }
 
 func (PublicEventDealArchived) EventType() string { return "deal.archived" }
 
@@ -2641,23 +2661,23 @@ func (PublicEventIncumbentDisconnected) EntityType() string { return "incumbent_
 
 func (PublicEventIntroRequestClosed) EventType() string { return "intro_request.closed" }
 
-func (PublicEventIntroRequestClosed) EntityType() string { return "person" }
+func (PublicEventIntroRequestClosed) EntityType() string { return "contact" }
 
 func (PublicEventIntroRequestCompleted) EventType() string { return "intro_request.completed" }
 
-func (PublicEventIntroRequestCompleted) EntityType() string { return "person" }
+func (PublicEventIntroRequestCompleted) EntityType() string { return "contact" }
 
 func (PublicEventIntroRequestCreated) EventType() string { return "intro_request.created" }
 
-func (PublicEventIntroRequestCreated) EntityType() string { return "person" }
+func (PublicEventIntroRequestCreated) EntityType() string { return "contact" }
 
 func (PublicEventIntroRequestDecided) EventType() string { return "intro_request.decided" }
 
-func (PublicEventIntroRequestDecided) EntityType() string { return "person" }
+func (PublicEventIntroRequestDecided) EntityType() string { return "contact" }
 
 func (PublicEventIntroRequestReplied) EventType() string { return "intro_request.replied" }
 
-func (PublicEventIntroRequestReplied) EntityType() string { return "person" }
+func (PublicEventIntroRequestReplied) EntityType() string { return "contact" }
 
 func (PublicEventLeadCreated) EventType() string { return "lead.created" }
 
@@ -2761,26 +2781,6 @@ func (PublicEventPassportRevoked) EventType() string { return "passport.revoked"
 
 func (PublicEventPassportRevoked) EntityType() string { return "passport" }
 
-func (PublicEventPersonArchived) EventType() string { return "person.archived" }
-
-func (PublicEventPersonArchived) EntityType() string { return "person" }
-
-func (PublicEventPersonCreated) EventType() string { return "person.created" }
-
-func (PublicEventPersonCreated) EntityType() string { return "person" }
-
-func (PublicEventPersonMerged) EventType() string { return "person.merged" }
-
-func (PublicEventPersonMerged) EntityType() string { return "person" }
-
-func (PublicEventPersonRestored) EventType() string { return "person.restored" }
-
-func (PublicEventPersonRestored) EntityType() string { return "person" }
-
-func (PublicEventPersonUpdated) EventType() string { return "person.updated" }
-
-func (PublicEventPersonUpdated) EntityType() string { return "person" }
-
 func (PublicEventPipelineArchived) EventType() string { return "pipeline.archived" }
 
 func (PublicEventPipelineArchived) EntityType() string { return "pipeline" }
@@ -2811,7 +2811,7 @@ func (PublicEventProjectUpdated) EntityType() string { return "project" }
 
 func (PublicEventRelationshipNudgeDecided) EventType() string { return "relationship_nudge.decided" }
 
-func (PublicEventRelationshipNudgeDecided) EntityType() string { return "person" }
+func (PublicEventRelationshipNudgeDecided) EntityType() string { return "contact" }
 
 func (PublicEventRetentionApplied) EventType() string { return "retention.applied" }
 
@@ -2943,6 +2943,11 @@ var PublicEventVersions = map[string]int{
 	"consent.changed":                           1,
 	"consent.suppressed":                        1,
 	"consent.suppression_lifted":                1,
+	"contact.archived":                          1,
+	"contact.created":                           1,
+	"contact.merged":                            1,
+	"contact.restored":                          1,
+	"contact.updated":                           1,
 	"contract.archived":                         1,
 	"contract.created":                          1,
 	"contract.status_changed":                   1,
@@ -3007,11 +3012,6 @@ var PublicEventVersions = map[string]int{
 	"offer.superseded":                          1,
 	"onboarding.state_changed":                  1,
 	"passport.revoked":                          1,
-	"person.archived":                           1,
-	"person.created":                            1,
-	"person.merged":                             1,
-	"person.restored":                           1,
-	"person.updated":                            1,
 	"pipeline.archived":                         1,
 	"pipeline.created":                          1,
 	"pipeline.updated":                          1,

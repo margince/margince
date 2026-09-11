@@ -169,8 +169,8 @@ func (a commsAttachments) ReadForSend(
 // exhausted", which names no cause. It is reachable from a message both
 // published bounds admit, because a transport declaring ten files at 20 MiB each
 // promises ten times what this allows, so parking is the least it owes the
-// person who was told the message would go.
-// It is now the BACKSTOP rather than the first thing a person hears: the
+// contact who was told the message would go.
+// It is now the BACKSTOP rather than the first thing a contact hears: the
 // carriage gate applies the same budget from the staged sizes, before any
 // object is opened, and parks with a reason naming the total and the bound.
 // This still runs, because the sizes it sums are the bytes actually read while

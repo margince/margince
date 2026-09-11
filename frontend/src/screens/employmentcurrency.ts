@@ -1,8 +1,8 @@
 import type { components } from "../api/schema";
 
-type Employment = components["schemas"]["Person360Employment"];
+type Employment = components["schemas"]["Contact360Employment"];
 
-// The client half of people.EmploymentIsCurrentSQL. `is_current_primary` records
+// The client half of contacts.EmploymentIsCurrentSQL. `is_current_primary` records
 // WHICH employer represents somebody and is written once; whether that job is
 // still theirs is a function of today, so every reader derives it — on this side
 // too, or the 360 header names a company the account's own contact count has
@@ -43,7 +43,7 @@ export function stillHeld(employment: Employment): boolean {
   return employment.ended_at.slice(0, 10) > today();
 }
 
-// currentEmployer is the one employment that represents this person right now —
+// currentEmployer is the one employment that represents this contact right now —
 // flagged AND not yet ended. Undefined is a real answer: somebody between jobs,
 // or whose only employer's last day has passed.
 export function currentEmployer(

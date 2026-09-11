@@ -8,7 +8,7 @@ package capture
 // fresh auto-created lead (sink.go) — then round-trips the result through
 // JSON exactly as storekit.EmitEvent marshals it into the outbox envelope's
 // payload column. This is the second of lead.created's two emit sites;
-// people/lead.go's direct-create site sets no fields at all and needs no
+// contacts/lead.go's direct-create site sets no fields at all and needs no
 // builder.
 
 import (

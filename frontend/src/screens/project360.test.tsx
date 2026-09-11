@@ -93,7 +93,7 @@ describe("ProjectScreen", () => {
     // and they were the first thing a reader met under the title.
     expect(screen.queryByTestId("project-coverage")).toBeNull();
 
-    // The sections: a linked deal row, a seated person with their role, the
+    // The sections: a linked deal row, a seated contact with their role, the
     // phase history with its duration, and honest empty states elsewhere.
     expect(
       screen.getByRole("button", { name: "Phase one licence" }),

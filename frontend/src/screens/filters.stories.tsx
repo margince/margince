@@ -29,8 +29,8 @@ const meta: Meta<typeof FiltersScreen> = {
 };
 export default meta;
 
-const PERSON_VOCAB = {
-  resource: "person",
+const CONTACT_VOCAB = {
+  resource: "contact",
   fields: [
     {
       name: "full_name",
@@ -54,7 +54,7 @@ const PERSON_VOCAB = {
 };
 
 const PREVIEW = {
-  resource: "person",
+  resource: "contact",
   match_count: 3,
   columns: ["id", "full_name", "city", "cf_loyalty_tier", "created_at"],
   rows: [
@@ -91,7 +91,7 @@ const SAVED_VIEWS = {
     {
       id: "v-1",
       owner_id: "u-1",
-      resource: "people",
+      resource: "contacts",
       name: "Gold tier in Berlin",
       query: {
         filter: {
@@ -106,7 +106,7 @@ const SAVED_VIEWS = {
     {
       id: "v-2",
       owner_id: "u-1",
-      resource: "people",
+      resource: "contacts",
       name: "Saved by an older build",
       query: { filter: { and: [{ field: "city", op: "like", value: "Ber" }] } },
       version: 1,
@@ -117,7 +117,7 @@ const SAVED_VIEWS = {
 
 function routes(): void {
   installFetchStub({
-    "GET /filters/vocabulary": () => jsonResponse(PERSON_VOCAB),
+    "GET /filters/vocabulary": () => jsonResponse(CONTACT_VOCAB),
     "POST /filters/preview": () => jsonResponse(PREVIEW),
     "GET /views": () => jsonResponse(SAVED_VIEWS),
     // Refused rather than served, because the failure is the state worth a
@@ -200,7 +200,7 @@ export const PreviewRefusedToAReadSeat: Story = {
   // retry land in the results card, which is the only row wide enough for both.
   render: () => {
     installFetchStub({
-      "GET /filters/vocabulary": () => jsonResponse(PERSON_VOCAB),
+      "GET /filters/vocabulary": () => jsonResponse(CONTACT_VOCAB),
       "GET /views": () => jsonResponse(SAVED_VIEWS),
       "POST /filters/preview": () =>
         jsonResponse(

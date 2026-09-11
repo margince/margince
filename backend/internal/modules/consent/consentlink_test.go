@@ -67,7 +67,7 @@ func TestARecordLinkStillCarriesCorrections(t *testing.T) {
 // violation, and it happens before any database work.
 func TestAConsentLinkRefusesWithoutAPurpose(t *testing.T) {
 	_, err := (&Store{}).IssueConsentLink(context.Background(),
-		ids.New[ids.PersonKind](), ids.PurposeID{}, "")
+		ids.New[ids.ContactKind](), ids.PurposeID{}, "")
 	if err == nil {
 		t.Fatal("a consent link with no purpose must be refused before it is minted")
 	}
@@ -76,7 +76,7 @@ func TestAConsentLinkRefusesWithoutAPurpose(t *testing.T) {
 // The READ carries the same gate as the write.
 //
 // A consent link's mail asked one question. Serving the record card on the page
-// it opens would hand whoever holds that link the person's name, employer,
+// it opens would hand whoever holds that link the contact's name, employer,
 // address, phone and the whole provenance trail — wider than the mail, and
 // wider than the same link's submit is allowed to be. The write side was gated
 // first and the read side was not, which is the asymmetry this holds shut.

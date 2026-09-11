@@ -67,7 +67,7 @@ const dealTaggableType = "deal"
 
 type ListDealsInput struct {
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
-	// The predicate is storekit's, shared with the person and account lists.
+	// The predicate is storekit's, shared with the contact and account lists.
 	TagIDs           []ids.UUID
 	TagMode          storekit.TagMode
 	Cursor           *string
@@ -135,7 +135,7 @@ var dealListFields = map[string]storekit.SortField{
 	filterPartnerCompanyID: {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterPartnerCompanyID)},
 }
 
-// wireRowTags renders one deal row's tag chips. A twin of the people module's:
+// wireRowTags renders one deal row's tag chips. A twin of the contacts module's:
 // a module never imports a sibling, and the shape is the contract's.
 func wireRowTags(tags []storekit.RowTag) *[]crmcontracts.RowTag {
 	out := make([]crmcontracts.RowTag, 0, len(tags))

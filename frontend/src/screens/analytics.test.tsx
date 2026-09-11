@@ -258,7 +258,7 @@ describe("the my-outcomes section", () => {
         ),
       ).toBeTruthy();
       // And it fetched nothing: numbers under this heading would have
-      // measured the default population, not the person.
+      // measured the default population, not the contact.
       expect(bodies.some((sent) => sent.key === "activities-by-kind")).toBe(
         false,
       );
@@ -737,7 +737,7 @@ describe("reports never sum money across currencies", () => {
   // and nothing on the server enforces that — a measure named `amount_cents`
   // would sum across currencies with this test still green. Two things would
   // have to happen for that: somebody adds a money measure AND spells it
-  // outside the convention. If you are that person, the fix is #4131's — the
+  // outside the convention. If you are that contact, the fix is #4131's — the
   // server refusing the combination — not a longer suffix list here.
   it("groups every native money plan by currency", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];

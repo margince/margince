@@ -20,7 +20,7 @@ import { incompleteGraph } from "./record360";
 //
 // The compact coverage on each contact row answers "who should make this call".
 // This answers the other question — "where are we thin" — and it is the one that
-// tempts a contact × every-colleague matrix. With a forty-person sales team that
+// tempts a contact × every-colleague matrix. With a forty-contact sales team that
 // matrix is 40 columns wide and nobody reads it.
 //
 // So the reader CHOOSES the colleagues to compare, up to a handful, and the grid
@@ -40,7 +40,7 @@ import { incompleteGraph } from "./record360";
 // is gone, and the account's contact list feeds it now. Naming the fields makes
 // both shapes fit and stops a future field on the 360 card reading as a
 // dependency this comparison does not have.
-type Contact = Readonly<{ person_id: string; full_name: string }>;
+type Contact = Readonly<{ contact_id: string; full_name: string }>;
 
 // How many colleagues can stand in the grid at once. Beyond this the columns
 // stop being scannable, which is the failure the whole surface exists to avoid.
@@ -80,7 +80,7 @@ export function CoverageExplorer({
   );
 }
 
-// One colleague's edges to this account's contacts, keyed by person.
+// One colleague's edges to this account's contacts, keyed by contact.
 type ColleagueCoverage = {
   id: string;
   label: string;
@@ -207,11 +207,11 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
           </thead>
           <tbody>
             {rows.map((contact) => (
-              <tr key={contact.person_id}>
+              <tr key={contact.contact_id}>
                 <th scope="row">{contact.full_name}</th>
                 {shown.map((id) => {
                   const colleague = colleagues.find((c) => c.id === id);
-                  const band = colleague?.bands.get(contact.person_id);
+                  const band = colleague?.bands.get(contact.contact_id);
                   return (
                     // The column header travels with the cell twice over: as
                     // data-label, which the narrow layout renders as visible
@@ -263,7 +263,7 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
 // Only colleagues with at least one edge to a contact ON THIS ACCOUNT appear: an
 // empty column is a name the reader has to rule out, and the default is to hide
 // what has nothing to say.
-/** accountContacts is every person the account's graph names. */
+/** accountContacts is every contact the account's graph names. */
 function accountContacts(
   graph: ReturnType<typeof useCompanyGraph>["data"],
 ): Contact[] {
@@ -271,8 +271,8 @@ function accountContacts(
     return [];
   }
   return graph.nodes
-    .filter((node) => node.kind === "person")
-    .map((node) => ({ person_id: node.id, full_name: node.label }));
+    .filter((node) => node.kind === "contact")
+    .map((node) => ({ contact_id: node.id, full_name: node.label }));
 }
 
 function colleaguesFrom(
@@ -285,10 +285,10 @@ function colleaguesFrom(
   // The account's contacts, taken from the GRAPH rather than from whatever the
   // caller had loaded. The caller is now a filtered, paged list, and a coverage
   // comparison built from a page answers a question nobody asked: filter the
-  // list to one person and the grid would report the whole team as covering
+  // list to one contact and the grid would report the whole team as covering
   // nobody, which is a false claim rather than a narrower one.
   const onAccount = new Set(
-    accountContacts(graph).map((contact) => contact.person_id),
+    accountContacts(graph).map((contact) => contact.contact_id),
   );
   const labels = new Map(graph.nodes.map((node) => [node.id, node.label]));
   const byColleague = new Map<string, ColleagueCoverage>();

@@ -120,7 +120,7 @@ const (
 // Pictures character collides with the input containing the byte it depicts.
 // Closing it needs an escape of the escape, which buys nothing here — a value
 // reaching this function is already length- and cardinality-bounded by its
-// caller, so the pair could at worst merge two series a person invented.
+// caller, so the pair could at worst merge two series a contact invented.
 func Label(value string) string {
 	var b strings.Builder
 	b.Grow(len(value) + 2)

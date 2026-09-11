@@ -10,7 +10,7 @@
 // place for the rules to live — what is new is only where the reader stands
 // when they press it.
 //
-// They are drawn only on a named person's queue. On the reader's own day there
+// They are drawn only on a named contact's queue. On the reader's own day there
 // is nobody to reassign work to and nobody to coach.
 
 import { UserRoundArrowLeft } from "lucide-react";
@@ -65,7 +65,7 @@ export function OwnerPicker({
   onOwner,
 }: Readonly<{ owner: string; onOwner: (next: string) => void }>) {
   const t = useT();
-  const people = useAssignableUserOptions();
+  const contacts = useAssignableUserOptions();
   // A ROSTER THAT STOPPED SHORT IS SAID SO. The walk is bounded, so past its
   // reach this list is part of the workspace rather than the workspace — and a
   // picker missing colleagues looks exactly like a workspace that has none, on
@@ -73,7 +73,7 @@ export function OwnerPicker({
   // own, and the `Field` wires them into the control's `aria-describedby`.
   const partial = useRosterPartial("user", true);
   const partialHint = useRosterPartialHint(partial);
-  const options = [{ value: "", label: t("worklist.owner.mine") }, ...people];
+  const options = [{ value: "", label: t("worklist.owner.mine") }, ...contacts];
   return (
     <Field
       label={t("worklist.owner.visibleLabel")}
@@ -92,7 +92,7 @@ export function OwnerPicker({
   );
 }
 
-// Who the reader may hand work to: the people, less whoever holds the task
+// Who the reader may hand work to: the contacts, less whoever holds the task
 // already. Why the holder is excluded is the caller's own note below.
 function useAssigneeOptions(exclude: string | undefined) {
   return useAssignableUserOptions().filter(
@@ -115,7 +115,7 @@ export function ReassignControl({
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [assignee, setAssignee] = useState("");
-  // Whose queue is being read, which is the person a reassignment moves work
+  // Whose queue is being read, which is the contact a reassignment moves work
   // AWAY from. On a rep's drill-down that is the selected rep; on the reader's
   // own queue nobody is selected and it is the reader. Without the fallback the
   // exclusion below compares against "" and matches nobody, so a rep was
@@ -126,7 +126,7 @@ export function ReassignControl({
   // holder is whoever `/me` names, and until that lands the exclusion below has
   // nothing to compare against — so a picker opened in that window would list
   // the reader's own name, and nothing on the server refuses a reassignment to
-  // the person already holding the task. An empty list is the honest state of a
+  // the contact already holding the task. An empty list is the honest state of a
   // question not yet answered; a self-reassignment is a write that changes
   // nothing and looks on screen exactly like one that did.
   const options = useAssigneeOptions(holder);
@@ -198,7 +198,7 @@ export function ReassignControl({
   );
 }
 
-// Leave a note on this person's queue.
+// Leave a note on this contact's queue.
 //
 // The KIND carries the headline and the note is the coach's own words, which is
 // why the kind is a control and the note is a plain field: the recipient reads
@@ -331,7 +331,7 @@ export function CoachControl({
  * What a refused note says, and it never wears the completion mark.
  *
  * The server answers 403 `permission_denied` where the caller may not coach
- * this person at all, which is not a failure to retry — the generic "that could
+ * this contact at all, which is not a failure to retry — the generic "that could
  * not be left" invited exactly that, and every press earned the same refusal.
  * Read off the RFC-7807 sentinel rather than off the message text: the words
  * are the reader's locale's and the code is the contract's.
@@ -359,7 +359,7 @@ function coachRefused(
  *
  * CONFIRMED, because it moves a record out of somebody's day and into the
  * reader's — the rep who held it loses it from their queue without having
- * pressed anything, so a lead doing it by a misplaced click costs two people
+ * pressed anything, so a lead doing it by a misplaced click costs two contacts
  * their sense of what they are carrying.
  *
  * ABSENT rather than disabled where the subject has no owner write. A control

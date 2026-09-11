@@ -246,11 +246,11 @@ func TestGateRejectsDMLOnCoreRelations(t *testing.T) {
 	unit := unitName(t, "dml")
 	ns := namespaceOf(t, unit)
 	up := scaffoldUp(ns) + `
-INSERT INTO person (full_name, source, captured_by)
+INSERT INTO contact (full_name, source, captured_by)
 VALUES ('smuggled', 'gate', 'gate');
 `
 	err := runGate(t, unit, migrationDir(t, up, scaffoldDown(ns)))
-	requireRefusal(t, err, "permission denied for table person", "0001_gate.up.sql")
+	requireRefusal(t, err, "permission denied for table contact", "0001_gate.up.sql")
 }
 
 // relkind 'f' and 'm' cannot carry row-level security at all: PostgreSQL

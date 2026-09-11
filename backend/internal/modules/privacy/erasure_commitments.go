@@ -24,9 +24,9 @@ import (
 //
 // The two are one step because they answer one question — what does an erasure
 // owe a record that is not the subject's and not about them, but names them in
-// passing — and because ErasePerson reads as a sequence of such questions
+// passing — and because EraseContact reads as a sequence of such questions
 // rather than a list of tables.
-func redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject ids.PersonID, emails []string) error {
+func redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject ids.ContactID, emails []string) error {
 	if err := redactWorkflowRuns(ctx, tx, emails); err != nil {
 		return err
 	}
@@ -37,16 +37,16 @@ func redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject ids.PersonID, 
 // A tombstone rather than an empty label, because the table refuses a blank one
 // (weekly_plan_commitment_label_present) and because the rep's week is still
 // entitled to say that a commitment was there.
-const erasedCommitment = "(erased: the person this named exercised erasure)"
+const erasedCommitment = "(erased: the contact this named exercised erasure)"
 
 // redactCommitmentsNaming clears what a rep wrote about the subject on their
 // weekly plan, in the single erasure transaction.
 //
-// Reachable because weekly_plan_commitment.linked_record_type accepts 'person'
+// Reachable because weekly_plan_commitment.linked_record_type accepts 'contact'
 // alongside deal, lead, company and project: a rep can commit to an action
 // about a contact and type a free-text label, a help request and a manager
 // response about them. Nothing else in this cascade can see those rows — the
-// table carries no person FK for a schema cascade to walk, its link is
+// table carries no contact FK for a schema cascade to walk, its link is
 // deliberately unconstrained so a deleted record does not erase the promise,
 // and it is keyed to the app_user who wrote it rather than to the subject.
 //
@@ -72,7 +72,7 @@ const erasedCommitment = "(erased: the person this named exercised erasure)"
 // commitment was answered, never a quotation with nobody behind it. The lead's
 // user id goes with the text even though a colleague is not the subject,
 // because the constraint binds the three together and a name beside a blanked
-// answer says only that somebody replied about a person nobody may now name.
+// answer says only that somebody replied about a contact nobody may now name.
 //
 // One statement over one table, with the name written out. Not a loop over the
 // linked-record types and not a helper shared with a sibling eraser: this
@@ -80,7 +80,7 @@ const erasedCommitment = "(erased: the person this named exercised erasure)"
 // through a variable is invisible to piicoverage_test.go and
 // tableownership_test.go both, and the tidier form turns a proven write into an
 // unproven one while the gates stay green.
-func redactCommitmentsNaming(ctx context.Context, tx pgx.Tx, personID ids.PersonID) error {
+func redactCommitmentsNaming(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE weekly_plan_commitment
 		   SET label = $2,
@@ -90,8 +90,8 @@ func redactCommitmentsNaming(ctx context.Context, tx pgx.Tx, personID ids.Person
 		       responded_at = NULL,
 		       linked_record_type = NULL,
 		       linked_record_id = NULL
-		 WHERE linked_record_type = 'person' AND linked_record_id = $1`,
-		personID, erasedCommitment); err != nil {
+		 WHERE linked_record_type = 'contact' AND linked_record_id = $1`,
+		contactID, erasedCommitment); err != nil {
 		return fmt.Errorf("privacy: redacting the weekly commitments naming the subject: %w", err)
 	}
 	return nil

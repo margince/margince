@@ -279,7 +279,7 @@
       "reported_abstained": 0
     },
     {
-      "scenario": "who_knows_needs_the_person",
+      "scenario": "who_knows_needs_the_contact",
       "site": "loop",
       "verdict": "certified",
       "runs": 5,

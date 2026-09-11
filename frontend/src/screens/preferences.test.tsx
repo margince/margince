@@ -84,7 +84,7 @@ const CENTER = {
 type Sent = { key: string; url: string; body: unknown };
 
 // consent.test.tsx's stubRoutes, with this surface's defaults: an anonymous
-// GET/PUT against tok-123 rather than a session-authed person id.
+// GET/PUT against tok-123 rather than a session-authed contact id.
 function stubCenter(
   // A response factory may itself be a pending promise — the
   // save-in-flight test below needs to control exactly when the PUT

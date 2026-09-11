@@ -85,7 +85,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
     },
   });
 
-  // Edits are held against what the server sent, so a field the person did not
+  // Edits are held against what the server sent, so a field the contact did not
   // touch is never submitted as a correction. Submitting an untouched field
   // would stage a proposal nobody made, and a rep would have to read it.
   const [edits, setEdits] = useState<Partial<Record<CorrectableField, string>>>(

@@ -23,7 +23,7 @@ const BASE_READ: CompanySiteRead = {
   profile_fields: [],
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   warnings: [],
   draft_version: 1,
   proposal_hash: "h1",

@@ -7,7 +7,7 @@ package identity
 //
 // It was written once — by the invite, or by the installation's cold start —
 // and nothing could change it afterwards. `display_name` had exactly two
-// writers, both INSERTs, so a person who married, was invited as "j.smith" or
+// writers, both INSERTs, so a contact who married, was invited as "j.smith" or
 // was simply typed wrong carried that name beside every record they touched
 // with no way to correct it, and no admin could correct it for them either.
 //
@@ -109,7 +109,7 @@ func (s *Service) SaveMyDisplayName(ctx context.Context, name string) (Seat, err
 			return apperrors.ErrNotFound
 		}
 		// The name is IN the audit payload, where a signature's text is not: it
-		// is what colleagues already see on every record this person touches,
+		// is what colleagues already see on every record this contact touches,
 		// so recording which name replaced which is the point of the entry
 		// rather than a disclosure it makes.
 		auditID, err := storekit.Audit(ctx, tx, "update", "user", human,

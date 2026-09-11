@@ -16,8 +16,8 @@ import (
 
 // The distinction the surface was missing.
 //
-// An assistant asked to assign work searched `person` — the customer contacts
-// — found two people with the right first name, and reported that neither was
+// An assistant asked to assign work searched `contact` — the customer contacts
+// — found two contacts with the right first name, and reported that neither was
 // "listed under sales". The seat it wanted was the one the human was signed in
 // as, and no tool could name it. assignee_id and owner_id take these ids.
 func TestListColleaguesAnswersSeatsWithWhatAssignmentNeeds(t *testing.T) {
@@ -86,7 +86,7 @@ func TestListColleaguesSaysWhenTheRosterIsLongerThanTheAnswer(t *testing.T) {
 // employs nobody, and nobody here is spelled the way you asked. A caller cannot
 // tell them apart, and the one it picks is the wrong one — asked to hand an
 // account to a colleague, an assistant read the empty list and reported that
-// the person does not work here, with the seat sitting in the roster under a
+// the contact does not work here, with the seat sitting in the roster under a
 // spelling it had not tried.
 func TestAColleagueMissHandsOverTheRosterItWasMatchedAgainst(t *testing.T) {
 	t.Parallel()
@@ -116,7 +116,7 @@ func TestAColleagueMissHandsOverTheRosterItWasMatchedAgainst(t *testing.T) {
 	}
 	if got.AllColleagues == nil || len(*got.AllColleagues) != 2 {
 		t.Fatalf("the miss handed over %d seats, want the 2 it was matched against — a caller "+
-			"told only \"no match\" reports that the person does not work here", len(*got.AllColleagues))
+			"told only \"no match\" reports that the contact does not work here", len(*got.AllColleagues))
 	}
 	if (*got.AllColleagues)[0].UserID != lena {
 		t.Errorf("the roster is not the seats the lister answered: %+v", *got.AllColleagues)
@@ -198,7 +198,7 @@ func warnedWith(facts *envelopeFacts, code string) (Warning, bool) {
 
 // A CAPPED fallback is the case this whole affordance can get wrong. Two
 // hundred alphabetical names with the one asked for absent reads as proof the
-// person has no seat — a caller MORE certain of the wrong answer than a bare
+// contact has no seat — a caller MORE certain of the wrong answer than a bare
 // empty list left it. So the cap rides its own flag, and the warning says do
 // not conclude absence from it.
 func TestACappedFallbackSaysItIsAPageAndNotTheWorkforce(t *testing.T) {

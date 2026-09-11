@@ -8,7 +8,7 @@ package gates
 // The subject lock is the FIRST row a transaction takes.
 //
 // Art. 17 erasure is subject-first and always has been: anonymizeSubjectRows
-// runs `UPDATE person … archived_at` and then, in the same transaction, deletes
+// runs `UPDATE contact … archived_at` and then, in the same transaction, deletes
 // the rows hanging off that subject — the consent tokens, the LinkedIn ghosts,
 // the lead scores. A writer that touches one of those child rows and only then
 // reaches for the subject has taken the two in the opposite order, and the two

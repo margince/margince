@@ -140,7 +140,7 @@ func closedSetRefusals(t *testing.T) []setBearingRefusal {
 	// The widest seat, because a refusal's length is worst when the caller may
 	// see everything — and it is the seat an admin passport actually gets.
 	schema := AnalyticsSchemaFor(seatWith(
-		"deal", "activity", "person", "company", "project", "partner"))
+		"deal", "activity", "contact", "company", "project", "partner"))
 	if len(schema.Entities) == 0 {
 		t.Fatal("the derived analytics schema is empty, so this census measures nothing")
 	}

@@ -16,14 +16,14 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
+	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
-	"github.com/margince/margince/backend/internal/compose/persondraft"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 func TestEveryDraftingRequestCarriesThinkingHeadroom(t *testing.T) {
-	person, err := persondraft.GroundedRequest(persondraft.Input{
-		Recipient: persondraft.RecipientIn{ID: "p1", Name: "Marek", FirstName: "Marek"},
+	contact, err := contactdraft.GroundedRequest(contactdraft.Input{
+		Recipient: contactdraft.RecipientIn{ID: "p1", Name: "Marek", FirstName: "Marek"},
 	}, draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
@@ -37,7 +37,7 @@ func TestEveryDraftingRequestCarriesThinkingHeadroom(t *testing.T) {
 	}
 
 	for name, got := range map[string]int{
-		"person":  person.MaxTokens,
+		"contact": contact.MaxTokens,
 		"account": account.MaxTokens,
 	} {
 		if got != ai.ReasoningOutputMaxTokens {

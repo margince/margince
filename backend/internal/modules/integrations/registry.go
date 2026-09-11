@@ -119,7 +119,7 @@ func pricesOnlyDeclaredPools(d provider.Descriptor) error {
 }
 
 // matchesOnKnownIdentifiers refuses an adapter whose match rules name a field
-// PersonIdentifiers does not carry.
+// ContactIdentifiers does not carry.
 //
 // This is the one way the mechanism fails quietly. An unknown field is never
 // present, so a rule carrying a typo can never be satisfied — and a rule that
@@ -144,7 +144,7 @@ func matchesOnKnownIdentifiers(d provider.Descriptor) error {
 		for _, f := range append(append([]provider.IdentifierField{}, rule.AllOf...), rule.AnyOf...) {
 			if !known[f] {
 				return fmt.Errorf(
-					"integrations: provider %q declares match rule %d on identifier %q, which is not one a person carries: "+
+					"integrations: provider %q declares match rule %d on identifier %q, which is not one a contact carries: "+
 						"an unknown field is never present, so the rule matches nobody and the lane goes silent",
 					d.Name, i, f)
 			}

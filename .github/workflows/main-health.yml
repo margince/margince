@@ -5,7 +5,7 @@
 # this workflow does nothing to prevent it. What it changes is the DELAY: without
 # it, a breakage on main is discovered when somebody else's unrelated pull request
 # goes red for reasons they did not cause, which is both slow and lands the cost on
-# the wrong person. The nightly lane in scheduled.yml answers the same question
+# the wrong contact. The nightly lane in scheduled.yml answers the same question
 # once a day; at eight merges an hour that is a working day of exposure.
 #
 # So this runs every two hours and, when it finds main broken, files ONE issue per

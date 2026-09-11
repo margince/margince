@@ -73,7 +73,7 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	entityType := r.FormValue("entity_type")
 	if !crmcontracts.AttachmentEntityType(entityType).Valid() {
 		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_enum",
-			"entity_type must be one of person, company, deal, activity, lead"))
+			"entity_type must be one of contact, company, deal, activity, lead"))
 		return
 	}
 	entityID, err := ids.Parse(r.FormValue("entity_id"))

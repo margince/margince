@@ -6,7 +6,7 @@ package compose
 // The company object's own claimed-key check.
 //
 // A domain names ONE company across the estate, the same way an email names one
-// person, so the preview has to answer the same question the person path does:
+// contact, so the preview has to answer the same question the contact path does:
 // will the store refuse this row before it is written?
 
 import (
@@ -24,7 +24,7 @@ import (
 // domain, WITHOUT regard to which company holds it.
 //
 // Not visibility-filtered, and that is the opposite of the name-collision check
-// beside it — for the reason the person email version gives. A duplicate NAME is
+// beside it — for the reason the contact email version gives. A duplicate NAME is
 // a judgement the commit resolves by creating a twin and filing a review pair,
 // so telling a caller about an incumbent they cannot see would disclose one. A
 // duplicate domain is not a judgement: the key is estate-wide, so the commit

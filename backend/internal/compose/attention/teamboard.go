@@ -5,14 +5,14 @@ package attention
 
 // WHO on the team is carrying what.
 //
-// The ranked queue assembles ONE person's day, so widening its scope cannot
+// The ranked queue assembles ONE contact's day, so widening its scope cannot
 // produce a colleague's waiting mail: those sources were never read for anybody
 // else, and scope.go says so where it explains what `team` and `all` can and
 // cannot do. A board over that assembly would therefore be a page of the
 // reader's own work wearing the team's name.
 //
 // So this reads COUNTS from the sources directly, and stays counts on purpose.
-// A lead reading it picks a person and opens that person's own day through the
+// A lead reading it picks a contact and opens that contact's own day through the
 // queue's `owner` parameter, which is the read that already exists and already
 // carries the authority check.
 
@@ -36,7 +36,7 @@ import (
 // count is zero for them.
 //
 // The counts are read ONCE for the whole board and bucketed by owner here,
-// rather than per member. Per member would be one query per person and would
+// rather than per member. Per member would be one query per contact and would
 // give a large team a page load proportional to its size; it would also let two
 // members' counts be read at different instants, so a message answered mid-read
 // could be absent from both columns.
@@ -76,9 +76,9 @@ func (s *Service) TeamBoard(ctx context.Context) (crmcontracts.TeamBoard, error)
 			Counts:      load.counts[member.UserID],
 		})
 	}
-	// By name, because a manager scans the board for a person they already have
+	// By name, because a manager scans the board for a contact they already have
 	// in mind. Ordering by load would move a row every time the numbers moved,
-	// so the same person sits somewhere new on each read.
+	// so the same contact sits somewhere new on each read.
 	sort.Slice(board.Members, func(a, b int) bool {
 		if board.Members[a].DisplayName != board.Members[b].DisplayName {
 			return board.Members[a].DisplayName < board.Members[b].DisplayName

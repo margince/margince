@@ -141,10 +141,10 @@ func TestTheCursorSurvivesACrashBeforeCommit(t *testing.T) {
 }
 
 // An erased subject writing again must leave NOTHING behind. The suppression list
-// stops the Person being recreated, but a verbatim update persisted anyway holds
+// stops the Contact being recreated, but a verbatim update persisted anyway holds
 // their numeric id, handle, names and message text where no later erasure can
 // reach it: both the raw purge and the suppression itself are driven off
-// person_channel_identity rows the first erasure deleted and the suppression
+// contact_channel_identity rows the first erasure deleted and the suppression
 // guarantees are never recreated.
 //
 // The cursor still advances, and that half matters as much: a cursor held back by
@@ -188,9 +188,9 @@ func TestAPollPersistsNothingForAnErasedSubject(t *testing.T) {
 
 // A group chat leaves ZERO rows. Refusing it in the worker that normalizes the
 // payload later is strictly WORSE than not filtering at all: by then the verbatim
-// update is stored, holding the sender's id, handle, names and text, and no Person,
+// update is stored, holding the sender's id, handle, names and text, and no Contact,
 // erasure, SAR or retention lane can reach it — every one of them drives off
-// person_channel_identity, which only a captured record creates.
+// contact_channel_identity, which only a captured record creates.
 //
 // The cursor still advances past it, because the alternative is re-fetching an
 // update this connector will never store on every poll, forever.

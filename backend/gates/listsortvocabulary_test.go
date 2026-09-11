@@ -27,7 +27,7 @@ package gates
 // user, whatever anybody decides about the columns that offer nothing.
 //
 // The Go side is read with its CONSTANTS RESOLVED. Several vocabularies spell
-// their keys as package constants (`ownerIDColumn`, `personNameColumn`), so a
+// their keys as package constants (`ownerIDColumn`, `contactNameColumn`), so a
 // scan reading string literals finds an EMPTY vocabulary and agrees with every
 // sort a screen could possibly offer. That is the failure direction a census
 // must not have, and this one had it until the constants were followed.
@@ -54,9 +54,9 @@ import (
 // surface out of the census quietly.
 var listSurfaces = map[string]struct{ vocabulary, source string }{
 	"deals.tsx":          {"dealListFields", "internal/modules/deals/deal_read.go"},
-	"contacts.tsx":       {"personListFields", "internal/modules/people/person_list.go"},
-	"leads.list.tsx":     {"leadListFields", "internal/modules/people/lead_list.go"},
-	"companies.tsx":      {"companyListFields", "internal/modules/people/company_list.go"},
+	"contacts.tsx":       {"contactListFields", "internal/modules/contacts/contact_list.go"},
+	"leads.list.tsx":     {"leadListFields", "internal/modules/contacts/lead_list.go"},
+	"companies.tsx":      {"companyListFields", "internal/modules/contacts/company_list.go"},
 	"projects.tsx":       {"projectListFields", "internal/modules/projects/read.go"},
 	"products.tsx":       {"productListFields", "internal/modules/deals/product.go"},
 	"offertemplates.tsx": {"offerTemplateListFields", "internal/modules/deals/offer_template.go"},

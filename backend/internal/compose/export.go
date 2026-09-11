@@ -53,7 +53,7 @@ type scopeMode uint8
 
 const (
 	// scopeShareable is the own/team owner predicate OR a live record
-	// grant — person, company, deal, lead (auth.ScopeClauseFor).
+	// grant — contact, company, deal, lead (auth.ScopeClauseFor).
 	scopeShareable scopeMode = iota
 	// scopeActivity walks activity_link: an activity is visible when any
 	// linked record is, or when it has no links (auth.ActivityContentClause).
@@ -68,9 +68,9 @@ const (
 	// owner (pipeline, stage): the RBAC object gate is the whole scope,
 	// so members see the same config their deals point at.
 	scopeWorkspace
-	// scopePersonChild scopes a person child row (person_social) by its
-	// parent person's visibility  14 the same rule the person read applies.
-	scopePersonChild
+	// scopeContactChild scopes a contact child row (contact_social) by its
+	// parent contact's visibility  14 the same rule the contact read applies.
+	scopeContactChild
 	// scopeMirror gates a mirror row by the caller's mirror_visibility
 	// deny-join — the same fail-closed rule every overlay read applies
 	// (ADR-0044): an unmapped caller exports zero mirror rows.
@@ -105,9 +105,13 @@ type exportMember struct {
 // identity, not CRM data — owner references remain as owner_id in the
 // exported rows, and resolving them to user records is left to the
 // round-trip re-importer's concern (B-E11.12), not this writer.
+// as a table list; one of them written as an agent-policy constant would read
+// as a different kind of thing than its neighbours.
+//
+//nolint:goconst // every entry here spells a TABLE name, and the bundle reads
 var exportMembers = []exportMember{
-	{table: "person", scope: scopeShareable, objectGate: "person"},
-	{table: "person_social", scope: scopePersonChild, objectGate: "person"},
+	{table: "contact", scope: scopeShareable, objectGate: "contact"},
+	{table: "contact_social", scope: scopeContactChild, objectGate: "contact"},
 	{table: string(recordTypeCompany), scope: scopeShareable, objectGate: string(recordTypeCompany)},
 	{table: "deal", scope: scopeShareable, objectGate: "deal"},
 	{table: "lead", scope: scopeShareable, objectGate: "lead"},

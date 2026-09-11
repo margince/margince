@@ -47,7 +47,7 @@ type hopBinding struct {
 //
 // A JOIN edge is recognised first and by its Join member, never by its text:
 // its Via is prose for a human, and a Via read for structure would find the
-// dot in `relationship(person_id → company_id)` and take a join edge for
+// dot in `relationship(contact_id → company_id)` and take a join edge for
 // an inverse one — an edge that would then compile against a column the join
 // table does not have.
 //

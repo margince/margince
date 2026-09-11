@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -42,7 +42,7 @@ import (
 var fixedCaptureTime = time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
 
 // mailFake is the in-repo test connector: two records per sync — one
-// email activity linked to a person, one lead. The raw payload varies
+// email activity linked to a contact, one lead. The raw payload varies
 // per sync so replay tests can prove evidence immutability.
 type mailFake struct {
 	linkTo    ids.UUID
@@ -81,7 +81,7 @@ func (m *mailFake) Sync(ctx context.Context, _ connector.Auth, cursor connector.
 			EntityType: datasource.EntityActivity,
 			NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "msg-1"},
 			Fields:     capturemod.ActivityFields{Kind: "email", Subject: "Quote request", Body: "please send pricing", OccurredAt: fixedCaptureTime, Direction: "inbound"},
-			Links:      []datasource.EntityRef{{Type: datasource.EntityPerson, ID: m.linkTo}},
+			Links:      []datasource.EntityRef{{Type: datasource.EntityContact, ID: m.linkTo}},
 			Source:     "graph", CapturedBy: "connector:graph",
 			Raw: []byte(fmt.Sprintf(`{"provider":"graph","message_id":"msg-1","sync":%d}`, m.syncCount)),
 		},
@@ -97,7 +97,7 @@ func (m *mailFake) Sync(ctx context.Context, _ connector.Auth, cursor connector.
 			EntityType: datasource.EntityActivity,
 			NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "msg-2"},
 			Fields:     capturemod.ActivityFields{Kind: "email", Subject: "Second thoughts", Body: "one more question", OccurredAt: fixedCaptureTime, Direction: "inbound"},
-			Links:      []datasource.EntityRef{{Type: datasource.EntityPerson, ID: m.linkTo}},
+			Links:      []datasource.EntityRef{{Type: datasource.EntityContact, ID: m.linkTo}},
 			Source:     "graph", CapturedBy: "connector:graph",
 			Raw: []byte(`{"provider":"graph","message_id":"msg-2"}`),
 		})
@@ -147,10 +147,10 @@ func readCaptureCounts(t *testing.T, e *integration.SearchEnv) captureCounts {
 
 func TestCaptureSyncIsIdempotentAndProvenanced(t *testing.T) {
 	e := integration.SetupSearch(t)
-	personID := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
+	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
 
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
-	fake := &mailFake{linkTo: personID}
+	fake := &mailFake{linkTo: contactID}
 	registry.Register(fake)
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
@@ -199,7 +199,7 @@ func TestCaptureSyncIsIdempotentAndProvenanced(t *testing.T) {
 		if err := tx.QueryRow(context.Background(), `SELECT captured_by FROM activity WHERE source_system = 'email'`).Scan(&capturedBy); err != nil {
 			return err
 		}
-		return tx.QueryRow(context.Background(), `SELECT count(*) FROM activity_link WHERE person_id = $1`, personID).Scan(&links)
+		return tx.QueryRow(context.Background(), `SELECT count(*) FROM activity_link WHERE contact_id = $1`, contactID).Scan(&links)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -283,13 +283,13 @@ func TestReconnectUnarchivesTheConnection(t *testing.T) {
 
 func TestCaptureLinkTargetOutsideScopeRefused(t *testing.T) {
 	e := integration.SetupSearch(t)
-	// A person capture-private to team2's rep — the one state that hides a
-	// person from the team1 granting human.
-	foreignPerson := e.SeedID(t, `INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+	// A contact capture-private to team2's rep — the one state that hides a
+	// contact from the team1 granting human.
+	foreignContact := e.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 		VALUES ($1, 'Foreign Private Target', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
-	fake := &mailFake{linkTo: foreignPerson}
+	fake := &mailFake{linkTo: foreignContact}
 	registry.Register(fake)
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
@@ -330,7 +330,7 @@ func humanWithScopes(e *integration.SearchEnv, user ids.UUID, scopes []principal
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true},
 				"lead":     {Create: true, Read: true},
-				"person":   {Read: true},
+				"contact":  {Read: true},
 			},
 			RowScope: principal.RowScopeTeam,
 		},
@@ -346,7 +346,7 @@ func (fakeAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.R
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true},
 			"lead":     {Create: true, Read: true},
-			"person":   {Read: true},
+			"contact":  {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	}}, nil
@@ -366,7 +366,7 @@ func (fakeAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.Se
 func newTestCaptureRegistry(e *integration.SearchEnv, vault keyvault.Vault) *capturemod.Registry {
 	sink := capturemod.NewSink(e.DB()).
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
-		WithParticipantNamer(people.FillParticipantNamesTx)
+		WithParticipantNamer(contacts.FillParticipantNamesTx)
 	return capturemod.NewRegistry(e.DB(), sink, fakeAuthority{}, vault)
 }
 

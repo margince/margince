@@ -6,7 +6,7 @@
 //
 // Three pieces of copy, three fields, because they are three different
 // messages. The reason and the value are read by the COLLEAGUE; the note is
-// the only one a person outside the company ever sees. A drawer that collapsed
+// the only one a contact outside the company ever sees. A drawer that collapsed
 // them would put the internal case for the ask in front of the contact.
 
 import { useId, useState } from "react";
@@ -14,10 +14,10 @@ import type { components } from "../api/schema";
 import { Badge, Button, Field, Modal } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { useT } from "../i18n";
+import { RouteLine } from "./contactroutes";
 import { type IntroRequestInput, useCreateIntroRequest } from "./introrequests";
-import { RouteLine } from "./personroutes";
 
-type RouteCandidate = components["schemas"]["PersonGraphRouteCandidate"];
+type RouteCandidate = components["schemas"]["ContactGraphRouteCandidate"];
 type FallbackPolicy = components["schemas"]["IntroFallbackPolicy"];
 
 /**
@@ -28,14 +28,14 @@ type FallbackPolicy = components["schemas"]["IntroFallbackPolicy"];
  * disagree about which colleague is being asked.
  */
 export function IntroDrawer({
-  personId,
-  personName,
+  contactId,
+  contactName,
   route,
   open,
   onClose,
 }: Readonly<{
-  personId: string;
-  personName: string;
+  contactId: string;
+  contactName: string;
   route: RouteCandidate | undefined;
   open: boolean;
   onClose: () => void;
@@ -48,7 +48,7 @@ export function IntroDrawer({
   const [nameDrop, setNameDrop] = useState(false);
   const [fallback, setFallback] = useState<FallbackPolicy>("none");
 
-  const create = useCreateIntroRequest(personId);
+  const create = useCreateIntroRequest(contactId);
 
   // An ask with no reason is a favour with no case behind it, and the server
   // refuses it too. Saying so here means the reader learns it before they send.
@@ -61,8 +61,8 @@ export function IntroDrawer({
     const body: IntroRequestInput = {
       introducer_user_id: route.via_user_id,
       route_type: route.route_type,
-      ...(route.through_person_id
-        ? { through_person_id: route.through_person_id }
+      ...(route.through_contact_id
+        ? { through_contact_id: route.through_contact_id }
         : {}),
       internal_reason: reason.trim(),
       ...(value.trim() ? { value_for_target: value.trim() } : {}),
@@ -85,19 +85,19 @@ export function IntroDrawer({
       placement="right"
       size="wide"
     >
-      <h2 id={titleId}>{t("person.intro.askTitle", { name: personName })}</h2>
+      <h2 id={titleId}>{t("contact.intro.askTitle", { name: contactName })}</h2>
 
       {route ? (
         <p className="pn-route">
           <RouteLine route={route} />
         </p>
       ) : (
-        <p className="pn-route">{t("person.graph.noRoute")}</p>
+        <p className="pn-route">{t("contact.graph.noRoute")}</p>
       )}
 
       <Field
-        label={t("person.intro.reasonLabel")}
-        hint={t("person.intro.reasonHint")}
+        label={t("contact.intro.reasonLabel")}
+        hint={t("contact.intro.reasonHint")}
       >
         {(control) => (
           <textarea
@@ -110,8 +110,8 @@ export function IntroDrawer({
       </Field>
 
       <Field
-        label={t("person.intro.valueLabel")}
-        hint={t("person.intro.valueHint")}
+        label={t("contact.intro.valueLabel")}
+        hint={t("contact.intro.valueHint")}
       >
         {(control) => (
           <textarea
@@ -124,8 +124,8 @@ export function IntroDrawer({
       </Field>
 
       <Field
-        label={t("person.intro.noteLabel")}
-        hint={t("person.intro.noteHint")}
+        label={t("contact.intro.noteLabel")}
+        hint={t("contact.intro.noteHint")}
       >
         {(control) => (
           <textarea
@@ -143,28 +143,28 @@ export function IntroDrawer({
           checked={nameDrop}
           onChange={(e) => setNameDrop(e.target.checked)}
         />
-        {t("person.intro.nameDropAsk")}
+        {t("contact.intro.nameDropAsk")}
       </label>
 
       <ChoiceList<FallbackPolicy>
-        legend={t("person.intro.fallbackLegend")}
+        legend={t("contact.intro.fallbackLegend")}
         value={fallback}
         onChange={setFallback}
         choices={[
           {
             value: "none",
-            label: t("person.intro.fallbackNone"),
-            description: t("person.intro.fallbackNoneHelp"),
+            label: t("contact.intro.fallbackNone"),
+            description: t("contact.intro.fallbackNoneHelp"),
           },
           {
             value: "name_drop",
-            label: t("person.intro.fallbackNameDrop"),
-            description: t("person.intro.fallbackNameDropHelp"),
+            label: t("contact.intro.fallbackNameDrop"),
+            description: t("contact.intro.fallbackNameDropHelp"),
           },
           {
             value: "next_route",
-            label: t("person.intro.fallbackNextRoute"),
-            description: t("person.intro.fallbackNextRouteHelp"),
+            label: t("contact.intro.fallbackNextRoute"),
+            description: t("contact.intro.fallbackNextRouteHelp"),
           },
         ]}
       />
@@ -174,15 +174,15 @@ export function IntroDrawer({
           the product just wrote to her. */}
       <div className="form-actions">
         <Button onClick={onClose} variant="ghost">
-          {t("person.intro.cancel")}
+          {t("contact.intro.cancel")}
         </Button>
         <Button onClick={submit} disabled={!ready || create.isPending}>
-          {t("person.intro.askAction")}
+          {t("contact.intro.askAction")}
         </Button>
       </div>
       {create.isError ? (
         <p role="alert">
-          <Badge tone="danger">{t("person.intro.askFailed")}</Badge>
+          <Badge tone="danger">{t("contact.intro.askFailed")}</Badge>
         </p>
       ) : null}
     </Modal>

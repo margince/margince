@@ -26,7 +26,7 @@ import (
 	"github.com/riverqueue/river/rivertest"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // workClient is the insert-only client a working job carries, built here
@@ -82,7 +82,7 @@ func TestASiteReadWithNoCompanyQueuesNoLookup(t *testing.T) {
 
 	// The triage lane's shape: a claim whose read is about a DOMAIN, with no
 	// account resolved behind it yet.
-	worker.askWhatTheCompanyRuns(ctx, people.SiteReadClaim{
+	worker.askWhatTheCompanyRuns(ctx, contacts.SiteReadClaim{
 		CompanyID:  nil,
 		TargetKind: "domain",
 		SeedURL:    "https://acme.example",

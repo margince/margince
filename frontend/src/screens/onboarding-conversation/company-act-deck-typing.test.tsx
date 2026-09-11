@@ -90,7 +90,7 @@ const READ: CompanySiteRead = {
   profile_fields: PROFILE_FIELDS,
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   legal_entities: [],
   warnings: [],
   draft_version: 1,

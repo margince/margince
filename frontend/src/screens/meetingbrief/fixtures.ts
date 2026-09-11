@@ -16,19 +16,19 @@ type BriefSection = components["schemas"]["MeetingBriefSection"];
 
 const ACTIVITY = "3f7c1a90-0000-4000-8000-00000000a001";
 const DEAL = "3f7c1a90-0000-4000-8000-00000000d001";
-const PERSON = "3f7c1a90-0000-4000-8000-00000000p001";
+const CONTACT = "3f7c1a90-0000-4000-8000-00000000p001";
 
 // The meeting the fixtures are about, for a caller that renders the header
 // from what it already holds.
 export const meetingFacts = {
   subject: "Retrofit-Abstimmung",
   startsAt: "2026-06-24T13:00:00Z",
-  participants: [{ person_id: PERSON, full_name: "Anna Weber" }],
+  participants: [{ contact_id: CONTACT, full_name: "Anna Weber" }],
 } as const;
 
 export const preparedFor = {
   name: "Anna Weber",
-  identity: PERSON,
+  identity: CONTACT,
   companyName: "Brandt Automotive",
 } as const;
 
@@ -40,7 +40,7 @@ function section(
 }
 
 // The nine sections, each carrying the citation kind it really carries: a goal
-// cites the deal it moves, an attendee line cites the person, everything else
+// cites the deal it moves, an attendee line cites the contact, everything else
 // cites the conversation it was read from.
 const NINE: BriefSection[] = [
   section("header", [
@@ -71,7 +71,7 @@ const NINE: BriefSection[] = [
       text: "Anna Weber, operations lead, is the only attendee from their side.",
       nature: "fact",
       evidence: [
-        { entity_type: "person", entity_id: PERSON, name: "Anna Weber" },
+        { entity_type: "contact", entity_id: CONTACT, name: "Anna Weber" },
       ],
     },
   ]),

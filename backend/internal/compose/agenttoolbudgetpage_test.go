@@ -98,7 +98,7 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 			len(b.Corpus.ReadByProse))
 		p.WriteString("matching registered tool names minus the scenario's own answer. That is wrong in\n")
 		p.WriteString("BOTH directions — it counts a tool a rubric merely quotes, and misses one the\n")
-		p.WriteString("rubric names in words, since \"a search would re-find the person\" is search_records\n")
+		p.WriteString("rubric names in words, since \"a search would re-find the contact\" is search_records\n")
 		p.WriteString("to a reader and nothing to a matcher. They are named rather than absorbed:\n\n")
 		for _, name := range b.Corpus.ReadByProse {
 			fmt.Fprintf(&p, "- %s\n", name)

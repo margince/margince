@@ -41,23 +41,23 @@ const (
 // message is one generated mail, and the shape stored in Raw so Normalize can
 // rebuild the record from it alone.
 type message struct {
-	Mailbox     Mailbox   `json:"mailbox"`
-	MessageID   string    `json:"message_id"`
-	ThreadKey   string    `json:"thread_key"`
-	InReplyTo   string    `json:"in_reply_to,omitempty"`
-	Subject     string    `json:"subject"`
-	Body        string    `json:"body"`
-	OccurredAt  time.Time `json:"occurred_at"`
-	Direction   string    `json:"direction"`
-	Kind        string    `json:"kind"`
-	FromAddr    string    `json:"from"`
-	FromName    string    `json:"from_name"`
-	ToAddr      string    `json:"to"`
-	ToName      string    `json:"to_name"`
-	CCAddr      string    `json:"cc,omitempty"`
-	CompanyID   string    `json:"company_id"`
-	DealID      string    `json:"deal_id,omitempty"`
-	PersonEmail string    `json:"person_email,omitempty"`
+	Mailbox      Mailbox   `json:"mailbox"`
+	MessageID    string    `json:"message_id"`
+	ThreadKey    string    `json:"thread_key"`
+	InReplyTo    string    `json:"in_reply_to,omitempty"`
+	Subject      string    `json:"subject"`
+	Body         string    `json:"body"`
+	OccurredAt   time.Time `json:"occurred_at"`
+	Direction    string    `json:"direction"`
+	Kind         string    `json:"kind"`
+	FromAddr     string    `json:"from"`
+	FromName     string    `json:"from_name"`
+	ToAddr       string    `json:"to"`
+	ToName       string    `json:"to_name"`
+	CCAddr       string    `json:"cc,omitempty"`
+	CompanyID    string    `json:"company_id"`
+	DealID       string    `json:"deal_id,omitempty"`
+	ContactEmail string    `json:"contact_email,omitempty"`
 }
 
 // record maps one generated message onto what the sink accepts.
@@ -88,7 +88,7 @@ func (m message) record() connector.NormalizedRecord {
 	}
 
 	// Meetings reach companies through their attendees, as live calendar capture
-	// does. Mail links the company directly; both may link a deal. Not the person: the sink's counterparty ladder resolves and links
+	// does. Mail links the company directly; both may link a deal. Not the contact: the sink's counterparty ladder resolves and links
 	// them, and a second link here would be a duplicate row.
 	// An id that will not parse costs its link rather than the message: the
 	// directory produced it from the database, so a bad one is a bug worth
@@ -174,13 +174,13 @@ const historyDays = 90
 
 // generate writes one account's correspondence with this mailbox.
 func generate(mailbox Mailbox, account Account) []message {
-	if len(account.People) == 0 {
+	if len(account.Contacts) == 0 {
 		// Nobody to write to. A thread addressed to a company rather than a
-		// person is not correspondence, and inventing a contact here would
-		// bypass the dataset's rule about where people come from.
+		// contact is not correspondence, and inventing a contact here would
+		// bypass the dataset's rule about where contacts come from.
 		return nil
 	}
-	contact := account.People[hashIndex("contact:"+account.Domain, len(account.People))]
+	contact := account.Contacts[hashIndex("contact:"+account.Domain, len(account.Contacts))]
 	if account.Now.IsZero() {
 		return nil
 	}
@@ -269,7 +269,7 @@ func dealStage(account Account) string {
 
 // writeThread turns one spec into its messages, opener first so the sink's
 // reply join sees an outbound before the inbound that answers it.
-func writeThread(mailbox Mailbox, account Account, contact Person, anchor time.Time, spec threadSpec) []message {
+func writeThread(mailbox Mailbox, account Account, contact Contact, anchor time.Time, spec threadSpec) []message {
 	base := fmt.Sprintf("offline-demo.%s.%s", shortKey(account.Domain), spec.Key)
 	openerID := fmt.Sprintf("<%s.m0@offline-demo.invalid>", base)
 	occurred := anchor.AddDate(0, 0, spec.DayStart)
@@ -307,7 +307,7 @@ func writeThread(mailbox Mailbox, account Account, contact Person, anchor time.T
 	return out
 }
 
-func newMessage(mailbox Mailbox, account Account, contact Person,
+func newMessage(mailbox Mailbox, account Account, contact Contact,
 	id, threadKey, inReplyTo, subject, body string, occurred time.Time,
 	direction, kind, dealID string,
 ) message {
@@ -322,7 +322,7 @@ func newMessage(mailbox Mailbox, account Account, contact Person,
 		addressee = firstWord(mailbox.DisplayName)
 	}
 	// A nameless addressee would render " 님께," with a leading space in Korean
-	// and "Hallo ," in German. The compose directory filters out people with no
+	// and "Hallo ," in German. The compose directory filters out contacts with no
 	// name, so this is a guard on the Directory CONTRACT rather than on the one
 	// implementation, and it drops the salutation line rather than greeting
 	// nobody.
@@ -341,7 +341,7 @@ func newMessage(mailbox Mailbox, account Account, contact Person,
 		Subject: subject, Body: greeting + body + "\n\n" + words.SignOff,
 		OccurredAt: occurred.UTC(), Direction: direction, Kind: kind,
 		FromAddr: from, FromName: fromName, ToAddr: to, ToName: toName, CCAddr: cc,
-		CompanyID: account.CompanyID, DealID: dealID, PersonEmail: contact.Email,
+		CompanyID: account.CompanyID, DealID: dealID, ContactEmail: contact.Email,
 	}
 }
 

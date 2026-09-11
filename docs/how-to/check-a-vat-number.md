@@ -198,7 +198,7 @@ a different number.
 
 The history is the audit log's. Every check writes an audit entry, and a check somebody **asked for**
 writes its own entry naming who asked — the worker itself runs under a system principal, so without that
-row "a person spent a consultation on this company" would be answerable from nothing.
+row "a contact spent a consultation on this company" would be answerable from nothing.
 
 ## See also
 

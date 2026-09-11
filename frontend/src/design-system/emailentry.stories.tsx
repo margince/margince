@@ -21,7 +21,7 @@ import { Panel, PanelBody } from "./panel";
 //
 // The states worth a picture are the access ones, because they are what a
 // reader has to tell apart at a glance: a message the team may read, one
-// limited to the people on it, one narrowed to named colleagues, and one this
+// limited to the contacts on it, one narrowed to named colleagues, and one this
 // reader may not read at all — which keeps its shape and loses its words.
 //
 // `InEveryHost` is the load-bearing one. The same row is drawn inside a
@@ -67,7 +67,7 @@ type Story = StoryObj<typeof Row>;
 /** Readable by anyone who can reach a linked record. */
 export const Team: Story = { args: { summary: BASE } };
 
-/** Limited to the people on the correspondence. */
+/** Limited to the contacts on the correspondence. */
 export const Participants: Story = {
   args: { summary: { ...BASE, display_status: "participants" } },
 };
@@ -240,7 +240,7 @@ export const RecordDrawer: StoryObj = {
               {
                 address: "ana@brandt.example",
                 display_name: "Ana Sommer",
-                person_id: ANA,
+                contact_id: ANA,
               },
             ],
             to: [],
@@ -249,7 +249,7 @@ export const RecordDrawer: StoryObj = {
             bcc_withheld: false,
             attachments: [],
             links: [
-              { entity_type: "person", entity_id: ANA },
+              { entity_type: "contact", entity_id: ANA },
               { entity_type: "company", entity_id: BRANDT },
             ],
             access: {
@@ -265,7 +265,7 @@ export const RecordDrawer: StoryObj = {
       // The reads that put a NAME to each filed record. `EntityRef` resolves
       // one record per link, so a story with links and no records draws the
       // line as ids rather than as the names a reader would meet.
-      [`GET /people/${ANA}`]: () =>
+      [`GET /contacts/${ANA}`]: () =>
         jsonResponse({ id: ANA, full_name: "Ana Sommer" }),
       [`GET /companies/${BRANDT}`]: () =>
         jsonResponse({ id: BRANDT, display_name: "Brandt Automotive" }),

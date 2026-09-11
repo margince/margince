@@ -82,8 +82,8 @@
       "reported_abstained": 0
     },
     {
-      "scenario": "person_brief_reads_what_was_said",
-      "site": "person_brief",
+      "scenario": "contact_brief_reads_what_was_said",
+      "site": "contact_brief",
       "stamp": "2a2f51cf80600ec3af95560bb618166901fa43f21c7bbdd18f741aa5c4d5219f33aa08dd2dcfb6532f34557b5781de0b4e08427ab14103a7de72bf6b62467a3e4519c73acb91635f8d7ab74e1558e355588af249ad3187ba19c73cf3c4260564",
       "verdict": "not_supported",
       "runs": 3,
@@ -94,8 +94,8 @@
       "reported_abstained": 0
     },
     {
-      "scenario": "person_brief_stays_silent_about_what_the_reader_may_not_see",
-      "site": "person_brief",
+      "scenario": "contact_brief_stays_silent_about_what_the_reader_may_not_see",
+      "site": "contact_brief",
       "stamp": "aea53c4c51d8656e6a5debda1b8933dc20fbb442e41d56c2db6ef7c9bd47be428350ed993a084544d2bc4674daccc7ee2b148ebb8df1c22c7eb6bf31830e4fcb43e84b93f368091d02f7b3640824360d5faaf34c908bf1f2d2909a2274d0e756",
       "verdict": "supported_degraded",
       "runs": 3,

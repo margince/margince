@@ -39,7 +39,7 @@ import (
 //
 // Its own type rather than a bare conflict, because the three ways this verb
 // declines are different situations for the caller: a window that has closed
-// (move the deal by hand instead), a move a person made (there is nothing
+// (move the deal by hand instead), a move a contact made (there is nothing
 // automatic to undo), and one already reversed (somebody got there first).
 //
 // Mapped to 409 by writeUndoConflict in handlers.go, the way this package maps
@@ -77,7 +77,7 @@ func (s *Store) RevertStageProgression(
 	var out crmcontracts.Deal
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		// THE DEAL FIRST, then the ledger row. The other door onto a reversal
-		// — a person moving the deal back by hand — takes the deal's lock in
+		// — a contact moving the deal back by hand — takes the deal's lock in
 		// advanceOnTx and then the ledger row's, so taking them the other way
 		// round here is a cycle: one undo and one manual move back, running at
 		// once, each holding what the other waits for. Postgres resolves that
@@ -87,7 +87,7 @@ func (s *Store) RevertStageProgression(
 			return err
 		}
 		// VISIBILITY BEFORE ANY CONFLICT. The three refusals below say
-		// different things — the window has closed, a person made this move,
+		// different things — the window has closed, a contact made this move,
 		// it is already taken back — and each is a fact about a record. Asked
 		// after them, a caller with the object grant but no row scope could
 		// tell an eligible hidden move from an expired one by the 409 they
@@ -119,7 +119,7 @@ func (s *Store) RevertStageProgression(
 			WonWithoutContractReason: wonReason,
 			WonWithoutContractDetail: wonDetail,
 			// No ApprovalID. This move is not made THROUGH a card — it is a
-			// person overruling one, and recording the card here would tell
+			// contact overruling one, and recording the card here would tell
 			// readProtection that the rep agreed with the product.
 			//
 			// IsExplicitUndo suppresses the automatic reversal detection: it
@@ -234,7 +234,7 @@ func historyRowOf(
 // carried as a constant — an installation that gave a transition a longer undo
 // window meant it for that transition. A move with no rule any more (the admin
 // deleted it) falls back to the column default, because the window a move was
-// made under is a promise to the person it was made for.
+// made under is a promise to the contact it was made for.
 func lockReversibleMove(
 	ctx context.Context, tx pgx.Tx, dealID ids.DealID, approvalID ids.UUID, now time.Time,
 ) (reversibleMove, error) {
@@ -277,7 +277,7 @@ func lockReversibleMove(
 		// agreed; moving the deal back is an ordinary stage move they can make
 		// themselves, and it is counted as a reversal on the same ledger.
 		return m, &UndoWindowClosedError{
-			Reason: "this move was made by a person, so there is nothing automatic to take back",
+			Reason: "this move was made by a contact, so there is nothing automatic to take back",
 		}
 	}
 	if now.After(decidedAt.Add(time.Duration(undoHours) * time.Hour)) {
@@ -366,10 +366,10 @@ func markMoveReversed(
 	}, now)
 }
 
-// reversalActor is the person the undo is recorded against.
+// reversalActor is the contact the undo is recorded against.
 //
 // Nil for a principal with no human behind it, matching the column's ON DELETE
-// SET NULL: an instant whose person has since been erased is what an anonymized
+// SET NULL: an instant whose contact has since been erased is what an anonymized
 // workspace looks like, and the audit row still holds who.
 func reversalActor(ctx context.Context) *ids.UUID {
 	p, ok := principal.Actor(ctx)
@@ -380,14 +380,14 @@ func reversalActor(ctx context.Context) *ids.UUID {
 	return &id
 }
 
-// countAManualMoveBackAsAReversal marks an automatic move that a person has
+// countAManualMoveBackAsAReversal marks an automatic move that a contact has
 // just undone by hand.
 //
 // THE SAME FACT AS THE UNDO BUTTON, reached the other way. A rep who disagrees
 // with what the autopilot did can press Undo or simply drag the deal back, and
 // only one of those routes going onto the ledger would leave the safety number
 // dodgeable by the more obvious one — the transition would keep applying while
-// people quietly corrected it all day.
+// contacts quietly corrected it all day.
 //
 // It does NOT refute the evidence, for the same reason the explicit undo does
 // not: moving a deal back says it should not have moved, not that the criteria
@@ -407,11 +407,11 @@ func countAManualMoveBackAsAReversal(
 		// move the deal back again.
 		return nil
 	}
-	// A PERSON's move, named positively rather than as "not through a card".
+	// A CONTACT's move, named positively rather than as "not through a card".
 	// An agent can advance a deal too, and its move carries no approval id
 	// either — read as a human's, it would record a reversal nobody made,
 	// attribute it to the agent's user, and let a machine reverse what another
-	// machine did with no person in the loop. The undo verb is human-only for
+	// machine did with no contact in the loop. The undo verb is human-only for
 	// exactly that reason, and this door must not be the way around it.
 	//
 	// readProtection names its human the same way, and its comment says why:

@@ -106,8 +106,8 @@ func lockSubjectsInOrder(ctx context.Context, tx pgx.Tx, subjects ...ids.UUID) e
 // subjectKey is the one id a StopSubject locks under. Exactly one of the two is
 // set, so this is a selection and never a choice.
 func subjectKey(s commsauthz.StopSubject) ids.UUID {
-	if !s.PersonID.IsZero() {
-		return s.PersonID.UUID
+	if !s.ContactID.IsZero() {
+		return s.ContactID.UUID
 	}
 	return s.LeadID.UUID
 }

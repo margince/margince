@@ -46,7 +46,7 @@ export type NavLevelEntry = {
   // describe all of them at once, which is no description of any of them.
   subKey?: MessageKey;
   // Whose state this page changes, in the reader's own words — "Only you",
-  // "Company", "Installation". A settings page is the one place a person cannot
+  // "Company", "Installation". A settings page is the one place a contact cannot
   // tell that from the controls: a toggle that changes your signature and a
   // toggle that changes everybody's mail routing look identical.
   //

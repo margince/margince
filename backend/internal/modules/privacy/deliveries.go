@@ -81,7 +81,7 @@ const parkedByPrivacyScrub = "content removed by a privacy scrub before this mes
 // SNAPSHOT does not stay: it holds filenames, sizes and checksums, and a
 // filename is routinely the subject's own name. from_name stays for
 // the same reason: it names the workspace member who SENT the message, not the
-// person exercising erasure, and clearing it would destroy send-log evidence
+// contact exercising erasure, and clearing it would destroy send-log evidence
 // while protecting nobody. status stays too
 // wherever it is already terminal: a message that went out did go out, and a
 // scrub that rewrote that would falsify the send log.
@@ -105,7 +105,7 @@ func redactDeliveries(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, to
 		return nil
 	}
 	// The one-time link material FIRST, inside this scrub rather than beside
-	// it. Three arms erase a delivery's content — a person's Art. 17 request,
+	// it. Three arms erase a delivery's content — a contact's Art. 17 request,
 	// the nightly retention sweep, and a statutory floor expiring — and a purge
 	// that lived at one call site would be absent from the other two, leaving a
 	// working confirmation link in the vault that the scrubbed row no longer

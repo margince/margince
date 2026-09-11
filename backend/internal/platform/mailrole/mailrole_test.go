@@ -19,7 +19,7 @@ func TestEveryObservedRoleAddressIsRefused(t *testing.T) {
 		"billing_apac@habyt.com",
 		"hello.events@thesentry.com.vn",
 		"asia-accounting@nfq.com",
-		// A NUMBERED service desk. This one reached the CRM as a person called
+		// A NUMBERED service desk. This one reached the CRM as a contact called
 		// "City Garden CS6" — the digits kept the role word from matching, and
 		// the address the founder had WRITTEN TO was judged as a stranger who
 		// had written in. Sanitized to the shape, not the customer's domain.
@@ -27,7 +27,7 @@ func TestEveryObservedRoleAddressIsRefused(t *testing.T) {
 		"support2@example.com",
 	} {
 		if _, role := mailrole.Match(address); !role {
-			t.Errorf("%s: wanted a role mailbox, got a person", address)
+			t.Errorf("%s: wanted a role mailbox, got a contact", address)
 		}
 	}
 }
@@ -40,7 +40,7 @@ func TestEveryObservedRoleAddressIsRefused(t *testing.T) {
 // "contacts" in the incident this package answers. Neither carries a role WORD:
 // one is a city, the other a business. Recognising them needs to know what the
 // company is, which is the AI verdict's question, and a list that guessed
-// at city and company names would refuse people called Paris and Mercer.
+// at city and company names would refuse contacts called Paris and Mercer.
 //
 // So this package answers no here, deliberately, and the verdict lane owns the
 // case. If that lane ever stops covering it, this test says where to look.
@@ -51,10 +51,10 @@ func TestACityOrCompanyMailboxIsBeyondADeterministicList(t *testing.T) {
 	}
 }
 
-// The other half of the same rule: a person whose name or address happens to
-// contain a role word is still a person. A gate that cannot tell these apart
+// The other half of the same rule: a contact whose name or address happens to
+// contain a role word is still a contact. A gate that cannot tell these apart
 // trades one silent failure for a louder one.
-func TestAPersonIsNotARoleMailbox(t *testing.T) {
+func TestAContactIsNotARoleMailbox(t *testing.T) {
 	t.Parallel()
 	for _, address := range []string{
 		"anna.weber@acme.com",
@@ -66,7 +66,7 @@ func TestAPersonIsNotARoleMailbox(t *testing.T) {
 		"connor.eply@acme.com",     // not "noreply"
 	} {
 		if token, role := mailrole.Match(address); role {
-			t.Errorf("%s: wanted a person, got role mailbox %q", address, token)
+			t.Errorf("%s: wanted a contact, got role mailbox %q", address, token)
 		}
 	}
 }
@@ -81,7 +81,7 @@ func TestPlusAddressingIsStrippedBeforeTheRoleIsRead(t *testing.T) {
 		t.Fatalf("wanted the support role, got %q role=%v", token, role)
 	}
 	if _, role := mailrole.Match("anna.weber+crm@acme.com"); role {
-		t.Error("a person's address with a routing tag is still a person")
+		t.Error("a contact's address with a routing tag is still a contact")
 	}
 }
 
@@ -99,20 +99,20 @@ func TestAHelpdeskVendorIsARoleMailboxWhateverTheLocalPart(t *testing.T) {
 	}
 }
 
-// A display name made only of department words invents a person when stored as
+// A display name made only of department words invents a contact when stored as
 // a full name. One that names somebody does not.
 func TestADepartmentDisplayNameNamesNobody(t *testing.T) {
 	t.Parallel()
 	for _, name := range []string{"Billing", "APAC Billing", "Support Team", "Sales Department"} {
 		if !mailrole.DisplayName(name) {
-			t.Errorf("%q: wanted a department, got a person's name", name)
+			t.Errorf("%q: wanted a department, got a contact's name", name)
 		}
 	}
 	// "Events The Sentry" is NOT here: "Sentry" is a company name, and a display
 	// name carrying one is beyond a word list for the same reason the address is.
 	for _, name := range []string{"Anna Weber", "Anna from Billing", "Lars Jankowfsky", "APAC"} {
 		if mailrole.DisplayName(name) {
-			t.Errorf("%q: wanted a person's name, got a department", name)
+			t.Errorf("%q: wanted a contact's name, got a department", name)
 		}
 	}
 }
@@ -163,7 +163,7 @@ func TestThePromptsRoleExamplesAreAllRoleTokens(t *testing.T) {
 }
 
 // The observed defect: "steireif Partnernet" at partner@steireif.net opened a
-// draft with "steireif," — the company greeted as a person.
+// draft with "steireif," — the company greeted as a contact.
 //
 // `partner` is deliberately outside the role vocabulary, so Match cannot reach
 // this and the greeting rule has to read the name against its own domain.
@@ -173,18 +173,18 @@ func TestAMailboxNamedAfterItsOwnDomainGreetsNobody(t *testing.T) {
 		{"steireif Partnernet", "partner@steireif.net"},
 		{"Contoso Vertrieb", "vertrieb@contoso.com"},
 		// Reached by the role vocabulary rather than by the domain rule, so
-		// the display name is a person's and the answer still has to be no.
+		// the display name is a contact's and the answer still has to be no.
 		{"Anna Weber", "info@contoso.com"},
 		// Reached by the display-name rule: all role words, personal address.
 		{"Support Team", "a.weber@contoso.com"},
 	} {
 		if !mailrole.GreetsNobody(c.name, c.address) {
-			t.Errorf("%q <%s>: wanted nobody to greet, got a person", c.name, c.address)
+			t.Errorf("%q <%s>: wanted nobody to greet, got a contact", c.name, c.address)
 		}
 	}
 }
 
-func TestAPersonIsStillGreetedByName(t *testing.T) {
+func TestAContactIsStillGreetedByName(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct{ name, address string }{
 		{"Anna Weber", "a.weber@contoso.com"},
@@ -192,12 +192,12 @@ func TestAPersonIsStillGreetedByName(t *testing.T) {
 		// token, because that is the one a greeting takes for a first name.
 		{"Anna Contoso", "anna@contoso.com"},
 		// No address to read, and a name that is not a department. Nothing
-		// here says this is not a person, so nothing may claim it.
+		// here says this is not a contact, so nothing may claim it.
 		{"Anna Weber", ""},
 		{"Lars Jankowfsky", "lars@jankowfsky.de"},
 	} {
 		if mailrole.GreetsNobody(c.name, c.address) {
-			t.Errorf("%q <%s>: wanted a person to greet, got nobody", c.name, c.address)
+			t.Errorf("%q <%s>: wanted a contact to greet, got nobody", c.name, c.address)
 		}
 	}
 }

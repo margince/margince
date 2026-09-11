@@ -51,7 +51,7 @@ const SHOTS = process.env.E2E_SHOT_DIR ?? "/tmp/e2e-company";
 
 // The readings row, by the test id StateStrip hands its StatStrip. Not by class:
 // the plate is the shared primitive's (design-system/statstrip.tsx), so a class
-// selector here would either name the primitive — and match the person record's
+// selector here would either name the primitive — and match the contact record's
 // row too — or name a screen class that only exists to be selected. The test id
 // names THIS row on THIS page, which is what these assertions are about.
 const STRIP = '[data-testid="company-strip"]';
@@ -218,7 +218,7 @@ test.describe("company record — the glance's page shape", () => {
   // The details pane is the record's, on the RIGHT of the work under the tab
   // row, and it starts closed: the Details control at the end of the tab row
   // opens it (DESIGN.md §6). Inside it, ONE pane of named sections — the
-  // account's fields, its deals, its people, the hold where the account has a
+  // account's fields, its deals, its contacts, the hold where the account has a
   // domain, its tags — each a disclosure with a non-empty summary, never a
   // stack of cards.
   //

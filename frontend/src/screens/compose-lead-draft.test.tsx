@@ -19,7 +19,7 @@ import {
 
 // Drafting to a LEAD.
 //
-// A lead is the shape the person drafter's own contract describes: the record
+// A lead is the shape the contact drafter's own contract describes: the record
 // IS the recipient, so there is no contact to name and no deal or project to
 // pick. Before this the composer refused every record but a company, and
 // "Draft with AI" on a lead did nothing at all.

@@ -64,7 +64,7 @@ curl -X POST http://localhost:8080/v1/webhook-subscriptions \
   -H 'Content-Type: application/json' \
   -d '{
         "target_url": "https://example.test/hooks/margince",
-        "event_types": ["deal.stage_changed", "person.created"]
+        "event_types": ["deal.stage_changed", "contact.created"]
       }'
 ```
 

@@ -61,7 +61,7 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // The reason travels with the outcome rather than being recomputed by the
 // caller. It used to be recomputed — from unwritableReason, which knows about
 // the size_band vocabulary and nothing else — so a refusal from any other source
-// reached the report as a skip with an EMPTY reason, and the person reading it
+// reached the report as a skip with an EMPTY reason, and the reader reading it
 // was told a row would not land without being told why.
 func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
 	if reason := unwritableReason(w.object, textFields(row.Fields)); reason != "" {
@@ -90,8 +90,8 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 // predictCreatePath is what the commit will do with a row no previous run of
 // this importer landed.
 //
-// Two questions, in this order and the order matters. First, whether a person's
-// address is already spoken for: uq_person_email_dedupe is estate-wide, so the
+// Two questions, in this order and the order matters. First, whether a contact's
+// address is already spoken for: uq_contact_email_dedupe is estate-wide, so the
 // store refuses that row whoever holds the address, and a preview promising a
 // create would simply be wrong. It runs BEFORE the collision check and is not a
 // disclosure decision — the outcome is identical for an incumbent the caller can
@@ -105,12 +105,12 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 // through reported invisible companies as duplicates on a `skip` run, one CSV
 // row at a time.
 func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
-	claimed, err := w.personEmailAlreadyHeld(ctx, row)
+	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
 	if err != nil {
 		return predictCreate, "", err
 	}
 	if claimed {
-		return predictUnwritable, personEmailClaimedReason, nil
+		return predictUnwritable, contactEmailClaimedReason, nil
 	}
 	takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
 	if err != nil {

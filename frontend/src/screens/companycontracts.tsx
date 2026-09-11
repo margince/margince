@@ -313,7 +313,7 @@ function ContractRow({
           )}
           <ContractTerm contract={contract} />
           <ContractTermState contract={contract} />
-          {/* A bare EntityRef here would read as a company name or a person —
+          {/* A bare EntityRef here would read as a company name or a contact —
               the other siblings on this line are all self-identifying by
               format (a mono number, a date range, a state pill), and a deal's
               name is not. Same {label}{" "}<EntityRef/> shape deals.tsx uses

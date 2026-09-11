@@ -359,7 +359,7 @@ func TestAMarketingSendRendersBothOneClickUnsubscribeHeaders(t *testing.T) {
 // delivered mail because no response carries it.
 func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 	t.Helper()
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent/confirm-request",
+	if status := p.Call(t, "POST", "/v1/contacts/"+p.contactID+"/consent/confirm-request",
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}

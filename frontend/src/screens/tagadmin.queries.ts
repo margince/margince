@@ -101,7 +101,7 @@ function useVocabularyInvalidation() {
 }
 
 /** The list reads whose rows carry tags inline. */
-const TAGGED_LISTS = ["people", "companies", "deals"] as const;
+const TAGGED_LISTS = ["contacts", "companies", "deals"] as const;
 
 export function useCreateTag() {
   const invalidate = useVocabularyInvalidation();

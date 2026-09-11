@@ -7,7 +7,7 @@ package gates
 
 // The plaintext confirm token goes into the mail body and nowhere else.
 //
-// The token is a bearer credential over one person's record: whoever holds it
+// The token is a bearer credential over one contact's record: whoever holds it
 // can open what is held about them, correct it, and answer for them about
 // marketing. The claim that a grant made through it is the SUBJECT'S rests
 // entirely on the plaintext having reached only the subject's own mailbox — so
@@ -16,7 +16,7 @@ package gates
 //
 // The retired operator-token endpoint is what this prevents returning. It handed
 // the plaintext back to the caller, who could paste it straight in again, so one
-// person could mint and redeem a confirmation the subject never saw. Those rows
+// contact could mint and redeem a confirmation the subject never saw. Those rows
 // are still on the proof log and authorize nothing (recordedStateFor's
 // issuance_trigger IS NOT NULL clause is what excludes them); this gate is what
 // stops the shape coming back.
@@ -29,7 +29,7 @@ package gates
 // fmt.Fprintf to a writer, and — worse, through a sink the list DID hold — a
 // slog.InfoContext handed the bare local the token actually lives in, because
 // the value match only recognised a ".Token" field selection. Both published a
-// bearer credential over one person's record and both read green. Publishing is
+// bearer credential over one contact's record and both read green. Publishing is
 // open-ended and cannot be enumerated; the legitimate destinations are named,
 // are named in the code, and change only when somebody edits this file.
 //
@@ -120,7 +120,7 @@ var ratifiedDestinations = map[string]string{
 
 	"stopForCredential": "resolves the token and records the stop it presses, returning nothing about the token itself",
 
-	"oneClickSubject": "resolves the press to the person it acts for, trying both credential families, and returns that person and the withdrawal scope — never the token",
+	"oneClickSubject": "resolves the press to the contact it acts for, trying both credential families, and returns that contact and the withdrawal scope — never the token",
 }
 
 // launderers are the two functions whose OWN BODY this gate does not inspect,
@@ -193,7 +193,7 @@ func TestThePlaintextConfirmTokenReachesNoSinkButTheMail(t *testing.T) {
 			for _, finding := range unratifiedUsesOf(fn, holders) {
 				t.Errorf("%s: %s hands the plaintext confirm token to %s, which is not one of "+
 					"the destinations it may reach (%s). The token is a bearer credential "+
-					"over one person's record, and a copy anywhere an operator can read it ends "+
+					"over one contact's record, and a copy anywhere an operator can read it ends "+
 					"the claim that a grant made through it was the subject's own.",
 					path, finding.holder, finding.call, ratifiedList())
 			}

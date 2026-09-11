@@ -6,7 +6,7 @@
 // support rather than whichever the renderer happened to walk first.
 
 /** What a node stands for, which decides its shape rather than its colour. */
-export type MapNodeKind = "user" | "person" | "company" | "deal" | "gap";
+export type MapNodeKind = "user" | "contact" | "company" | "deal" | "gap";
 
 /**
  * The three bands a ROUTE is shown in.
@@ -69,7 +69,7 @@ export const COL_W = { left: 184, center: 200, right: 184 } as const;
 export const GUTTER = 72;
 export const NODE_H = {
   user: 40,
-  person: 60,
+  contact: 60,
   company: 48,
   deal: 44,
   gap: 60,
@@ -148,7 +148,7 @@ export function layout(
   }
 
   // The centre is placed last and centred against the taller side, so the
-  // account and its deal sit level with the people they join rather than at the
+  // account and its deal sit level with the contacts they join rather than at the
   // top of a column that happens to be short.
   const centreNodes = laneOf("center").flatMap((lane) =>
     lane.nodeIds.map((id) => ({ id, laneId: lane.id })),
@@ -216,7 +216,7 @@ function stackColumn(
     });
     y += LANE_HEAD_H;
     for (const id of shown) {
-      const kind = byId.get(id)?.kind ?? "person";
+      const kind = byId.get(id)?.kind ?? "contact";
       const h = NODE_H[kind];
       placed.push({
         id,
@@ -266,7 +266,7 @@ export type Route = Readonly<{
  * routeFor decides what a focused node lights up.
  *
  * The BEST route, not every route: a reader asking "how do I reach this
- * person" is choosing one colleague to ask, and drawing four equally is
+ * contact" is choosing one colleague to ask, and drawing four equally is
  * leaving the choice to them again. Strongest band wins; a tie goes to the
  * most recent exchange, and a tie there to the edge id so the same model
  * always lights the same path.
@@ -288,8 +288,8 @@ export function routeFor(
   const routes = model.edges.filter((edge) => edge.kind === "route");
   const memberships = model.edges.filter((edge) => edge.kind === "membership");
 
-  if (node.kind === "person") {
-    return personRoute(focusId, routes, memberships);
+  if (node.kind === "contact") {
+    return contactRoute(focusId, routes, memberships);
   }
   if (node.kind === "user") {
     return colleagueRoute(focusId, routes, memberships);
@@ -309,8 +309,8 @@ export function routeFor(
   return { related: new Set([focusId]), route: null };
 }
 
-/** The walk into one of their people: who can reach them, and by which route. */
-function personRoute(
+/** The walk into one of their contacts: who can reach them, and by which route. */
+function contactRoute(
   focusId: string,
   routes: readonly MapEdge[],
   memberships: readonly MapEdge[],

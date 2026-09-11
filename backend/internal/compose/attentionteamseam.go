@@ -7,7 +7,7 @@ package compose
 //
 // Their own file rather than beside the per-reader lanes, because they answer a
 // different question: each is about somebody OTHER than the caller, counted
-// under the caller's own visibility. The lane seam next door reads one person's
+// under the caller's own visibility. The lane seam next door reads one contact's
 // day and never needs a roster.
 
 import (
@@ -15,22 +15,22 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// attentionPromiseLoad counts each named person's commitments due, for the team
+// attentionPromiseLoad counts each named contact's commitments due, for the team
 // board.
 //
 // ONE query over every owner rather than one per teammate. A board reaches a
-// hundred people, and a hundred sequential round trips on a surface a lead
+// hundred contacts, and a hundred sequential round trips on a surface a lead
 // opens every morning is a slow page for no reason — and each in its own
-// transaction meant a person's records changing hands mid-loop could be counted
+// transaction meant a contact's records changing hands mid-loop could be counted
 // twice or not at all.
 //
 // The store shares every arm of that count with the page a rep opens, so a
 // lead's column and their colleague's own cards answer the same question.
-type attentionPromiseLoad struct{ store *people.Store }
+type attentionPromiseLoad struct{ store *contacts.Store }
 
 var _ attention.PromiseLoad = attentionPromiseLoad{}
 
@@ -48,7 +48,7 @@ func (p attentionPromiseLoad) DuePerOwner(
 	if err != nil {
 		return nil, err
 	}
-	// A person the query did not name owes nothing. Said explicitly, because
+	// A contact the query did not name owes nothing. Said explicitly, because
 	// the board draws a number for every member and an absent key would leave
 	// their column reading zero for a reason nobody chose.
 	for _, owner := range owners {

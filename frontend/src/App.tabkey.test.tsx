@@ -16,12 +16,12 @@ import {
 // clicked keep their DOM nodes, so design-system/enter.css plays the arrival
 // animation for the panel that actually changed and for nothing else.
 //
-// It is asserted here rather than in screens/personpage.test.tsx because the key
+// It is asserted here rather than in screens/contactpage.test.tsx because the key
 // lives above every screen: that suite mounts the page with a `tab` prop and can
 // never see the router decide.
 //
 // A second mount is a case of its own below. It was written for a cache leak —
-// the person page sat at "Loading…" whenever another App suite had mounted
+// the contact page sat at "Loading…" whenever another App suite had mounted
 // first, which reads exactly like something above the fresh `QueryClient`
 // answering from a previous mount. The case is worth keeping either way, since
 // nothing else asserts that a remount re-reads. The leak is not what was
@@ -42,7 +42,7 @@ import {
 // pass, and the instrumented wait completes in ~600ms with a sibling — so it
 // was late, not absent, and the two want opposite fixes (#3971, #3675, #3710).
 
-type Person360 = components["schemas"]["Person360"];
+type Contact360 = components["schemas"]["Contact360"];
 
 const CAPTURED = {
   source: "manual",
@@ -53,10 +53,10 @@ const CAPTURED = {
 
 // The smallest record that draws a header and a tab strip. A panel showing an
 // error is as good a panel as one showing data here, so nothing else is stubbed.
-function person(id: string, name: string): Person360 {
+function contact(id: string, name: string): Contact360 {
   return {
     as_of: "2026-08-13T09:00:00Z",
-    person: { id, full_name: name, ...CAPTURED },
+    contact: { id, full_name: name, ...CAPTURED },
     sections_omitted: [],
     activities: { data: [], page: { has_more: false } },
     deal_roles: { data: [], page: { has_more: false } },
@@ -68,26 +68,30 @@ function person(id: string, name: string): Person360 {
 // without answered on top of it. Everything else still 503s into its own error
 // state — this suite is about which DOM nodes survive a navigation.
 //
-// TWO reads, not one. The page asks for the person itself before it asks for the
+// TWO reads, not one. The page asks for the contact itself before it asks for the
 // 360 projection, and a suite that answered only the second sat at "Loading…"
 // forever: no header, no tab strip, and both cases failing on their first
 // `waitFor` rather than on the node comparison they exist for. That is a whole
 // screen this file cannot draw, so it is stubbed here rather than left to the
 // harness — the harness deliberately 503s everything it is not asked about.
-function personFetch() {
+function contactFetch() {
   const session = sessionOnlyFetch();
   return async (input: Request | string | URL) => {
     const url = String(input instanceof Request ? input.url : input);
-    const whole = /\/v1\/people\/(p-\d+)\/360$/.exec(url);
+    const whole = /\/v1\/contacts\/(p-\d+)\/360$/.exec(url);
     if (whole) {
-      return json(person(whole[1], `Person ${whole[1]}`));
+      return json(contact(whole[1], `Contact ${whole[1]}`));
     }
     // The record itself, which the page reads for its header. Anchored to the
     // end so it cannot swallow /360, /brief or /consent — those keep 503ing
     // into panels of their own, which is what this suite wants.
-    const bare = /\/v1\/people\/(p-\d+)$/.exec(url);
+    const bare = /\/v1\/contacts\/(p-\d+)$/.exec(url);
     if (bare) {
-      return json({ id: bare[1], full_name: `Person ${bare[1]}`, ...CAPTURED });
+      return json({
+        id: bare[1],
+        full_name: `Contact ${bare[1]}`,
+        ...CAPTURED,
+      });
     }
     return session(input);
   };
@@ -166,7 +170,7 @@ beforeEach(() => {
     value: ["fr-FR"],
     configurable: true,
   });
-  vi.stubGlobal("fetch", vi.fn(personFetch()));
+  vi.stubGlobal("fetch", vi.fn(contactFetch()));
 });
 
 afterEach(() => {
@@ -221,7 +225,7 @@ describe("the routed subtree's key", () => {
       await waitFor(() => expect(currentTab()).toBe("Overview"), {
         timeout: SETTLE_MS,
       });
-      expect(recordHead().textContent).toContain("Person p-2");
+      expect(recordHead().textContent).toContain("Contact p-2");
     },
     TWO_SETTLES_MS,
   );
@@ -237,7 +241,7 @@ describe("the routed subtree's key", () => {
       const chromeBefore = recordHead();
 
       // The control for the case above, and the reason the key exists at all: one
-      // person's screen must never be reconciled into another's, or the state it
+      // contact's screen must never be reconciled into another's, or the state it
       // holds — an open drawer, a half-typed note — arrives on the wrong record.
       window.location.hash = "#/contacts/p-2/overview";
       await waitFor(() => expect(recordHead()).not.toBe(chromeBefore), {

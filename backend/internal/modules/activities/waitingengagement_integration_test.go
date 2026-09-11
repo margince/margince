@@ -91,7 +91,7 @@ func (e *loadEnv) addressedTo(t *testing.T, activity ids.UUID, owner ids.UUID, h
 }
 
 // waitingFrom seeds one otherwise-qualifying wait from a named address.
-func (e *loadEnv) waitingFrom(t *testing.T, subject, address string, person ids.UUID) ids.UUID {
+func (e *loadEnv) waitingFrom(t *testing.T, subject, address string, contact ids.UUID) ids.UUID {
 	t.Helper()
 	activity := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
@@ -99,18 +99,18 @@ func (e *loadEnv) waitingFrom(t *testing.T, subject, address string, person ids.
 		activity, subject, "thread-"+activity.String())
 	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
 		VALUES ($1, $2, 'from', $3)`, ids.NewV7(), activity, address)
-	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), activity, person)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), activity, contact)
 	return activity
 }
 
-// buyer writes one person record for a wait to hang off.
+// buyer writes one contact record for a wait to hang off.
 func (e *loadEnv) buyer(t *testing.T) ids.UUID {
 	t.Helper()
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
-	return person
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
+	return contact
 }
 
 // present reports whether the given message came back from the queue.
@@ -131,9 +131,9 @@ func present(t *testing.T, s *Store, e *loadEnv, activity ids.UUID) (WaitingRepl
 // A colleague writing is not a customer waiting.
 func TestAMessageFromOurOwnDomainIsNotAWaitingCustomer(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	colleague := e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", person)
-	customer := e.waitingFrom(t, "Question about pricing", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	colleague := e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", contact)
+	customer := e.waitingFrom(t, "Question about pricing", "buyer@customer.test", contact)
 
 	s := storeKnowing(e, "ourco.test")
 	if _, ok := present(t, s, e, colleague); ok {
@@ -149,10 +149,10 @@ func TestAMessageFromOurOwnDomainIsNotAWaitingCustomer(t *testing.T) {
 // A departmental host is still our own house.
 func TestASubdomainOfOursIsAlsoOurs(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	sub := e.waitingFrom(t, "From the Berlin office", "ops@mail.ourco.test", person)
+	contact := e.buyer(t)
+	sub := e.waitingFrom(t, "From the Berlin office", "ops@mail.ourco.test", contact)
 	// A domain that merely ENDS with ours is somebody else's company.
-	lookalike := e.waitingFrom(t, "Not us at all", "sales@notourco.test", person)
+	lookalike := e.waitingFrom(t, "Not us at all", "sales@notourco.test", contact)
 
 	s := storeKnowing(e, "ourco.test")
 	if _, ok := present(t, s, e, sub); ok {
@@ -172,9 +172,9 @@ func TestASubdomainOfOursIsAlsoOurs(t *testing.T) {
 // rep's queue. The domain is read after the LAST at-sign for that reason.
 func TestASenderCannotHideBehindOurDomainInTheirLocalPart(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	quoted := e.waitingFrom(t, "Suppress me", `"x@ourco.test"@evil.test`, person)
-	doubled := e.waitingFrom(t, "And me", "a@ourco.test@evil.test", person)
+	contact := e.buyer(t)
+	quoted := e.waitingFrom(t, "Suppress me", `"x@ourco.test"@evil.test`, contact)
+	doubled := e.waitingFrom(t, "And me", "a@ourco.test@evil.test", contact)
 
 	s := storeKnowing(e, "ourco.test")
 	if _, ok := present(t, s, e, quoted); !ok {
@@ -193,11 +193,11 @@ func TestASenderCannotHideBehindOurDomainInTheirLocalPart(t *testing.T) {
 // compared with right() so an entry can only ever match itself.
 func TestAnOwnDomainIsNeverReadAsAPattern(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
+	contact := e.buyer(t)
 	// A SUBDOMAIN, because that is the branch a pattern can reach: the equality
 	// branch compares whole strings and can never treat one as a pattern, so a
 	// fixture using a bare domain passes whether or not the suffix is safe.
-	customer := e.waitingFrom(t, "A real customer", "buyer@mail.ourx.test", person)
+	customer := e.waitingFrom(t, "A real customer", "buyer@mail.ourx.test", contact)
 
 	// The operator typed a wildcard character, deliberately or by accident.
 	s := storeKnowing(e, "our_.test")
@@ -213,11 +213,11 @@ func TestAnOwnDomainIsNeverReadAsAPattern(t *testing.T) {
 // empty the queue, so it is refused explicitly.
 func TestABlankOwnDomainMatchesNothing(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
+	contact := e.buyer(t)
 	// A subdomain again: a blank entry makes the suffix comparison ask whether
 	// the domain ends in a bare dot, which only a dotted address could satisfy.
 	// Against "customer.test" the test would pass with the guard removed.
-	customer := e.waitingFrom(t, "A real customer", "buyer@mail.customer.test", person)
+	customer := e.waitingFrom(t, "A real customer", "buyer@mail.customer.test", contact)
 
 	s := storeKnowing(e, "")
 	if _, ok := present(t, s, e, customer); !ok {
@@ -232,8 +232,8 @@ func TestABlankOwnDomainMatchesNothing(t *testing.T) {
 // dropped a customer whose domain resembles ours is not.
 func TestWithNoOwnDomainsNobodyIsExcluded(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	colleague := e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", person)
+	contact := e.buyer(t)
+	colleague := e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", contact)
 
 	unbound := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	if _, ok := present(t, unbound, e, colleague); !ok {
@@ -247,8 +247,8 @@ func TestWithNoOwnDomainsNobodyIsExcluded(t *testing.T) {
 // test fails — which is what it is for.
 func TestAnUnengagedThreadIsReportedNotHidden(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	cold := e.waitingFrom(t, "Cold approach", "stranger@customer.test", person)
+	contact := e.buyer(t)
+	cold := e.waitingFrom(t, "Cold approach", "stranger@customer.test", contact)
 
 	s := storeKnowing(e, "ourco.test")
 	row, ok := present(t, s, e, cold)
@@ -263,8 +263,8 @@ func TestAnUnengagedThreadIsReportedNotHidden(t *testing.T) {
 // An earlier outbound on the same thread is what engagement means.
 func TestAnEarlierOutboundOnTheThreadIsEngagement(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	activity := e.waitingFrom(t, "Re: the proposal", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	activity := e.waitingFrom(t, "Re: the proposal", "buyer@customer.test", contact)
 	var thread string
 	e.exec(t, `SELECT 1`)
 	if err := e.pool.QueryRow(e.as(), `SELECT thread_key FROM activity WHERE id = $1`,
@@ -294,8 +294,8 @@ func TestAnEarlierOutboundOnTheThreadIsEngagement(t *testing.T) {
 // the band before anybody answered them.
 func TestALaterOutboundIsNotEngagement(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	activity := e.waitingFrom(t, "Still waiting", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	activity := e.waitingFrom(t, "Still waiting", "buyer@customer.test", contact)
 	var thread string
 	if err := e.pool.QueryRow(e.as(), `SELECT thread_key FROM activity WHERE id = $1`,
 		activity).Scan(&thread); err != nil {
@@ -330,8 +330,8 @@ func TestALaterOutboundIsNotEngagement(t *testing.T) {
 // addressed entirely to somebody else. Only the HEADER says who was written to.
 func TestAMessageWrittenOnlyToAColleagueIsAddressedElsewhere(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	activity := e.waitingFrom(t, "Connect me with your team", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	activity := e.waitingFrom(t, "Connect me with your team", "buyer@customer.test", contact)
 	e.addressedTo(t, activity, e.rep, "colleague@ours.test")
 
 	row, found := present(t, storeAddressing(e, "reader@ours.test"), e, activity)
@@ -353,8 +353,8 @@ func TestAMessageWrittenOnlyToAColleagueIsAddressedElsewhere(t *testing.T) {
 // every genuine waiting customer.
 func TestAMessageNamingTheReaderIsNotAddressedElsewhere(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", contact)
 	e.addressedTo(t, activity, e.rep, "colleague@ours.test", "reader@ours.test")
 
 	row, found := present(t, storeAddressing(e, "reader@ours.test"), e, activity)
@@ -373,8 +373,8 @@ func TestAMessageNamingTheReaderIsNotAddressedElsewhere(t *testing.T) {
 // every message they captured — a silent failure across a whole integration.
 func TestAMessageNamingNoRecipientIsNotAddressedElsewhere(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	activity := e.waitingFrom(t, "No headers here", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	activity := e.waitingFrom(t, "No headers here", "buyer@customer.test", contact)
 	// Only the synthetic row: what a connector that records no recipients
 	// leaves behind.
 	e.addressedTo(t, activity, e.rep)
@@ -392,8 +392,8 @@ func TestAMessageNamingNoRecipientIsNotAddressedElsewhere(t *testing.T) {
 // A reader whose addresses cannot be resolved sees everything, unchanged.
 func TestAnUnknownReaderAddressDemotesNothing(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", contact)
 	e.addressedTo(t, activity, e.rep, "colleague@ours.test")
 
 	row, found := present(t, storeAddressing(e), e, activity)

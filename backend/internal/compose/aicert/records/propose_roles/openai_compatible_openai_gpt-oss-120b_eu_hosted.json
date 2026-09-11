@@ -44,7 +44,7 @@
       "reported_abstained": 0
     },
     {
-      "scenario": "a_committee_where_four_people_state_their_own_roles",
+      "scenario": "a_committee_where_four_contacts_state_their_own_roles",
       "site": "committee",
       "stamp": "41b38f7b741f9845704c833327db2384404549004feaacb39813cf5ed7732f35c0f6ba0c6ad17cd4e61f01ed6904f0371ea4351faf78d6b1400daa22440b5c884e7273d1af2fa3efcefe96e09487dd2f293ad24b2b5e23b9cd553ef6b916ef33",
       "verdict": "certified",

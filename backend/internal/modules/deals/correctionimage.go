@@ -59,7 +59,7 @@ func currentCorrectedValues(ctx context.Context, tx pgx.Tx, c DealCorrection) (m
 	return out, nil
 }
 
-// correctionAfterImage is what the correction WROTE, used to tell "a person has
+// correctionAfterImage is what the correction WROTE, used to tell "a contact has
 // edited this since" from "the value is simply what the correction made it".
 func correctionAfterImage(ctx context.Context, tx pgx.Tx, c DealCorrection) (map[string]json.RawMessage, error) {
 	var raw []byte

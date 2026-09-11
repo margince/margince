@@ -103,7 +103,7 @@ func (s *Store) PreviewRoom(ctx context.Context, roomID ids.DealRoomID) (IssuedP
 // is asking rather than on which room.
 //
 // Extracted so a room read can answer PreviewAvailable with the same rule the
-// press will apply. Two spellings of "may this person preview" would agree
+// press will apply. Two spellings of "may this contact preview" would agree
 // until one of them changed, and the visible cost of that is a button offered
 // and then refused — which is the state this exists to leave behind.
 func previewAllowedForCaller(ctx context.Context) error {
@@ -113,7 +113,7 @@ func previewAllowedForCaller(ctx context.Context) error {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
-	// RequireHuman admits the system principal; a preview is a person's act
+	// RequireHuman admits the system principal; a preview is a contact's act
 	// on their own seat and a system caller has no seat to preview from.
 	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
 		return apperrors.ErrPermissionDenied

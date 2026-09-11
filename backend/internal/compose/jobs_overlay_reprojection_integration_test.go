@@ -175,7 +175,7 @@ func setupReprojection(t *testing.T) *reprojectionEnv {
 		current:                     currentRowExternalID,
 	} {
 		rec := fake.Rec(externalID, map[string]any{"firstname": "Ada"})
-		rec.ObjectClass, rec.OwnerExternalID = "person", "owner-1"
+		rec.ObjectClass, rec.OwnerExternalID = "contact", "owner-1"
 		rec.ModifiedAt = time.Now().Add(-24 * time.Hour)
 		rec.ProjectionFingerprint = fingerprint
 		inc.Seed(overlay.IncumbentClassContacts, rec)
@@ -276,7 +276,7 @@ func TestSweepReprojectionConvergesOnceTheRefetchLands(t *testing.T) {
 	if err := worker.Work(context.Background(), &river.Job[OverlayRefetchArgs]{Args: r.inc.enqueued[0]}); err != nil {
 		t.Fatalf("refetch Work: %v", err)
 	}
-	row, err := r.ms.Get(overlayReaderCtx(r.env.WS, r.env.Rep1), "person", staleRowExternalID)
+	row, err := r.ms.Get(overlayReaderCtx(r.env.WS, r.env.Rep1), "contact", staleRowExternalID)
 	if err != nil {
 		t.Fatalf("reading the re-projected row: %v", err)
 	}
@@ -498,7 +498,7 @@ func TestSweepReprojectionRecordsARefetchThatCannotLand(t *testing.T) {
 	}
 
 	// The mirror keys on the CANONICAL class a declaration projects onto
-	// ("person"), never the incumbent's own name for it ("contacts"), and the
+	// ("contact"), never the incumbent's own name for it ("contacts"), and the
 	// fingerprint is the one StaleProjections compares against.
 	declared := declarationFingerprint(t, m)
 	if recorded := r.reprojectionFailureRecord(t, m.Target); recorded != declared {

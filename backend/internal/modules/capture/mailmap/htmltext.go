@@ -237,7 +237,7 @@ func (a *anchorState) flush(w *textWriter) {
 	w.write(linkText(a.text.String(), a.href))
 }
 
-// htmlToText renders an HTML mail body as the text a person would read: entity
+// htmlToText renders an HTML mail body as the text a contact would read: entity
 // references decoded, blocks separated by real line breaks, list items marked,
 // and the contents of style and script left out.
 func htmlToText(src string) string {

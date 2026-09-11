@@ -170,7 +170,7 @@ it.each([
     expect(sent).toBe(path);
     expect(init?.method).toBe("POST");
     // The part's NAME is the contract's, and a body that spells it differently
-    // reaches a server that answers 422 for a file the person did choose.
+    // reaches a server that answers 422 for a file the contact did choose.
     const body = init?.body as FormData;
     expect((body.get("file") as File).name).toBe("acme-logo.png");
   },
@@ -195,11 +195,11 @@ it.each([
   expect(request.method).toBe("DELETE");
 });
 
-// A refusal is shown where the person is standing, and only there. The server
+// A refusal is shown where the contact is standing, and only there. The server
 // is the one that judges an image: the picker's filter goes on media type and
 // says nothing about whether the bytes behind it decode, so a file that passes
 // the picker can still be refused — and a refusal that surfaced under BOTH
-// slots would accuse a mark the person never touched.
+// slots would accuse a mark the contact never touched.
 it("shows the server's refusal under the slot that was refused", async () => {
   const user = userEvent.setup();
   vi.stubGlobal(
@@ -232,7 +232,7 @@ it("shows the server's refusal under the slot that was refused", async () => {
 });
 
 // The removal is judged by the server too, and its refusal lands in the same
-// place: a person who pressed Remove and saw nothing change would press it
+// place: a contact who pressed Remove and saw nothing change would press it
 // again, and a second DELETE behind a refused first one is what the guard on
 // the handler exists to prevent.
 it("shows the server's refusal of a removal beside the control", async () => {

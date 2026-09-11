@@ -8,7 +8,7 @@ package compose
 // briefs is a compose subpackage and agents is a module, so the edge between
 // them is wired here like every other cross-module edge (ADR-0054 §9). What
 // crosses is one function: the acting human's latest PERSISTED run. The
-// refresh, and the per-item marks, are not offered — they are how a person
+// refresh, and the per-item marks, are not offered — they are how a contact
 // notices what an agent did.
 
 import (
@@ -19,17 +19,17 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // briefReader binds the tool to the same engine entry point the home route
-// calls, so an agent and the person it acts for read one queue rather than two
+// calls, so an agent and the contact it acts for read one queue rather than two
 // readings of it. The engine resolves the run through the acting principal's
 // own user id and requires deal-read, so no scoping is added or re-decided
 // here.
 func briefReader(pool *pgxpool.Pool) agents.BriefReader {
-	engine := briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))
+	engine := briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool)))
 	return func(ctx context.Context) (agents.ReadBriefResult, error) {
 		// The instant is the read's own, exactly as the HTTP handler passes it:
 		// LatestRun resolves snoozes against it, so a run read now is what the
@@ -51,7 +51,7 @@ func briefReader(pool *pgxpool.Pool) agents.BriefReader {
 // decided here, because a seam that re-derived any of it would be a second
 // answer to a question the store already answers.
 func briefAnnotator(pool *pgxpool.Pool) agents.BriefAnnotator {
-	engine := briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))
+	engine := briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool)))
 	return func(ctx context.Context, in agents.AnnotateBriefArgs) error {
 		items := make([]briefs.ItemAnnotation, 0, len(in.Items))
 		for _, item := range in.Items {

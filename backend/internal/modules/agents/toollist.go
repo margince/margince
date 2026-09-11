@@ -90,14 +90,14 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 	// TierAutoExecute as confirm-first, so a tier added without updating this
 	// switch must not be advertised as running unattended. The same posture
 	// tierWire takes on the REST side, for the same reason.
-	tier := "a person approves every call before it runs"
+	tier := "a human approves every call before it runs"
 	switch spec.Tier {
 	case mcp.TierAutoExecute:
 		tier = "runs immediately"
 	case mcp.TierConfirmationRequired:
-		tier = "a person approves every call before it runs"
+		tier = "a human approves every call before it runs"
 	case mcp.TierDynamic:
-		tier = "some calls run immediately and others a person approves first, decided per call from its arguments"
+		tier = "some calls run immediately and others a human approves first, decided per call from its arguments"
 	}
 	return fmt.Sprintf("%s (Governance: %s; requires passport scope %q.)", spec.Description, tier, spec.RequiredScope)
 }

@@ -57,8 +57,8 @@ func TestAnOutboundMessageCannotCarryAReplyVerdict(t *testing.T) {
 // nobody can tell them apart afterwards.
 func TestAnInboundReplyTakesAVerdictAndNamesItsJudge(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	reply := e.waitingFrom(t, "Yes, let us talk next week", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	reply := e.waitingFrom(t, "Yes, let us talk next week", "buyer@customer.test", contact)
 
 	applied, err := storeKnowing(e).SetReplyVerdict(asReplyClassifier(e), reply, ReplyVerdictPositive, "local-small-v3")
 	if err != nil {
@@ -95,8 +95,8 @@ func TestAnInboundReplyTakesAVerdictAndNamesItsJudge(t *testing.T) {
 // anything.
 func TestASecondReplyVerdictDoesNotOverwriteTheFirst(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	reply := e.waitingFrom(t, "Not for us, thanks", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	reply := e.waitingFrom(t, "Not for us, thanks", "buyer@customer.test", contact)
 	s := storeKnowing(e)
 
 	if _, err := s.SetReplyVerdict(asReplyClassifier(e), reply, ReplyVerdictNegative, "first"); err != nil {
@@ -123,8 +123,8 @@ func TestASecondReplyVerdictDoesNotOverwriteTheFirst(t *testing.T) {
 // because customers did, and an overwriting column cannot tell them apart.
 func TestAHumanCorrectionAppendsRatherThanReplaces(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	reply := e.waitingFrom(t, "Interesting, but not now", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	reply := e.waitingFrom(t, "Interesting, but not now", "buyer@customer.test", contact)
 	s := storeKnowing(e)
 
 	if _, err := s.SetReplyVerdict(asReplyClassifier(e), reply, ReplyVerdictPositive, "local-small-v3"); err != nil {
@@ -160,8 +160,8 @@ func TestAHumanCorrectionAppendsRatherThanReplaces(t *testing.T) {
 // the rate rather than leaving a guess standing.
 func TestAHumanMayCorrectAVerdictBackToUnjudged(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
-	reply := e.waitingFrom(t, "?", "buyer@customer.test", person)
+	contact := e.buyer(t)
+	reply := e.waitingFrom(t, "?", "buyer@customer.test", contact)
 	s := storeKnowing(e)
 
 	if _, err := s.SetReplyVerdict(asReplyClassifier(e), reply, ReplyVerdictPositive, "local-small-v3"); err != nil {
@@ -199,7 +199,7 @@ func asReplyClassifier(e *loadEnv) context.Context {
 	})
 }
 
-// asHumanCorrector is a person disagreeing with the classifier — the correction
+// asHumanCorrector is a contact disagreeing with the classifier — the correction
 // path's real caller, and the reason the history records WHO decided.
 func asHumanCorrector(e *loadEnv) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)

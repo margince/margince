@@ -80,7 +80,7 @@ func TestABriefThatReadEveryFactorOmitsNone(t *testing.T) {
 // The OTHER way to be refused the warmth factor.
 //
 // Warmth needs two grants, not one: the seat edge to learn who is on the deal,
-// and the person grant to score them. A caller holding the first and not the
+// and the contact grant to score them. A caller holding the first and not the
 // second reads the stakeholders and then gets the same refusal for every one of
 // them — so the factor floors across the whole queue exactly as it does for an
 // edge-blind caller, and the reader is owed the same sentence.
@@ -95,20 +95,20 @@ func TestABriefThatReadEveryFactorOmitsNone(t *testing.T) {
 // caller and the seats are a property of the deals, so a run whose deals happen
 // to carry nobody must still report the factor withheld — an answer inferred
 // from the first refusal cannot, because there is no read to be refused.
-func TestABriefNamesWarmthWhenItMayReadSeatsButNotPeople(t *testing.T) {
+func TestABriefNamesWarmthWhenItMayReadSeatsButNotContacts(t *testing.T) {
 	b := setupBrief(t)
 
 	perms := integration.RepPerms
 	perms.Objects = make(map[string]principal.ObjectGrant, len(integration.RepPerms.Objects))
 	for object, grant := range integration.RepPerms.Objects {
-		if object == "person" {
+		if object == "contact" {
 			continue
 		}
 		perms.Objects[object] = grant
 	}
 	run, err := b.engine.SnapshotRun(b.As(b.Rep1, []ids.UUID{b.Team1}, perms), briefClock)
 	if err != nil {
-		t.Fatalf("snapshot for a caller who may read seats but not people: %v", err)
+		t.Fatalf("snapshot for a caller who may read seats but not contacts: %v", err)
 	}
 	if !slices.Contains(run.FactorsOmitted, "warmth") {
 		t.Errorf("the run omits %v, want warmth named — the caller reached every stakeholder and "+

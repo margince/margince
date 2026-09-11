@@ -206,27 +206,27 @@ type ArchiveResult struct {
 	ID         ids.UUID              `json:"id"`
 }
 
-// PromoteLeadResult is what promote_lead answers: the person the lead became,
-// and whether that person already existed.
+// PromoteLeadResult is what promote_lead answers: the contact the lead became,
+// and whether that contact already existed.
 type PromoteLeadResult struct {
-	// Merged is true when the promotion landed on an EXISTING person rather than
+	// Merged is true when the promotion landed on an EXISTING contact rather than
 	// creating one — the caller's follow-up differs, because a merged promotion
-	// means the person carries history the lead never had.
-	Merged bool       `json:"merged"`
-	Person wireRecord `json:"person"`
+	// means the contact carries history the lead never had.
+	Merged  bool       `json:"merged"`
+	Contact wireRecord `json:"contact"`
 }
 
 // DemoteLeadResult is the GUARANTEED SUBSET of what demote_lead answers, on
 // the same terms PassthroughEntityResult states: the handler answers with the
-// people module's whole DemoteLeadResponse, and re-marshalling it here would
+// contacts module's whole DemoteLeadResponse, and re-marshalling it here would
 // drop whatever that response carries.
 //
 // Unwind is named alongside the lead because the two outcomes are not the same
-// event to a caller: `reversed` means the person the promotion created is
+// event to a caller: `reversed` means the contact the promotion created is
 // archived and the lead is back on the ladder, while `merge_lineage_only`
-// means a pre-existing person was left exactly as it was and only the lineage
+// means a pre-existing contact was left exactly as it was and only the lineage
 // pointers were cleared. A caller told merely "demoted" would have to read the
-// person back to learn which.
+// contact back to learn which.
 type DemoteLeadResult struct {
 	Lead   json.RawMessage `json:"lead"`
 	Unwind string          `json:"unwind"`
@@ -295,7 +295,7 @@ type ContextItem struct {
 }
 
 // ContextSection groups items by what they are — recent activity, open tasks,
-// related people. The names are the retriever's, not a closed set here.
+// related contacts. The names are the retriever's, not a closed set here.
 type ContextSection struct {
 	Name  string        `json:"name"`
 	Items []ContextItem `json:"items"`
@@ -320,7 +320,7 @@ type PrepForMeetingResult struct {
 	Briefing     AssembledContextResult `json:"briefing"`
 	MeetingFocus []MeetingFocusItem     `json:"meeting_focus"`
 	// Brief is the written pre-meeting brief — the SAME eight cited sections a
-	// person reads on the record page, not a second assembly of the same
+	// contact reads on the record page, not a second assembly of the same
 	// question. Present only for a meeting anchor the caller may read: the
 	// other anchors name a record rather than a room, and there is no brief to
 	// write for them.
@@ -335,7 +335,7 @@ type QualifiedField struct {
 
 // QualifyLeadResult is what qualify_lead answers: what it could derive, and what
 // it could not. The gaps are the honest half — they are what still needs a
-// person, not a failure of the call.
+// contact, not a failure of the call.
 type QualifyLeadResult struct {
 	RecordID ids.UUID                  `json:"record_id"`
 	Filled   map[string]QualifiedField `json:"filled"`

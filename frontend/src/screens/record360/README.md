@@ -1,4 +1,4 @@
-# record360 — the shared kit behind Deal360, Company360 and Person360
+# record360 — the shared kit behind Deal360, Company360 and Contact360
 
 Three record pages answer the same question about different records: *where do
 we stand with this, and what do I do about it?* They render the same parts —
@@ -8,7 +8,7 @@ words. This directory is those parts, owned in one place.
 
 It exists because the parts were already shared and had no home. They lived in
 `company360.tsx`, which grew to 3140 lines — six times the repo's 500-line file
-cap — and eighteen other modules imported from it. `person360.tsx` and
+cap — and eighteen other modules imported from it. `contact360.tsx` and
 `network.tsx` reached into a *company* screen for `dealRoleLabel`;
 `dealstatus.tsx` reached in for `SentenceList`. Every one of those imports was
 a shared component wearing one entity's name.
@@ -20,7 +20,7 @@ Every record page now reads in the same order, and the parts are here:
 CALL (`CallCard`: the head whose indigo mark says a machine read the record,
 the standing with the sentence it rests on, and whatever the call was read
 from under it);
-`today.tsx` holds WHAT NEEDS A PERSON TODAY (`TodayPanel`) and its two row
+`today.tsx` holds WHAT NEEDS A CONTACT TODAY (`TodayPanel`) and its two row
 shapes — the move the agent is asking for (`FoundMove`) and a to-do the record
 already carries (`TodoRow`); `spine.tsx` is the thread, and `timelinespine.ts` reads
 its source off a bare timeline page for the records that have no composite
@@ -50,7 +50,7 @@ flag — which is the thing this kit exists to avoid, not an instance of it.
 ## The contract already agrees
 
 `CompanyBriefSentence` is the sentence type for the company brief, the deal
-status card, Person360 and the growth-fit panel alike. Only its NAME says
+status card, Contact360 and the growth-fit panel alike. Only its NAME says
 "Company". The kit types against it directly and calls it what it is, so a
 reader of `record360` is not told that a deal's sentence is a company's.
 

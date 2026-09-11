@@ -42,8 +42,8 @@ function contextCards() {
       <Panel title={en["co.rail.deals.title"]}>
         <PanelBody>{en["co.rail.deals.empty"]}</PanelBody>
       </Panel>
-      <Panel title={en["co.rail.people.title"]}>
-        <PanelBody>{en["co.rail.people.empty"]}</PanelBody>
+      <Panel title={en["co.rail.contacts.title"]}>
+        <PanelBody>{en["co.rail.contacts.empty"]}</PanelBody>
       </Panel>
     </>
   );

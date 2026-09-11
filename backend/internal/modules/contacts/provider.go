@@ -1,0 +1,379 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+// The contacts slice of the SoR-mode SystemOfRecordProvider (interfaces.md
+// §3): contact, company and lead verbs over the module store — the
+// same entry points the HTTP handlers use, with the same RBAC, row
+// scope, audit and event shape. The composition root assembles the
+// module providers into the one datasource seam the MCP surface binds.
+
+import (
+	"context"
+	"fmt"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+)
+
+// Provider answers the datasource verbs for contact|company|lead|
+// relationship|partner.
+type Provider struct {
+	store *Store
+}
+
+// NewProvider builds this module's system-of-record provider over a
+// workspace-bound handle.
+func NewProvider(db *database.DB) *Provider {
+	return &Provider{store: NewStore(db)}
+}
+
+// WithFieldCatalog wires the workspace custom-field catalog into the
+// provider's store (see Store.WithFieldCatalog), so the MCP surface's
+// record verbs carry cf_* values exactly like the HTTP handlers.
+func (p *Provider) WithFieldCatalog(catalog fieldcatalog.Reader) *Provider {
+	p.store = p.store.WithFieldCatalog(catalog)
+	return p
+}
+
+// WithStopCarrier wires the consent-side stop carry into the provider's
+// store (see Store.WithStopCarrier). The MCP surface merges and promotes
+// records exactly as the HTTP handlers do, so it needs the same seam: without
+// it every merge of a subject holding a live stop refuses, which is precisely
+// the record the carry exists to protect.
+func (p *Provider) WithStopCarrier(carrier StopCarrier) *Provider {
+	p.store = p.store.WithStopCarrier(carrier)
+	return p
+}
+
+func ref(t datasource.EntityType, id openapi_types.UUID) datasource.EntityRef {
+	return datasource.EntityRef{Type: t, ID: ids.UUID(id)}
+}
+
+// edgeRef is ref for a relationship: the row carries the kernel id directly
+// rather than the contract's, because an edge has no contract shape the store
+// returns — it returns its own row.
+func edgeRef(id ids.UUID) datasource.EntityRef {
+	return datasource.EntityRef{Type: datasource.EntityRelationship, ID: id}
+}
+
+func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource.Record, error) {
+	switch r.Type {
+	case datasource.EntityContact:
+		v, err := p.store.GetContact(ctx, ids.From[ids.ContactKind](r.ID), storekit.LiveOnly)
+		if err != nil {
+			return datasource.Record{}, err
+		}
+		return datasource.NewRecord(r, v, v.Version)
+	case datasource.EntityCompany:
+		v, err := p.store.GetCompany(ctx, ids.From[ids.CompanyKind](r.ID), storekit.LiveOnly)
+		if err != nil {
+			return datasource.Record{}, err
+		}
+		return datasource.NewRecord(r, v, v.Version)
+	case datasource.EntityLead:
+		v, err := p.store.GetLead(ctx, ids.From[ids.LeadKind](r.ID), storekit.LiveOnly)
+		if err != nil {
+			return datasource.Record{}, err
+		}
+		return datasource.NewRecord(r, v, v.Version)
+	case datasource.EntityRelationship:
+		row, err := p.store.GetRelationship(ctx, r.ID)
+		if err != nil {
+			return datasource.Record{}, err
+		}
+		return datasource.NewRecord(r, wireRelationship(row), &row.Version)
+	case datasource.EntityPartner:
+		// The ref carries the COMPANY's id: a partner row is the 1:1
+		// extension of one company and has no id of its own to be addressed
+		// by. GetPartner gates on both the partner and company objects
+		// and checks the company is visible, so a caller who cannot open
+		// the company cannot read its partner terms either.
+		row, err := p.store.GetPartner(ctx, ids.From[ids.CompanyKind](r.ID))
+		if err != nil {
+			return datasource.Record{}, err
+		}
+		return datasource.NewRecord(r, wirePartner(row), &row.Version)
+	default:
+		return datasource.Record{}, &datasource.UnsupportedEntityError{Type: string(r.Type)}
+	}
+}
+
+// SearchEntity lists one of this module's entity types under the shared
+// search contract (text query, structured filters, CAP-PAGE limit, per-entity
+// keyset cursor).
+//
+// A filter this type has no binding for is an ERROR rather than a dropped
+// clause — see listfilters.go. It is unreachable while the composition root
+// publishes only what ListFilters names, which is what makes it a safe
+// assertion instead of a silent widening.
+func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, text *string, limit int, cursor *string,
+	filters map[string]string,
+) ([]datasource.Record, string, bool, error) {
+	switch t {
+	case datasource.EntityContact:
+		in := ListContactsInput{Query: text, Limit: &limit, Cursor: cursor}
+		if err := contactListFilters.Apply(&in, filters); err != nil {
+			return nil, "", false, err
+		}
+		rows, page, err := p.store.ListContacts(ctx, in)
+		return pageOf(datasource.EntityContact, rows, page, err, func(v crmcontracts.Contact) (openapi_types.UUID, *int64) {
+			return v.Id, v.Version
+		})
+	case datasource.EntityCompany:
+		in := ListCompaniesInput{Query: text, Limit: &limit, Cursor: cursor}
+		if err := companyListFilters.Apply(&in, filters); err != nil {
+			return nil, "", false, err
+		}
+		rows, page, err := p.store.ListCompanies(ctx, in)
+		return pageOf(datasource.EntityCompany, rows, page, err,
+			func(v crmcontracts.Company) (openapi_types.UUID, *int64) { return v.Id, v.Version })
+	case datasource.EntityLead:
+		in := ListLeadsInput{Query: text, Limit: &limit, Cursor: cursor}
+		if err := leadListFilters.Apply(&in, filters); err != nil {
+			return nil, "", false, err
+		}
+		rows, page, err := p.store.ListLeads(ctx, in)
+		return pageOf(datasource.EntityLead, rows, page, err, func(v crmcontracts.Lead) (openapi_types.UUID, *int64) {
+			return v.Id, v.Version
+		})
+	case datasource.EntityPartner:
+		// ListPartners narrows by role and certification only — it has no text
+		// index — so a text query is refused rather than silently dropped,
+		// which would answer an unfiltered page and read as "no matches".
+		if text != nil && *text != "" {
+			return nil, "", false, fmt.Errorf(
+				"contacts: partner has no text index; narrow by partner_role or cert_status, or search company instead")
+		}
+		in := ListPartnersInput{Limit: &limit}
+		if cursor != nil {
+			in.Cursor = *cursor
+		}
+		if err := partnerListFilters.Apply(&in, filters); err != nil {
+			return nil, "", false, err
+		}
+		rows, page, err := p.store.ListPartners(ctx, in)
+		if err != nil {
+			return nil, "", false, err
+		}
+		return pageOf(datasource.EntityPartner, mapRows(rows, wirePartner), page, nil,
+			func(v crmcontracts.Partner) (openapi_types.UUID, *int64) {
+				return v.CompanyId, (*int64)(v.Version)
+			})
+	default:
+		return nil, "", false, &datasource.UnsupportedEntityError{Type: string(t)}
+	}
+}
+
+// mapRows converts a store page's rows to their wire shape, so pageOf keeps
+// identifying one type rather than growing a second row-shape parameter.
+func mapRows[A, B any](in []A, f func(A) B) []B {
+	out := make([]B, 0, len(in))
+	for _, v := range in {
+		out = append(out, f(v))
+	}
+	return out
+}
+
+// pageOf turns one store page into seam records. The three list calls differ
+// only in the row type and where its id and version sit, so the shared half is
+// written once: a per-type copy is how one of them comes to page differently
+// from its siblings without anyone noticing.
+func pageOf[R any](t datasource.EntityType, rows []R, page storekit.Page, err error,
+	identify func(R) (openapi_types.UUID, *int64),
+) ([]datasource.Record, string, bool, error) {
+	if err != nil {
+		return nil, "", false, err
+	}
+	records := make([]datasource.Record, 0, len(rows))
+	for _, row := range rows {
+		id, version := identify(row)
+		rec, err := datasource.NewRecord(ref(t, id), row, version)
+		if err != nil {
+			return nil, "", false, err
+		}
+		records = append(records, rec)
+	}
+	return records, page.NextCursor, page.HasMore, nil
+}
+
+func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datasource.EntityRef, error) {
+	raw, err := datasource.RawFields(in.Fields)
+	if err != nil {
+		return datasource.EntityRef{}, err
+	}
+	switch in.EntityType {
+	case datasource.EntityContact:
+		var req crmcontracts.CreateContactRequest
+		if err := datasource.StrictDecode(raw, &req); err != nil {
+			return datasource.EntityRef{}, err
+		}
+		req.Source = in.Source
+		mapped, err := contactCreateInput(req)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		v, err := p.store.CreateContact(ctx, mapped)
+		return ref(datasource.EntityContact, v.Id), err
+	case datasource.EntityCompany:
+		var req crmcontracts.CreateCompanyRequest
+		if err := datasource.StrictDecode(raw, &req); err != nil {
+			return datasource.EntityRef{}, err
+		}
+		req.Source = in.Source
+		mapped, err := companyCreateInput(req)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		v, err := p.store.CreateCompany(ctx, mapped)
+		return ref(datasource.EntityCompany, v.Id), err
+	case datasource.EntityLead:
+		var req crmcontracts.CreateLeadRequest
+		if err := datasource.StrictDecode(raw, &req); err != nil {
+			return datasource.EntityRef{}, err
+		}
+		req.Source = in.Source
+		mapped, err := leadCreateInput(req)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		v, _, err := p.store.CreateLead(ctx, mapped)
+		return ref(datasource.EntityLead, v.Id), err
+	case datasource.EntityRelationship:
+		var req crmcontracts.CreateRelationshipRequest
+		if err := datasource.StrictDecode(raw, &req); err != nil {
+			return datasource.EntityRef{}, err
+		}
+		req.Source = in.Source
+		row, err := p.store.CreateRelationship(ctx, relationshipCreateInput(req))
+		// The edge's own id, not an endpoint's: the caller asked for a
+		// relationship and the read-back has to reach the row it created.
+		return edgeRef(row.ID), err
+	default:
+		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.EntityType)}
+	}
+}
+
+func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datasource.EntityRef, error) {
+	raw, err := datasource.RawFields(in.Patch)
+	if err != nil {
+		return datasource.EntityRef{}, err
+	}
+	switch in.Ref.Type {
+	case datasource.EntityContact:
+		var req crmcontracts.UpdateContactRequest
+		if err := datasource.StrictDecode(raw, &req); err != nil {
+			return datasource.EntityRef{}, err
+		}
+		update := contactUpdateInput(req, in.IfVersion)
+		update.Trail = in.Trail
+		update.Clear = in.Clear
+		v, err := p.store.UpdateContact(ctx, ids.From[ids.ContactKind](in.Ref.ID), update)
+		return ref(datasource.EntityContact, v.Id), err
+	case datasource.EntityCompany:
+		var req crmcontracts.UpdateCompanyRequest
+		if err := datasource.StrictDecode(raw, &req); err != nil {
+			return datasource.EntityRef{}, err
+		}
+		update := companyUpdateInput(req, in.IfVersion)
+		update.Trail = in.Trail
+		update.Clear = in.Clear
+		v, err := p.store.UpdateCompany(ctx, ids.From[ids.CompanyKind](in.Ref.ID), update)
+		return ref(datasource.EntityCompany, v.Id), err
+	case datasource.EntityLead:
+		var req LeadUpdateRequest
+		if err := datasource.StrictDecode(raw, &req); err != nil {
+			return datasource.EntityRef{}, err
+		}
+		update := leadUpdateInput(req, in.IfVersion)
+		update.Trail = in.Trail
+		update.Clear = in.Clear
+		v, err := p.store.UpdateLead(ctx, ids.From[ids.LeadKind](in.Ref.ID), update)
+		return ref(datasource.EntityLead, v.Id), err
+	case datasource.EntityRelationship:
+		var req crmcontracts.UpdateRelationshipRequest
+		if err := datasource.StrictDecode(raw, &req); err != nil {
+			return datasource.EntityRef{}, err
+		}
+		row, err := p.store.UpdateRelationship(ctx, in.Ref.ID, relationshipUpdateInput(req, in.IfVersion))
+		return edgeRef(row.ID), err
+	default:
+		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
+	}
+}
+
+func (p *Provider) Archive(ctx context.Context, r datasource.EntityRef) (datasource.EntityRef, error) {
+	return p.ArchiveAt(ctx, datasource.ArchiveInput{Ref: r})
+}
+
+// ArchivableTypes is datasource.RecordArchiverV2's: the three this module's
+// switch below actually serves.
+func (p *Provider) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
+	return []datasource.EntityType{
+		datasource.EntityContact, datasource.EntityCompany, datasource.EntityRelationship,
+	}, nil
+}
+
+// RefuseArchive is datasource.RecordArchiverV2's stage-time half: each store's
+// own authority probes, run without the write.
+func (p *Provider) RefuseArchive(ctx context.Context, r datasource.EntityRef) error {
+	switch r.Type {
+	case datasource.EntityContact:
+		return p.store.RefuseArchiveContact(ctx, ids.From[ids.ContactKind](r.ID))
+	case datasource.EntityCompany:
+		return p.store.RefuseArchiveCompany(ctx, ids.From[ids.CompanyKind](r.ID))
+	case datasource.EntityRelationship:
+		return p.store.RefuseArchiveRelationship(ctx, r.ID)
+	default:
+		return &datasource.UnsupportedEntityError{Type: string(r.Type)}
+	}
+}
+
+// ArchiveAt is Archive carrying the version the caller's authority named.
+func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (datasource.EntityRef, error) {
+	switch in.Ref.Type {
+	case datasource.EntityContact:
+		v, err := p.store.ArchiveContact(ctx, ids.From[ids.ContactKind](in.Ref.ID), in.IfVersion)
+		return ref(datasource.EntityContact, v.Id), err
+	case datasource.EntityCompany:
+		v, err := p.store.ArchiveCompany(ctx, ids.From[ids.CompanyKind](in.Ref.ID), in.IfVersion)
+		return ref(datasource.EntityCompany, v.Id), err
+	case datasource.EntityRelationship:
+		row, err := p.store.ArchiveRelationship(ctx, in.Ref.ID, in.IfVersion)
+		return edgeRef(row.ID), err
+	default:
+		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
+	}
+}
+
+// Merge folds source into target for contact/company and returns the
+// survivor's ref. The store owns the collision-aware relink, the
+// restrictive consent rule, and the single audit transaction.
+func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
+	switch in.Type {
+	case datasource.EntityContact:
+		v, err := p.store.MergeContact(ctx, ids.From[ids.ContactKind](in.SourceID), ids.From[ids.ContactKind](in.TargetID))
+		return ref(datasource.EntityContact, v.Id), err
+	case datasource.EntityCompany:
+		v, err := p.store.MergeCompany(ctx, ids.From[ids.CompanyKind](in.SourceID), ids.From[ids.CompanyKind](in.TargetID))
+		return ref(datasource.EntityCompany, v.Id), err
+	default:
+		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Type)}
+	}
+}
+
+// PromoteLead exposes the features/01 §6.4 graduation to the tool surface
+// (a provider extension: interfaces.md §3 has no promotion verb yet).
+func (p *Provider) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (datasource.EntityRef, bool, error) {
+	contact, merged, err := p.store.PromoteLead(ctx, ids.From[ids.LeadKind](id), PromoteLeadInput{
+		Trigger: trigger, EvidenceNote: evidenceNote,
+	})
+	return ref(datasource.EntityContact, contact.Id), merged, err
+}

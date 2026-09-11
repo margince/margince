@@ -66,7 +66,7 @@ func TestUnmappedColumnsAreNamedRatherThanDroppedSilently(t *testing.T) {
 	}
 }
 
-// `object` takes company, person or lead. Not deal, and not activity.
+// `object` takes company, contact or lead. Not deal, and not activity.
 //
 // The refused set is what has no import WRITER: offering it would advertise a
 // door that answers an error. The accepted set has to match the REST contract's
@@ -78,7 +78,7 @@ func TestOnlyTheThreeImportableObjectsAreAccepted(t *testing.T) {
 			t.Errorf("`object` accepted %q; nothing imports it", object)
 		}
 	}
-	for _, object := range []string{importObjectLead, importObjectCompany, importObjectPerson} {
+	for _, object := range []string{importObjectLead, importObjectCompany, importObjectContact} {
 		if err := refuseUnimportableObject(object); err != nil {
 			t.Errorf("`object` refused %q: %v", object, err)
 		}
@@ -173,7 +173,7 @@ func (r recordingImports) ProfileSource(
 	return profile, nil
 }
 
-// The approval a person sees says what the import will DO.
+// The approval a contact sees says what the import will DO.
 //
 // The inbox row is its summary — nothing renders the report beside it — so a
 // summary naming only the run id asks somebody to authorise a bulk write to
@@ -195,7 +195,7 @@ func TestTheApprovalSaysWhatTheImportWillDo(t *testing.T) {
 }
 
 // The unusable count is never quietly dropped: it is the least flattering
-// number in the report and the one a person most needs before saying yes.
+// number in the report and the one a contact most needs before saying yes.
 func TestACleanImportSaysNothingAboutUnusableRows(t *testing.T) {
 	got := describeImport("lead", crmcontracts.ImportRunReport{
 		RowsRead:    12,

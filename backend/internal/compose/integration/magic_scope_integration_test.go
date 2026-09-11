@@ -87,7 +87,7 @@ func TestASeatThatCannotReadDealsSeesNoMachineActionOnOne(t *testing.T) {
 
 	// The same rep, one grant fewer.
 	noDeals := RepPerms
-	noDeals.Objects = map[string]principal.ObjectGrant{"person": {Read: true}}
+	noDeals.Objects = map[string]principal.ObjectGrant{"contact": {Read: true}}
 	svc := magic.NewService(e.Pool, nil, time.Now)
 	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, noDeals), &since, 20)
 	if err != nil {
@@ -203,7 +203,7 @@ func seedMachineAction(
 
 // AN ERASED RECORD'S PRE-SCRUB IMAGES STAY BURIED.
 //
-// audit_log is append-only, so a person erased under Art. 17 or anonymized by
+// audit_log is append-only, so a contact erased under Art. 17 or anonymized by
 // retention keeps every image written before the scrub — with their real name,
 // email and phone still in it. The record row survives too: anonymize works IN
 // PLACE and archives rather than deletes, so it still satisfies the scope clause
@@ -218,39 +218,39 @@ func TestAnErasedRecordsImagesAreNotRepublishedByTheReceipt(t *testing.T) {
 	ctx := context.Background()
 	since := time.Now().Add(-time.Hour)
 
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-			VALUES ($1, $2, 'Dana Buyer', 'manual', 'human:x')`, person, e.Rep1); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+			VALUES ($1, $2, 'Dana Buyer', 'manual', 'human:x')`, contact, e.Rep1); err != nil {
 			return err
 		}
-		// A machine updated them while they were still a person.
+		// A machine updated them while they were still a contact.
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
-			VALUES ('agent', 'agent:enrich', 'update', 'person', $1,
+			VALUES ('agent', 'agent:enrich', 'update', 'contact', $1,
 			        '{"full_name":"D. Buyer"}', '{"full_name":"Dana Buyer"}', now() - interval '10 minutes')`,
-			person); err != nil {
+			contact); err != nil {
 			return err
 		}
 		// And then they were erased. The scrub is AFTER the row above.
 		_, err := tx.Exec(ctx, `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-			VALUES ('human', 'human:dpo', 'erase', 'person', $1, now() - interval '1 minute')`, person)
+			VALUES ('human', 'human:dpo', 'erase', 'contact', $1, now() - interval '1 minute')`, contact)
 		return err
 	})
 	if err != nil {
-		t.Fatalf("seeding the erased person: %v", err)
+		t.Fatalf("seeding the erased contact: %v", err)
 	}
 
 	svc := magic.NewService(e.Pool, nil, time.Now)
-	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, personRepPerms()), &since, 20)
+	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, contactRepPerms()), &since, 20)
 	if err != nil {
 		t.Fatalf("reading the receipt: %v", err)
 	}
 
 	for _, line := range receipt.Done {
-		if line.Entity != nil && ids.UUID(line.Entity.Id) == person {
-			t.Fatalf("an erased person's pre-scrub image came back on the receipt: %+v", line)
+		if line.Entity != nil && ids.UUID(line.Entity.Id) == contact {
+			t.Fatalf("an erased contact's pre-scrub image came back on the receipt: %+v", line)
 		}
 	}
 }
@@ -262,30 +262,30 @@ func TestAnUnerasedRecordsMachineActionStillReports(t *testing.T) {
 	ctx := context.Background()
 	since := time.Now().Add(-time.Hour)
 
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-			VALUES ($1, $2, 'Ines Bauer', 'manual', 'human:x')`, person, e.Rep1); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+			VALUES ($1, $2, 'Ines Bauer', 'manual', 'human:x')`, contact, e.Rep1); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-			VALUES ('agent', 'agent:enrich', 'update', 'person', $1, now() - interval '10 minutes')`, person)
+			VALUES ('agent', 'agent:enrich', 'update', 'contact', $1, now() - interval '10 minutes')`, contact)
 		return err
 	})
 	if err != nil {
-		t.Fatalf("seeding the person: %v", err)
+		t.Fatalf("seeding the contact: %v", err)
 	}
 
 	svc := magic.NewService(e.Pool, nil, time.Now)
-	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, personRepPerms()), &since, 20)
+	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, contactRepPerms()), &since, 20)
 	if err != nil {
 		t.Fatalf("reading the receipt: %v", err)
 	}
 
 	var found bool
 	for _, line := range receipt.Done {
-		if line.Entity != nil && ids.UUID(line.Entity.Id) == person {
+		if line.Entity != nil && ids.UUID(line.Entity.Id) == contact {
 			found = true
 		}
 	}
@@ -304,16 +304,16 @@ func TestTheWindowRefusesToReachBackToInstallation(t *testing.T) {
 	ctx := context.Background()
 	ancient := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-			VALUES ($1, $2, 'Long ago', 'manual', 'human:x')`, person, e.Rep1); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+			VALUES ($1, $2, 'Long ago', 'manual', 'human:x')`, contact, e.Rep1); err != nil {
 			return err
 		}
 		// Older than any floor this surface would accept.
 		_, err := tx.Exec(ctx, `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-			VALUES ('agent', 'agent:enrich', 'update', 'person', $1, now() - interval '200 days')`, person)
+			VALUES ('agent', 'agent:enrich', 'update', 'contact', $1, now() - interval '200 days')`, contact)
 		return err
 	})
 	if err != nil {
@@ -321,7 +321,7 @@ func TestTheWindowRefusesToReachBackToInstallation(t *testing.T) {
 	}
 
 	svc := magic.NewService(e.Pool, nil, time.Now)
-	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, personRepPerms()), &ancient, 20)
+	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, contactRepPerms()), &ancient, 20)
 	if err != nil {
 		t.Fatalf("reading the receipt: %v", err)
 	}
@@ -332,15 +332,15 @@ func TestTheWindowRefusesToReachBackToInstallation(t *testing.T) {
 			receipt.Since)
 	}
 	for _, line := range receipt.Done {
-		if line.Entity != nil && ids.UUID(line.Entity.Id) == person {
+		if line.Entity != nil && ids.UUID(line.Entity.Id) == contact {
 			t.Fatal("an action from 200 days ago reached a morning receipt")
 		}
 	}
 }
 
-// personRepPerms is a rep who reads people. RepPerms already does; this names
+// contactRepPerms is a rep who reads contacts. RepPerms already does; this names
 // the grant the cases above depend on rather than leaving it implied.
-func personRepPerms() principal.Permissions {
+func contactRepPerms() principal.Permissions {
 	return RepPerms
 }
 

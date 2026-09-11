@@ -177,7 +177,7 @@ func TestUndoAfterTheWindowIsRefusedAndTheAuditStays(t *testing.T) {
 	}
 }
 
-// A move a PERSON approved is not undone by this verb.
+// A move a CONTACT approved is not undone by this verb.
 //
 // There was never anything automatic to take back. Moving the deal back is an
 // ordinary stage move the rep can make, and that route counts as a reversal on
@@ -195,13 +195,13 @@ func TestAHumanApprovedMoveIsNotTakenBackByTheUndoVerb(t *testing.T) {
 	}
 	if _, err := compose.StageProgressionDecisions(e.Pool).Decide(
 		e.Admin(), card, true, nil); err != nil {
-		t.Fatalf("approving the card as a person: %v", err)
+		t.Fatalf("approving the card as a contact: %v", err)
 	}
 	deliverApprovalDecided(t, e, card)
 
 	_, err := e.Deals.RevertStageProgression(e.Admin(), deal, card.UUID)
 	if err == nil {
-		t.Fatal("the undo verb took back a move a person had approved")
+		t.Fatal("the undo verb took back a move a contact had approved")
 	}
 	var closed *deals.UndoWindowClosedError
 	if !errors.As(err, &closed) {
@@ -213,7 +213,7 @@ func TestAHumanApprovedMoveIsNotTakenBackByTheUndoVerb(t *testing.T) {
 //
 // The route a rep who disagrees actually takes. Counted only on the undo
 // button, the safety number would be dodgeable by dragging the deal back —
-// the transition would keep applying while people quietly corrected it.
+// the transition would keep applying while contacts quietly corrected it.
 func TestAManualMoveBackInsideTheWindowAlsoCountsAsReversalWithoutRefutingEvidence(t *testing.T) {
 	e := Setup(t)
 	deal, card, ref := autoAppliedMove(t, e)
@@ -330,7 +330,7 @@ func TestAnUndoIsRefusedOnceTheDealHasMovedOn(t *testing.T) {
 //
 // readProtection asks whether any history row on this deal names a move it
 // undid. The reversal has to write that link or the product re-proposes the
-// exact move a person just took back — the definition of not listening.
+// exact move a contact just took back — the definition of not listening.
 func TestAnUndoneMoveIsNotProposedAgain(t *testing.T) {
 	e := Setup(t)
 	deal, card, _ := autoAppliedMove(t, e)
@@ -377,7 +377,7 @@ func TestAManualMoveBackRecordsWhatItUndid(t *testing.T) {
 // The undo window is the one the move was made under.
 //
 // An admin shortening the window must not retroactively close it on moves
-// already made, and lengthening it must not reopen ones people were told had
+// already made, and lengthening it must not reopen ones contacts were told had
 // closed. The promise is made when the move is applied.
 func TestTheUndoWindowIsTheOneTheMoveWasMadeUnder(t *testing.T) {
 	e := Setup(t)
@@ -410,19 +410,19 @@ func TestTheUndoWindowIsTheOneTheMoveWasMadeUnder(t *testing.T) {
 	// seventy-two the move was made under. It must still be undoable.
 	if _, err := e.Deals.RevertStageProgression(e.Admin(), deal, card.UUID); err != nil {
 		t.Fatalf("the undo was refused on a window the admin shortened AFTER the "+
-			"move was made: %v — a person told they had three days to take this "+
+			"move was made: %v — a contact told they had three days to take this "+
 			"back finds it closed because somebody edited a setting", err)
 	}
 }
 
 func ptrTo[T any](v T) *T { return &v }
 
-// An AGENT moving a deal back is not a person taking a move back.
+// An AGENT moving a deal back is not a contact taking a move back.
 //
 // The undo verb is human-only, and this door must not be the way around it.
 // Read as manual, an agent's ordinary advance would record a reversal nobody
 // made, attribute it to the agent's user, and let one machine undo what
-// another machine did with no person in the loop.
+// another machine did with no contact in the loop.
 //
 // readProtection names its human positively for the same reason, and says so:
 // an agent moving a deal is precisely what a human has not done.
@@ -450,7 +450,7 @@ func TestAnAgentMovingADealBackIsNotCountedAsAHumanReversal(t *testing.T) {
 	if reversed || outcome != deals.ProgressionAutoApplied {
 		t.Errorf("an AGENT's move back was counted as a human reversal (%q, %v): "+
 			"the undo verb is human-only and this is the way around it, with the "+
-			"reversal recorded against a person who did nothing", outcome, reversed)
+			"reversal recorded against a contact who did nothing", outcome, reversed)
 	}
 }
 

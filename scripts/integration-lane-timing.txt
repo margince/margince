@@ -14,7 +14,7 @@
 ./migrations|133.142
 ./internal/compose|127.043
 ./internal/compose/integration/agentaccess|49.698
-./internal/modules/people|36.219
+./internal/modules/contacts|36.219
 ./internal/compose/integration/channels|30.629
 ./internal/compose/integration/overlay|30.114
 ./internal/modules/identity|28.752

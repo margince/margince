@@ -57,7 +57,7 @@ const (
 //
 // The product constructor alone was not enough, and that was not a hypothesis:
 // the tree ALREADY held a module suite reaching the driver's own pool
-// constructor directly (people/ensurechannel_contention, whose bound rides
+// constructor directly (contacts/ensurechannel_contention, whose bound rides
 // ConnConfig rather than the DSN), which a gate spelled against the product one
 // read straight past. A gate that refuses one spelling of a mistake while a
 // second spelling sits unjudged in the same tree is the shape this file exists
@@ -89,7 +89,7 @@ var poolConstructors = []struct{ pkg, symbol string }{
 // exists to refuse, because a per-test pool on the lane's own app DSN is exactly
 // what the next suite would claim needs its own parameters.
 var ownPools = gatekit.Waive(map[string]string{
-	"internal/modules/people/ensurechannel_contention_integration_test.go": "the same instrument one module " +
+	"internal/modules/contacts/ensurechannel_contention_integration_test.go": "the same instrument one module " +
 		"over, built through pgxpool directly because the bound rides ConnConfig rather than the DSN: a " +
 		"lock_timeout of 250ms so that a contended account lock decides the outcome instead of the clock. " +
 		"Per-test and closed with the test, and it re-registers the typed ids the product pool would have.",
@@ -138,7 +138,7 @@ func TestModuleSuitesTakeTheProcessSharedPool(t *testing.T) {
 			"a pool per test dials connections, uses them once and closes them, and stays outside the "+
 			"per-pool ceiling the lane budgets for (#1744). Call testdb.EnsureSchema and then "+
 			"testdb.Pool, and register testdb.AssertPoolsQuiesced where the pool is handed out "+
-			"(see internal/modules/people/dedupe_integration_test.go):\n\t%s",
+			"(see internal/modules/contacts/dedupe_integration_test.go):\n\t%s",
 			len(offenders), strings.Join(offenders, "\n\t"))
 	}
 

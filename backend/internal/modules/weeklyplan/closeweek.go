@@ -84,7 +84,7 @@ func (s *Store) CloseWeek(ctx context.Context, now time.Time) (Outcome, error) {
 		}
 		// Everything still open when the week ran out was not done. `missed` is
 		// written here and nowhere else: it is the week's verdict, not
-		// something a person declares about themselves.
+		// something a contact declares about themselves.
 		// The plan row is locked FIRST, and every write below runs under it —
 		// including the sweep, which is by plan_id rather than by commitment.
 		// Without the lock a rep marking a commitment done in the same instant

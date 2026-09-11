@@ -107,7 +107,7 @@ var columnValueShapes = map[string]analyticsquery.ColumnShape{
 //
 // Per-caller rather than installation-wide, deliberately. A seat that LOSES a
 // grant must have its outstanding plans refused too, and an installation-wide
-// version would not move when one person's roles changed.
+// version would not move when one contact's roles changed.
 func schemaVersion(entities map[string]analyticsquery.Entity) string {
 	sum := sha256.New()
 	for _, name := range slices.Sorted(maps.Keys(entities)) {

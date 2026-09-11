@@ -4,7 +4,7 @@
 package attention
 
 // The dsr lane: the requests whose legal clocks are running reach the one
-// person the case queue admits, and nobody else even learns the lane exists.
+// contact the case queue admits, and nobody else even learns the lane exists.
 
 import (
 	"context"

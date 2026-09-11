@@ -10,7 +10,7 @@ package integration
 // timescan_integration_test.go's structural precedent, but for the
 // DateFieldScan seam rather than ActivityScan. A real date-typed custom
 // field is defined and written through the customfields engine and the
-// people store (never a hand-inserted cf_* column or a raw UPDATE — the
+// contacts store (never a hand-inserted cf_* column or a raw UPDATE — the
 // review-loop rule that a test supplying its own version of production
 // proves nothing about production), and TimeScanner.ScanWorkspace runs
 // against it exactly as the worker's periodic job would.
@@ -35,25 +35,25 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TestRenewalReminderFiresWithinWindowButNotBeyondIt seeds one real date
-// field on person and one renewal_reminder instance watching it with
-// days_before: 30 — a person 10 days out is a candidate and gets a
-// reminder task, a person 40 days out is outside the window and gets
+// field on contact and one renewal_reminder instance watching it with
+// days_before: 30 — a contact 10 days out is a candidate and gets a
+// reminder task, a contact 40 days out is outside the window and gets
 // none, proving DateFieldCandidates' literal BETWEEN shape end to end.
 func TestRenewalReminderFiresWithinWindowButNotBeyondIt(t *testing.T) {
 	e := Setup(t)
 	svc := customfields.NewService(e.Pool, SchemaPool(t))
-	store := people.NewStore(e.DB()).WithFieldCatalog(svc)
+	store := contacts.NewStore(e.DB()).WithFieldCatalog(svc)
 	fieldCtx := e.As(e.Rep1, nil, CustomFieldAdminPerms)
 
 	field, err := svc.Create(fieldCtx, customfields.FieldSpec{
-		Object: "person", Label: "Renewal Date", Type: customfields.TypeDate, Source: "ui",
+		Object: "contact", Label: "Renewal Date", Type: customfields.TypeDate, Source: "ui",
 	})
 	if err != nil {
 		t.Fatalf("defining the renewal-date field: %v", err)
@@ -65,19 +65,19 @@ func TestRenewalReminderFiresWithinWindowButNotBeyondIt(t *testing.T) {
 	scanNow := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
 	now := func() time.Time { return scanNow }
 
-	dueSoon, err := store.CreatePerson(fieldCtx, people.CreatePersonInput{
+	dueSoon, err := store.CreateContact(fieldCtx, contacts.CreateContactInput{
 		FullName: "Due Soon", Source: "manual",
 		CustomFields: map[string]any{col: scanNow.AddDate(0, 0, 10).Format(time.DateOnly)},
 	})
 	if err != nil {
-		t.Fatalf("creating the in-window person: %v", err)
+		t.Fatalf("creating the in-window contact: %v", err)
 	}
-	dueLater, err := store.CreatePerson(fieldCtx, people.CreatePersonInput{
+	dueLater, err := store.CreateContact(fieldCtx, contacts.CreateContactInput{
 		FullName: "Due Later", Source: "manual",
 		CustomFields: map[string]any{col: scanNow.AddDate(0, 0, 40).Format(time.DateOnly)},
 	})
 	if err != nil {
-		t.Fatalf("creating the out-of-window person: %v", err)
+		t.Fatalf("creating the out-of-window contact: %v", err)
 	}
 
 	owner := OwnerConn(t)
@@ -89,11 +89,11 @@ func TestRenewalReminderFiresWithinWindowButNotBeyondIt(t *testing.T) {
 		t.Fatalf("scan: %v", err)
 	}
 
-	if got := personTaskCount(t, e, ids.UUID(dueSoon.Id)); got != 1 {
-		t.Fatalf("reminder tasks for the in-window person = %d, want exactly 1", got)
+	if got := contactTaskCount(t, e, ids.UUID(dueSoon.Id)); got != 1 {
+		t.Fatalf("reminder tasks for the in-window contact = %d, want exactly 1", got)
 	}
-	if got := personTaskCount(t, e, ids.UUID(dueLater.Id)); got != 0 {
-		t.Fatalf("reminder tasks for the out-of-window person = %d, want 0 — 40 days out is past the 30-day horizon", got)
+	if got := contactTaskCount(t, e, ids.UUID(dueLater.Id)); got != 0 {
+		t.Fatalf("reminder tasks for the out-of-window contact = %d, want 0 — 40 days out is past the 30-day horizon", got)
 	}
 }
 
@@ -110,11 +110,11 @@ func TestRenewalReminderFiresWithinWindowButNotBeyondIt(t *testing.T) {
 func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
 	e := Setup(t)
 	svc := customfields.NewService(e.Pool, SchemaPool(t))
-	peopleStore := people.NewStore(e.DB()).WithFieldCatalog(svc)
+	contactsStore := contacts.NewStore(e.DB()).WithFieldCatalog(svc)
 	fieldCtx := e.As(e.Rep1, nil, CustomFieldAdminPerms)
 
 	field, err := svc.Create(fieldCtx, customfields.FieldSpec{
-		Object: "person", Label: "Renewal Date", Type: customfields.TypeDate, Source: "ui",
+		Object: "contact", Label: "Renewal Date", Type: customfields.TypeDate, Source: "ui",
 	})
 	if err != nil {
 		t.Fatalf("defining the renewal-date field: %v", err)
@@ -122,19 +122,19 @@ func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
 	col := *field.ColumnName
 
 	previewNow := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
-	dueSoon, err := peopleStore.CreatePerson(fieldCtx, people.CreatePersonInput{
+	dueSoon, err := contactsStore.CreateContact(fieldCtx, contacts.CreateContactInput{
 		FullName: "Due Soon", Source: "manual",
 		CustomFields: map[string]any{col: previewNow.AddDate(0, 0, 10).Format(time.DateOnly)},
 	})
 	if err != nil {
-		t.Fatalf("creating the in-window person: %v", err)
+		t.Fatalf("creating the in-window contact: %v", err)
 	}
-	dueLater, err := peopleStore.CreatePerson(fieldCtx, people.CreatePersonInput{
+	dueLater, err := contactsStore.CreateContact(fieldCtx, contacts.CreateContactInput{
 		FullName: "Due Later", Source: "manual",
 		CustomFields: map[string]any{col: previewNow.AddDate(0, 0, 40).Format(time.DateOnly)},
 	})
 	if err != nil {
-		t.Fatalf("creating the out-of-window person: %v", err)
+		t.Fatalf("creating the out-of-window contact: %v", err)
 	}
 
 	owner := OwnerConn(t)
@@ -144,7 +144,7 @@ func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
 		WithClock(func() time.Time { return previewNow }).
 		WithFieldCatalog(svc)
 	// automation:Read authorizes reading the instance being previewed;
-	// person:Read is the target-table read gate Preview applies on top
+	// contact:Read is the target-table read gate Preview applies on top
 	// (automations_preview.go's own doc: "a preview is a read... gated
 	// like a read"). RowScopeAll matches CustomFieldAdminPerms — this
 	// test is proving the predicate/scope wiring works, not exercising a
@@ -154,7 +154,7 @@ func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
 		RowScope: principal.RowScopeAll,
 		Objects: map[string]principal.ObjectGrant{
 			"automation": {Read: true},
-			"person":     {Read: true},
+			"contact":    {Read: true},
 		},
 	})
 	result, err := automationStore.Preview(previewCtx, id, automation.AutomationPreviewInput{})
@@ -162,10 +162,10 @@ func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
 		t.Fatalf("Preview: %v", err)
 	}
 	if result.MatchesNow != 1 {
-		t.Fatalf("MatchesNow = %d, want exactly 1 (the in-window person only)", result.MatchesNow)
+		t.Fatalf("MatchesNow = %d, want exactly 1 (the in-window contact only)", result.MatchesNow)
 	}
 	if len(result.Sample) != 1 || result.Sample[0] != ids.UUID(dueSoon.Id) {
-		t.Fatalf("Sample = %v, want exactly [%s] (the in-window person, never the out-of-window one)", result.Sample, dueSoon.Id)
+		t.Fatalf("Sample = %v, want exactly [%s] (the in-window contact, never the out-of-window one)", result.Sample, dueSoon.Id)
 	}
 	if result.ExcludedByPermission != 0 {
 		t.Errorf("ExcludedByPermission = %d, want 0 — this caller can see everything it matched", result.ExcludedByPermission)
@@ -173,14 +173,14 @@ func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
 	// WouldHaveFired asks a DIFFERENT question than MatchesNow: not "is
 	// the value in [now, now+days_before] RIGHT NOW" but "did the value
 	// fall in that window at ANY point in the trailing window_days" — the
-	// due-soon person's (10 days out) active-match span opens
+	// due-soon contact's (10 days out) active-match span opens
 	// days_before=30 days before its OWN value, i.e. ~20 days AGO
 	// (previewNow-20), which is inside the trailing 30-day estimate
-	// window [previewNow-30, previewNow] even though the person was not
+	// window [previewNow-30, previewNow] even though the contact was not
 	// yet a MatchesNow candidate 30 days ago — so it must count here too,
 	// not just in MatchesNow.
 	if result.WouldHaveFired == nil || *result.WouldHaveFired != 1 {
-		t.Fatalf("WouldHaveFired = %v, want exactly 1 (the due-soon person's active-match span overlaps the trailing estimate window)", result.WouldHaveFired)
+		t.Fatalf("WouldHaveFired = %v, want exactly 1 (the due-soon contact's active-match span overlaps the trailing estimate window)", result.WouldHaveFired)
 	}
 	_ = dueLater // asserted by absence: MatchesNow/Sample above already exclude it
 }
@@ -198,11 +198,11 @@ func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
 func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
 	e := Setup(t)
 	svc := customfields.NewService(e.Pool, SchemaPool(t))
-	store := people.NewStore(e.DB()).WithFieldCatalog(svc)
+	store := contacts.NewStore(e.DB()).WithFieldCatalog(svc)
 	fieldCtx := e.As(e.Rep1, nil, CustomFieldAdminPerms)
 
 	field, err := svc.Create(fieldCtx, customfields.FieldSpec{
-		Object: "person", Label: "Birthday", Type: customfields.TypeDate, Source: "ui",
+		Object: "contact", Label: "Birthday", Type: customfields.TypeDate, Source: "ui",
 	})
 	if err != nil {
 		t.Fatalf("defining the birthday field: %v", err)
@@ -212,12 +212,12 @@ func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
 	// The stored year (1990) carries no meaning for a recurring field —
 	// only the August 1st month/day does. It never changes across either
 	// simulated scan below.
-	celebrant, err := store.CreatePerson(fieldCtx, people.CreatePersonInput{
+	celebrant, err := store.CreateContact(fieldCtx, contacts.CreateContactInput{
 		FullName: "Has A Birthday", Source: "manual",
 		CustomFields: map[string]any{col: "1990-08-01"},
 	})
 	if err != nil {
-		t.Fatalf("creating the birthday-bearing person: %v", err)
+		t.Fatalf("creating the birthday-bearing contact: %v", err)
 	}
 
 	owner := OwnerConn(t)
@@ -237,7 +237,7 @@ func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
 	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
 		t.Fatalf("year-one scan: %v", err)
 	}
-	if got := personTaskCount(t, e, ids.UUID(celebrant.Id)); got != 1 {
+	if got := contactTaskCount(t, e, ids.UUID(celebrant.Id)); got != 1 {
 		t.Fatalf("reminder tasks after year one = %d, want exactly 1", got)
 	}
 
@@ -249,7 +249,7 @@ func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
 	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
 		t.Fatalf("year-two scan: %v", err)
 	}
-	if got := personTaskCount(t, e, ids.UUID(celebrant.Id)); got != 2 {
+	if got := contactTaskCount(t, e, ids.UUID(celebrant.Id)); got != 2 {
 		t.Fatalf("reminder tasks after year two = %d, want exactly 2 — the recurring anchor must re-arm, not suppress as a duplicate", got)
 	}
 }
@@ -285,7 +285,7 @@ func TestRenewalReminderMisconfiguredInstanceDoesNotAbortTheWorkspacePass(t *tes
 
 	seedNoActivityReminder(t, owner, e.WS)
 	// A renewal_reminder instance naming a column that is not (and never
-	// was) an active date-typed custom field on person — the same shape of
+	// was) an active date-typed custom field on contact — the same shape of
 	// failure a retired field leaves behind, since both reach
 	// DateFieldCandidates as customfields.ErrUnknownDateColumn.
 	seedRenewalReminder(t, owner, "cf_does_not_exist", false)
@@ -302,18 +302,18 @@ func TestRenewalReminderMisconfiguredInstanceDoesNotAbortTheWorkspacePass(t *tes
 }
 
 // seedRenewalReminder enrolls one enabled, ownerless renewal_reminder
-// instance watching the given column on person — the DateFieldScan-driven
+// instance watching the given column on contact — the DateFieldScan-driven
 // counterpart of timescan_integration_test.go's seedNoActivityReminder.
 // Ownerless (no owner_id) skips the match-time owner gate exactly like
 // that precedent, since gate.go's own RBAC path is proven separately.
-// object is always "person" and days_before always 30 here: every
-// scenario in this suite watches a person field on the same 30-day
+// object is always "contact" and days_before always 30 here: every
+// scenario in this suite watches a contact field on the same 30-day
 // horizon, so caller-given values for either would be unexercised
 // parameters (T3/T8) until a test actually needs to vary one.
 func seedRenewalReminder(t *testing.T, owner *pgx.Conn, dateField string, recursYearly bool) ids.AutomationID {
 	t.Helper()
 	params, err := json.Marshal(map[string]any{
-		"object": "person", "date_field": dateField, "days_before": 30, "recurs_yearly": recursYearly,
+		"object": "contact", "date_field": dateField, "days_before": 30, "recurs_yearly": recursYearly,
 	})
 	if err != nil {
 		t.Fatalf("encoding renewal_reminder params: %v", err)
@@ -328,13 +328,13 @@ func seedRenewalReminder(t *testing.T, owner *pgx.Conn, dateField string, recurs
 	return ids.AutomationID{UUID: id}
 }
 
-// personTaskCount counts the create_task activities renewal_reminder
-// minted on a person's timeline — reminderTaskCount's (timescan_integration_test.go)
-// counterpart for the person entity type rather than deal.
-func personTaskCount(t *testing.T, e *Env, personID ids.UUID) int {
+// contactTaskCount counts the create_task activities renewal_reminder
+// minted on a contact's timeline — reminderTaskCount's (timescan_integration_test.go)
+// counterpart for the contact entity type rather than deal.
+func contactTaskCount(t *testing.T, e *Env, contactID ids.UUID) int {
 	t.Helper()
 	return e.WsCount(t, `
 		SELECT count(*) FROM activity a
 		JOIN activity_link al ON al.activity_id = a.id
-		WHERE al.entity_type = 'person' AND al.person_id = $1 AND a.kind = 'task'`, personID)
+		WHERE al.entity_type = 'contact' AND al.contact_id = $1 AND a.kind = 'task'`, contactID)
 }

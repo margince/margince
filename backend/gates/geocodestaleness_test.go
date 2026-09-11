@@ -135,7 +135,7 @@ func TestOnlyResolvedCoordinatesAreQueryable(t *testing.T) {
 // coverage can be checked against something rather than assumed.
 func TestTheAddressWritersAreStillTheOnesTheTriggerCovers(t *testing.T) {
 	t.Parallel()
-	root := filepath.Join("internal", "modules", "people")
+	root := filepath.Join("internal", "modules", "contacts")
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		t.Fatalf("reading %s: %v", root, err)

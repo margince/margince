@@ -71,7 +71,7 @@ const (
 // DATES subtracted, not instants. A deal created at 23:50 and closed at 00:10
 // the next night took two calendar days by any reader's reckoning and 0.01 by
 // the clock's; every other duration on this surface — stage age, the slipped
-// rule — already counts the days a person would count.
+// rule — already counts the days a contact would count.
 //
 // Both days are read on the INSTALLATION's reporting clock, which is what the
 // period buckets beside them use. Cast in the session's zone instead, the same

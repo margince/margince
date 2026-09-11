@@ -92,7 +92,7 @@ import { SettingsSearchBox } from "./settingssearchbox";
 // which is the same rule applied to everyone rather than to two role names.
 // The server stays the RBAC authority on every card within.
 //
-// The personal group is where a credential or a connection the PERSON holds
+// The personal group is where a credential or a connection the CONTACT holds
 // lives: `agents` carries the caller's own passports, so gating it would regress
 // passport minting for every seat that is not an admin, and `connections` carries
 // their own mailbox and their own LinkedIn network.
@@ -296,8 +296,8 @@ export function useSettingsEntryVisibility(): Readonly<
   const automation = useCan("automation", "read");
   const webhook = useCan("webhook_subscription", "read");
   // The consent registry's server gate, which is not a role and not "any member":
-  // consent/store.go's ListPurposes calls auth.Require(ctx, "person", read).
-  const person = useCan("person", "read");
+  // consent/store.go's ListPurposes calls auth.Require(ctx, "contact", read).
+  const contact = useCan("contact", "read");
   const overlay = useCan("overlay_connection", "read");
   // The one predicate below that is a ROLE rather than a grant. `GET /admin/reset-data`
   // and the job-health read are gated on the literal admin role server-side and no
@@ -386,12 +386,12 @@ export function useSettingsEntryVisibility(): Readonly<
     // queue and the audit trail. `consent_config` is a governed object upstream and
     // absent from the shipped RBAC vocabulary, so there is no grant NAMED for the
     // registry — but the server does not gate it on a role either: ListPurposes
-    // demands `person:read`, so that is the grant to ask for, and asking it is what
+    // demands `contact:read`, so that is the grant to ask for, and asking it is what
     // keeps this from being `true` standing in for a permission. Every seeded role
     // holds it, and a role edited to drop it would otherwise reach a page of four
     // refusals. The three surfaces below the registry are narrower and each says so.
-    privacy: person,
-    // The document sets a person can ask questions of, and the files in them.
+    privacy: contact,
+    // The document sets a contact can ask questions of, and the files in them.
     // `knowledge_corpus:read` is the ASK, and the RBAC migration grants it to
     // every seeded role — so this entry opens for a manager or a rep, and the
     // card inside shows them the sets with no verbs. That is deliberate and is
@@ -442,7 +442,7 @@ export function useSettingsEntryVisibility(): Readonly<
  * `SETTINGS_TABS` carries the current one alone.
  */
 const RENAMED_TABS: Readonly<Record<string, SettingsTabId>> = {
-  people: "users",
+  contacts: "users",
 };
 
 export function settingsRouteTab(route: Route): {
@@ -691,7 +691,7 @@ export function useVisibleSettingsPages(): readonly SettingsPage[] {
  *
  * The hook half of `settingsReach`, taking the same two facts as the visibility
  * hook above so the rail, the settings home and the read-only banner resolve one
- * partition rather than each deciding "can this person act?" for itself.
+ * partition rather than each deciding "can this contact act?" for itself.
  */
 export function useSettingsReach(): SettingsReach {
   const snapshot = useMe().data;

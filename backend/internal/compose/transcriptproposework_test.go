@@ -203,7 +203,7 @@ func TestAReadingIsAttributedToTheReaderNotToANeighbouringAgent(t *testing.T) {
 		t.Fatal("the reading must run as a named principal, or its writes are unattributable")
 	}
 	if actor.ID != transcriptProposalActor {
-		t.Errorf("a transcript proposal must say the transcript reader read it, got %q — the inbox shows this to the person deciding", actor.ID)
+		t.Errorf("a transcript proposal must say the transcript reader read it, got %q — the inbox shows this to the contact deciding", actor.ID)
 	}
 	if actor.OnBehalfOf != requester {
 		t.Errorf("what the reading produces is owned by the human who asked; got %s, want %s", actor.OnBehalfOf, requester)

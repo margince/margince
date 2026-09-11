@@ -46,11 +46,11 @@ type replyOrigin struct {
 	// inbound reply routes on this value alone, and a class would make it
 	// re-derive the provider from the activity row anyway.
 	channel string
-	// contactID is the counterparty when they already resolve to a person.
+	// contactID is the counterparty when they already resolve to a contact.
 	// Nil is the ordinary first-contact case, not a fault: the ensure that
 	// creates them runs AFTER this transaction commits, so a first-ever sender
-	// has no person yet on either medium.
-	contactID *ids.PersonID
+	// has no contact yet on either medium.
+	contactID *ids.ContactID
 }
 
 // emitReply is CAP-FORMULA-1: an INBOUND message in a thread we previously
@@ -127,7 +127,7 @@ func (s *Sink) emitReply(ctx context.Context, tx pgx.Tx, auditID ids.UUID, id id
 	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload)
 }
 
-// replyOriginOf resolves the medium a reply arrived on and the person already
+// replyOriginOf resolves the medium a reply arrived on and the contact already
 // on file for it, in one switch over the shape the record names its human by.
 // It reports ok=false when there is no origin to publish at all.
 //
@@ -170,77 +170,77 @@ func (s *Sink) replyOriginForShape(ctx context.Context, tx pgx.Tx, cp connector.
 	}
 }
 
-// withContact carries a resolved person onto the origin, and leaves it absent
+// withContact carries a resolved contact onto the origin, and leaves it absent
 // when the lookup found none. It exists so both arms above spell "found or not"
 // the same way rather than each re-deriving a pointer from a flag.
-func withContact(origin replyOrigin, contact ids.PersonID, found bool) replyOrigin {
+func withContact(origin replyOrigin, contact ids.ContactID, found bool) replyOrigin {
 	if found {
 		origin.contactID = &contact
 	}
 	return origin
 }
 
-// mailReplyContact resolves a mail counterparty to a person already on file.
+// mailReplyContact resolves a mail counterparty to a contact already on file.
 // A miss is not an error: the ensure that would create them runs after this
 // transaction commits, so the normal first-contact reply simply has no contact
 // to name yet.
-func mailReplyContact(ctx context.Context, tx pgx.Tx, email string) (ids.PersonID, bool, error) {
+func mailReplyContact(ctx context.Context, tx pgx.Tx, email string) (ids.ContactID, bool, error) {
 	normalized := strings.ToLower(strings.TrimSpace(email))
 	if normalized == "" {
-		return ids.PersonID{}, false, nil
+		return ids.ContactID{}, false, nil
 	}
-	var personID ids.PersonID
-	// The PERSON's own archived_at is checked, not only the binding's. Archiving
-	// a person does cascade to their satellites today, so this join changes no
+	var contactID ids.ContactID
+	// The CONTACT's own archived_at is checked, not only the binding's. Archiving
+	// a contact does cascade to their satellites today, so this join changes no
 	// live answer — it stops the reply fact from depending on that cascade. A
 	// half-archived record (a retention pass, a merge, a repair) would otherwise
-	// name a person the consumer cannot read back, and the same reasoning holds
+	// name a contact the consumer cannot read back, and the same reasoning holds
 	// for the channel twin below.
 	err := tx.QueryRow(ctx, `
-		SELECT pe.person_id FROM person_email pe
-		JOIN person p ON p.id = pe.person_id AND p.archived_at IS NULL
+		SELECT pe.contact_id FROM contact_email pe
+		JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
 		WHERE pe.email = $1 AND pe.archived_at IS NULL
-		ORDER BY pe.is_primary DESC LIMIT 1`, normalized).Scan(&personID)
+		ORDER BY pe.is_primary DESC LIMIT 1`, normalized).Scan(&contactID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.PersonID{}, false, nil
+		return ids.ContactID{}, false, nil
 	}
 	if err != nil {
-		return ids.PersonID{}, false, fmt.Errorf("capture: reply contact lookup: %w", err)
+		return ids.ContactID{}, false, fmt.Errorf("capture: reply contact lookup: %w", err)
 	}
-	return personID, true, nil
+	return contactID, true, nil
 }
 
 // channelReplyContact is the same resolution on a channel identity — the key a
 // messaging connector names its human by, where mail names an address. The
-// binding is unique per live identity (uq_person_channel_identity is partial on
+// binding is unique per live identity (uq_contact_channel_identity is partial on
 // archived_at IS NULL), so this needs no ordering tiebreak the way the mail
 // lookup needs is_primary.
-func channelReplyContact(ctx context.Context, tx pgx.Tx, ci connector.ChannelIdentity) (ids.PersonID, bool, error) {
+func channelReplyContact(ctx context.Context, tx pgx.Tx, ci connector.ChannelIdentity) (ids.ContactID, bool, error) {
 	if ci.Provider == "" || ci.ChannelUserID == "" {
 		// shapeChannel already guarantees both halves, exactly as shapeMail
 		// guarantees a non-empty address for the sibling lookup. Both refuse an
 		// empty key anyway rather than probing on one: a half key matches by
 		// accident or matches nothing, and neither is an answer.
-		return ids.PersonID{}, false, nil
+		return ids.ContactID{}, false, nil
 	}
-	var personID ids.PersonID
+	var contactID ids.ContactID
 	err := tx.QueryRow(ctx, `
-		SELECT pci.person_id FROM person_channel_identity pci
-		JOIN person p ON p.id = pci.person_id AND p.archived_at IS NULL
+		SELECT pci.contact_id FROM contact_channel_identity pci
+		JOIN contact p ON p.id = pci.contact_id AND p.archived_at IS NULL
 		WHERE pci.provider = $1 AND pci.channel_user_id = $2 AND pci.archived_at IS NULL`,
-		ci.Provider, ci.ChannelUserID).Scan(&personID)
+		ci.Provider, ci.ChannelUserID).Scan(&contactID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.PersonID{}, false, nil
+		return ids.ContactID{}, false, nil
 	}
 	if err != nil {
-		return ids.PersonID{}, false, fmt.Errorf("capture: reply channel contact lookup: %w", err)
+		return ids.ContactID{}, false, fmt.Errorf("capture: reply channel contact lookup: %w", err)
 	}
-	return personID, true, nil
+	return contactID, true, nil
 }
 
 // engagementReplyPayload builds the engagement.reply event from the origin the
 // switch above resolved — the reply's channel and, when the counterparty is
-// already a known person, their id (absent, not null, otherwise).
+// already a known contact, their id (absent, not null, otherwise).
 func engagementReplyPayload(matched ids.UUID, origin replyOrigin, occurredAt time.Time, idempotencyKey string) crmcontracts.PublicEventEngagementReply {
 	payload := crmcontracts.PublicEventEngagementReply{
 		MatchedOutboundActivityId: openapi_types.UUID(matched),

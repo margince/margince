@@ -108,7 +108,7 @@ export function profileFieldClaim(
             // Both verbs pin the row they answer for. A confirmation is a human
             // agreeing with a value they READ, so it is the verb a stale version
             // damages most: agreeing with a claim that has since been corrected
-            // stamps a person's name on a value they never saw.
+            // stamps a contact's name on a value they never saw.
             ...ifMatch(requireVersion(field.version)),
           },
           body: { value },

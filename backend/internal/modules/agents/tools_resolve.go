@@ -10,10 +10,10 @@ package agents
 // WHY IT IS NOT A SEARCH. Search matches text and ranks it. Identity is decided
 // by keys: a shared address, a phone number, an established channel binding, a
 // company domain. The two give different answers to the same string, and only
-// one of them can be acted on — a caller that creates a person because a search
+// one of them can be acted on — a caller that creates a contact because a search
 // found nothing has created the duplicate this tool exists to prevent.
 //
-// IT DECIDES NOTHING AND MERGES NOBODY. A near-match is a comparison a person
+// IT DECIDES NOTHING AND MERGES NOBODY. A near-match is a comparison a contact
 // makes, and this answers `ambiguous` however high the score. Merging stays 🟡
 // and goes through merge_records, with a human in it.
 //
@@ -41,7 +41,7 @@ const (
 	// ResolveDecisionMatched: one record, reached by a unique key. Act on it.
 	ResolveDecisionMatched = "matched"
 	// ResolveDecisionAmbiguous: more than one record could be meant, or one
-	// could be meant on a similarity nobody has confirmed. A person decides.
+	// could be meant on a similarity nobody has confirmed. A human decides.
 	ResolveDecisionAmbiguous = "ambiguous"
 	// ResolveDecisionUnresolved: nothing here names this candidate.
 	ResolveDecisionUnresolved = "unresolved"
@@ -86,13 +86,13 @@ const resolveMaxKeysPerCandidate = 10
 // spelled with the seam's own constants so the check and the value that crosses
 // the seam cannot drift apart.
 var resolveKinds = map[string]bool{
-	string(datasource.EntityPerson):  true,
+	string(datasource.EntityContact): true,
 	string(datasource.EntityCompany): true,
 }
 
 // EntityResolver answers which records a batch of payloads already names.
 //
-// It answers REFS, never records: the people module cannot shape a wire record
+// It answers REFS, never records: the contacts module cannot shape a wire record
 // and this package cannot import it. Hydration is the tool's job, and doing it
 // here is what puts every named record through this surface's own read path.
 //
@@ -153,15 +153,15 @@ type resolveEntities struct {
 
 func (t resolveEntities) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "resolve_entities", Title: "Resolve people and companies", Version: toolVersionV1,
+		Name: "resolve_entities", Title: "Resolve contacts and companies", Version: toolVersionV1,
 		Description:   resolveEntitiesCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		InputSchema: schema(`{"type":"object","required":["candidates"],"properties":{
 			"candidates":{"type":"array","minItems":1,"maxItems":20,"items":{
 				"type":"object","required":["kind"],"properties":{
-					"kind":{"type":"string","enum":["person","company"],"description":"Which record type this payload is asking about. Leads are not resolved."},
+					"kind":{"type":"string","enum":["contact","company"],"description":"Which record type this payload is asking about. Leads are not resolved."},
 					"ref":{"type":"string","description":"Your own label for this candidate, echoed back on its answer so a batch can be lined up. Any string; it is never stored."},
-					"name":{"type":"string","description":"Full name for a person, trading name for a company."},
+					"name":{"type":"string","description":"Full name for a contact, trading name for a company."},
 					"legal_name":{"type":"string","description":"The registered company name, when it differs from the trading name. Read for a company only."},
 					"emails":{"type":"array","maxItems":10,"items":{"type":"string"},"description":"Every address on the payload, not just the primary one. For a company each address also contributes its domain, unless it is a consumer mail domain."},
 					"phones":{"type":"array","maxItems":10,"items":{"type":"string"},"description":"Phone numbers in E.164 form; one that does not normalize is not a key and is ignored."},
@@ -207,7 +207,7 @@ func (t resolveEntities) Handle(ctx context.Context, in json.RawMessage) (json.R
 		// the call.
 		if !resolveKinds[c.Kind] {
 			return nil, &BadArgsError{Cause: fmt.Errorf(
-				"`kind` takes person or company, not %q; leads are not resolved", c.Kind)}
+				"`kind` takes contact or company, not %q; leads are not resolved", c.Kind)}
 		}
 		for field, keys := range map[string][]string{"emails": c.Emails, "phones": c.Phones, "domains": c.Domains} {
 			if len(keys) > resolveMaxKeysPerCandidate {
@@ -244,7 +244,7 @@ func (t resolveEntities) hydrate(ctx context.Context, labels []string, outcomes 
 	result := ResolveEntitiesResult{Candidates: make([]ResolvedCandidate, 0, len(outcomes))}
 	// One bookkeeping for the whole batch, because two candidates routinely name
 	// ONE record — a card carrying two addresses, or a name and a phone number
-	// that belong to the same person. Stamping it per candidate would charge the
+	// that belong to the same contact. Stamping it per candidate would charge the
 	// caller twice for a record they were shown once, against a bound that
 	// measures what was handed over.
 	served := newServedRecords()
@@ -255,7 +255,7 @@ func (t resolveEntities) hydrate(ctx context.Context, labels []string, outcomes 
 	// `unresolved` answer exists to close.
 	noteWarning(ctx, CodeResolutionBoundedByVisibility,
 		"this answer is bounded by the records you may read, so `unresolved` does not prove that no "+
-			"such record exists; a person with wider visibility may see one")
+			"such record exists; a contact with wider visibility may see one")
 	unanswered := 0
 	for i, outcome := range outcomes {
 		matches, err := t.readable(ctx, outcome.Refs, served)
@@ -330,7 +330,7 @@ func (t resolveEntities) readable(ctx context.Context, refs []ResolveRef, served
 // it on every call, which is the honest version of the same caution.
 //
 // A single FUZZY match is still `ambiguous`, and that is not a visibility rule:
-// the fuzzy tier is a comparison a person makes, DEDUPE_FUZZY_AUTOMERGE is
+// the fuzzy tier is a comparison a contact makes, DEDUPE_FUZZY_AUTOMERGE is
 // pinned *never*, and a caller told "matched" would write against a record
 // nobody confirmed.
 func decisionFor(matches []ResolvedRecord) string {

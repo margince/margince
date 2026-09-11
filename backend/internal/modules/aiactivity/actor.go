@@ -22,12 +22,12 @@ import (
 //
 // A non-human actor with nobody behind it is workspace-scoped: it belongs to
 // nobody by nature. A HUMAN one that does not parse is refused instead, because
-// quietly making it workspace-scoped is how one person's work becomes a system
+// quietly making it workspace-scoped is how one contact's work becomes a system
 // sweep nobody can find and nobody notices is missing.
 func ResolveActor(a events.Actor) (scope string, user ids.UUID, err error) {
 	if a.Type == "human" {
 		if a.OnBehalfOf != nil && !a.OnBehalfOf.IsZero() {
-			return "", ids.Nil, fmt.Errorf("aiactivity: human actor %q also names on_behalf_of %s — no writer produces that, and guessing which half owns the work files it under the wrong person", a.ID, a.OnBehalfOf)
+			return "", ids.Nil, fmt.Errorf("aiactivity: human actor %q also names on_behalf_of %s — no writer produces that, and guessing which half owns the work files it under the wrong contact", a.ID, a.OnBehalfOf)
 		}
 		parsed, ok := principal.HumanUserID(a.ID)
 		if !ok {

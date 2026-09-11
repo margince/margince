@@ -9,7 +9,7 @@ package capture
 // candidate read. Compose owns the sweep worker and the deep-read enqueue; this
 // store owns the scheduling state and the atomic cap reservation so the two are
 // one transaction each. The candidate read joins company / site_read
-// (people-owned) — a read is bounded by its own workspace predicate, not by
+// (contacts-owned) — a read is bounded by its own workspace predicate, not by
 // which module owns the table — so all the sweep's eligibility logic lives in
 // one place.
 
@@ -59,7 +59,7 @@ func NewAutoEnrichStore(db *database.DB) *AutoEnrichStore { return &AutoEnrichSt
 // on 2026-08-19, twice: "when I create a company and if admin enabled automatic
 // website read then this should be also put on the list for website ingestion",
 // and "If I manually create a company auto enrich must also be triggered." A
-// person typing the name is not a reason to withhold the dossier; it is usually
+// contact typing the name is not a reason to withhold the dossier; it is usually
 // the moment they want one.
 //
 // The old rule had also made the lane inert rather than selective: all 195
@@ -69,7 +69,7 @@ func NewAutoEnrichStore(db *database.DB) *AutoEnrichStore { return &AutoEnrichSt
 // The anchor stays out, now by its OWN predicate rather than as a side effect
 // of being human-named — removing name_source without this would have started
 // offering it. Two reasons it does not belong here. It is enriched during cold
-// start already (people/company.go's cold-start read-back, distinct from the
+// start already (contacts/company.go's cold-start read-back, distinct from the
 // human write), so a sweep over it is redundant — Lars, 2026-08-20: "Gradion
 // (anchor) IS enriched during coldstart and does not require auto enrichment
 // later." And this lane applies what it finds directly, while the anchor's own
@@ -103,7 +103,7 @@ func NewAutoEnrichStore(db *database.DB) *AutoEnrichStore { return &AutoEnrichSt
 // ahead in — and the id is neither.
 //
 // The company-name sweep pages this same set to exhaustion instead
-// (people/companynamepromotion.go). It can: its per-candidate work is one in-memory
+// (contacts/companynamepromotion.go). It can: its per-candidate work is one in-memory
 // decision. This lane's is a model-backed site read under a daily cap, so a
 // pass takes one page by construction — which is why the ordering has to be the
 // thing that guarantees progress.

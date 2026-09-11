@@ -8,7 +8,7 @@
 // The claim that matters most here is the one the timeline row cannot make: the
 // editor opens with the set that is ALREADY on the message. The row's dialog
 // starts blank, because a list row carries no access block — so a reader
-// removing one person from a set of five had to re-tick the other four from
+// removing one contact from a set of five had to re-tick the other four from
 // memory. These tests hold the difference.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -164,7 +164,7 @@ describe("what the drawer says about who reads a message", () => {
     expect(screen.queryByRole("button", { name: /Share/ })).toBeNull();
   });
 
-  it("names the people a limited message is limited to", async () => {
+  it("names the contacts a limited message is limited to", async () => {
     draw(
       <EmailAccessEditor
         presentation={presentation({
@@ -202,7 +202,7 @@ describe("what the drawer says about who reads a message", () => {
     );
 
     // An absent list is NOT an empty audience. Printing "nobody" would be a
-    // false statement about a message limited to people this reader cannot
+    // false statement about a message limited to contacts this reader cannot
     // name, so nothing is drawn for it.
     expect(
       screen.getByText("Only the people named below can read this."),

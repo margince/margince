@@ -44,9 +44,9 @@ type eventDateTime struct {
 
 // eventActor is one organizer/attendee: the email the mapping resolves the
 // counterparty by, Google's resource flag marking a booked room or device
-// rather than a person, and the name the organizer typed for them.
+// rather than a contact, and the name the organizer typed for them.
 //
-// The display name is the only place an attendee is named in full. A person
+// The display name is the only place an attendee is named in full. A contact
 // minted from a bare invitation address is otherwise named by its local part,
 // and no later pass has better evidence to correct it with.
 type eventActor struct {
@@ -69,7 +69,7 @@ type eventActor struct {
 const roomResourceDomain = "resource.calendar.google.com"
 
 // isRoom reports whether this attendee is a booked room or device rather than a
-// person. A room is not a party to a meeting: it cannot be a counterparty, it
+// contact. A room is not a party to a meeting: it cannot be a counterparty, it
 // cannot be answered, and — the case that matters — it is on no workspace's own
 // domain, so counting it would make every all-colleague meeting held in a
 // booked room look like it had an outside guest.

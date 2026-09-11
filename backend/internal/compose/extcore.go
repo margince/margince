@@ -223,7 +223,7 @@ func (c extensionCore) refuseOverlay(ctx context.Context) error {
 
 // portRefusal maps a core error onto the published refusal classes.
 //
-// It maps rather than wraps, and that is the point: a unit is other people's
+// It maps rather than wraps, and that is the point: a unit is other contacts's
 // code, so the core's own error text — a table name, a constraint, a SQL state,
 // the shape of an internal type — must not reach it. What survives is the
 // class, which is the only part a unit can act on.

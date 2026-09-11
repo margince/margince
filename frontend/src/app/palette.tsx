@@ -60,7 +60,7 @@ const SETTINGS_ALIASES: Readonly<
   "capture-activity": ["capture log", "trace"],
   company: ["general", "currency", "workspace", "fx"],
   authentication: ["sign-in", "sso", "oauth app", "login"],
-  members: ["users", "people", "roster", "invite"],
+  members: ["users", "contacts", "roster", "invite"],
   teams: ["team"],
   seats: ["license", "billing", "plan", "subscription"],
   pipelines: ["stages", "deal stages"],
@@ -156,7 +156,7 @@ export function useBuiltinCommands(): Command[] {
       route: settingsHref(page.id),
     }));
     // The scheduled queue, which is off the rail deliberately — a queue of one
-    // person's own unsent mail is not an eleventh destination (pagemeta.ts says
+    // contact's own unsent mail is not an eleventh destination (pagemeta.ts says
     // so) — and was therefore reachable only by typing the address. The
     // composer that queued a message is one door; this is the other, for the
     // rep who closed that toast an hour ago and now wants the message back.

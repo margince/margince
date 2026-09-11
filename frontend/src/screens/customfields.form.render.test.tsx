@@ -115,7 +115,7 @@ describe("custom fields on the record edit form", () => {
   // an empty custom field coerces to null, the API reads a top-level null as
   // "forget this column", and no cf_* column is clearable — so one empty field
   // refused every save of the record, naming a field nobody had touched.
-  it("says nothing about an empty custom field the person never touched", async () => {
+  it("says nothing about an empty custom field the contact never touched", async () => {
     const update = vi.fn(async (_values: Record<string, unknown>) => ({
       id: "d1",
     }));

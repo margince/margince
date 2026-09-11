@@ -227,7 +227,7 @@ const recipientMaxRunes = 200
 // recipientName is who this reply is written to, or nothing.
 //
 // A failure to resolve the name degrades to no name rather than failing the
-// draft: the person may be outside this caller's scope, the activity may be
+// draft: the contact may be outside this caller's scope, the activity may be
 // linked to nobody, and in both cases an unnamed greeting is the honest answer.
 // The reason is logged, so a lookup that breaks for some other cause is visible
 // rather than silently reading as "no recipient".
@@ -251,7 +251,7 @@ func (d replyDrafter) recipientName(ctx context.Context, anchor ids.ActivityID) 
 
 // conversationState places the message being answered on the silence axis.
 //
-// A reply reads its own anchor rather than the person's whole history, which is
+// A reply reads its own anchor rather than the contact's whole history, which is
 // the honest scope for this surface: the drafter was pointed at one activity
 // and asked to answer it. Which direction that message went decides what the
 // reply owes — an inbound message is a question waiting, an outbound one is our

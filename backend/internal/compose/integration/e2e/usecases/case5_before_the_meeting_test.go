@@ -17,7 +17,7 @@ package usecases
 // half and stays out of this suite; what is pinned here is what Margince has to
 // hand back once the account is known.
 //
-// The criteria this file covers are the deterministic ones: every person is
+// The criteria this file covers are the deterministic ones: every contact is
 // named (4), every event carries its date (3), and a cold account reports a
 // NUMBER rather than "a while ago" (7). Whether a model writes a good briefing
 // from that material is the weekly model lane's question.
@@ -28,7 +28,7 @@ package usecases
 //     assistant resolving "Vietnam partner" from a calendar, which is its half.
 //   - Criterion 5, the unkept promise. It needs a model to notice that
 //     something promised was never sent.
-//   - Criterion 9, a caller who may not read a person being refused rather than
+//   - Criterion 9, a caller who may not read a contact being refused rather than
 //     shown a blank. AppEnv mints its passport for whoever holds the cookie and
 //     exposes no role control, so the restricted principal cannot be built over
 //     MCP today. networktools_integration_test.go covers it in process.
@@ -49,7 +49,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// meetingFixture is the account a briefing is asked about: a deal, the people
+// meetingFixture is the account a briefing is asked about: a deal, the contacts
 // on it, and the exchange history that decides who counts as engaged.
 type meetingFixture struct {
 	company ids.UUID
@@ -68,8 +68,8 @@ type meetingFixture struct {
 }
 
 const (
-	engagedPersonName = "Mai Nguyen"
-	quietPersonName   = "Tobias Kern"
+	engagedContactName = "Mai Nguyen"
+	quietContactName   = "Tobias Kern"
 	// coldDays is how long the cold fixture's account has been silent. Well
 	// past the 30-day threshold, so the finding is not sitting on a boundary
 	// that a clock skew could tip either way.
@@ -98,14 +98,14 @@ func (s *scenario) seedMeetingAccount(t *testing.T) meetingFixture {
 		VALUES ($1, $2, $3, $4, $5, 'Distribution agreement', 'open', 'manual', 'human:x')`,
 		s.Colleague, f.company, pipeline, stage)
 
-	f.engaged = s.seedPerson(t, engagedPersonName, f.company)
-	f.quiet = s.seedPerson(t, quietPersonName, f.company)
+	f.engaged = s.seedContact(t, engagedContactName, f.company)
+	f.quiet = s.seedContact(t, quietContactName, f.company)
 
 	// Both are seats on the deal. Only one of them has spoken.
-	s.seed(t, `INSERT INTO relationship (id, kind, deal_id, person_id, role, source, captured_by)
+	s.seed(t, `INSERT INTO relationship (id, kind, deal_id, contact_id, role, source, captured_by)
 		VALUES ($1, 'deal_stakeholder', $2, $3, 'champion', 'manual', 'human:x')`,
 		ids.NewV7(), f.deal, f.engaged)
-	s.seed(t, `INSERT INTO relationship (id, kind, deal_id, person_id, role, source, captured_by)
+	s.seed(t, `INSERT INTO relationship (id, kind, deal_id, contact_id, role, source, captured_by)
 		VALUES ($1, 'deal_stakeholder', $2, $3, 'economic_buyer', 'manual', 'human:x')`,
 		ids.NewV7(), f.deal, f.quiet)
 
@@ -140,8 +140,8 @@ func (s *scenario) seedColdAccount(t *testing.T) meetingFixture {
 		VALUES ($1, $2, $3, $4, $5, 'Renewal', 'open', 'manual', 'human:x')`,
 		s.Colleague, f.company, pipeline, stage)
 
-	f.engaged = s.seedPerson(t, engagedPersonName, f.company)
-	s.seed(t, `INSERT INTO relationship (id, kind, deal_id, person_id, role, source, captured_by)
+	f.engaged = s.seedContact(t, engagedContactName, f.company)
+	s.seed(t, `INSERT INTO relationship (id, kind, deal_id, contact_id, role, source, captured_by)
 		VALUES ($1, 'deal_stakeholder', $2, $3, 'champion', 'manual', 'human:x')`,
 		ids.NewV7(), f.deal, f.engaged)
 
@@ -153,12 +153,12 @@ func (s *scenario) seedColdAccount(t *testing.T) meetingFixture {
 	return f
 }
 
-// seedPerson adds a contact employed at the company.
-func (s *scenario) seedPerson(t *testing.T, name string, company ids.UUID) ids.UUID {
+// seedContact adds a contact employed at the company.
+func (s *scenario) seedContact(t *testing.T, name string, company ids.UUID) ids.UUID {
 	t.Helper()
-	id := s.seedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+	id := s.seedID(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, $3, 'manual', 'human:x')`, s.Colleague, name)
-	s.seed(t, `INSERT INTO relationship (id, kind, person_id, company_id, source, captured_by)
+	s.seed(t, `INSERT INTO relationship (id, kind, contact_id, company_id, source, captured_by)
 		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, ids.NewV7(), id, company)
 	return id
 }
@@ -169,7 +169,7 @@ func (s *scenario) seedPerson(t *testing.T, name string, company ids.UUID) ids.U
 // event carries the date it happened, and a briefing that quotes a date from
 // somebody's prose instead of the record is the defect #2059 was merged for.
 func (s *scenario) seedDatedActivity(
-	t *testing.T, kind, direction string, person, company, deal ids.UUID, occurredAt time.Time, body string,
+	t *testing.T, kind, direction string, contact, company, deal ids.UUID, occurredAt time.Time, body string,
 ) ids.UUID {
 	t.Helper()
 	id := s.seedID(t, `INSERT INTO activity
@@ -177,27 +177,27 @@ func (s *scenario) seedDatedActivity(
 		VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, kind, direction, occurredAt, body)
 
 	// One link row per target, because activity_link_shape allows exactly one
-	// id per row: a row naming both a person and a company is refused.
+	// id per row: a row naming both a contact and a company is refused.
 	//
 	// THE DEAL LINK IS LOAD-BEARING. deal.last_activity_at is maintained by a
 	// trigger on activity_link, and the coverage rules read that column to
 	// decide whether the deal has ever been touched. An exchange linked only
-	// to the person and the company leaves the deal looking untouched, and
+	// to the contact and the company leaves the deal looking untouched, and
 	// every risk that gates on EverTouched stays silent — which is what this
 	// fixture did before Codex pointed at it.
-	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), id, person)
+	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), id, contact)
 	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, company_id)
 		VALUES ($1, $2, 'company', $3)`, ids.NewV7(), id, company)
 	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
 		VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), id, deal)
 
-	// The participant row every real logging path writes for a person-linked
-	// interaction. Relationship strength and the person graph are projected
+	// The participant row every real logging path writes for a contact-linked
+	// interaction. Relationship strength and the contact graph are projected
 	// from these, so an exchange without one is a conversation the product
-	// cannot see two people having.
-	s.seed(t, `INSERT INTO activity_participant (id, activity_id, person_id, role)
-		VALUES ($1, $2, $3, $4)`, ids.NewV7(), id, person, participantRoleFor(direction))
+	// cannot see two contacts having.
+	s.seed(t, `INSERT INTO activity_participant (id, activity_id, contact_id, role)
+		VALUES ($1, $2, $3, $4)`, ids.NewV7(), id, contact, participantRoleFor(direction))
 	return id
 }
 
@@ -241,45 +241,45 @@ func TestCase5EveryStakeholderIsNamedNotJustIdentified(t *testing.T) {
 	}
 	byName := map[string]agents.CoverageSeat{}
 	for _, seat := range answer.Stakeholders {
-		if seat.PersonName == "" {
+		if seat.ContactName == "" {
 			t.Fatalf("case 5 criterion 4: the %s seat came back as %s with no name — a rep cannot "+
-				"be told who to bring into the room", seat.Role, seat.PersonID)
+				"be told who to bring into the room", seat.Role, seat.ContactID)
 		}
-		byName[seat.PersonName] = seat
+		byName[seat.ContactName] = seat
 	}
 
 	// Criterion 7's other half: engaged and quiet must be told apart. A tool
 	// that marked everyone engaged would pass a name check and still tell the
 	// rep the deal is covered when it is not.
-	engaged, ok := byName[engagedPersonName]
+	engaged, ok := byName[engagedContactName]
 	if !ok {
 		t.Fatalf("case 5 criterion 4: the engaged stakeholder is missing; got %v", keysOf(byName))
 	}
 	if !engaged.Engaged {
 		t.Fatalf("case 5: %s has traffic both ways inside the window and is reported as not engaged",
-			engagedPersonName)
+			engagedContactName)
 	}
-	quiet, ok := byName[quietPersonName]
+	quiet, ok := byName[quietContactName]
 	if !ok {
 		t.Fatalf("case 5 criterion 4: the quiet stakeholder is missing; got %v", keysOf(byName))
 	}
 	if quiet.Engaged {
 		t.Fatalf("case 5: %s has never spoken and is reported as engaged, which tells a rep the "+
-			"economic buyer is covered when nobody has heard from them", quietPersonName)
+			"economic buyer is covered when nobody has heard from them", quietContactName)
 	}
 }
 
-// TestCase5AFindingNamesThePeopleItIsAbout pins criterion 4's second half.
+// TestCase5AFindingNamesTheContactsItIsAbout pins criterion 4's second half.
 //
 // A finding that says "the deal rests on one relationship" and lists a uuid
 // makes the rep go look the name up, which is the work the tool exists to save.
 //
 // The fixture is built so a finding MUST exist: one engaged contact on an open
-// deal is single_threaded_theirs, and it carries the person it is about. The
+// deal is single_threaded_theirs, and it carries the contact it is about. The
 // test demands that finding by name rather than looping over whatever came
 // back — a loop over an empty list asserts nothing, and risk generation could
 // be deleted without this test noticing.
-func TestCase5AFindingNamesThePeopleItIsAbout(t *testing.T) {
+func TestCase5AFindingNamesTheContactsItIsAbout(t *testing.T) {
 	s := boot(t, scopesRead)
 	f := s.seedMeetingAccount(t)
 
@@ -292,28 +292,28 @@ func TestCase5AFindingNamesThePeopleItIsAbout(t *testing.T) {
 		t.Fatalf("case 5 criterion 4: the deal has exactly one engaged contact, so %q must be "+
 			"reported; findings were %v", network.RiskSingleThreadedTheirs, kindsOf(answer.Risks))
 	}
-	if len(risk.People) == 0 {
+	if len(risk.Contacts) == 0 {
 		t.Fatalf("case 5 criterion 4: the %q finding names nobody, so a rep is told the deal rests "+
 			"on one relationship without being told whose", risk.Kind)
 	}
 
 	// The pairing is the assertion, not the two lengths. Names travel INSIDE
 	// one object with their ids precisely so a consumer cannot attach the
-	// wrong name to the wrong person — checking only that the lists are the
+	// wrong name to the wrong contact — checking only that the lists are the
 	// same length would pass on exactly the misattribution the shape prevents.
-	for _, person := range risk.People {
-		if person.Name == "" {
-			t.Fatalf("case 5 criterion 4: the %q finding names person %s with no name",
-				risk.Kind, person.PersonID)
+	for _, contact := range risk.Contacts {
+		if contact.Name == "" {
+			t.Fatalf("case 5 criterion 4: the %q finding names contact %s with no name",
+				risk.Kind, contact.ContactID)
 		}
-		if person.PersonID != f.engaged {
+		if contact.ContactID != f.engaged {
 			t.Fatalf("case 5 criterion 4: the %q finding is about %s, but the only engaged contact "+
-				"on this deal is %s", risk.Kind, person.PersonID, f.engaged)
+				"on this deal is %s", risk.Kind, contact.ContactID, f.engaged)
 		}
-		if person.Name != engagedPersonName {
-			t.Fatalf("case 5 criterion 4: person %s is named %q in the finding and %q in the CRM — "+
+		if contact.Name != engagedContactName {
+			t.Fatalf("case 5 criterion 4: contact %s is named %q in the finding and %q in the CRM — "+
 				"a rep repeating that sentence names the wrong human",
-				person.PersonID, person.Name, engagedPersonName)
+				contact.ContactID, contact.Name, engagedContactName)
 		}
 	}
 }

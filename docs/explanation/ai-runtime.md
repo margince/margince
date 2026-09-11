@@ -121,7 +121,7 @@ Per task:
 | `company_context.scopes` | any of `identity`, `positioning`, `sales`, `offer`, `market`, `proof`, `administrative` | which bounded views of the company profile may be injected. That declaration order is also the wire and fingerprint order, so re-ordering a selection cannot make it hash differently. |
 | `company_context.token_budget` | positive int | what the renderer bounds the block by. Required with any scope — at zero the scopes would ride no prompt — and refused without one, since a budget attached to a policy that selects nothing reads as a deleted scope list. |
 | `company_context.conditional` | `true` (or absent) | inject only when the caller asks, rather than always. |
-| `cost_unit` | rule name, or absent | which pre-flight estimator rule prices this task (`per_message`, `per_person`; `per_entity` for embed). The arithmetic stays in code — naming the rule here is what lets the build prove the mapping is **total** in both directions. Absent means unpriced. |
+| `cost_unit` | rule name, or absent | which pre-flight estimator rule prices this task (`per_message`, `per_contact`; `per_entity` for embed). The arithmetic stays in code — naming the rule here is what lets the build prove the mapping is **total** in both directions. Absent means unpriced. |
 | `doc` | string | carried through into the generated constant's comment. Prose only: nothing may depend on it. |
 
 `make gen` compiles this into `tasks_gen.go` (and the routing shape in `config/margince.schema.json`);
@@ -294,9 +294,9 @@ model-call hot path.
     else its own tier's current binding (so a rebind re-prices instantly), else
     the ladder head if that tier is now unbound.
   - **Expected units** come from the connection's completed backfill yields:
-    messages to classify, people to enrich, entities to embed. A run measures its
+    messages to classify, contacts to enrich, entities to embed. A run measures its
     own yield as it pages — the counterparty resolver reports whether an ensure
-    *minted* a person/company or merely resolved onto rows that already
+    *minted* a contact/company or merely resolved onto rows that already
     existed, and those counts commit in the same statement as `scanned`/`captured`,
     so a page that fails to commit counts nothing.
   - **When there's nothing to price from, the preview says so instead of
@@ -306,12 +306,12 @@ model-call hot path.
     cost-read failure degrades it to a plain message count — never a block on the
     consent flow.
 
-  *(Two deliberate under-counts. The people/company yields count only what a run's own
+  *(Two deliberate under-counts. The contacts/company yields count only what a run's own
   pages minted: a sender the tier gate defers is resolved by the verdict engine
-  long after that page, and the person it may eventually mint is nobody's page to
+  long after that page, and the contact it may eventually mint is nobody's page to
   claim. So a run that minted nobody reports "ratio unavailable" rather than zero
-  people, floating the enrich line to its `heuristic` floor instead of quoting a
-  confident $0. And the cold-start floor counts message embeds only: person/company
+  contacts, floating the enrich line to its `heuristic` floor instead of quoting a
+  confident $0. And the cold-start floor counts message embeds only: contact/company
   embeds would over-quote at its full-email unit size.)*
 
 ## Certification — proving a binding is good enough

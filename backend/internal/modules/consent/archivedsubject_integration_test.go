@@ -12,13 +12,13 @@ package consent
 // The split is by STATE, not by subject. A withdrawal must stay recordable
 // because suppression depends on it, and it is the case you most want working
 // after somebody has asked to be forgotten. A grant must not: erasure
-// anonymizes in place, so the person row survives and an erased subject would
-// go on accruing fresh person_consent, consent_event, audit and outbox rows —
+// anonymizes in place, so the contact row survives and an erased subject would
+// go on accruing fresh contact_consent, consent_event, audit and outbox rows —
 // the accrual privacy/erasure.go's deletePreferenceToken destroys the emailed
 // capability to stop.
 //
 // Both subject kinds run because Record takes either and dispatches on which,
-// writing a different column of person_consent for each.
+// writing a different column of contact_consent for each.
 
 import (
 	"context"
@@ -46,7 +46,7 @@ func boundedRepCtx(ws, user ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Read: true, Update: true},
+				"contact": {Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeOwn,
 		},
@@ -61,44 +61,44 @@ func TestAnArchivedSubjectTakesAWithdrawalButNotAGrant(t *testing.T) {
 	// still pass.
 	t.Run("a withdrawal is still row-gated", func(t *testing.T) {
 		e := setupChannelConsent(t)
-		archiveConsentSubject(t, e.owner, "person", e.person.UUID)
+		archiveConsentSubject(t, e.owner, "contact", e.contact.UUID)
 		bounded := boundedRepCtx(e.ws, ids.NewV7())
 		// ErrPermissionDenied rather than ErrNotFound, and the difference says
-		// which half refused: a person row defaults to workspace visibility, so
+		// which half refused: a contact row defaults to workspace visibility, so
 		// this rep can SEE the subject — the scope clause admits them — and it
 		// is the write-authority arm that stops them, the row being owned by
 		// nobody they are. Existence-hiding has nothing left to hide once the
 		// caller has been shown the row.
 		if _, err := e.store.Record(bounded, RecordInput{
-			PersonID: e.person, PurposeID: e.newsletter, NewState: string(StateWithdrawn),
+			ContactID: e.contact, PurposeID: e.newsletter, NewState: string(StateWithdrawn),
 		}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Fatalf("withdrawing for a subject the caller may read but not change: got %v, want permission denied", err)
 		}
 		var rows int
 		if err := e.owner.QueryRow(context.Background(),
-			`SELECT count(*) FROM person_consent WHERE person_id = $1`, e.person).Scan(&rows); err != nil {
-			t.Fatalf("count person_consent: %v", err)
+			`SELECT count(*) FROM contact_consent WHERE contact_id = $1`, e.contact).Scan(&rows); err != nil {
+			t.Fatalf("count contact_consent: %v", err)
 		}
 		if rows != 0 {
-			t.Errorf("person_consent rows = %d, want 0 — a refused withdrawal still wrote", rows)
+			t.Errorf("contact_consent rows = %d, want 0 — a refused withdrawal still wrote", rows)
 		}
 	})
 
-	t.Run("a person", func(t *testing.T) {
+	t.Run("a contact", func(t *testing.T) {
 		e := setupChannelConsent(t)
-		archiveConsentSubject(t, e.owner, "person", e.person.UUID)
+		archiveConsentSubject(t, e.owner, "contact", e.contact.UUID)
 		assertConsentSplit(e.ctx, t, e.store, e.owner, RecordInput{
-			PersonID: e.person, PurposeID: e.newsletter,
-		}, "person_id", e.person.UUID)
+			ContactID: e.contact, PurposeID: e.newsletter,
+		}, "contact_id", e.contact.UUID)
 
 		// The slower route to the same grant used to be double-opt-in issuance,
-		// which reached person_consent without going through Record. There is
+		// which reached contact_consent without going through Record. There is
 		// no such route now — issuance refuses at the handler and mints
 		// nothing — so the only thing left to hold is that the table stayed
 		// empty for this subject.
 		var tokens int
 		if err := e.owner.QueryRow(context.Background(),
-			`SELECT count(*) FROM consent_doi_token WHERE person_id = $1`, e.person).Scan(&tokens); err != nil {
+			`SELECT count(*) FROM consent_doi_token WHERE contact_id = $1`, e.contact).Scan(&tokens); err != nil {
 			t.Fatalf("count consent_doi_token: %v", err)
 		}
 		if tokens != 0 {
@@ -133,7 +133,7 @@ func archiveConsentSubject(t *testing.T, owner *pgx.Conn, table string, id ids.U
 // archived subject and purpose, and checks that only the second lands.
 //
 // column, like archiveConsentSubject's table, is a test-local literal naming
-// person_consent's person or lead arm — never caller input.
+// contact_consent's contact or lead arm — never caller input.
 // ctx leads rather than t, against this package's usual helper shape: revive's
 // context-as-argument rule is enforced by the lint gate and rejects the other
 // order outright.
@@ -169,11 +169,11 @@ func assertConsentSplit(
 	var rows int
 	var state string
 	if err := owner.QueryRow(context.Background(),
-		`SELECT count(*), coalesce(max(state), '') FROM person_consent WHERE `+column+` = $1`,
+		`SELECT count(*), coalesce(max(state), '') FROM contact_consent WHERE `+column+` = $1`,
 		id).Scan(&rows, &state); err != nil {
-		t.Fatalf("read person_consent: %v", err)
+		t.Fatalf("read contact_consent: %v", err)
 	}
 	if rows != 1 || state != string(StateWithdrawn) {
-		t.Errorf("person_consent rows = %d state = %q, want 1 withdrawn", rows, state)
+		t.Errorf("contact_consent rows = %d state = %q, want 1 withdrawn", rows, state)
 	}
 }

@@ -19,9 +19,9 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -63,7 +63,7 @@ func (w *flipWriters) activityLinks(ctx context.Context, activityExt string) ([]
 }
 
 // Associate applies one estate edge after the row phase. Activity edges
-// were already applied at insert time (see activityLinks); person→company
+// were already applied at insert time (see activityLinks); contact→company
 // edges become employment relationship rows; deal→company edges set the
 // deal's company FK — IEM-FORM-2's detangling, on the edges the
 // mirror actually holds. Every non-applied edge returns its reason, so
@@ -90,12 +90,12 @@ func (w *flipWriters) Associate(ctx context.Context, a migration.Assoc) (migrati
 			return migration.AssocResult{}, fmt.Errorf("flip import: linking deal %s to company %s: %w", a.FromID, a.ToID, err)
 		}
 		return migration.AssocResult{Applied: true}, nil
-	case a.FromType == flipObjectPerson && a.ToType == flipObjectCompany:
-		personID := ids.From[ids.PersonKind](fromID)
+	case a.FromType == flipObjectContact && a.ToType == flipObjectCompany:
+		contactID := ids.From[ids.ContactKind](fromID)
 		companyID := ids.From[ids.CompanyKind](toID)
-		_, err := w.people.CreateRelationship(ctx, people.CreateRelationshipInput{
+		_, err := w.contacts.CreateRelationship(ctx, contacts.CreateRelationshipInput{
 			Kind:      "employment",
-			PersonID:  &personID,
+			ContactID: &contactID,
 			CompanyID: &companyID,
 			// The mirrored label is the incumbent's own answer, so it is stated
 			// either way — a non-primary association must not be promoted by the
@@ -104,17 +104,17 @@ func (w *flipWriters) Associate(ctx context.Context, a migration.Assoc) (migrati
 			Source:           w.provenance("relationship", a.FromID+"→"+a.ToID),
 		})
 		if err != nil {
-			// The employment edge is unique per (person, company):
+			// The employment edge is unique per (contact, company):
 			// a resumed run replaying its association phase re-offers an
 			// edge that already landed, which is convergence, not a
 			// failure — every other error still stops the run.
 			//
 			// The store is asked WHICH rule refused, because a second one
-			// answers here: the primary-employer index is keyed on the person
+			// answers here: the primary-employer index is keyed on the contact
 			// alone, and its refusal means this edge did not land at all.
 			// Reading that as convergence reported an import as applied while
 			// silently dropping the employment it was importing.
-			var conflict *people.RelationshipConflictError
+			var conflict *contacts.RelationshipConflictError
 			if errors.As(err, &conflict) && conflict.AlreadyRecorded() {
 				return migration.AssocResult{Applied: true}, nil
 			}
@@ -141,7 +141,7 @@ func (w *flipWriters) activityEdgeResult(ctx context.Context, a migration.Assoc)
 	if a.FromType != flipObjectActivity {
 		return migration.AssocResult{Reason: reasonUnmodelledEdge}, nil
 	}
-	// activity_link models person/company/deal only. A lead edge,
+	// activity_link models contact/company/deal only. A lead edge,
 	// which the incumbent does produce, has no native link to become.
 	if !activityLinkable(a.ToType) {
 		return migration.AssocResult{Reason: reasonUnmodelledEdge}, nil
@@ -171,7 +171,7 @@ func (w *flipWriters) activityEdgeResult(ctx context.Context, a migration.Assoc)
 // corresponds to a link that actually exists.
 func activityLinkable(entityType string) bool {
 	switch entityType {
-	case flipObjectPerson, flipObjectCompany, flipObjectDeal:
+	case flipObjectContact, flipObjectCompany, flipObjectDeal:
 		return true
 	default:
 		return false

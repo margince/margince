@@ -19,58 +19,58 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestMergePerson_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
+func TestMergeContact_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
 	firstAda := "Ada"
-	source, err := e.People.CreatePerson(admin, people.CreatePersonInput{
+	source, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
 		FullName: "Ada Source", FirstName: &firstAda, Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "ada.work@x.test", EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: "ada.work@x.test", EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("create source: %v", err)
 	}
-	target, err := e.People.CreatePerson(admin, people.CreatePersonInput{
+	target, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
 		FullName: "Ada Target", Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "ada.other@x.test", EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: "ada.other@x.test", EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("create target: %v", err)
 	}
-	src, tgt := PersonIDOf(ids.UUID(source.Id)), PersonIDOf(ids.UUID(target.Id))
+	src, tgt := ContactIDOf(ids.UUID(source.Id)), ContactIDOf(ids.UUID(target.Id))
 
-	survivor, err := e.People.MergePerson(admin, src, tgt)
+	survivor, err := e.Contacts.MergeContact(admin, src, tgt)
 	if err != nil {
 		t.Fatalf("merge: %v", err)
 	}
-	if PersonIDOf(ids.UUID(survivor.Id)) != tgt {
+	if ContactIDOf(ids.UUID(survivor.Id)) != tgt {
 		t.Fatalf("survivor = %s, want the target %s", survivor.Id, tgt)
 	}
 
 	// Referential integrity: nothing LIVE still points at the merged-away
 	// source (the source row itself keeps merged_into_id, that is the
 	// redirect and expected).
-	if n := e.WsCount(t, `SELECT count(*) FROM person_email WHERE person_id = $1`, src); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE contact_id = $1`, src); n != 0 {
 		t.Errorf("%d emails still point at the merged-away source", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM person_email WHERE person_id = $1`, tgt); n != 2 {
+	if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE contact_id = $1`, tgt); n != 2 {
 		t.Errorf("survivor has %d emails, want both relinked", n)
 	}
 	// Primary demotion: exactly one primary work email survives on B.
-	if n := e.WsCount(t, `SELECT count(*) FROM person_email WHERE person_id = $1 AND email_type = 'work' AND is_primary AND archived_at IS NULL`, tgt); n != 1 {
+	if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE contact_id = $1 AND email_type = 'work' AND is_primary AND archived_at IS NULL`, tgt); n != 1 {
 		t.Errorf("survivor has %d primary work emails, want exactly 1 (A's must demote)", n)
 	}
 
 	// Fill-only survivorship: B had no first_name, so it takes A's.
-	after, err := e.People.GetPerson(admin, tgt, storekit.LiveOnly)
+	after, err := e.Contacts.GetContact(admin, tgt, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read survivor: %v", err)
 	}
@@ -79,24 +79,24 @@ func TestMergePerson_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
 	}
 
 	// The source is archived with a one-hop redirect and no longer live.
-	if _, err := e.People.GetPerson(admin, src, storekit.LiveOnly); err == nil {
+	if _, err := e.Contacts.GetContact(admin, src, storekit.LiveOnly); err == nil {
 		t.Error("merged-away source still reads as live")
 	}
-	archived, err := e.People.GetPerson(admin, src, storekit.IncludeArchived)
+	archived, err := e.Contacts.GetContact(admin, src, storekit.IncludeArchived)
 	if err != nil {
 		t.Fatalf("read archived source: %v", err)
 	}
-	if archived.MergedIntoId == nil || PersonIDOf(ids.UUID(*archived.MergedIntoId)) != tgt {
+	if archived.MergedIntoId == nil || ContactIDOf(ids.UUID(*archived.MergedIntoId)) != tgt {
 		t.Errorf("source merged_into_id = %v, want the target %s", archived.MergedIntoId, tgt)
 	}
 }
 
-func TestMergePerson_consentMergesRestrictively(t *testing.T) {
+func TestMergeContact_consentMergesRestrictively(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	source := e.SeedPerson(t, "Consent Source", nil)
-	target := e.SeedPerson(t, "Consent Target", nil)
+	source := e.SeedContact(t, "Consent Source", nil)
+	target := e.SeedContact(t, "Consent Target", nil)
 
 	// One shared purpose; the source WITHDREW, the target GRANTED. The
 	// restrictive rule says a merge may only ever REDUCE what the workspace
@@ -104,17 +104,17 @@ func TestMergePerson_consentMergesRestrictively(t *testing.T) {
 	// withdrawn — never the other way round.
 	purpose := ids.NewV7()
 	e.WsExec(t, `INSERT INTO consent_purpose (id, key, label) VALUES ($1, 'marketing', 'Marketing')`, purpose)
-	e.WsExec(t, `INSERT INTO person_consent (person_id, purpose_id, state) VALUES ($1, $2, 'withdrawn')`, source, purpose)
-	e.WsExec(t, `INSERT INTO person_consent (person_id, purpose_id, state) VALUES ($1, $2, 'granted')`, target, purpose)
+	e.WsExec(t, `INSERT INTO contact_consent (contact_id, purpose_id, state) VALUES ($1, $2, 'withdrawn')`, source, purpose)
+	e.WsExec(t, `INSERT INTO contact_consent (contact_id, purpose_id, state) VALUES ($1, $2, 'granted')`, target, purpose)
 
-	if _, err := e.People.MergePerson(admin, PersonIDOf(source), PersonIDOf(target)); err != nil {
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(source), ContactIDOf(target)); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
 	var state string
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT state FROM person_consent WHERE person_id = $1 AND purpose_id = $2`, target, purpose).Scan(&state)
+		return tx.QueryRow(ctx, `SELECT state FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`, target, purpose).Scan(&state)
 	}); err != nil {
 		t.Fatalf("read survivor consent: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestMergePerson_consentMergesRestrictively(t *testing.T) {
 		t.Errorf("survivor consent = %q, want withdrawn (a merge only ever tightens)", state)
 	}
 	// The source's consent row folded in, none left behind.
-	if n := e.WsCount(t, `SELECT count(*) FROM person_consent WHERE person_id = $1`, source); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM contact_consent WHERE contact_id = $1`, source); n != 0 {
 		t.Errorf("%d consent rows still point at the merged-away source", n)
 	}
 }
@@ -131,29 +131,29 @@ func TestMergeCompany_hierarchyReparenting(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	source, err := e.People.CreateCompany(admin, people.CreateCompanyInput{DisplayName: "Acme Source", Source: "manual"})
+	source, err := e.Contacts.CreateCompany(admin, contacts.CreateCompanyInput{DisplayName: "Acme Source", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create source: %v", err)
 	}
-	target, err := e.People.CreateCompany(admin, people.CreateCompanyInput{DisplayName: "Acme Target", Source: "manual"})
+	target, err := e.Contacts.CreateCompany(admin, contacts.CreateCompanyInput{DisplayName: "Acme Target", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create target: %v", err)
 	}
 	srcID, tgtID := companyIDOf(ids.UUID(source.Id)), companyIDOf(ids.UUID(target.Id))
 	// A child sits under the source.
-	child, err := e.People.CreateCompany(admin, people.CreateCompanyInput{
+	child, err := e.Contacts.CreateCompany(admin, contacts.CreateCompanyInput{
 		DisplayName: "Acme Child", ParentCompanyID: &srcID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create child: %v", err)
 	}
 
-	if _, err := e.People.MergeCompany(admin, srcID, tgtID); err != nil {
+	if _, err := e.Contacts.MergeCompany(admin, srcID, tgtID); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
 	// The child is re-homed under the survivor.
-	got, err := e.People.GetCompany(admin, companyIDOf(ids.UUID(child.Id)), storekit.LiveOnly)
+	got, err := e.Contacts.GetCompany(admin, companyIDOf(ids.UUID(child.Id)), storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read child: %v", err)
 	}
@@ -169,11 +169,11 @@ func TestMergeCompany_partnerExtensionMovesIntoVacancy(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	source, err := e.People.CreateCompany(admin, people.CreateCompanyInput{DisplayName: "Partner Source", Source: "manual"})
+	source, err := e.Contacts.CreateCompany(admin, contacts.CreateCompanyInput{DisplayName: "Partner Source", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create source: %v", err)
 	}
-	target, err := e.People.CreateCompany(admin, people.CreateCompanyInput{DisplayName: "Plain Target", Source: "manual"})
+	target, err := e.Contacts.CreateCompany(admin, contacts.CreateCompanyInput{DisplayName: "Plain Target", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create target: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestMergeCompany_partnerExtensionMovesIntoVacancy(t *testing.T) {
 	e.WsExec(t, `INSERT INTO company_relationship_type (company_id, relationship_type, source, captured_by)
 		VALUES ($1, 'partner', 'manual', 'human:test')`, srcID)
 
-	if _, err := e.People.MergeCompany(admin, srcID, tgtID); err != nil {
+	if _, err := e.Contacts.MergeCompany(admin, srcID, tgtID); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -196,7 +196,7 @@ func TestMergeCompany_partnerExtensionMovesIntoVacancy(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM partner WHERE company_id = $1`, srcID); n != 0 {
 		t.Errorf("%d partner rows still point at the merged-away source", n)
 	}
-	got, err := e.People.GetCompany(admin, tgtID, storekit.LiveOnly)
+	got, err := e.Contacts.GetCompany(admin, tgtID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read survivor: %v", err)
 	}
@@ -215,31 +215,31 @@ func TestMerge_errorPaths(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	a := e.SeedPerson(t, "A", nil)
-	b := e.SeedPerson(t, "B", nil)
-	c := e.SeedPerson(t, "C", nil)
+	a := e.SeedContact(t, "A", nil)
+	b := e.SeedContact(t, "B", nil)
+	c := e.SeedContact(t, "C", nil)
 
 	// Self-merge.
-	var selfErr *people.MergeSelfError
-	if _, err := e.People.MergePerson(admin, PersonIDOf(a), PersonIDOf(a)); !errors.As(err, &selfErr) {
-		t.Fatalf("self-merge → %v, want people.MergeSelfError", err)
+	var selfErr *contacts.MergeSelfError
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(a)); !errors.As(err, &selfErr) {
+		t.Fatalf("self-merge → %v, want contacts.MergeSelfError", err)
 	}
 
 	// First merge succeeds; a second merge OF the same source answers
 	// AlreadyMerged with the redirect pointer.
-	if _, err := e.People.MergePerson(admin, PersonIDOf(a), PersonIDOf(b)); err != nil {
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(b)); err != nil {
 		t.Fatalf("first merge: %v", err)
 	}
-	var already *people.AlreadyMergedError
-	if _, err := e.People.MergePerson(admin, PersonIDOf(a), PersonIDOf(c)); !errors.As(err, &already) {
-		t.Fatalf("re-merge of a merged-away source → %v, want people.AlreadyMergedError", err)
+	var already *contacts.AlreadyMergedError
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(c)); !errors.As(err, &already) {
+		t.Fatalf("re-merge of a merged-away source → %v, want contacts.AlreadyMergedError", err)
 	} else if already.IntoID != b {
 		t.Errorf("AlreadyMerged points at %s, want the first survivor %s", already.IntoID, b)
 	}
 
 	// Merging INTO a merged-away (archived) target is refused.
-	var deadTarget *people.MergedTargetError
-	if _, err := e.People.MergePerson(admin, PersonIDOf(c), PersonIDOf(a)); !errors.As(err, &deadTarget) {
-		t.Fatalf("merge into a dead target → %v, want people.MergedTargetError", err)
+	var deadTarget *contacts.MergedTargetError
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(c), ContactIDOf(a)); !errors.As(err, &deadTarget) {
+		t.Fatalf("merge into a dead target → %v, want contacts.MergedTargetError", err)
 	}
 }

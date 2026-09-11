@@ -41,14 +41,14 @@ const SYSTEM_SWEEP = notDisplayed(
 //
 // Their attribution is why this is a reason of its own rather than the sweep's:
 // compose binds the requester as OnBehalfOf when a human asked
-// (deepreadprincipal.go), so those occurrences resolve to that person and land
+// (deepreadprincipal.go), so those occurrences resolve to that contact and land
 // in their personal feed — while a read requested by domain triage or the
 // auto-enrich sweep names no human and is workspace-scoped like any sweep.
 // Calling all three "work that belongs to nobody" is false for the commonest
 // case, and a kind-level map cannot say "sometimes personal" in the SYSTEM_SWEEP
 // sentence.
 const SITE_READ_WATCHED_WHERE_IT_RUNS = notDisplayed(
-  "the site-read lanes, which are the individual model calls a website read makes. The read narrates itself: `site_read` below is one occurrence for the whole crawl, announced by the dossier row from the moment it is queued to the moment it settles, so a line per call would tell one reading several times over. These three no longer report at all — the rail registry has them as steps inside the read — and the names survive here because rows written before that are served until the projection's retention window closes over them, and because the same list is what a caller may filter on. Their attribution was never the task's either: a human-requested read carries that person as on_behalf_of and IS personal to them, while a domain-triage or auto-enrich read names no human and is workspace-scoped, exactly like the sweeps above",
+  "the site-read lanes, which are the individual model calls a website read makes. The read narrates itself: `site_read` below is one occurrence for the whole crawl, announced by the dossier row from the moment it is queued to the moment it settles, so a line per call would tell one reading several times over. These three no longer report at all — the rail registry has them as steps inside the read — and the names survive here because rows written before that are served until the projection's retention window closes over them, and because the same list is what a caller may filter on. Their attribution was never the task's either: a human-requested read carries that contact as on_behalf_of and IS personal to them, while a domain-triage or auto-enrich read names no human and is workspace-scoped, exactly like the sweeps above",
 );
 
 /**
@@ -105,7 +105,7 @@ export const ACTIVITY_LINE: Readonly<
     failed: "agent.activity.documentExtract.failed",
   },
   // A company's website read end to end, from the button on its page. The
-  // other carrier a person presses and then waits on: the dossier row can say
+  // other carrier a contact presses and then waits on: the dossier row can say
   // queued and running, which is what lets the orb enter `ingest` for the
   // whole crawl rather than flicker on each settled model call.
   site_read: {
@@ -191,7 +191,7 @@ export const ACTIVITY_LINE: Readonly<
   capture_confidentiality_verdict: SYSTEM_SWEEP,
   capture_counterparty_verdict: SYSTEM_SWEEP,
   enrich: notDisplayed(
-    "it reaches nobody, and it would not be worth showing if it did — recording only the first half is what made this read like a gap somebody should close. Reachability: the one production site is the signature-enrichment pass, which runs under a system principal with no on_behalf_of, so ResolveActor scopes every occurrence to the workspace with a NULL actor_user_id while the personal feed selects on actor_user_id. Worth: it could not be per-person even if it were reachable. The pass mints ONE correlation id for the whole run (api/jobs.yaml capture_enrich, up to 100 candidates in series), and the occurrence key is correlation+task, so every candidate collapses into ONE row — a per-person subject would make that single row flap from one person to the next rather than narrate any of them. What a reader actually wants from this pass is what it FOUND, which is durable and already drawn as evidence-or-omit provenance on the person record. The ticker's own `enrich` key names DIFFERENT work (a provider run on a person, and the company page's Enrich card, which runs cold_start rather than this task), which is what makes this one easy to mistake for visible",
+    "it reaches nobody, and it would not be worth showing if it did — recording only the first half is what made this read like a gap somebody should close. Reachability: the one production site is the signature-enrichment pass, which runs under a system principal with no on_behalf_of, so ResolveActor scopes every occurrence to the workspace with a NULL actor_user_id while the personal feed selects on actor_user_id. Worth: it could not be per-contact even if it were reachable. The pass mints ONE correlation id for the whole run (api/jobs.yaml capture_enrich, up to 100 candidates in series), and the occurrence key is correlation+task, so every candidate collapses into ONE row — a per-contact subject would make that single row flap from one contact to the next rather than narrate any of them. What a reader actually wants from this pass is what it FOUND, which is durable and already drawn as evidence-or-omit provenance on the contact record. The ticker's own `enrich` key names DIFFERENT work (a provider run on a contact, and the company page's Enrich card, which runs cold_start rather than this task), which is what makes this one easy to mistake for visible",
   ),
   rate_extract: SYSTEM_SWEEP,
   signal_extract: SYSTEM_SWEEP,
@@ -266,7 +266,7 @@ export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
  * something every kind can have. Most occurrences are about no single record,
  * and the ones that are only carry a name when their emitter sends
  * `subject_label` — the document reading names its document, the website
- * read names its company, and the summary sites name the company, person or
+ * read names its company, and the summary sites name the company, contact or
  * meeting they were asked about. A total map here would demand copy for
  * sentences no server can produce, which is the boilerplate the notDisplayed
  * branch exists to avoid.

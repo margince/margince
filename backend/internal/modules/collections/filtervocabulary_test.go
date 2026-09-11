@@ -145,14 +145,14 @@ func TestEveryReportedOperatorCompilesAndEveryOmittedOneIsRefused(t *testing.T) 
 // reported the way the engine actually resolved it.
 func TestACustomColumnIsReportedCustomAndACollidingOneIsNot(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {
+		"contact": {
 			{Name: "cf_qa_owner", Type: fieldcatalog.TypeText},
 			// Collides with a core field; SegmentEngine keeps the core one.
 			{Name: "owner_id", Type: fieldcatalog.TypeText},
 		},
 	}})
 	byName := map[string]VocabularyField{}
-	fields, _, err := store.FilterVocabulary(readerCtx(), "person")
+	fields, _, err := store.FilterVocabulary(readerCtx(), "contact")
 	if err != nil {
 		t.Fatalf("filterVocabulary: %v", err)
 	}
@@ -299,18 +299,18 @@ func TestNoCustomFieldTypeMapsToAnIDColumn(t *testing.T) {
 // without the sort this passes by luck and a picker reshuffles between renders.
 func TestTheVocabularyIsOrderedTheSameWayTwice(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {
+		"contact": {
 			{Name: "cf_zeta", Type: fieldcatalog.TypeText},
 			{Name: "cf_alpha", Type: fieldcatalog.TypeNumber},
 			{Name: "cf_mid", Type: fieldcatalog.TypeDate},
 		},
 	}})
-	first, _, err := store.FilterVocabulary(readerCtx(), "person")
+	first, _, err := store.FilterVocabulary(readerCtx(), "contact")
 	if err != nil {
 		t.Fatalf("filterVocabulary: %v", err)
 	}
 	for range 8 {
-		again, _, err := store.FilterVocabulary(readerCtx(), "person")
+		again, _, err := store.FilterVocabulary(readerCtx(), "contact")
 		if err != nil {
 			t.Fatalf("filterVocabulary: %v", err)
 		}
@@ -342,14 +342,14 @@ func TestTheVocabularyIsOrderedTheSameWayTwice(t *testing.T) {
 func TestARetiredCustomColumnIsStillCompilableAndNoLongerOffered(t *testing.T) {
 	const retired, live = "cf_old_tier", "cf_tier"
 	store := (&Store{}).WithFieldCatalog(stubFilterable{
-		cols: map[string][]fieldcatalog.Column{"person": {
+		cols: map[string][]fieldcatalog.Column{"contact": {
 			{Name: retired, Type: fieldcatalog.TypeText},
 			{Name: live, Type: fieldcatalog.TypeText},
 		}},
 		retired: map[string]bool{retired: true},
 	})
 
-	fields, _, err := store.FilterVocabulary(readerCtx(), "person")
+	fields, _, err := store.FilterVocabulary(readerCtx(), "contact")
 	if err != nil {
 		t.Fatalf("filterVocabulary: %v", err)
 	}
@@ -365,7 +365,7 @@ func TestARetiredCustomColumnIsStillCompilableAndNoLongerOffered(t *testing.T) {
 	}
 
 	// The other half, through the engine the saved segment would be evaluated by.
-	engine, _, err := store.SegmentEngine(context.Background(), "person")
+	engine, _, err := store.SegmentEngine(context.Background(), "contact")
 	if err != nil {
 		t.Fatalf("segmentEngine: %v", err)
 	}
@@ -430,7 +430,7 @@ func TestEveryRetiredCoreFieldNamesARealCoreField(t *testing.T) {
 // principal with no list grant learns nothing about a workspace's custom fields.
 func TestReadingTheVocabularyNeedsTheListReadGrant(t *testing.T) {
 	ungranted := grantCtx("tag", principal.ObjectGrant{Read: true})
-	_, _, err := (&Store{}).FilterVocabulary(ungranted, "person")
+	_, _, err := (&Store{}).FilterVocabulary(ungranted, "contact")
 	if err == nil {
 		t.Fatal("a principal without list:read read the filter vocabulary")
 	}
@@ -450,11 +450,11 @@ func TestReadingTheVocabularyNeedsTheListReadGrant(t *testing.T) {
 // the grant types the value, exactly as everyone did before options travelled.
 func TestACustomPicklistsValuesNeedTheCatalogueGrant(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {{Name: "cf_tier", Type: fieldcatalog.TypePicklist, Options: []string{"gold", "silver"}}},
+		"contact": {{Name: "cf_tier", Type: fieldcatalog.TypePicklist, Options: []string{"gold", "silver"}}},
 	}})
 
 	blind := grantCtx("list", principal.ObjectGrant{Read: true})
-	withheld, ok, err := store.FilterVocabulary(blind, "person")
+	withheld, ok, err := store.FilterVocabulary(blind, "contact")
 	if err != nil || !ok {
 		t.Fatalf("filterVocabulary without custom_field:read: ok=%v err=%v — a missing grant narrows the answer, it does not refuse", ok, err)
 	}
@@ -473,7 +473,7 @@ func TestACustomPicklistsValuesNeedTheCatalogueGrant(t *testing.T) {
 
 	// The same store, one grant richer. Without this the assertion above would
 	// also pass against a stub whose options never arrived.
-	granted, _, err := store.FilterVocabulary(readerCtx(), "person")
+	granted, _, err := store.FilterVocabulary(readerCtx(), "contact")
 	if err != nil {
 		t.Fatalf("filterVocabulary with both grants: %v", err)
 	}
@@ -533,7 +533,7 @@ func TestAResourceWithNoEngineIsNotAnEmptyVocabulary(t *testing.T) {
 // branch honest rather than dead: it fires the moment the two disagree.
 func TestEveryResourceTheContractAdmitsHasAnEngine(t *testing.T) {
 	for _, admitted := range []crmcontracts.GetFilterVocabularyParamsResource{
-		crmcontracts.GetFilterVocabularyParamsResourcePerson,
+		crmcontracts.GetFilterVocabularyParamsResourceContact,
 		crmcontracts.GetFilterVocabularyParamsResourceCompany,
 		crmcontracts.GetFilterVocabularyParamsResourceDeal,
 		crmcontracts.GetFilterVocabularyParamsResourceLead,

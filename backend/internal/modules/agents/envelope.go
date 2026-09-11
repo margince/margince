@@ -10,7 +10,7 @@ package agents
 // know this, and how current is it? Worse, it could not tell "no records
 // matched" from "records matched and you may not see them" — the one confusion
 // that produces a WRONG answer rather than a thin one, because the agent then
-// tells a person a record does not exist when it does.
+// tells a contact a record does not exist when it does.
 //
 // NONE OF THE SIX FIELDS IS NEW INFORMATION. Each reports something the call
 // already computed and then discarded: the correlation id the HTTP layer mints
@@ -129,7 +129,7 @@ var taintOf = map[string]int{trustSystem: 0, trustInternal: 1, trustExternal: 2}
 
 // capturedByHuman is the actor-kind prefix that earns T1. Provenance spells the
 // writer as "<kind>:<id>" (provenance.Provenance) and the kinds are the
-// contract's: human, agent, connector, system. Only the first is a person
+// contract's: human, agent, connector, system. Only the first is a contact
 // typing into this product; the rest are automated writers whose content this
 // surface must not present as first-party.
 const capturedByHuman = "human"
@@ -230,7 +230,7 @@ func (f *envelopeFacts) servedCount() int {
 // non-authoritative is mirror-backed content from another system, which is T2 by
 // definition. Otherwise the writer decides: a human typing into this product is
 // T1, and every automated writer — a connector sync, an agent, a system job — is
-// T2, because their content originates outside a person's keyboard and the
+// T2, because their content originates outside a contact's keyboard and the
 // doctrine is that such content is data, never instructions.
 //
 // UNREADABLE PROVENANCE IS T2. A row this cannot read a writer off is a row this
@@ -263,7 +263,7 @@ func provenanceOf(rec datasource.Record) (source, capturedBy string) {
 }
 
 // noteEvidence records a record an answer NAMES without carrying its content —
-// the deal a move acknowledges, the person an intro path goes through. It adds a
+// the deal a move acknowledges, the contact an intro path goes through. It adds a
 // reference and moves no tier: a reference is not content, and an id the caller
 // can follow says nothing about how far the row behind it can be trusted. A
 // handler whose answer carries record CONTENT calls noteRecord (it holds the
@@ -426,7 +426,7 @@ func sealEnvelope(spec mcp.ToolSpec, trace string, facts *envelopeFacts, data js
 // that anything was actually removed. That is the whole point — a count would be
 // precisely the side channel existence-hiding closes, while saying nothing at
 // all leaves "no records matched" and "records matched and you may not see them"
-// rendering identically, which is how an agent ends up telling a person a record
+// rendering identically, which is how an agent ends up telling a contact a record
 // does not exist when it does.
 //
 // EVERY tool raises it, not only the ones whose scope says `read`. Whether an

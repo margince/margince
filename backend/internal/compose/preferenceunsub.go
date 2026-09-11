@@ -30,7 +30,7 @@ func (a preferenceLinkAdapter) UnsubscribeToken(ctx context.Context, recipientEm
 	// one thing RFC 8058 exists to prevent.
 	//
 	// It also reaches recipients the preference token cannot: that mint
-	// resolves persons only, so a lead-only address carried NO header at all.
+	// resolves contacts only, so a lead-only address carried NO header at all.
 	token, ok, err := a.store.WithdrawalTokenForEmail(ctx, recipientEmail, purposeKey)
 	if err != nil || ok {
 		return token, ok, err
@@ -50,7 +50,7 @@ func (a preferenceLinkAdapter) UnsubscribeToken(ctx context.Context, recipientEm
 // nothing — the page could not read the subject their own purposes, because the
 // credential it was given was never meant to.
 //
-// A recipient this mint cannot resolve — a lead-only address holds no person
+// A recipient this mint cannot resolve — a lead-only address holds no contact
 // record — gets no manage token and the link falls back to the stop credential,
 // which draws the withdraw-only page. That page is honest about what it can do;
 // a dead preference link is not.

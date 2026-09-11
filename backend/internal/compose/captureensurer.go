@@ -3,7 +3,7 @@
 
 package compose
 
-// The adapter between capture's counterparty seam and the people module's
+// The adapter between capture's counterparty seam and the contacts module's
 // auto-create engine. It lives in compose because a module never imports a
 // sibling, and because what a captured counterparty is WORTH — a dossier for a
 // new company, a triage read for an unjudged domain, an identity review for a
@@ -18,44 +18,44 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// newCounterpartyStore builds the people store every counterparty-creation path
+// newCounterpartyStore builds the contacts store every counterparty-creation path
 // shares, with the consumer-mail reader wired in. The ensure ladder has to know
 // which domains can never name a company, and capture owns that list — so the
 // injection happens here, where a module reaching a sibling is allowed and a
 // module importing one is not.
 //
 // Every route into EnsureCounterpartyTx uses this: the capture sink, the
-// verdict engine, and the review-queue accept. A plain people.NewStore on any
+// verdict engine, and the review-queue accept. A plain contacts.NewStore on any
 // of them would silently fall back to the shipped baseline and ignore the
 // workspace's own corrections.
-func newCounterpartyStore(pool *pgxpool.Pool) *people.Store {
+func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
 	// The VAT-check enqueue rides here rather than being passed in, because
 	// every caller of this constructor is several layers below the composition
 	// that holds a job runner. A site read's accepted fields land through the
 	// approval effect's store, so without it the lane's main trigger queued
 	// nothing — see BindVatChecking.
 	// The audience derivation rides here for a reason of the same shape: the
-	// cohort repair FILES a captured meeting under the person it has just
+	// cohort repair FILES a captured meeting under the contact it has just
 	// resolved, and a meeting the capture limiter held for having no record is
 	// no longer that record-less thing once it does. activities owns the
-	// derivation, people may not import it, so compose hands it over.
-	return people.NewStore(InstallationDB(pool)).
+	// derivation, contacts may not import it, so compose hands it over.
+	return contacts.NewStore(InstallationDB(pool)).
 		WithConsumerMail(capture.MatcherTx).
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
 		WithVatCheckEnqueue(boundVatCheckEnqueue())
 }
 
-// peopleEnsurer adapts the people module's auto-create engine onto
+// contactsEnsurer adapts the contacts module's auto-create engine onto
 // capture's resolver seams — the mail one and the channel one. Both land in the
 // same module because both must resolve through the same dedupe chokepoint; the
 // contracts differ because a mail counterparty is named by an address and a
 // channel counterparty by a provider identity.
-type peopleEnsurer struct {
-	store *people.Store
+type contactsEnsurer struct {
+	store *contacts.Store
 	// triage queues the read that decides whether a domain this ensure just met
 	// deserves a company at all — and, when the answer is yes, creates it and
 	// fills it from the same crawl. It lives HERE rather than in capture
@@ -69,8 +69,8 @@ type peopleEnsurer struct {
 	log *slog.Logger
 }
 
-func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
-	res, err := p.store.EnsureCounterparty(ctx, people.EnsureCounterpartyInput{
+func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
+	res, err := p.store.EnsureCounterparty(ctx, contacts.EnsureCounterpartyInput{
 		Email:           in.Email,
 		DisplayName:     in.DisplayName,
 		Domain:          in.Domain,
@@ -85,7 +85,7 @@ func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensure
 		// only caller that asks for the workspace.
 		OwnerScoped: true,
 	})
-	if errors.Is(err, people.ErrCounterpartySuppressed) {
+	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		// A13: the erased address stays dead — a deliberate no-op, not a
 		// fault for the reconcile queue, and nothing was created to count.
 		return capture.EnsureOutcome{}, nil
@@ -100,10 +100,10 @@ func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensure
 		p.triage.domainPending(ctx, res.TriageDomain)
 	}
 	return capture.EnsureOutcome{
-		PersonCreated: res.PersonCreated,
-		PersonID:      res.PersonID.UUID,
-		CompanyQueued: res.TriagePending,
-		QueuedDomain:  res.TriageDomain,
+		ContactCreated: res.ContactCreated,
+		ContactID:      res.ContactID.UUID,
+		CompanyQueued:  res.TriagePending,
+		QueuedDomain:   res.TriageDomain,
 	}, nil
 }
 
@@ -111,8 +111,8 @@ func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensure
 // message (telegram-oa design §6.4). No company is derived and so no web
 // dossier is queued: this path derives no employer even from a corroborating
 // address, so there is nothing for the enrich trigger to read a website from.
-func (p peopleEnsurer) EnsureChannelCounterparty(ctx context.Context, in capture.EnsureChannelRequest) (capture.EnsureOutcome, error) {
-	res, err := p.store.EnsureChannelCounterparty(ctx, people.EnsureChannelCounterpartyInput{
+func (p contactsEnsurer) EnsureChannelCounterparty(ctx context.Context, in capture.EnsureChannelRequest) (capture.EnsureOutcome, error) {
+	res, err := p.store.EnsureChannelCounterparty(ctx, contacts.EnsureChannelCounterpartyInput{
 		Identity:           in.Identity,
 		DisplayName:        in.DisplayName,
 		CorroboratingEmail: in.CorroboratingEmail,
@@ -120,7 +120,7 @@ func (p peopleEnsurer) EnsureChannelCounterparty(ctx context.Context, in capture
 		Source:             in.Source,
 		CapturedBy:         in.CapturedBy,
 	})
-	if errors.Is(err, people.ErrCounterpartySuppressed) {
+	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		// A13 on the channel key: an erased subject stays dead — a deliberate
 		// no-op, not a fault for the reconcile queue, and nothing was created
 		// to count.
@@ -132,13 +132,13 @@ func (p peopleEnsurer) EnsureChannelCounterparty(ctx context.Context, in capture
 	if res.Conflict != nil {
 		p.raiseIdentityConflict(ctx, *res.Conflict, in.Source, in.CapturedBy)
 	}
-	return capture.EnsureOutcome{PersonCreated: res.PersonCreated, PersonID: res.PersonID.UUID}, nil
+	return capture.EnsureOutcome{ContactCreated: res.ContactCreated, ContactID: res.ContactID.UUID}, nil
 }
 
 // raiseIdentityConflict is the D8 identity-review half of routing (design
 // §7.3): the ensure above already routed the message deterministically and
 // wrote nothing onto the rival, so what remains is telling a human "these two
-// records may be one person." It runs in its own transaction (EnqueueIdentityConflict),
+// records may be one contact." It runs in its own transaction (EnqueueIdentityConflict),
 // AFTER the ensure's own commit, and deliberately swallows nothing into
 // silence — a failure is logged with the pair and both lanes so it is
 // actionable — but never returns an error: the message that surfaced this
@@ -147,7 +147,7 @@ func (p peopleEnsurer) EnsureChannelCounterparty(ctx context.Context, in capture
 // identity retries this call, and dedupequeue's own pair index absorbs the
 // repeat (EnqueueIdentityConflict's own contract), so a transient failure
 // here self-heals on the next message rather than needing a retry queue.
-func (p peopleEnsurer) raiseIdentityConflict(ctx context.Context, conflict people.LaneConflict, source, capturedBy string) {
+func (p contactsEnsurer) raiseIdentityConflict(ctx context.Context, conflict contacts.LaneConflict, source, capturedBy string) {
 	if _, err := p.store.EnqueueIdentityConflict(ctx, conflict, source, capturedBy); err != nil {
 		p.log.ErrorContext(ctx, "capture: identity-conflict review failed to enqueue",
 			"routed_to", conflict.RoutedTo.String(), "routed_lane", conflict.RoutedLane,

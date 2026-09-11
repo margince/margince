@@ -15,7 +15,7 @@ package gates
 // graph_*_edge table joins this census the commit it is created, because a
 // census a new table can silently miss has already failed (AGENTS.md rule 8).
 // The relationship table has its own, richer census in edgereaders_test.go —
-// asserted edges carry a dedicated grant; a projection is gated by the person
+// asserted edges carry a dedicated grant; a projection is gated by the contact
 // and activity objects it derives from.
 
 import (
@@ -80,15 +80,15 @@ var projectionMaintenanceSites = gatekit.Waive(map[string]string{
 	"internal/modules/search:recomputeContactPairs":          "the contact fold, same contract as recomputePairs: system principal, rewrites from base tables, returns nothing",
 	"internal/modules/search:affectedContactPairs":           "resolves which pairs an activity touches for the fold — including stale edges of a relinked participant; the keys never leave the maintenance path",
 	"internal/modules/search:affectedPairs":                  "the colleague half of affectedContactPairs, same contract: names which pairs an activity touches for the fold, stale edges of a relinked participant included, and the keys never leave the maintenance path",
-	"internal/modules/search:contactPairsForPerson":          "resolves a person's pairs for the fold on merge/archive; the keys never leave the maintenance path",
+	"internal/modules/search:contactPairsForContact":         "resolves a contact's pairs for the fold on merge/archive; the keys never leave the maintenance path",
 	"internal/compose/company360:contactRoutes":              "gated by its one caller: contacts.go asks mayReadRoutes (activity read — the projection derives from activity) before calling, and a refusal omits the routes rather than reaching this read",
-	"internal/compose/company360:readInContactWith":          "gated by its one caller: readOurSide requires person and activity read before calling, and only already-drawn contact ids reach it",
-	"internal/modules/search:RecomputeEdgesForPerson":        "maintenance entry point: re-folds one contact's edges under the system principal after a merge, archive or restore",
-	"internal/modules/search:DropEdgesForPerson":             "the erasure drop: deletes, returns nothing",
+	"internal/compose/company360:readInContactWith":          "gated by its one caller: readOurSide requires contact and activity read before calling, and only already-drawn contact ids reach it",
+	"internal/modules/search:RecomputeEdgesForContact":       "maintenance entry point: re-folds one contact's edges under the system principal after a merge, archive or restore",
+	"internal/modules/search:DropEdgesForContact":            "the erasure drop: deletes, returns nothing",
 	"internal/modules/search:RebuildEdges":                   "the corruption remedy: wholesale replace under the system principal",
 	"internal/modules/search:rebuildContactEdges":            "RebuildEdges' contact half, same contract",
 	"internal/modules/privacy:deleteSubjectInteractionEdges": "the Art. 17 erasure delete inside the erasure transaction; deletes on both endpoint columns and returns nothing",
-	"internal/modules/privacy:scrubPersonGraphTraces":        "the nightly retention delete inside the per-record transaction; deletes and returns nothing",
+	"internal/modules/privacy:scrubContactGraphTraces":       "the nightly retention delete inside the per-record transaction; deletes and returns nothing",
 })
 
 func TestEveryProjectionEdgeReaderIsAuthGatedOrRatified(t *testing.T) {

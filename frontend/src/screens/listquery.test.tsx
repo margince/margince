@@ -191,7 +191,7 @@ function ListTableHarness({
       columns={[
         {
           key: "name",
-          header: "people.name",
+          header: "contacts.name",
           cell: (row: Row) => row.name,
           sort: "full_name",
         },
@@ -236,7 +236,7 @@ function TwoListHarness({
   const columns = [
     {
       key: "name",
-      header: "people.name",
+      header: "contacts.name",
       cell: (row: Row) => row.name,
       sort: "name",
     },
@@ -465,7 +465,7 @@ describe("ListTable: query vocabulary", () => {
     render(<ListTableHarness fetchPage={fetchPage} />);
 
     const sortButton = await screen.findByRole("button", {
-      name: "Sort by people.name",
+      name: "Sort by contacts.name",
     });
     await userEvent.click(sortButton);
 
@@ -556,13 +556,13 @@ describe("ListTable: pending, error and empty states", () => {
       // API sent, and a failure with no problem behind it falls back to the
       // generic copy rather than putting an internal message on the screen.
       .mockRejectedValueOnce(
-        new ProblemError({ detail: "missing scope people:read" }),
+        new ProblemError({ detail: "missing scope contacts:read" }),
       )
       .mockResolvedValue(emptyPage());
     render(<ListTableHarness fetchPage={fetchPage} />);
 
     await screen.findByText("Couldn't load this view.");
-    expect(screen.getByText("missing scope people:read")).toBeTruthy();
+    expect(screen.getByText("missing scope contacts:read")).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
 

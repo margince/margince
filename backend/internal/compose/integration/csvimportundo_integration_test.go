@@ -7,7 +7,7 @@ package integration
 
 // The undo half of the migrate-in surface, end to end over real HTTP and a
 // real Postgres: upload, approve, undo — proving IEM-WIRE-9 and A93 against
-// the actual wiring (csvWriters.Reverse through people.Store), not a fake.
+// the actual wiring (csvWriters.Reverse through contacts.Store), not a fake.
 
 import (
 	"net/http"

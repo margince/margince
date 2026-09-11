@@ -71,7 +71,7 @@ func (h Handlers) GetClaimEvidence(w http.ResponseWriter, r *http.Request,
 	if !h.native(w, r) {
 		return
 	}
-	// A growth fit or dossier is for a person; an agent holding a passport has
+	// A growth fit or dossier is for a contact; an agent holding a passport has
 	// the records themselves and needs no receipt for them.
 	if err := auth.RequireHuman(r.Context()); err != nil {
 		httperr.Write(w, r, err)

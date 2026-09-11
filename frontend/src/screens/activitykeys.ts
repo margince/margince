@@ -37,7 +37,7 @@ const TIMELINE_SEED_KEYS: Partial<
   Record<EntityKind, (entityId: string) => QueryKey>
 > = {
   company: (id) => COMPANY_360_KEY(id),
-  person: (id) => ["person360", id],
+  contact: (id) => ["contact360", id],
   project: (id) => ["project", id, "360"],
 };
 
@@ -83,7 +83,7 @@ export function derivedRecordKeys(
 // every one of them is stale the moment a seat is added, re-roled or removed.
 // Keyed per deal by the reader (dealCoverageKey); named here as the prefix,
 // because a writer usually knows only that SOME deal's edges moved — a
-// stakeholder is seated from the person's page as readily as from the deal's.
+// stakeholder is seated from the contact's page as readily as from the deal's.
 export const DEAL_COVERAGE_KEY: QueryKey = ["deal-coverage"];
 
 const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey> = {
@@ -110,7 +110,7 @@ export function taskWriteKeys(
 // page and list, the company page — it embeds the account's projects with
 // their phase — is stale the moment the advance returns. A deal names no
 // contact of its own (the Deal schema carries company_id and project_id
-// only), so there is no person page to reach from here. Derived beside the
+// only), so there is no contact page to reach from here. Derived beside the
 // timeline keys so the 360 keys keep one spelling.
 export function dealWinKeys(
   deal: { project_id?: string | null; company_id?: string | null } | undefined,

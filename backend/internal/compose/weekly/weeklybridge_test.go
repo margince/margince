@@ -103,7 +103,7 @@ func TestADecidedOutcomeKeepsItsBarWhicheverWayTheMoneyWent(t *testing.T) {
 	}
 }
 
-// The machinery buckets stay out of the bars a person is judged by. An FX move
+// The machinery buckets stay out of the bars a contact is judged by. An FX move
 // credited as an advance tells a rep they sold something a rate did.
 func TestTheMachineryBucketsAreTheirOwnBarAndNotProgress(t *testing.T) {
 	t.Parallel()

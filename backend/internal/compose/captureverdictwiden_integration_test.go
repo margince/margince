@@ -10,7 +10,7 @@ package compose
 //
 // Most of the file is refusals, for the same reason widenhistory's tests are:
 // the release itself is one statement, and what makes it safe is everything it
-// declines to publish — a sender judged real but not a person, a mailbox that
+// declines to publish — a sender judged real but not a contact, a mailbox that
 // asked to hold everything, a thread a confidentiality verdict already settled,
 // and a message a second rule held for a reason of its own.
 
@@ -32,7 +32,7 @@ import (
 // The defect this whole change is about: a sender the classifier cleared, and
 // mail that stays limited to its participants for good because nothing re-asks
 // a question the ledger already answered.
-func TestARealPersonVerdictReopensTheMailThePostureHeld(t *testing.T) {
+func TestARealContactVerdictReopensTheMailThePostureHeld(t *testing.T) {
 	e := integration.Setup(t)
 	const sender = "chi@fvhospital.example"
 	mail := seedCapturedMail(t, e, sender, "FVH | Remaining specialities")
@@ -44,10 +44,10 @@ func TestARealPersonVerdictReopensTheMailThePostureHeld(t *testing.T) {
 			got, reason)
 	}
 
-	judgeSenderAs(t, e, dispositionID, capture.KindPerson)
+	judgeSenderAs(t, e, dispositionID, capture.KindContact)
 
 	if got, reason := audienceAndReason(t, e, mail); got != "workspace" || reason != "" {
-		t.Errorf("after its sender was judged a real person the mail is %q / %q, want workspace: "+
+		t.Errorf("after its sender was judged a real contact the mail is %q / %q, want workspace: "+
 			"a cleared verdict never re-opened the mail it cleared", got, reason)
 	}
 	if posture := importPosture(t, e, mail); posture != "shared" {
@@ -57,10 +57,10 @@ func TestARealPersonVerdictReopensTheMailThePostureHeld(t *testing.T) {
 }
 
 // status `real` is not the question. advisor, role_mailbox and
-// company_sender all settle `real`, and none of them is a person whose
+// company_sender all settle `real`, and none of them is a contact whose
 // mail a posture should stop holding — an advisor's most of all, since that
 // record is deliberately kept to its owner.
-func TestAVerdictThatIsRealButNotAPersonPublishesNothing(t *testing.T) {
+func TestAVerdictThatIsRealButNotAContactPublishesNothing(t *testing.T) {
 	for _, kind := range []string{capture.KindAdvisor, capture.KindRoleMailbox, capture.KindCompanySender} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -73,7 +73,7 @@ func TestAVerdictThatIsRealButNotAPersonPublishesNothing(t *testing.T) {
 
 			if got, _ := audienceAndReason(t, e, mail); got != "participants" {
 				t.Errorf("a %s verdict published the mail as %q: the release asked for status "+
-					"alone instead of asking whether a PERSON was behind the address", kind, got)
+					"alone instead of asking whether a CONTACT was behind the address", kind, got)
 			}
 		})
 	}
@@ -104,7 +104,7 @@ func TestAClearedSenderNeverOpensAHeldMailbox(t *testing.T) {
 	seedImport(t, e, mail, e.Rep1, "held", nil, []string{"posture"})
 	dispositionID := seedPendingDisposition(t, e, sender, "fvhospital.example", mail)
 
-	judgeSenderAs(t, e, dispositionID, capture.KindPerson)
+	judgeSenderAs(t, e, dispositionID, capture.KindContact)
 
 	if posture := importPosture(t, e, mail); posture != "held" {
 		t.Errorf("the import row moved to %q: a mailbox that asked to hold everything had its "+
@@ -122,7 +122,7 @@ func TestAClearedSenderDoesNotLiftACounterpartyHold(t *testing.T) {
 	seedImport(t, e, mail, e.Rep1, "classified", nil, []string{"counterparty", "posture"})
 	dispositionID := seedPendingDisposition(t, e, sender, "studiolegal.example", mail)
 
-	judgeSenderAs(t, e, dispositionID, capture.KindPerson)
+	judgeSenderAs(t, e, dispositionID, capture.KindContact)
 
 	if posture := importPosture(t, e, mail); posture != "classified" {
 		t.Errorf("the import row moved to %q: a message a seat's own counterparty hold also caught "+
@@ -141,7 +141,7 @@ func TestAThreadVerdictThatHeldOutranksAClearedSender(t *testing.T) {
 	seedImport(t, e, mail, e.Rep1, "classified", &held, []string{"posture"})
 	dispositionID := seedPendingDisposition(t, e, sender, "fvhospital.example", mail)
 
-	judgeSenderAs(t, e, dispositionID, capture.KindPerson)
+	judgeSenderAs(t, e, dispositionID, capture.KindContact)
 
 	if posture := importPosture(t, e, mail); posture != "classified" {
 		t.Errorf("the import row moved to %q: a thread a confidentiality verdict held was "+
@@ -163,7 +163,7 @@ func TestAHeldThreadsUnstampedMessagesAreNotPublishedByASenderVerdict(t *testing
 	holdThreadFor(t, e, mail, e.Rep1)
 	dispositionID := seedPendingDisposition(t, e, sender, "fvhospital.example", mail)
 
-	judgeSenderAs(t, e, dispositionID, capture.KindPerson)
+	judgeSenderAs(t, e, dispositionID, capture.KindContact)
 
 	if got, _ := audienceAndReason(t, e, mail); got != "participants" {
 		t.Errorf("a message on a thread its seat held is %q: the release read the import row's "+
@@ -205,7 +205,7 @@ func TestMailCapturedBeforeReasonsWereRecordedStaysHeld(t *testing.T) {
 	seedImport(t, e, mail, e.Rep1, "classified", nil, nil)
 	dispositionID := seedPendingDisposition(t, e, sender, "fvhospital.example", mail)
 
-	judgeSenderAs(t, e, dispositionID, capture.KindPerson)
+	judgeSenderAs(t, e, dispositionID, capture.KindContact)
 
 	if posture := importPosture(t, e, mail); posture != "classified" {
 		t.Errorf("the import row moved to %q: a row that never recorded its reasons was released "+
@@ -215,8 +215,8 @@ func TestMailCapturedBeforeReasonsWereRecordedStaysHeld(t *testing.T) {
 
 // The reconciling pass reads the ledger directly rather than being told which
 // verdict just landed, so the kind filter has to hold there on its own — this is
-// the only place a non-person `real` verdict can reach the release at all.
-func TestTheReconcilingPassLeavesARealButNonPersonSenderHeld(t *testing.T) {
+// the only place a non-contact `real` verdict can reach the release at all.
+func TestTheReconcilingPassLeavesARealButNonContactSenderHeld(t *testing.T) {
 	for _, kind := range []string{capture.KindAdvisor, capture.KindRoleMailbox, capture.KindCompanySender} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -249,7 +249,7 @@ func TestTheVerdictPassDrainsSendersClearedBeforeTheRelease(t *testing.T) {
 	mail := seedCapturedMail(t, e, sender, "FVH | Remaining specialities")
 	seedPostureHeldImport(t, e, mail, e.Rep1)
 	dispositionID := seedPendingDisposition(t, e, sender, "fvhospital.example", mail)
-	settleDisposition(t, e, dispositionID, capture.PendingStatusReal, capture.KindPerson)
+	settleDisposition(t, e, dispositionID, capture.PendingStatusReal, capture.KindContact)
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, nil, slog.Default())
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -280,7 +280,7 @@ func TestTheReconcilingPassStopsAtItsBudgetAndFinishesOnTheNextTick(t *testing.T
 		seedPostureHeldImport(t, e, last, e.Rep1)
 	}
 	dispositionID := seedPendingDisposition(t, e, sender, "fvhospital.example", last)
-	settleDisposition(t, e, dispositionID, capture.PendingStatusReal, capture.KindPerson)
+	settleDisposition(t, e, dispositionID, capture.PendingStatusReal, capture.KindContact)
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, nil, slog.Default())
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)

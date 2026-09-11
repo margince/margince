@@ -5,7 +5,7 @@ package compose
 
 // The day's surface, wired to the modules that own what it shows.
 //
-// attention is a compose subpackage and approvals, people and activities are
+// attention is a compose subpackage and approvals, contacts and activities are
 // modules, so every edge between them is bound here like any other cross-module
 // edge. What crosses is four READS. No verb does: a card's approve, complete or
 // merge goes to the endpoint that already owns it, so this surface can never
@@ -30,11 +30,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -88,8 +88,8 @@ var linkPriority = map[crmcontracts.ActivityLinkEntityType]int{
 	flipObjectLead: 1,
 	flipObjectDeal: 2,
 	crmcontracts.ActivityLinkEntityTypeProject: 3,
-	flipObjectPerson:  4,
-	flipObjectCompany: 5,
+	flipObjectContact:                          4,
+	flipObjectCompany:                          5,
 }
 
 // primaryLink picks the one record a task row points at.
@@ -179,11 +179,11 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 	cards := newDealStatusService(pool)
 	return attention.NewService(
 		attentionApprovals{svc: svc},
-		attentionDuplicates{store: people.NewStore(db)},
+		attentionDuplicates{store: contacts.NewStore(db)},
 		attentionTasks{store: activities.NewStore(db)},
 		attentionReceipts{svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
-			engine: briefs.NewBriefEngine(pool, people.NewStore(db)),
+			engine: briefs.NewBriefEngine(pool, contacts.NewStore(db)),
 			// The same reader WithDealFacts binds below, so the lane keeps an
 			// entry exactly when the figures pass can state its deal.
 			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
@@ -195,13 +195,13 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// dressed as a feature, and absent is the honest rendering of "this
 		// feed does not do commitments".
 		//
-		// That is no longer true. POST /people/{id}/claims writes through
-		// people.RecordConversationClaim, and the transcript reader files what
+		// That is no longer true. POST /contacts/{id}/claims writes through
+		// contacts.RecordConversationClaim, and the transcript reader files what
 		// a reader accepts from a meeting. A promise a rep made is then real
 		// data the queue was still refusing to show.
-		attentionCommitments{store: people.NewStore(db)},
+		attentionCommitments{store: contacts.NewStore(db)},
 		attentionAtRisk{lister: quietDealScan(pool, deals.QuietThresholdDays), pool: pool},
-		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
+		attentionDecay{pool: pool, store: contacts.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
 		// The compliance clock: the open DSR cases, due-soonest first, served
@@ -300,7 +300,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// The base-currency conversion the ranked queue's money comparisons
 		// run in — the same engine every other money surface prices with.
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
-		// Whether a team-scoped reader may open a named person's queue. Bound
+		// Whether a team-scoped reader may open a named contact's queue. Bound
 		// unconditionally: unbound, that reader is refused, so a seam that
 		// dropped this would present as a Team Lead unable to open their own
 		// rep's day rather than as one able to open a stranger's.
@@ -309,7 +309,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// ordering and the state; this lane only ranks them against the rest of
 		// the day.
 		WithLeadResponses(attentionLeadResponses{
-			store:     people.NewStore(db),
+			store:     contacts.NewStore(db),
 			teammates: newTeammatesSeam(pool),
 		}).
 		// How many promises each teammate has already missed, for the team
@@ -317,7 +317,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// at a dozen and a board built from it would call every loaded rep
 		// equally loaded.
 		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)}).
-		WithPromiseLoad(attentionPromiseLoad{store: people.NewStore(db)})
+		WithPromiseLoad(attentionPromiseLoad{store: contacts.NewStore(db)})
 }
 
 // attentionZone binds the feed's day boundary to the installation's timezone,

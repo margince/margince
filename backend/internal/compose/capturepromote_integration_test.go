@@ -7,9 +7,9 @@ package compose
 
 // Whose record a captured contact is, and what makes it the workspace's.
 //
-// Capture mints every person owner-scoped, because the workspace writing to an
+// Capture mints every contact owner-scoped, because the workspace writing to an
 // address proves the address is a counterparty and not that the counterparty is
-// the business's. The verdict is what settles that, and `person` is the answer
+// the business's. The verdict is what settles that, and `contact` is the answer
 // that widens the row. The tests below drive the REAL sink — the one compose
 // assembles for production — so what they prove about visibility is what a
 // captured mail actually does.
@@ -27,7 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -67,7 +67,7 @@ func seedAttestedOutbound(t *testing.T, e *integration.Env, sourceID, counterpar
 
 // captureInboundThroughRealSink lands one INBOUND mail through the sink compose
 // builds for production — the ensurer attached, so the tier ladder actually runs
-// and can create a person. captureMail in the participant suite deliberately
+// and can create a contact. captureMail in the participant suite deliberately
 // uses a bare sink; this one is here because the ladder is the subject.
 func captureInboundThroughRealSink(
 	t *testing.T, e *integration.Env, owner ids.UUID, sourceID, counterparty, threadKey string,
@@ -101,16 +101,16 @@ func captureInboundThroughRealSink(
 	}
 }
 
-// personVisibility reads the row's visibility and reports whether a person for
+// contactVisibility reads the row's visibility and reports whether a contact for
 // that address exists at all.
-func personVisibility(t *testing.T, e *integration.Env, email string) (string, bool) {
+func contactVisibility(t *testing.T, e *integration.Env, email string) (string, bool) {
 	t.Helper()
 	var visibility string
 	found := true
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(context.Background(), `
 			SELECT p.visibility
-			  FROM person p JOIN person_email pe ON pe.person_id = p.id
+			  FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			 WHERE pe.email = $1 AND p.archived_at IS NULL`, email).Scan(&visibility)
 		if err == pgx.ErrNoRows {
 			found = false
@@ -163,15 +163,15 @@ func TestACorrespondedSenderIsJudgedAndBecomesTheWorkspacesContact(t *testing.T)
 
 	// The workspace writes first: this is the T1 evidence.
 	seedAttestedOutbound(t, e, "promote-out-1", sender, "promote-t1")
-	// Then they reply, and the ladder creates the person on sight.
+	// Then they reply, and the ladder creates the contact on sight.
 	captureInboundThroughRealSink(t, e, e.Rep1, "promote-in-1", sender, "promote-t1")
 
-	visibility, found := personVisibility(t, e, sender)
+	visibility, found := contactVisibility(t, e, sender)
 	if !found {
-		t.Fatalf("the T1 rung created no person for a corresponded sender")
+		t.Fatalf("the T1 rung created no contact for a corresponded sender")
 	}
 	if visibility != "owner" {
-		t.Fatalf("a freshly captured person is %q, want owner — capture cannot yet know whose the contact is", visibility)
+		t.Fatalf("a freshly captured contact is %q, want owner — capture cannot yet know whose the contact is", visibility)
 	}
 
 	dispositionID, queued := openDisposition(t, e, sender)
@@ -180,11 +180,11 @@ func TestACorrespondedSenderIsJudgedAndBecomesTheWorkspacesContact(t *testing.T)
 			"so nothing will ever promote the row and the contact stays the mailbox owner's forever")
 	}
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	runVerdict(t, e, brain)
 
-	if visibility, _ = personVisibility(t, e, sender); visibility != "workspace" {
-		t.Errorf("after a `person` verdict the contact is %q, want workspace — "+
+	if visibility, _ = contactVisibility(t, e, sender); visibility != "workspace" {
+		t.Errorf("after a `contact` verdict the contact is %q, want workspace — "+
 			"a judged business counterparty belongs to the business", visibility)
 	}
 }
@@ -207,7 +207,7 @@ func TestAnAdvisorVerdictLeavesACorrespondedContactTheOwnersOwn(t *testing.T) {
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
 	runVerdict(t, e, brain)
 
-	if visibility, _ := personVisibility(t, e, sender); visibility != "owner" {
+	if visibility, _ := contactVisibility(t, e, sender); visibility != "owner" {
 		t.Errorf("an advisor verdict left the contact %q, want owner — "+
 			"publishing it announces that the mailbox owner has one", visibility)
 	}
@@ -228,7 +228,7 @@ func TestASettledSenderIsNotAskedAgain(t *testing.T) {
 	if !queued {
 		t.Fatal("no verdict was opened for a corresponded sender")
 	}
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	runVerdict(t, e, brain)
 
 	// They write again, long after the answer.
@@ -263,14 +263,14 @@ func TestADomainTheWorkspaceCorrespondsWithIsNeverRefusedACompany(t *testing.T) 
 	// crawl, admission is the standing decision about whether the domain may
 	// ever become a company. Asserting on status passes whatever the verdict
 	// did, which is a test that cannot fail.
-	if admission := domainAdmission(t, e, "supplier.example"); admission == people.DomainSuppressed {
+	if admission := domainAdmission(t, e, "supplier.example"); admission == contacts.DomainSuppressed {
 		t.Error("a newsletter verdict refused a company the workspace corresponds with — " +
 			"hiding the blast is right, refusing the supplier on the strength of it is not")
 	}
 }
 
 func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
-	// The ceiling must delay the question, never cancel it. Once the person
+	// The ceiling must delay the question, never cancel it. Once the contact
 	// exists, the ladder reads their address as already-known on every later
 	// message — so a create whose question the cap refused has no second chance
 	// unless the enqueue is retried for a record still owner-scoped. Without
@@ -290,8 +290,8 @@ func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
 
 	seedAttestedOutbound(t, e, "capped-out-1", sender, "capped-t1")
 	captureInboundThroughRealSink(t, e, e.Rep1, "capped-in-1", sender, "capped-t1")
-	if _, found := personVisibility(t, e, sender); !found {
-		t.Fatal("the T1 rung created no person for a corresponded sender")
+	if _, found := contactVisibility(t, e, sender); !found {
+		t.Fatal("the T1 rung created no contact for a corresponded sender")
 	}
 
 	// The queue drains: the fillers are answered and their slots come back.
@@ -306,9 +306,9 @@ func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
 			"stays the mailbox owner's for good")
 	}
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	runVerdict(t, e, brain)
-	if visibility, _ := personVisibility(t, e, sender); visibility != "workspace" {
+	if visibility, _ := contactVisibility(t, e, sender); visibility != "workspace" {
 		t.Errorf("after the delayed verdict the contact is %q, want workspace", visibility)
 	}
 }
@@ -332,7 +332,7 @@ func TestASingleDecliningReplyDoesNotSpareASpammersDomain(t *testing.T) {
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	runVerdict(t, e, brain)
 
-	if admission := domainAdmission(t, e, "spam.example"); admission != people.DomainSuppressed {
+	if admission := domainAdmission(t, e, "spam.example"); admission != contacts.DomainSuppressed {
 		t.Errorf("the domain admission is %q, want suppressed — a single declining reply "+
 			"is not correspondence, and must not spare the sender's domain", admission)
 	}
@@ -535,9 +535,9 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 	seedAttestedOutbound(t, e, "quiet-out-1", sender, "quiet-t1")
 	captureInboundThroughRealSink(t, e, e.Rep1, "quiet-in-1", sender, "quiet-t1")
 
-	visibility, found := personVisibility(t, e, sender)
+	visibility, found := contactVisibility(t, e, sender)
 	if !found {
-		t.Fatal("the capture created no person for a corresponded sender")
+		t.Fatal("the capture created no contact for a corresponded sender")
 	}
 	if visibility != "owner" {
 		t.Fatalf("the new contact is %q, want owner: an unjudged capture is the mailbox owner's", visibility)
@@ -551,7 +551,7 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 	// notices the contact nobody was ever asked about.
 	runVerdict(t, e, &scriptedVerdictBrain{})
 
-	store := people.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool))
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
@@ -564,9 +564,9 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 	}
 
 	// And the answer reaches the record: the whole point of asking.
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	runVerdict(t, e, brain)
-	if got, _ := personVisibility(t, e, sender); got != "workspace" {
+	if got, _ := contactVisibility(t, e, sender); got != "workspace" {
 		t.Errorf("after the delayed verdict the contact is %q, want workspace", got)
 	}
 }
@@ -588,12 +588,12 @@ func TestTheSweepDoesNotReaskASettledSender(t *testing.T) {
 	}
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
 	runVerdict(t, e, brain)
-	if got, _ := personVisibility(t, e, advisor); got != "owner" {
+	if got, _ := contactVisibility(t, e, advisor); got != "owner" {
 		t.Fatalf("an advisor's record is %q, want owner", got)
 	}
 
 	before := countDispositions(t, e, advisor)
-	store := people.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool))
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
@@ -617,13 +617,13 @@ func countDispositions(t *testing.T, e *integration.Env, email string) int {
 	return n
 }
 
-// TestTheSweepLeavesAContactAHumanKeptPrivate holds the decision a person made.
+// TestTheSweepLeavesAContactAHumanKeptPrivate holds the decision a contact made.
 //
 // A captured contact somebody has worked on is not retracted when the
-// conversation turns out to be private: people.RetractCaptureOnlyPersonTx
+// conversation turns out to be private: contacts.RetractCaptureOnlyContactTx
 // refuses to archive one carrying a human audit row, and it stays owner-private.
 // That is a decision, and asking about it again would put it in front of a
-// model whose `person` answer publishes it to the workspace — a transition
+// model whose `contact` answer publishes it to the workspace — a transition
 // nothing reverses.
 func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
 	e := integration.Setup(t)
@@ -643,34 +643,34 @@ func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
 	}
 
 	// Somebody works on the contact: the evidence a human touched it.
-	personID := personIDFor(t, e, sender)
-	seedHumanEdit(t, e, personID)
+	contactID := contactIDFor(t, e, sender)
+	seedHumanEdit(t, e, contactID)
 
 	runVerdict(t, e, &scriptedVerdictBrain{})
-	store := people.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool))
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
 
 	if _, queued := openDisposition(t, e, sender); queued {
-		t.Fatal("the sweep re-asked about a contact a person had already worked on and kept " +
-			"private; a `person` answer to that question publishes it to the workspace")
+		t.Fatal("the sweep re-asked about a contact a contact had already worked on and kept " +
+			"private; a `contact` answer to that question publishes it to the workspace")
 	}
-	if got, _ := personVisibility(t, e, sender); got != "owner" {
+	if got, _ := contactVisibility(t, e, sender); got != "owner" {
 		t.Fatalf("the contact is %q, want owner", got)
 	}
 }
 
-// personIDFor reads the person minted for an address.
-func personIDFor(t *testing.T, e *integration.Env, email string) ids.PersonID {
+// contactIDFor reads the contact minted for an address.
+func contactIDFor(t *testing.T, e *integration.Env, email string) ids.ContactID {
 	t.Helper()
-	var id ids.PersonID
+	var id ids.ContactID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT person_id FROM person_email WHERE email = $1`, email).Scan(&id)
+			`SELECT contact_id FROM contact_email WHERE email = $1`, email).Scan(&id)
 	}); err != nil {
-		t.Fatalf("reading the person for %s: %v", email, err)
+		t.Fatalf("reading the contact for %s: %v", email, err)
 	}
 	return id
 }
@@ -678,7 +678,7 @@ func personIDFor(t *testing.T, e *integration.Env, email string) ids.PersonID {
 // TestPublishingACapturedContactLeavesATrace holds the trail on the write that
 // most needs one.
 //
-// A contact stops being one person's and becomes everybody's. "Which contacts
+// A contact stops being one contact's and becomes everybody's. "Which contacts
 // were published, when, and on whose authority" is answered from audit_log or
 // it is not answered at all — and until this, the visibility flip was a bare
 // UPDATE while every other write on the record audited and emitted.
@@ -688,41 +688,41 @@ func TestPublishingACapturedContactLeavesATrace(t *testing.T) {
 
 	seedAttestedOutbound(t, e, "trace-out-1", sender, "trace-t1")
 	captureInboundThroughRealSink(t, e, e.Rep1, "trace-in-1", sender, "trace-t1")
-	personID := personIDFor(t, e, sender)
-	if got, _ := personVisibility(t, e, sender); got != "owner" {
+	contactID := contactIDFor(t, e, sender)
+	if got, _ := contactVisibility(t, e, sender); got != "owner" {
 		t.Fatalf("a fresh capture is %q, want owner", got)
 	}
-	before := countVisibilityAudits(t, e, personID)
+	before := countVisibilityAudits(t, e, contactID)
 
 	dispositionID, queued := openDisposition(t, e, sender)
 	if !queued {
 		t.Fatal("no question was opened for a corresponded sender")
 	}
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	runVerdict(t, e, brain)
-	if got, _ := personVisibility(t, e, sender); got != "workspace" {
-		t.Fatalf("after a person verdict the contact is %q, want workspace", got)
+	if got, _ := contactVisibility(t, e, sender); got != "workspace" {
+		t.Fatalf("after a contact verdict the contact is %q, want workspace", got)
 	}
 
-	if after := countVisibilityAudits(t, e, personID); after != before+1 {
+	if after := countVisibilityAudits(t, e, contactID); after != before+1 {
 		t.Fatalf("publishing the contact wrote %d audit row(s) naming visibility, want 1: "+
 			"nothing records that this contact became visible to the workspace", after-before)
 	}
-	if n := countOutboxFor(t, e, personID); n == 0 {
+	if n := countOutboxFor(t, e, contactID); n == 0 {
 		t.Fatal("publishing the contact emitted no event, so nothing downstream learns the " +
 			"record changed hands")
 	}
 }
 
-// countVisibilityAudits counts audit rows on a person naming the visibility
+// countVisibilityAudits counts audit rows on a contact naming the visibility
 // column, in either image.
-func countVisibilityAudits(t *testing.T, e *integration.Env, id ids.PersonID) int {
+func countVisibilityAudits(t *testing.T, e *integration.Env, id ids.ContactID) int {
 	t.Helper()
 	var n int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM audit_log
-			 WHERE entity_type = 'person' AND entity_id = $1
+			 WHERE entity_type = 'contact' AND entity_id = $1
 			   AND (after ? 'visibility' OR before ? 'visibility')`, id.UUID).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting visibility audits: %v", err)
@@ -731,13 +731,13 @@ func countVisibilityAudits(t *testing.T, e *integration.Env, id ids.PersonID) in
 }
 
 // countOutboxFor counts the events published about a record.
-func countOutboxFor(t *testing.T, e *integration.Env, id ids.PersonID) int {
+func countOutboxFor(t *testing.T, e *integration.Env, id ids.ContactID) int {
 	t.Helper()
 	var n int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM event_outbox
-			 WHERE envelope->>'type' = 'person.updated'
+			 WHERE envelope->>'type' = 'contact.updated'
 			   AND envelope->'entity'->>'id' = $1
 			   AND envelope->'payload'->'changed_fields' ? 'visibility'`,
 			id.UUID.String()).Scan(&n)
@@ -759,20 +759,20 @@ func TestAnOwnerPublishesTheirOwnCapturedContact(t *testing.T) {
 
 	seedAttestedOutbound(t, e, "own-out-1", sender, "own-t1")
 	captureInboundThroughRealSink(t, e, e.Rep1, "own-in-1", sender, "own-t1")
-	personID := personIDFor(t, e, sender)
-	if got, _ := personVisibility(t, e, sender); got != "owner" {
+	contactID := contactIDFor(t, e, sender)
+	if got, _ := contactVisibility(t, e, sender); got != "owner" {
 		t.Fatalf("a fresh capture is %q, want owner", got)
 	}
 
-	store := people.NewStore(InstallationDB(e.Pool))
-	if err := store.PromoteOwnCapturedPerson(seatCtx(e, e.Rep1), personID); err != nil {
+	store := contacts.NewStore(InstallationDB(e.Pool))
+	if err := store.PromoteOwnCapturedContact(seatCtx(e, e.Rep1), contactID); err != nil {
 		t.Fatalf("the owner publishing their own contact: %v", err)
 	}
-	if got, _ := personVisibility(t, e, sender); got != "workspace" {
+	if got, _ := contactVisibility(t, e, sender); got != "workspace" {
 		t.Fatalf("after the owner published it the contact is %q, want workspace", got)
 	}
 	// The trail, on the same terms as a verdict's promotion.
-	if n := countVisibilityAudits(t, e, personID); n != 1 {
+	if n := countVisibilityAudits(t, e, contactID); n != 1 {
 		t.Fatalf("publishing wrote %d audit row(s) naming visibility, want 1", n)
 	}
 }
@@ -790,20 +790,20 @@ func TestOnlyTheOwnerPublishesACapturedContact(t *testing.T) {
 
 	seedAttestedOutbound(t, e, "other-out-1", sender, "other-t1")
 	captureInboundThroughRealSink(t, e, e.Rep1, "other-in-1", sender, "other-t1")
-	personID := personIDFor(t, e, sender)
+	contactID := contactIDFor(t, e, sender)
 
-	store := people.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool))
 	for _, seat := range []struct {
 		name string
 		user ids.UUID
 	}{{"a colleague", e.Rep2}, {"an admin", e.AdminUser}} {
-		err := store.PromoteOwnCapturedPerson(seatCtx(e, seat.user), personID)
+		err := store.PromoteOwnCapturedContact(seatCtx(e, seat.user), contactID)
 		if !errors.Is(err, apperrors.ErrNotFound) {
 			t.Fatalf("%s publishing somebody else's capture-private contact: err = %v, want ErrNotFound — "+
 				"a 403 would confirm the contact exists, which is what the boundary hides", seat.name, err)
 		}
 	}
-	if got, _ := personVisibility(t, e, sender); got != "owner" {
+	if got, _ := contactVisibility(t, e, sender); got != "owner" {
 		t.Fatalf("the contact is %q after two refused attempts, want owner", got)
 	}
 }
@@ -817,7 +817,7 @@ func seatCtx(e *integration.Env, user ids.UUID) context.Context {
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(),
 		UserID: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"person": {Read: true, Update: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -826,7 +826,7 @@ func seatCtx(e *integration.Env, user ids.UUID) context.Context {
 // TestARecordSaysWhoItIsFor puts capture privacy on the wire.
 //
 // A client could see that it may not WRITE a row and not that the row it is
-// reading is private to the person reading it. Without the field a page cannot
+// reading is private to the reader reading it. Without the field a page cannot
 // tell "private to you" from "shared with everybody", which is the question the
 // owner of a captured contact is actually asking.
 //
@@ -837,41 +837,41 @@ func TestARecordSaysWhoItIsFor(t *testing.T) {
 
 	seedAttestedOutbound(t, e, "vis-out-1", sender, "vis-t1")
 	captureInboundThroughRealSink(t, e, e.Rep1, "vis-in-1", sender, "vis-t1")
-	personID := personIDFor(t, e, sender)
+	contactID := contactIDFor(t, e, sender)
 
-	store := people.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool))
 	owner := seatCtx(e, e.Rep1)
 
-	got, err := store.GetPerson(owner, personID, storekit.LiveOnly)
+	got, err := store.GetContact(owner, contactID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("the owner reading their own captured contact: %v", err)
 	}
-	if got.Visibility == nil || *got.Visibility != crmcontracts.PersonVisibilityOwner {
+	if got.Visibility == nil || *got.Visibility != crmcontracts.ContactVisibilityOwner {
 		t.Fatalf("a fresh capture reads %v, want owner — a page cannot say \"private to you\" "+
 			"about a field the server never sends", got.Visibility)
 	}
 
 	// And it follows the record when the owner publishes it.
-	if err := store.PromoteOwnCapturedPerson(owner, personID); err != nil {
+	if err := store.PromoteOwnCapturedContact(owner, contactID); err != nil {
 		t.Fatalf("publishing: %v", err)
 	}
-	after, err := store.GetPerson(owner, personID, storekit.LiveOnly)
+	after, err := store.GetContact(owner, contactID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("reading it back: %v", err)
 	}
-	if after.Visibility == nil || *after.Visibility != crmcontracts.PersonVisibilityWorkspace {
+	if after.Visibility == nil || *after.Visibility != crmcontracts.ContactVisibilityWorkspace {
 		t.Fatalf("after publishing it reads %v, want workspace", after.Visibility)
 	}
 
 	// The list carries it too: the two paths share one scanner, and a field on
 	// only one of them is how a page shows a badge that vanishes on refresh.
-	listed, _, err := store.ListPeople(owner, people.ListPeopleInput{})
+	listed, _, err := store.ListContacts(owner, contacts.ListContactsInput{})
 	if err != nil {
 		t.Fatalf("listing: %v", err)
 	}
 	for _, p := range listed {
-		if ids.UUID(p.Id) == personID.UUID {
-			if p.Visibility == nil || *p.Visibility != crmcontracts.PersonVisibilityWorkspace {
+		if ids.UUID(p.Id) == contactID.UUID {
+			if p.Visibility == nil || *p.Visibility != crmcontracts.ContactVisibilityWorkspace {
 				t.Fatalf("the listed row reads %v, want workspace", p.Visibility)
 			}
 			return

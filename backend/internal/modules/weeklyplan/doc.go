@@ -6,7 +6,7 @@
 //
 // The counterpart to compose/weekly, and deliberately not part of it.
 // weekly_review is the PAST — assembled by a job, frozen at write, edited by
-// nobody. A plan is authored by a person, carries an audit row and an event for
+// nobody. A plan is authored by a contact, carries an audit row and an event for
 // every change, is gated by its own RBAC object, and has a SECOND writer in the
 // rep's lead. A record with those properties is a module, not a snapshot.
 //

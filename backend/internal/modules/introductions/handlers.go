@@ -43,7 +43,7 @@ func NewHandlers(store *Store, now func() time.Time) Handlers {
 // ListIntroRequests returns the asks about one contact that the caller is
 // party to.
 func (h Handlers) ListIntroRequests(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	rows, err := h.store.ForPerson(r.Context(), ids.UUID(id), listCap)
+	rows, err := h.store.ForContact(r.Context(), ids.UUID(id), listCap)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -64,28 +64,28 @@ func (h Handlers) CreateIntroRequest(w http.ResponseWriter, r *http.Request, id 
 	// A route through somebody names them and a direct one does not. Either
 	// half alone describes a route nobody can act on, and the table refuses it
 	// too — this is here so the caller is told which half is wrong.
-	throughGiven := body.ThroughPersonId != nil
-	wantsThrough := body.RouteType == crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeThroughContact
+	throughGiven := body.ThroughContactId != nil
+	wantsThrough := body.RouteType == crmcontracts.ContactGraphRouteTypeContactGraphRouteTypeThroughContact
 	if throughGiven != wantsThrough {
 		httperr.Write(w, r, httperr.Validation(
-			"through_person_id", "route_shape",
+			"through_contact_id", "route_shape",
 			"a route through a contact names them, and a direct route does not"))
 		return
 	}
 
 	newID, err := h.store.Create(r.Context(), NewRequest{
-		PersonID:        ids.UUID(id),
-		IntroducerUser:  ids.UUID(body.IntroducerUserId),
-		RouteType:       string(body.RouteType),
-		ThroughPersonID: optionalID(body.ThroughPersonId),
-		InternalReason:  body.InternalReason,
-		ValueForTarget:  deref(body.ValueForTarget),
-		ForwardableNote: deref(body.ForwardableNote),
-		NoteGeneratedBy: noteOriginOf(body.NoteGeneratedBy),
-		NoteAIGenerated: body.NoteAiGenerated != nil && *body.NoteAiGenerated,
-		FallbackPolicy:  fallbackOf(body.FallbackPolicy),
-		NameDropAllowed: body.NameDropAllowed != nil && *body.NameDropAllowed,
-		DueAt:           h.now().Add(askWindow),
+		ContactID:        ids.UUID(id),
+		IntroducerUser:   ids.UUID(body.IntroducerUserId),
+		RouteType:        string(body.RouteType),
+		ThroughContactID: optionalID(body.ThroughContactId),
+		InternalReason:   body.InternalReason,
+		ValueForTarget:   deref(body.ValueForTarget),
+		ForwardableNote:  deref(body.ForwardableNote),
+		NoteGeneratedBy:  noteOriginOf(body.NoteGeneratedBy),
+		NoteAIGenerated:  body.NoteAiGenerated != nil && *body.NoteAiGenerated,
+		FallbackPolicy:   fallbackOf(body.FallbackPolicy),
+		NameDropAllowed:  body.NameDropAllowed != nil && *body.NameDropAllowed,
+		DueAt:            h.now().Add(askWindow),
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -155,10 +155,10 @@ func (h Handlers) writeAsk(w http.ResponseWriter, r *http.Request, id ids.UUID, 
 func wire(r *Request) crmcontracts.IntroRequest {
 	out := crmcontracts.IntroRequest{
 		Id:               openapi_types.UUID(r.ID),
-		PersonId:         openapi_types.UUID(r.PersonID),
+		ContactId:        openapi_types.UUID(r.ContactID),
 		RequesterUserId:  openapi_types.UUID(r.RequesterUserID),
 		IntroducerUserId: openapi_types.UUID(r.IntroducerUser),
-		RouteType:        crmcontracts.PersonGraphRouteType(r.RouteType),
+		RouteType:        crmcontracts.ContactGraphRouteType(r.RouteType),
 		InternalReason:   r.InternalReason,
 		Status:           crmcontracts.IntroRequestStatus(r.Status),
 		NameDropAllowed:  r.NameDropAllowed,
@@ -179,7 +179,7 @@ func wire(r *Request) crmcontracts.IntroRequest {
 	if r.ForwardableNote != "" {
 		out.ForwardableNote = &r.ForwardableNote
 	}
-	out.ThroughPersonId = wireID(r.ThroughPersonID)
+	out.ThroughContactId = wireID(r.ThroughContactID)
 	out.SuggestedUserId = wireID(r.SuggestedUserID)
 	out.SourceActivityId = wireID(r.SourceActivityID)
 	out.DecisionReason = r.DecisionReason
@@ -210,7 +210,7 @@ func deref(s *string) string {
 }
 
 // noteOriginOf defaults an unstated origin to `human`. A client that sends no
-// provenance has a person typing, and claiming a model wrote it would mark
+// provenance has a contact typing, and claiming a model wrote it would mark
 // honest copy as machine-authored.
 func noteOriginOf(o *crmcontracts.IntroNoteOrigin) string {
 	if o == nil {

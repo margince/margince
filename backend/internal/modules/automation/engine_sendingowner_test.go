@@ -7,7 +7,7 @@ package automation
 //
 // The firing runs under the system actor so its writes stay attributed to the
 // system, and that is also why the drafter could not tell whose voice to write
-// in: a system principal names no person. The owner is bound alongside it, for
+// in: a system principal names no contact. The owner is bound alongside it, for
 // that one question and nothing else.
 
 import (
@@ -41,7 +41,7 @@ func TestAFiringNamesItsOwnerAsTheSendingHuman(t *testing.T) {
 //
 // The other half, and the one that keeps the binding honest: an automation no
 // human authored has no voice to borrow, and inventing one would sign a message
-// in a person who never asked for it.
+// in a contact who never asked for it.
 func TestASystemSeededFiringNamesNoSendingHuman(t *testing.T) {
 	ctx := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
@@ -80,7 +80,7 @@ func TestBindingTheSenderLeavesTheActingPrincipalAlone(t *testing.T) {
 //
 // This is what reaches approval.on_behalf_of when the firing stages a held
 // draft, and it is what the decision-authority predicate narrows that draft by:
-// releasing one sends it from the approver's own mailbox, so only the person it
+// releasing one sends it from the approver's own mailbox, so only the contact it
 // goes out as may release it. A staging with nobody recorded is decidable by
 // nobody, so an unstamped firing does not merely lose a nicety — it strands the
 // card.

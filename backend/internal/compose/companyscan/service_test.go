@@ -136,7 +136,7 @@ func TestTheMergeKeepsOneRowPerSituationAndReportsTheCap(t *testing.T) {
 	}
 }
 
-// A scan is a reading aid for a person. An agent holding a passport has the
+// A scan is a reading aid for a contact. An agent holding a passport has the
 // records themselves, and a call with no user has nobody to file the row
 // under, so both are refused as permission rather than served as somebody's.
 func TestTheScanBelongsToAHumanAndNobodyElse(t *testing.T) {

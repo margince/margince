@@ -13,7 +13,7 @@ package integration
 // must not read the same and must not disclose how they differ. A unit test with
 // a stubbed provider would be asserting the arrangement.
 //
-// The failure it exists to prevent is specific: an agent tells a person a record
+// The failure it exists to prevent is specific: an agent tells a contact a record
 // does not exist, when it does and they simply may not see it. And the fix must
 // not become the disclosure it replaces — the fact of filtering rides the
 // envelope, the SIZE of what was filtered never does.
@@ -33,14 +33,14 @@ func TestABoundedCallerIsToldTheAnswerIsBoundedAndNeverHowMuch(t *testing.T) {
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 
-	// One corpus: three people capture-private to Rep1 — the one state that
+	// One corpus: three contacts capture-private to Rep1 — the one state that
 	// hides a contact from another seat. Three rather than one, because a
 	// count that leaked would be indistinguishable from a boolean at one row.
 	for _, name := range []string{"Withheld Alpha", "Withheld Beta", "Withheld Gamma"} {
-		e.MakeCapturePrivate(t, "person", e.SeedPerson(t, name, &e.Rep1), e.Rep1)
+		e.MakeCapturePrivate(t, "contact", e.SeedContact(t, name, &e.Rep1), e.Rep1)
 	}
 
-	const query = `{"q":"Withheld","record_type":"person"}`
+	const query = `{"q":"Withheld","record_type":"contact"}`
 	bounded := invokeForEnvelope(e.As(e.Rep3, []ids.UUID{e.Team2}, RepPerms), t, registry, query)
 	unbounded := invokeForEnvelope(e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms), t, registry, query)
 
@@ -51,11 +51,11 @@ func TestABoundedCallerIsToldTheAnswerIsBoundedAndNeverHowMuch(t *testing.T) {
 		t.Fatalf("the bounded caller read %d of another rep's private captures — this suite is not testing what it claims", got)
 	}
 	if got := recordCount(t, unbounded.Data); got != 3 {
-		t.Fatalf("the unbounded caller read %d people, want the 3 seeded — the corpus is not what the bounded arm was denied", got)
+		t.Fatalf("the unbounded caller read %d contacts, want the 3 seeded — the corpus is not what the bounded arm was denied", got)
 	}
 	if !carriesWarning(bounded, "row_scope_filtered") {
 		t.Errorf("the bounded caller's empty answer carries no row_scope_filtered warning: %v — "+
-			"an agent reading it will report that no such person exists", bounded.Warnings)
+			"an agent reading it will report that no such contact exists", bounded.Warnings)
 	}
 	if carriesWarning(unbounded, "row_scope_filtered") {
 		t.Error("the unbounded caller's answer claims filtering, so no answer on this surface can ever mean 'nothing exists'")

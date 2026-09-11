@@ -19,7 +19,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
@@ -100,7 +100,7 @@ func TestDiagnoseCrawlFailureNamesTheCauseAndItsRetryPolicy(t *testing.T) {
 			if detail == "" {
 				t.Error("detail is empty — a failure with no sentence is the state this replaces")
 			}
-			if retry := people.SiteReadFailureCodes[code]; retry != tc.wantRetry {
+			if retry := contacts.SiteReadFailureCodes[code]; retry != tc.wantRetry {
 				t.Errorf("retryable = %v, want %v", retry, tc.wantRetry)
 			}
 		})
@@ -124,7 +124,7 @@ func TestEveryDiagnosedCodeIsInTheStoreVocabulary(t *testing.T) {
 	}
 	for _, cause := range causes {
 		code, _ := diagnoseCrawlFailure(cause)
-		if _, known := people.SiteReadFailureCodes[code]; !known {
+		if _, known := contacts.SiteReadFailureCodes[code]; !known {
 			t.Errorf("diagnoseCrawlFailure(%v) produced %q, which the store would reject", cause, code)
 		}
 	}

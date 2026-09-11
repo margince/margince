@@ -56,8 +56,8 @@ func TestOverlayWriteGuard(t *testing.T) {
 		wantNext   bool
 		wantStatus int
 	}{
-		{"SoR write refused in overlay", "POST", "/v1/people", true, false, http.StatusUnprocessableEntity},
-		{"SoR write allowed off overlay", "POST", "/v1/people", false, true, http.StatusOK},
+		{"SoR write refused in overlay", "POST", "/v1/contacts", true, false, http.StatusUnprocessableEntity},
+		{"SoR write allowed off overlay", "POST", "/v1/contacts", false, true, http.StatusOK},
 		{"deal advance refused in overlay", "POST", "/v1/deals/{id}/advance", true, false, http.StatusUnprocessableEntity},
 		{"lead promote refused in overlay", "POST", "/v1/leads/{id}/promote", true, false, http.StatusUnprocessableEntity},
 		// DELETE /v1/leads/{id} is disqualify_lead (agentpolicy_gen.go), a
@@ -69,10 +69,10 @@ func TestOverlayWriteGuard(t *testing.T) {
 		// DisqualifyLead's native handler.
 		{"lead disqualify refused in overlay", "DELETE", "/v1/leads/{id}", true, false, http.StatusUnprocessableEntity},
 		// Archive of a mirrored type the provider DOES support
-		// (overlay.SupportsWrite(WriteArchive, person) is true — archivableTypes)
+		// (overlay.SupportsWrite(WriteArchive, contact) is true — archivableTypes)
 		// is let through rather than refused: it is destined for the write
 		// shadow, never the native handler.
-		{"supported archive allowed in overlay", "DELETE", "/v1/people/{id}", true, true, http.StatusOK},
+		{"supported archive allowed in overlay", "DELETE", "/v1/contacts/{id}", true, true, http.StatusOK},
 		// Archive of a mirrored type the provider does NOT support (activity
 		// is not in archivableTypes) is still refused.
 		{"unsupported archive refused in overlay", "DELETE", "/v1/activities/{id}", true, false, http.StatusUnprocessableEntity},
@@ -80,7 +80,7 @@ func TestOverlayWriteGuard(t *testing.T) {
 		// NOT a SoR record write — it stays available in overlay.
 		{"governance write allowed in overlay", "POST", "/v1/approvals/{id}/approve", true, true, http.StatusOK},
 		// A read is never guarded.
-		{"read passes through in overlay", "GET", "/v1/people", true, true, http.StatusOK},
+		{"read passes through in overlay", "GET", "/v1/contacts", true, true, http.StatusOK},
 		// An unknown route is not a SoR write — pass through.
 		{"unknown route passes through", "POST", "/v1/not-a-route", true, true, http.StatusOK},
 	}
@@ -157,9 +157,9 @@ func TestGuardRefusalMatchesProviderCapability(t *testing.T) {
 		method     string
 		pattern    string
 	}{
-		{datasource.EntityPerson, overlay.WriteCreate, "POST", "/v1/people"},
-		{datasource.EntityPerson, overlay.WriteUpdate, "PATCH", "/v1/people/{id}"},
-		{datasource.EntityPerson, overlay.WriteArchive, "DELETE", "/v1/people/{id}"},
+		{datasource.EntityContact, overlay.WriteCreate, "POST", "/v1/contacts"},
+		{datasource.EntityContact, overlay.WriteUpdate, "PATCH", "/v1/contacts/{id}"},
+		{datasource.EntityContact, overlay.WriteArchive, "DELETE", "/v1/contacts/{id}"},
 		{datasource.EntityCompany, overlay.WriteCreate, "POST", "/v1/companies"},
 		{datasource.EntityCompany, overlay.WriteUpdate, "PATCH", "/v1/companies/{id}"},
 		{datasource.EntityCompany, overlay.WriteArchive, "DELETE", "/v1/companies/{id}"},
@@ -201,7 +201,7 @@ func TestGuardRefusalMatchesProviderCapability(t *testing.T) {
 // files excluded) and returns the set of method names declared with a
 // receiver of type Server — a static-source check, not reflection: every
 // contract op Server does not shadow directly is instead SATISFIED BY
-// PROMOTION from an embedded module handler (e.g. people.Handlers), which
+// PROMOTION from an embedded module handler (e.g. contacts.Handlers), which
 // carries the identical method name. Reflection over Server{}'s resolved
 // method set cannot tell a hand-written shadow apart from a promoted
 // fallback (both simply appear as "Server has a method named X"), so the
@@ -248,7 +248,7 @@ func serverDeclaredMethods(t *testing.T) map[string]bool {
 // gatekit:fixture the expected spelling each shadow method name is built from —
 // naming-convention data, not a cost.
 var overlayEntityTitles = map[string]string{
-	string(datasource.EntityPerson):   "Person",
+	string(datasource.EntityContact):  "Contact",
 	string(datasource.EntityCompany):  "Company",
 	string(datasource.EntityDeal):     "Deal",
 	string(datasource.EntityLead):     "Lead",
@@ -315,8 +315,8 @@ func guardHuman() principal.Principal {
 func TestOverlayWriteGuardRefusesAnAgentEvenForASeamServedVerb(t *testing.T) {
 	// Both are verbs the seam DOES serve, so only the principal decides.
 	for _, tc := range []struct{ method, pattern string }{
-		{"PATCH", "/v1/people/{id}"},
-		{"DELETE", "/v1/people/{id}"},
+		{"PATCH", "/v1/contacts/{id}"},
+		{"DELETE", "/v1/contacts/{id}"},
 	} {
 		t.Run(tc.method, func(t *testing.T) {
 			nexted := false
@@ -340,8 +340,8 @@ func TestOverlayWriteGuardRefusesAnAgentEvenForASeamServedVerb(t *testing.T) {
 // had, and takes the fast path without a mode read.
 func TestOverlayWriteGuardPassesAHumanSeamServedWrite(t *testing.T) {
 	for _, tc := range []struct{ method, pattern string }{
-		{"PATCH", "/v1/people/{id}"},
-		{"DELETE", "/v1/people/{id}"},
+		{"PATCH", "/v1/contacts/{id}"},
+		{"DELETE", "/v1/contacts/{id}"},
 	} {
 		t.Run(tc.method, func(t *testing.T) {
 			nexted := false
@@ -375,7 +375,7 @@ func TestOverlayWriteGuardRefusesWhenTheModeCannotBeResolved(t *testing.T) {
 
 	// A verb the seam does NOT serve, so the guard reaches the mode read.
 	mode := &fakeMode{err: errModeUnresolvable}
-	overlayWriteGuard(mode)(next).ServeHTTP(rec, guardRequest("POST", "/v1/people"))
+	overlayWriteGuard(mode)(next).ServeHTTP(rec, guardRequest("POST", "/v1/contacts"))
 
 	if nexted {
 		t.Error("the guard admitted a write without resolving the system-of-record mode")

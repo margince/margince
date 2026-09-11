@@ -8,7 +8,7 @@ package mailmap
 //
 //   - SkipReason decides what never reaches the timeline at all. It is NARROW:
 //     ADR-0072 §1 keeps a transactional sender's message and suppresses only the
-//     person/company derivation, so the tier gate has to see the mail it judges.
+//     contact/company derivation, so the tier gate has to see the mail it judges.
 //   - isMachineTouched decides what may vouch for an address. It is WIDE, and
 //     only ever withholds evidence: an autoresponder's reply is genuinely
 //     owner-authored and genuinely in Sent, so nothing downstream could tell it
@@ -51,7 +51,7 @@ func (m Message) SkipReason() (string, bool) {
 // address is a real company writing to the workspace — a signed envelope,
 // an invoice, a shipping notice — and ADR-0072 §1 is explicit that such a
 // message keeps its place on the timeline while the tier gate suppresses the
-// person and company derivation. Dropping it here would make that promise false
+// contact and company derivation. Dropping it here would make that promise false
 // and would starve the T2 corroboration rule (CAP-PARAM-6), which exists to
 // recognize exactly these machine localparts, of the mail it judges.
 func isDeliverySystemSender(addr string) bool {
@@ -80,7 +80,7 @@ func isDeliverySystemSender(addr string) bool {
 	return false
 }
 
-// The two RFC 3834 values that mean a person's mail reaches the tier gate:
+// The two RFC 3834 values that mean a contact's mail reaches the tier gate:
 // `no` is not automatic at all, and `auto-generated` is mail a system
 // originated on its own — an invoice, a notice, a signed envelope — as opposed
 // to mail it generated in reply to something we sent.
@@ -262,7 +262,7 @@ func isMachineTouched(autoSubmitted, precedence []string, machineHandledHeader b
 	}
 	for _, v := range autoSubmitted {
 		// The KEYWORD, exactly as the drop rule reads it: `no; owner-email=…`
-		// is legal RFC 3834 and still means a person wrote this.
+		// is legal RFC 3834 and still means a contact wrote this.
 		if isMalformedValue(v) {
 			return true
 		}

@@ -39,7 +39,7 @@ import { fieldsNamed, type Node, newGroup } from "./segmentpredicate";
 /**
  * The three object tabs AC-1 names, and the record type each reads.
  *
- * The tab says "Contacts" and the vocabulary says "person": the wire's word and
+ * The tab says "Contacts" and the vocabulary says "contact": the wire's word and
  * the product's word differ, and this is the one place that correspondence is
  * written down rather than assumed at each call site.
  */
@@ -47,7 +47,7 @@ const OBJECT_TABS = ["contacts", "companies", "deals"] as const;
 type ObjectTab = (typeof OBJECT_TABS)[number];
 
 const RESOURCE_OF: Record<ObjectTab, FilterResource> = {
-  contacts: "person",
+  contacts: "contact",
   companies: "company",
   deals: "deal",
 };
@@ -75,13 +75,13 @@ const UNIT_LABEL: Record<ObjectTab, MessageKey> = {
  * The same three objects again, as `/views` spells them.
  *
  * A third spelling, and it is not a mistake to fix here: `/filters/*` takes
- * `person` and `/views` takes `people`, both enumerated in the contract. So this
+ * `contact` and `/views` takes `contacts`, both enumerated in the contract. So this
  * screen is where the two vocabularies meet, and the correspondence is written
  * down once — beside `RESOURCE_OF`, so a reader sees both mappings together —
  * rather than derived at each call site by adding an "s".
  */
 const VIEW_OF: Record<ObjectTab, ViewResource> = {
-  contacts: "people",
+  contacts: "contacts",
   companies: "companies",
   deals: "deals",
 };
@@ -98,7 +98,7 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
   // URL naming the object the reader had left, which a reload or a Back press
   // then restored over them.
   const tab = tabFromRoute(id);
-  // A fresh tree per object, because a clause naming a person's field means
+  // A fresh tree per object, because a clause naming a contact's field means
   // nothing on a deal — carrying the tree across would offer the human a filter
   // the new vocabulary refuses.
   const [tree, setTree] = useState<Node>(() => newGroup("and"));
@@ -141,7 +141,7 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
         // as its argument, so it belongs after the thing it reads — and a
         // refusal is a sentence, which no header row has width for. It also
         // takes the FILTER vocabulary's word for the object rather than the
-        // view rail's, because `/exports` enumerates `person`, the same as the
+        // view rail's, because `/exports` enumerates `contact`, the same as the
         // preview it has to agree with.
         //
         // The slot is filled only when the menu will draw something. Panel

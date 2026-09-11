@@ -81,7 +81,7 @@ func TestTheTenantPassClosesAbandonedRunsAndLeavesTheRestAlone(t *testing.T) {
 	}
 	// The one that would hurt most: a human decision still pending.
 	if got := re.runState(t, awaitingHuman); got.status != "awaiting_approval" {
-		t.Errorf("a run awaiting a human is %q, want awaiting_approval — a person may take weeks, and "+
+		t.Errorf("a run awaiting a human is %q, want awaiting_approval — a contact may take weeks, and "+
 			"closing it discards a decision nobody has made", got.status)
 	}
 }

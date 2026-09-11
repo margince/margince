@@ -5,7 +5,7 @@ package activities
 
 // The account's document library, and the metadata a human asserts on a file.
 //
-// A document reachable from a company may hang off a deal, a person, an activity
+// A document reachable from a company may hang off a deal, a contact, an activity
 // or the company itself, and each of those has its OWN visibility. So the
 // roll-up scopes every candidate through its own primary parent rather than
 // filtering afterwards: a contract on a deal the viewer cannot see contributes
@@ -242,7 +242,7 @@ const scopeUnbounded = "TRUE"
 // clause over their own columns. `activity` is not one of them — its scope is
 // the link walk — so it gets its own arm in activityParentClause rather than
 // being forced into this shape, which would widen it.
-var documentParentKinds = []string{linkEntityCompany, linkEntityDeal, linkEntityPerson}
+var documentParentKinds = []string{linkEntityCompany, linkEntityDeal, linkEntityContact}
 
 // activityParentClause is the arm for a file hanging off an activity. It uses
 // the link-walk scope every other activity read uses (ADR-0054 §8: scope policy
@@ -396,7 +396,7 @@ var provenanceCategories = map[string]struct{}{
 // it did not.
 //
 // The two `*_attachment` values are the document library's answer to "where did
-// this come from", and a hand upload came from the person uploading it. Letting
+// this come from", and a hand upload came from the contact uploading it. Letting
 // the patch set one would mint a false provenance claim that every later reader
 // takes for a derived fact — and unlike a wrong title, nothing downstream can
 // tell it apart from the real thing.

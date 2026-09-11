@@ -10,7 +10,7 @@
 // the capture sink or it does not exist. So the seeder had no way in, and the
 // demo had companies, deals, contracts and invoices behind an empty inbox.
 // The reply join, the thread view, "who on our team knows this contact" and
-// every person's timeline sat blank in front of anyone being shown the
+// every contact's timeline sat blank in front of anyone being shown the
 // product.
 //
 // Going through the sink is the point. The threads, participants, attachments,
@@ -77,7 +77,7 @@ const Name = "offline_demo"
 const generatorVersion = 3
 
 // Directory is what the connector needs to know about the installation to
-// write plausible mail for it. Implemented in compose, because reading people
+// write plausible mail for it. Implemented in compose, because reading contacts
 // and deals is not capture's business: the connector is a pure generator and
 // this is the only thing it is handed.
 type Directory interface {
@@ -107,9 +107,9 @@ type Account struct {
 	// or `en` — carried in from company-locale.json through the auth payload.
 	// Empty when the installation was not seeded from a dataset, and the
 	// domain suffix answers instead.
-	Locale string
-	People []Person
-	Deals  []Deal
+	Locale   string
+	Contacts []Contact
+	Deals    []Deal
 	// ContractEndsInDays is negative for a contract already over. Zero when
 	// the account holds none.
 	ContractEndsInDays int
@@ -121,8 +121,8 @@ type Account struct {
 	Now time.Time
 }
 
-// Person is somebody at the account we write to.
-type Person struct {
+// Contact is somebody at the account we write to.
+type Contact struct {
 	Name  string
 	Email string
 	Role  string

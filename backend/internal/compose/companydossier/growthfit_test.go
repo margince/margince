@@ -177,7 +177,7 @@ func TestAStaleMachineReadValueDoesNotCountTowardCompleteness(t *testing.T) {
 	}
 }
 
-// A person who typed the answer did not read a source, so there is nothing to
+// A contact who typed the answer did not read a source, so there is nothing to
 // re-read and nothing to go stale. Expiring their entry would ask them to
 // retype the same fact on a schedule.
 func TestAHumanEnteredValueNeverGoesStale(t *testing.T) {
@@ -349,7 +349,7 @@ func TestAnAssessmentOverHumanValuesAloneNeverExpiresOnTheClock(t *testing.T) {
 		t.Fatalf("band = %q, want weak — four of seven clears the floor", got.Band)
 	}
 	if !got.StaleAt.IsZero() {
-		t.Errorf("stale at %v, want never — a person's own answer does not age", got.StaleAt)
+		t.Errorf("stale at %v, want never — a contact's own answer does not age", got.StaleAt)
 	}
 }
 

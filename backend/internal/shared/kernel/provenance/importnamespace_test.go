@@ -29,7 +29,7 @@ func TestReservedSourceSystem(t *testing.T) {
 }
 
 func TestRefuseNamesTheFieldAndLetsOrdinaryValuesThrough(t *testing.T) {
-	err := provenance.Refuse("source", provenance.ReservedSourceSystemPrefix+"hubspot:person:p-1")
+	err := provenance.Refuse("source", provenance.ReservedSourceSystemPrefix+"hubspot:contact:p-1")
 	var reserved *provenance.ReservedError
 	if !errors.As(err, &reserved) {
 		t.Fatalf("err = %v, want ReservedError — a client write into the import namespace must be refused", err)
@@ -42,7 +42,7 @@ func TestRefuseNamesTheFieldAndLetsOrdinaryValuesThrough(t *testing.T) {
 	}
 	// The guard is a prefix rule, not a ban: ordinary provenance — and an
 	// empty one — stay writable, or every create wire would break.
-	for _, ordinary := range []string{"", "hubspot", "hubspot:person:p-1", "mirrorless"} {
+	for _, ordinary := range []string{"", "hubspot", "hubspot:contact:p-1", "mirrorless"} {
 		if err := provenance.Refuse("source", ordinary); err != nil {
 			t.Errorf("Refuse(%q) = %v, want nil", ordinary, err)
 		}
@@ -56,7 +56,7 @@ func TestReservedErrorStatesItselfAsCallerFixable(t *testing.T) {
 	// the refusal degrades to an opaque internal fault telling the caller
 	// to retry something that will never succeed.
 	var fault apperrors.FieldFault = &provenance.ReservedError{
-		Field: "source", Value: "mirror:hubspot:person:p-1",
+		Field: "source", Value: "mirror:hubspot:contact:p-1",
 	}
 	field, code, message := fault.FieldFault()
 	if field != "source" {

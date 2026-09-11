@@ -24,7 +24,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const LONG = "In contact, but one person carries the whole account.";
+const LONG = "In contact, but one contact carries the whole account.";
 
 // jsdom lays nothing out, so every element reports a width of zero and no text
 // is ever clipped. These are the two measurements the hook reads, and stubbing

@@ -68,7 +68,7 @@ func TestTheCalendarBackingIsOnlyReadForTheActingSeat(t *testing.T) {
 			}
 			if asked != tc.wantAsked {
 				t.Errorf("the connector was read %d times, want %d — reading it for a host who is "+
-					"not the acting seat reports that person's account state", asked, tc.wantAsked)
+					"not the acting seat reports that contact's account state", asked, tc.wantAsked)
 			}
 		})
 	}

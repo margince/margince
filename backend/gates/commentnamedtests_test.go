@@ -28,7 +28,7 @@ package gates
 // grepping the name finds anything. `jobs.Config.TestOnly` is a field and
 // `capture.TestMailboxLedger` is a type; prose naming either is telling the
 // truth, and a gate that only knew about `func Test…` would call both stale and
-// teach people to stop naming things.
+// teach contacts to stop naming things.
 
 import (
 	"go/ast"
@@ -57,7 +57,7 @@ var abbreviated = regexp.MustCompile(`^\s*(?:…|\.\.\.)`)
 // takes an unanchored regular expression, so a prefix is not a truncated name
 // but the ordinary way to write one — `-run TestEveryPolicyRecordType` selects
 // TestEveryPolicyRecordTypeIsOneItsToolCanSend and is exactly what its author
-// meant. Requiring the full name here would teach people to paste a longer
+// meant. Requiring the full name here would teach contacts to paste a longer
 // string than the command needs.
 var runInvocation = regexp.MustCompile(`-run\s+$`)
 

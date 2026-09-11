@@ -66,7 +66,7 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 	if err != nil {
 		// The parse failure is the ANSWER, not a fault to propagate: one bad cell
 		// in a spreadsheet is a thing to fix in the file, and failing the whole
-		// run over it would tell a person nothing about which line to look at.
+		// run over it would tell a contact nothing about which line to look at.
 		return targetID{named: true, reason: fmt.Sprintf(
 			"%q is not a company id; export the companies to get theirs, or leave the column empty "+
 				"to import this row as a new company", raw)}
@@ -77,7 +77,7 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 	// Likewise: a read that does not answer means no company this caller can see
 	// has that id, which is the sentence the report shows. Distinguishing "gone"
 	// from "not yours" would tell a caller that an id they cannot read exists.
-	if _, err := w.people.GetCompany(ctx, ids.From[ids.CompanyKind](parsed),
+	if _, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](parsed),
 		storekit.LiveOnly); err != nil {
 		return targetID{named: true, reason: fmt.Sprintf(
 			"no company you can see has the id %q; it may have been archived, merged away, or belong "+

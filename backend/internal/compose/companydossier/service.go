@@ -136,7 +136,7 @@ func (d stored) usable(fingerprint string) bool {
 }
 
 // newestSource is when the freshest value this dossier was written from was
-// last read. A company with nothing dated — every value entered by a person —
+// last read. A company with nothing dated — every value entered by a contact —
 // has no source age at all, and reports the zero time rather than "now", which
 // would claim a read nobody performed.
 func newestSource(in Input) time.Time {
@@ -166,7 +166,7 @@ func newestSource(in Input) time.Time {
 // the company's current facts.
 func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) (crmcontracts.CompanyDossier, error) {
 	var zero crmcontracts.CompanyDossier
-	// A dossier is a reading aid for a person; an agent reading records through
+	// A dossier is a reading aid for a contact; an agent reading records through
 	// a passport has the records themselves.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return zero, err

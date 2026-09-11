@@ -31,7 +31,7 @@ export type EmailBodyParts = {
    * What the trimmed part starts with. "none" when there is no tail at all.
    *
    * A signature and a quote are trimmed for different reasons and read
-   * differently to a person: the sign-off is the sender still speaking, and
+   * differently to a contact: the sign-off is the sender still speaking, and
    * the quote is an older message. One label for both was the defect.
    */
   tail: "none" | "signature" | "quote";

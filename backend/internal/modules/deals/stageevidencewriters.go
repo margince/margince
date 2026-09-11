@@ -209,20 +209,20 @@ type ActivityAuthorship struct {
 	// because activity.updated carries no kind and a meeting must still be
 	// told from a task.
 	Kind string
-	// BuyerParticipants counts the people on the activity who are genuinely
+	// BuyerParticipants counts the contacts on the activity who are genuinely
 	// the other side. A meeting nobody from their side attended is one we held
 	// with ourselves, and it settles no event_held criterion.
 	//
 	// Counted by CountsAsBuyerParticipant rather than by the absence of a
 	// seat: a colleague logged through the manual path is written as a
-	// person-linked row with a NULL user_id, so "not a seat" would count our
-	// own people as the buyer and let an internal meeting settle the criterion.
+	// contact-linked row with a NULL user_id, so "not a seat" would count our
+	// own contacts as the buyer and let an internal meeting settle the criterion.
 	BuyerParticipants int
 	// MeetingStatus is activity.meeting_status — booked, held, no_show or
 	// canceled — and empty on anything that is not a meeting.
 	MeetingStatus string
 	// HasTranscript reports whether this activity carries a transcript: a
-	// recording of people talking, which cannot exist for a meeting that did
+	// recording of contacts talking, which cannot exist for a meeting that did
 	// not happen.
 	HasTranscript bool
 	// TranscriptLines is how many lines that transcript has, so evidence
@@ -295,7 +295,7 @@ func ReadActivityAuthorship(
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT role, coalesce(user_id::text, ''), coalesce(address, ''),
-		       person_id IS NOT NULL
+		       contact_id IS NOT NULL
 		  FROM activity_participant WHERE activity_id = $1`, activityID)
 	if err != nil {
 		return out, fmt.Errorf("read the activity's participants: %w", err)
@@ -303,7 +303,7 @@ func ReadActivityAuthorship(
 	defer rows.Close()
 	for rows.Next() {
 		var p Participant
-		if err := rows.Scan(&p.Role, &p.UserID, &p.Address, &p.PersonLinked); err != nil {
+		if err := rows.Scan(&p.Role, &p.UserID, &p.Address, &p.ContactLinked); err != nil {
 			return out, fmt.Errorf("scan a participant: %w", err)
 		}
 		out.Participants = append(out.Participants, p)
@@ -324,7 +324,7 @@ func ReadActivityAuthorship(
 	return out, nil
 }
 
-// OwnDomainReader answers the email domains this installation's own people
+// OwnDomainReader answers the email domains this installation's own contacts
 // write from — the set a sender is tested against to tell a colleague from a
 // customer.
 //

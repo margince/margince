@@ -82,7 +82,7 @@ func New() extension.Extension {
 		Jobs: []extension.Job{
 			{Name: "drain", Handle: drain},
 		},
-		// A landed request's timeline entry can be archived by a person, and
+		// A landed request's timeline entry can be archived by a contact, and
 		// nothing in the core knows this unit's queue claims to have produced it.
 		// Without this subscription that claim stays true forever about an entry
 		// nobody can see.

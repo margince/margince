@@ -89,7 +89,7 @@ function SessionBookingScreen() {
       if (error) {
         throwProblem(error);
       }
-      return data.data.find((hit) => hit.type === "person") ?? null;
+      return data.data.find((hit) => hit.type === "contact") ?? null;
     },
     onSuccess: (hit) => setRecognized(hit?.title ?? null),
   });

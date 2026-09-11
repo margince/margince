@@ -138,9 +138,9 @@ function SeedCache({
   }
   if (
     record &&
-    client.getQueryData(["person", "ref", record.id]) === undefined
+    client.getQueryData(["contact", "ref", record.id]) === undefined
   ) {
-    client.setQueryData(["person", "ref", record.id], record.name);
+    client.setQueryData(["contact", "ref", record.id], record.name);
   }
   return <>{children}</>;
 }

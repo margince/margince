@@ -45,7 +45,7 @@ type Comms interface {
 	// the records the message is filed under are named instead of inherited.
 	SendAccountEmail(ctx context.Context, links []RecordLink, in SendEmailArgs) (SendEmailResult, error)
 	// SendMessage replies on a captured channel conversation. It takes no
-	// addressee: the recipient is the person the anchor conversation is with,
+	// addressee: the recipient is the contact the anchor conversation is with,
 	// resolved server-side, so a reply can only reach the human who opened it.
 	SendMessage(ctx context.Context, anchor ids.UUID, in SendMessageArgs) (SendMessageResult, error)
 	// ChannelKinds reports whether an activity kind is a messaging-channel

@@ -119,7 +119,7 @@ func (a approvalsAdapter) ProposedChange(ctx context.Context, approvalID ids.App
 }
 
 // Withdraw retracts the proposal behind a cancelled task, so no decision is
-// left in a person's inbox that could no longer take effect. It reports whether
+// left in a contact's inbox that could no longer take effect. It reports whether
 // there was still an offer to take: a proposal a human already decided is
 // untouched, and a task that claimed otherwise would say the decision was gone
 // while it sat live in the inbox.

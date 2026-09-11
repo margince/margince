@@ -37,13 +37,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// SuppressInput is a rep saying we may not write to this person.
+// SuppressInput is a rep saying we may not write to this contact.
 type SuppressInput struct {
-	// PersonID is the only subject this door takes. A lead can be suppressed by
+	// ContactID is the only subject this door takes. A lead can be suppressed by
 	// the same table and is not reachable here: leads have no consent surface
 	// yet, and an input field naming a subject the authorization check cannot
 	// name would be a door claiming a reach it does not have.
-	PersonID ids.PersonID
+	ContactID ids.ContactID
 	// Kind is which stop this is. The vocabulary is the table's own CHECK, and
 	// a caller may only ever record subject_request — the other three are
 	// written by machinery (a bounce) or describe a legal fact (an objection, a
@@ -110,35 +110,35 @@ func (s *Store) Suppress(ctx context.Context, in SuppressInput) error {
 // admitSuppress settles everything decidable before a connection is taken: the
 // subject, the kind, and that this caller may write about that subject at all.
 func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.AuthorityLevel, error) {
-	sub, err := consentSubject(RecordInput{PersonID: in.PersonID})
+	sub, err := consentSubject(RecordInput{ContactID: in.ContactID})
 	if err != nil {
 		return subject{}, "", err
 	}
 	if !slices.Contains(suppressibleKinds, in.Kind) {
 		return subject{}, "", &ValidationError{
 			Field: auditFieldKind,
-			Reason: "a person may record that the subject asked us to stop, or objected to " +
+			Reason: "a contact may record that the subject asked us to stop, or objected to " +
 				"marketing; a processing restriction and a bounce are not recorded by hand here",
 		}
 	}
 	// The BOUND only. The contract makes this reason optional (`required: [kind]`),
 	// and a rep relaying a phone call may have nothing to add — what it must not
-	// be is a megabyte every later reader of this person's history is served.
+	// be is a megabyte every later reader of this contact's history is served.
 	if err := boundReason(in.Reason); err != nil {
 		return subject{}, "", err
 	}
-	// "person" as a literal rather than sub.entityType, which is the same value
-	// on every path this door has: SuppressInput reaches it from a person route
+	// "contact" as a literal rather than sub.entityType, which is the same value
+	// on every path this door has: SuppressInput reaches it from a contact route
 	// only. A computed object name is a door no static check can resolve, and
 	// grantreachability_test.go counts those — an authorization gate nothing can
 	// scan is exactly the one worth keeping scannable.
-	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return subject{}, "", err
 	}
 	return sub, levelFor(ctx, in.Kind), nil
 }
 
-// survivingSubject resolves a person to whichever record survives them, so a
+// survivingSubject resolves a contact to whichever record survives them, so a
 // stop always lands where the send path will read it.
 //
 // One hop, not a walk. The merge writes merged_into_id to the SURVIVOR, and a
@@ -147,16 +147,16 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 func survivingSubject(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, error) {
 	var canonical ids.UUID
 	err := tx.QueryRow(ctx,
-		`SELECT coalesce(merged_into_id, id) FROM person WHERE id = $1`, id).Scan(&canonical)
+		`SELECT coalesce(merged_into_id, id) FROM contact WHERE id = $1`, id).Scan(&canonical)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// A person who does not exist answers ErrNotFound, the same as one this
+		// A contact who does not exist answers ErrNotFound, the same as one this
 		// caller may not see. EnsureWritable below would have said so anyway;
 		// this read runs first, so it has to keep the same silence rather than
 		// turn "no such row" into a distinguishable error.
 		return ids.UUID{}, apperrors.ErrNotFound
 	}
 	if err != nil {
-		return ids.UUID{}, fmt.Errorf("consent: resolving the person a stop belongs to: %w", err)
+		return ids.UUID{}, fmt.Errorf("consent: resolving the contact a stop belongs to: %w", err)
 	}
 	return canonical, nil
 }
@@ -173,13 +173,13 @@ func survivingSubject(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, er
 //
 // THE COST IS REAL AND CURRENTLY WORSE THAN THE DESIGN INTENDS. The plan has a
 // subject-initiated reversal and a per-message exception path; NEITHER EXISTS
-// YET. PublicSaveChoices writes person_consent and never touches this table, so
+// YET. PublicSaveChoices writes contact_consent and never touches this table, so
 // today a mistyped objection is undone by a database correction and nothing
 // else.
 //
 // Shipping it anyway, because the alternative was worse in the direction that
 // matters: with no writer at all, a rep told "stop the newsletter" recorded a
-// subject_request, which stopped that person's invoices. A stop too hard to
+// subject_request, which stopped that contact's invoices. A stop too hard to
 // lift is an awkward conversation. A stop too easy to lift is mail somebody
 // explicitly refused, and one that was never recordable is both.
 //
@@ -225,7 +225,7 @@ func (s *Store) suppressAdmittedTx(
 	// lock the lift and the carry take makes the three queue.
 	//
 	// BEFORE EnsureWritable, and that order is the whole of it. EnsureWritable
-	// reads the person row, and a merge holds that row locked while it reaches
+	// reads the contact row, and a merge holds that row locked while it reaches
 	// for this same advisory lock. Taking them the other way round inverts the
 	// order between the two transactions and Postgres reports a deadlock — it
 	// did, in TestAStopRecordedDuringAMergeStillReachesTheSurvivor, which is
@@ -236,7 +236,7 @@ func (s *Store) suppressAdmittedTx(
 	// auth.EnsureWritable, the same probe recordAdmittedTx runs for a
 	// withdrawal — row scope, capture privacy and write authority together. A
 	// bare existence check would let somebody stop a contact they cannot open:
-	// `person` carries capture privacy, so a mailbox sync's unpromoted rows are
+	// `contact` carries capture privacy, so a mailbox sync's unpromoted rows are
 	// invisible to every seat but their owner's, and a stop written onto one is
 	// a refusal its owner can neither see nor explain.
 	//
@@ -246,8 +246,8 @@ func (s *Store) suppressAdmittedTx(
 	if err := auth.EnsureWritable(ctx, tx, sub.entityType, sub.id); err != nil {
 		return err
 	}
-	// SETTLED AGAINST A MERGE, for the reason PromotePersonCohortTx settles the
-	// person a cohort belongs to: no reader of communication_suppression walks
+	// SETTLED AGAINST A MERGE, for the reason PromoteContactCohortTx settles the
+	// contact a cohort belongs to: no reader of communication_suppression walks
 	// merged_into_id, so a stop written onto a retired id sits on a record no
 	// send evaluates. The merge that retired it has already carried the stops
 	// it could see; one recorded a moment later would otherwise be lost, which
@@ -259,7 +259,7 @@ func (s *Store) suppressAdmittedTx(
 	// "which record survives this one" to somebody with no claim on either.
 	//
 	// The lock above is what makes the answer trustworthy: a merge naming this
-	// person is either committed before it, and visible here, or has not begun.
+	// contact is either committed before it, and visible here, or has not begun.
 	subjectID, err := survivingSubject(ctx, tx, sub.id)
 	if err != nil {
 		return err
@@ -285,16 +285,16 @@ func (s *Store) suppressAdmittedTx(
 		return fmt.Errorf("consent: recording the suppression: %w", err)
 	}
 
-	// "update" on the person, which is what qualifyingevent.go records for the
+	// "update" on the contact, which is what qualifyingevent.go records for the
 	// same class of write — a human changing what may be sent to somebody.
 	//
 	// NOT "restrict", which looks apt and is a trap: privacy/fieldhistory.go
 	// treats it as a SCRUB TOMBSTONE, so a suppression audited that way would
-	// hide every earlier edit to that person as though their data had been
+	// hide every earlier edit to that contact as though their data had been
 	// erased. The record history would also render it "System withheld the
 	// record", which is not what happened.
 	// AuditEvent and not Audit: this write has no prior state to image. A
-	// suppression is a new fact about the person, not an edit to a field that
+	// suppression is a new fact about the contact, not an edit to a field that
 	// held something before, and Audit refuses an update with no before-image
 	// rather than let one record a change it cannot describe.
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
@@ -303,7 +303,7 @@ func (s *Store) suppressAdmittedTx(
 		return err
 	}
 	// EmitEvent, because the payload declares a STATIC entity: this door writes
-	// about a person and only a person, so the fan-out gate resolves delivery
+	// about a contact and only a contact, so the fan-out gate resolves delivery
 	// scope from the type rather than from a runtime subject somebody has to
 	// ratify by hand.
 	return storekit.EmitEvent(ctx, tx, auditID, sub.id, suppressionRecordedPayload(in.Kind, level))
@@ -316,9 +316,9 @@ func (s *Store) suppressAdmittedTx(
 // missing field.
 func suppressionSource(reason string) string {
 	if reason == "" {
-		return "recorded by a person"
+		return "recorded by a contact"
 	}
-	return "recorded by a person: " + reason
+	return "recorded by a contact: " + reason
 }
 
 // suppressionRecordedPayload names what was recorded and at which authority.

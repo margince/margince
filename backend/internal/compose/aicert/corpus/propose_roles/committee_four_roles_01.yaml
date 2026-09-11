@@ -1,16 +1,16 @@
-name: a_committee_where_four_people_state_their_own_roles
+name: a_committee_where_four_contacts_state_their_own_roles
 task: propose_roles
 site: committee
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 # One call, four candidates, four different roles — the site's real shape, since
-# a committee is several people at once and nothing else in this corpus reads
-# more than one role from a single call. Every role here is stated by the person
+# a committee is several contacts at once and nothing else in this corpus reads
+# more than one role from a single call. Every role here is stated by the contact
 # who holds it, in their own sentence, because a title is never evidence.
 fixture:
   deal: "Steinbach Tech — warehouse scanning rollout"
   candidates:
-    - PersonID: p-champion
+    - ContactID: p-champion
       FullName: "Marta Kovac"
       Title: "Logistics Coordinator"
       Messages:
@@ -20,7 +20,7 @@ fixture:
             I took this to the operations board myself last Thursday and I'll
             keep making the case internally until it's funded. Send me whatever
             you have on the throughput numbers and I'll put it in front of them.
-    - PersonID: p-influencer
+    - ContactID: p-influencer
       FullName: "Dev Anand"
       Title: "Solutions Architect"
       Messages:
@@ -30,7 +30,7 @@ fixture:
             I don't hold any budget for this, but they won't sign anything until
             I've said the integration is sound. My assessment is what the
             decision will rest on, so let's go through the API limits properly.
-    - PersonID: p-blocker
+    - ContactID: p-blocker
       FullName: "Ruth Feld"
       Title: "Data Protection Officer"
       Messages:
@@ -40,7 +40,7 @@ fixture:
             I am not prepared to approve this while the retention question is
             open. I'll hold it at my stage until we have a written answer on how
             long scan images are kept and who can read them.
-    - PersonID: p-user
+    - ContactID: p-user
       FullName: "Tomas Bilek"
       Title: "Shift Supervisor"
       Messages:
@@ -58,7 +58,7 @@ expect:
     p-blocker: blocker
     p-user: user
   rubric: >
-    Four people, each stating what they do on this deal in their own words:
+    Four contacts, each stating what they do on this deal in their own words:
     Marta carries it internally and says so ("I took this to the operations board
     myself... I'll keep making the case"), Dev holds no budget but owns the
     assessment the decision rests on, Ruth will withhold approval at her stage
@@ -70,12 +70,12 @@ expect:
     Two failures matter more than a plain mislabel. First, reading a role off a
     TITLE — Data Protection Officer, Solutions Architect and Shift Supervisor are
     all titles a model can guess a role from, and the contract forbids it, so the
-    scenario only passes if the evidence quoted for each is the person's own
+    scenario only passes if the evidence quoted for each is the contact's own
     sentence. Ruth is the sharpest case: her title alone would suggest blocker
     and her words independently confirm it, so a reply that cites the title as
     evidence is wrong while being right by accident.
     Second, binding evidence to the wrong author. All four sit in one prompt, and
-    a role proposed for one person on the strength of another's sentence scores
+    a role proposed for one contact on the strength of another's sentence scores
     at the floor — that is one participant handing a role to a colleague who
     never spoke for it.
     Distinguishing influencer from champion is the genuine difficulty and the

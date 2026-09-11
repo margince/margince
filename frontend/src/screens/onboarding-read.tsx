@@ -95,7 +95,7 @@ function presenceState(
       // Every status this screen counts as failure, not just the one named
       // `failed`: an abandoned read is a read that did not finish either, and
       // it fell through to the resting fallback below, where the orb said the
-      // surface was waiting on a person when it was actually broken.
+      // surface was waiting on a contact when it was actually broken.
       (props.read !== null &&
         props.read !== undefined &&
         failedStatuses.has(props.read.status)))
@@ -121,7 +121,7 @@ function presenceState(
     return "idle";
   }
   // Nothing running either way: a mode chosen and a mode not chosen are both a
-  // surface waiting on a person, which is the same thing for the orb.
+  // surface waiting on a contact, which is the same thing for the orb.
   return "idle";
 }
 

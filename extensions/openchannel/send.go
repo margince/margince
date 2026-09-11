@@ -7,7 +7,7 @@ package openchannel
 // member registered.
 //
 // WHOSE CREDENTIAL SIGNS is the whole shape of this file. A message leaves under
-// the MEMBER's own signing secret — the person whose endpoint it is — never under
+// the MEMBER's own signing secret — the contact whose endpoint it is — never under
 // an installation credential, because this connector has none: it holds one
 // sealed secret per member and nothing else. That is also why Live exists: the
 // core has to be able to ask "can this member still send" without spending the

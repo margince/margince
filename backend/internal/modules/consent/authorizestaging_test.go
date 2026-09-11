@@ -20,7 +20,7 @@ import (
 // A message with no recipients has not been authorized; it has failed to ask.
 // Reported as the caller defect it is rather than as a suppression, because
 // dressing it up would park the send with a reason an operator reads as "this
-// person opted out" for a bug that named nobody.
+// contact opted out" for a bug that named nobody.
 func TestStagingRefusesAMessageWithNoRecipients(t *testing.T) {
 	_, err := (&Gate{}).AuthorizeStagingTx(context.Background(), nil, ids.NewV7(), commsauthz.Request{})
 	if !errors.Is(err, apperrors.ErrInvalidArgument) {

@@ -388,7 +388,7 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 		named, ok := catalog[c.Name]
 		if !ok {
 			t.Errorf("case %s declares criteria and %s names none of them — a grade against a "+
-				"number nothing in this repository explains cannot be read by the person it is for",
+				"number nothing in this repository explains cannot be read by the contact it is for",
 				c.Name, e2eLLMCriteriaFile)
 			continue
 		}

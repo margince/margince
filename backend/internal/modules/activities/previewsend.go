@@ -5,11 +5,11 @@ package activities
 
 // Asking whether a message may be sent, before there is a message.
 //
-// The per-person guard answers "may we write to this person, per purpose". That
+// The per-contact guard answers "may we write to this contact, per purpose". That
 // is the right question for a record page and the wrong one for a composer: the
 // engine resolves a category from the THREAD a message answers, the deal or
 // invoice it names and the evidence the sender offers, none of which belong to
-// a person in the abstract. So a composer that only had the guard would show a
+// a contact in the abstract. So a composer that only had the guard would show a
 // verdict about a different question than the one the send asks.
 
 import (
@@ -73,7 +73,7 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 	// A preview answers about a message this caller could send, so a caller who
 	// could not send must not be able to ask. Without it the endpoint is a
 	// consent oracle for anyone with a session: name an address, learn whether
-	// that person has objected. The record probe below is not a substitute — it
+	// that contact has objected. The record probe below is not a substitute — it
 	// gates the RECORDS named, and a reply preview names none.
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return commsauthz.DecisionSet{}, err

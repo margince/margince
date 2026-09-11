@@ -59,10 +59,10 @@ func SignalScopeClause(ctx context.Context, alias string, arg func(any) int) (st
 	}
 	private := fmt.Sprintf("(%[1]s.visibility <> 'owner' OR %[1]s.owner_id = $%d)",
 		alias, arg(p.UserID))
-	if UnboundedFor(p, tablePerson, tableCompany, tableDeal, tableProject) {
+	if UnboundedFor(p, tableContact, tableCompany, tableDeal, tableProject) {
 		return private, nil
 	}
-	person := VisiblePredicate(p, tablePerson, arg)
+	contact := VisiblePredicate(p, tableContact, arg)
 	company := VisiblePredicate(p, tableCompany, arg)
 	deal := VisiblePredicate(p, tableDeal, arg)
 	// A project-subject signal inherits the project's visibility, the same
@@ -78,11 +78,11 @@ func SignalScopeClause(ctx context.Context, alias string, arg func(any) int) (st
 		projectArm = fmt.Sprintf("EXISTS (SELECT 1 FROM project sj WHERE sj.id = %s.entity_id AND %s)", alias, project("sj"))
 	}
 	return fmt.Sprintf(`(%[6]s AND (%[1]s.entity_type IS NULL
-	 OR (%[1]s.entity_type = 'person'       AND EXISTS (SELECT 1 FROM person sp WHERE sp.id = %[1]s.entity_id AND %[2]s))
+	 OR (%[1]s.entity_type = 'contact'       AND EXISTS (SELECT 1 FROM contact sp WHERE sp.id = %[1]s.entity_id AND %[2]s))
 	 OR (%[1]s.entity_type = 'company' AND EXISTS (SELECT 1 FROM company so WHERE so.id = %[1]s.entity_id AND %[3]s))
 	 OR (%[1]s.entity_type = 'deal'         AND EXISTS (SELECT 1 FROM deal sd WHERE sd.id = %[1]s.entity_id AND %[4]s))
 	 OR (%[1]s.entity_type = 'project'      AND %[5]s)))`,
-		alias, person("sp"), company("so"), deal("sd"), projectArm, private), nil
+		alias, contact("sp"), company("so"), deal("sd"), projectArm, private), nil
 }
 
 // EnsureSignalVisible is EnsureVisible for signals, using the

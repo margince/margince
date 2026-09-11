@@ -47,7 +47,7 @@ const errorConnection: Connection = { ...activeConnection, status: "error" };
 const syncStatusFixture: SyncStatus = {
   objects: [
     {
-      object: "person",
+      object: "contact",
       lastSyncedAt: "2026-07-25T08:00:00Z",
       state: "fresh",
       backfillComplete: true,
@@ -256,7 +256,7 @@ describe("the overlay card", () => {
       "GET /overlay/budget": () => jsonResponse(budgetFixture),
     });
     render(<OverlayCard />);
-    expect(await screen.findByText("person")).toBeTruthy();
+    expect(await screen.findByText("contact")).toBeTruthy();
     expect(screen.getByText("Fresh")).toBeTruthy();
     expect(screen.getByText("deal")).toBeTruthy();
     expect(screen.getByText("Pending sync")).toBeTruthy();
@@ -334,7 +334,7 @@ describe("the overlay card", () => {
     });
     render(<OverlayCard />);
     expect(await screen.findByText("Sync error")).toBeTruthy();
-    expect(await screen.findByText("person")).toBeTruthy();
+    expect(await screen.findByText("contact")).toBeTruthy();
     expect(screen.getByText("Approaching limit")).toBeTruthy();
   });
 
@@ -498,7 +498,7 @@ describe("the overlay card", () => {
     render(<OverlayCard />);
     // The health rows still render (read is granted to every role) — only
     // the mutating actions are withheld.
-    expect(await screen.findByText("person")).toBeTruthy();
+    expect(await screen.findByText("contact")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Sync now" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Disconnect" })).toBeNull();
   });

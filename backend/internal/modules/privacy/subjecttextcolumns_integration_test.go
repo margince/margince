@@ -36,19 +36,19 @@ import (
 // they are two writers of one invariant: the Art. 17 request and the retention
 // sweep clear the same columns on the same tables, and a column added to one
 // alone leaves the other keeping what the first was built to remove.
-var subjectRowWriters = map[string]func(context.Context, pgx.Tx, ids.PersonID, []string) error{
-	"an Art. 17 request": func(ctx context.Context, tx pgx.Tx, person ids.PersonID, emails []string) error {
+var subjectRowWriters = map[string]func(context.Context, pgx.Tx, ids.ContactID, []string) error{
+	"an Art. 17 request": func(ctx context.Context, tx pgx.Tx, contact ids.ContactID, emails []string) error {
 		// No channel accounts: this suite drives the subject's own TEXT
 		// columns, and the account list reaches only the participant scrub —
 		// a graph structure, covered by its own erasure test.
-		_, err := anonymizeSubjectRows(ctx, tx, person, emails, nil)
+		_, err := anonymizeSubjectRows(ctx, tx, contact, emails, nil)
 		return err
 	},
-	"the retention sweep": func(ctx context.Context, tx pgx.Tx, person ids.PersonID, emails []string) error {
-		if err := anonymizePersonRecord(ctx, tx, person.UUID); err != nil {
+	"the retention sweep": func(ctx context.Context, tx pgx.Tx, contact ids.ContactID, emails []string) error {
+		if err := anonymizeContactRecord(ctx, tx, contact.UUID); err != nil {
 			return err
 		}
-		_, err := anonymizeLeadTwins(ctx, tx, person, emails)
+		_, err := anonymizeLeadTwins(ctx, tx, contact, emails)
 		return err
 	},
 }
@@ -60,7 +60,7 @@ func TestErasureClearsTheSubjectTextColumnsItUsedToLeave(t *testing.T) {
 			tx := subjectColumnsTx(ctx, t)
 
 			ws, user := ids.NewV7(), ids.NewV7()
-			person := ids.New[ids.PersonKind]()
+			contact := ids.New[ids.ContactKind]()
 			lead := ids.NewV7()
 			const subjectEmail = "bounced@anon.test"
 			mustExec(ctx, t, tx, `INSERT INTO workspace (id) VALUES ($1)`, ws)
@@ -68,29 +68,29 @@ func TestErasureClearsTheSubjectTextColumnsItUsedToLeave(t *testing.T) {
 				`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
 				user, "admin-"+user.String()+"@anon.test")
 			mustExec(ctx, t, tx,
-				`INSERT INTO person (id, full_name, source, captured_by, photo_object_key, photo_origin)
+				`INSERT INTO contact (id, full_name, source, captured_by, photo_object_key, photo_origin)
 				 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text, $3, 'human_upload')`,
-				person, user, "people/"+person.String()+".jpg")
+				contact, user, "contacts/"+contact.String()+".jpg")
 			mustExec(ctx, t, tx,
-				`INSERT INTO person_email (person_id, email, source, captured_by)
-				 VALUES ($1, $2, 'manual', 'user:'||$3::text)`, person, subjectEmail, user)
-			// The twin the erasure reaches through promoted_person_id.
+				`INSERT INTO contact_email (contact_id, email, source, captured_by)
+				 VALUES ($1, $2, 'manual', 'user:'||$3::text)`, contact, subjectEmail, user)
+			// The twin the erasure reaches through promoted_contact_id.
 			mustExec(ctx, t, tx,
-				`INSERT INTO lead (id, full_name, source, captured_by, promoted_person_id,
+				`INSERT INTO lead (id, full_name, source, captured_by, promoted_contact_id,
 				                   linkedin_url, disqualify_note, score_override_reason)
 				 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text, $3,
 				         'https://www.linkedin.com/in/hedda-subject',
 				         'said on the call she has moved to a competitor',
 				         'raised by hand after she answered the second mail')`,
-				lead, user, person)
+				lead, user, contact)
 
-			if err := anonymize(ctx, tx, person, []string{subjectEmail}); err != nil {
+			if err := anonymize(ctx, tx, contact, []string{subjectEmail}); err != nil {
 				t.Fatalf("anonymizing: %v", err)
 			}
 
 			assertNulled(ctx, t, tx,
-				`SELECT photo_object_key, photo_origin FROM person WHERE id = $1`, person.UUID,
-				"person.photo_object_key", "person.photo_origin")
+				`SELECT photo_object_key, photo_origin FROM contact WHERE id = $1`, contact.UUID,
+				"contact.photo_object_key", "contact.photo_origin")
 			assertNulled(ctx, t, tx,
 				`SELECT linkedin_url, disqualify_note, score_override_reason FROM lead WHERE id = $1`, lead,
 				"lead.linkedin_url", "lead.disqualify_note", "lead.score_override_reason")
@@ -100,7 +100,7 @@ func TestErasureClearsTheSubjectTextColumnsItUsedToLeave(t *testing.T) {
 
 // The lead's own retention action, which reaches a lead nobody was promoted
 // from — so the twin sweep above never sees it. A fourth writer of the same
-// three columns, and the one a person-driven test cannot reach.
+// three columns, and the one a contact-driven test cannot reach.
 func TestTheLeadRetentionActionClearsTheSameThreeColumns(t *testing.T) {
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)

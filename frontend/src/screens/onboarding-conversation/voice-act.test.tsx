@@ -131,7 +131,7 @@ const candidateVersion = {
   status: "candidate",
   model_name: "test-model",
   profile_json: {
-    inference: { identity_summary: "Direct, concrete, first person." },
+    inference: { identity_summary: "Direct, concrete, first contact." },
   },
   stats_json: { word_count: 1240 },
 };

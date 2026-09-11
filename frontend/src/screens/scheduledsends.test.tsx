@@ -187,7 +187,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("puts what needs a person first, and says why it stopped", async () => {
+it("puts what needs a contact first, and says why it stopped", async () => {
   mount([SENT, WAITING, HELD]);
   const headings = await screen.findAllByRole("heading", { level: 2 });
   expect(headings.map((heading) => heading.textContent)).toEqual([
@@ -333,7 +333,7 @@ it("says nothing is scheduled with one sentence, not three", async () => {
 
 // The queue says WHOSE decision stopped a message, in the composer's words.
 //
-// The held reason names a gate; this names the person. A rep reading "consent
+// The held reason names a gate; this names the contact. A rep reading "consent
 // withdrawn" has to decide whether to move the message or give up on it, and
 // only "she asked us to stop, and nobody here can lift that" answers that.
 it("names who decided against a held message, and that nobody may lift it", async () => {

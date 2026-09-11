@@ -40,14 +40,14 @@ func evaluateWithoutTheTrail(t *testing.T, e Evaluator, row AuditRow) Undoabilit
 	return answer
 }
 
-// personRow is one audited person update. The after image differs from the
+// contactRow is one audited contact update. The after image differs from the
 // before by construction: an entry whose images match changed nothing, which is
 // its own refusal, and a fixture that tripped it would test that branch instead
 // of the one each case names.
-func personRow(before string) AuditRow {
+func contactRow(before string) AuditRow {
 	return AuditRow{
 		ID:         ids.NewV7(),
-		EntityType: "person",
+		EntityType: "contact",
 		EntityID:   ids.NewV7(),
 		Action:     "update",
 		Before:     json.RawMessage(before),
@@ -58,7 +58,7 @@ func personRow(before string) AuditRow {
 // A verb outside {update, restore} is not reversed by replaying an image.
 // archive, promote and merge each have their own verb and their own undo.
 func TestAVerbThatIsNotAnImageReplayIsRefused(t *testing.T) {
-	row := personRow(`{"full_name":"Greta"}`)
+	row := contactRow(`{"full_name":"Greta"}`)
 	row.Action = "archive"
 	answer := evaluateWithoutTheTrail(t, Evaluator{}, row)
 	if answer.Reason != ReasonNotAReplayableVerb {
@@ -83,7 +83,7 @@ func TestARestoreVerbIsItselfReplayable(t *testing.T) {
 // A type the history screens do not serve is refused by name rather than
 // half-served. A custom field is audited and has no history screen of its own.
 func TestARecordTypeWithNoHistoryScreenIsRefusedByName(t *testing.T) {
-	row := personRow(`{"role":"cfo"}`)
+	row := contactRow(`{"role":"cfo"}`)
 	row.EntityType = "custom_field"
 	answer := evaluateWithoutTheTrail(t, Evaluator{}, row)
 	if answer.Reason != ReasonUnsupportedRecordType {
@@ -103,7 +103,7 @@ func TestAnImageThatFiltersToNothingIsRefusedAsNoBeforeImage(t *testing.T) {
 		"only derived columns": `{"updated_at":"2026-01-01T00:00:00Z","id":"x"}`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			answer := evaluateWithoutTheTrail(t, Evaluator{}, personRow(before))
+			answer := evaluateWithoutTheTrail(t, Evaluator{}, contactRow(before))
 			if answer.Reason != ReasonNoBeforeImage {
 				t.Errorf("reason = %q, want %q", answer.Reason, ReasonNoBeforeImage)
 			}
@@ -113,12 +113,12 @@ func TestAnImageThatFiltersToNothingIsRefusedAsNoBeforeImage(t *testing.T) {
 
 // An image key the record's update shape cannot spell is NAMED, never dropped.
 // Quietly restoring the title beside it would put half the change back and
-// report success — worse than refusing, because the person reads the
+// report success — worse than refusing, because the reader reads the
 // confirmation and stops looking.
 //
 // `consent_status` is the durable example. Consent is not mutable through a
-// person update at all: it moves only through the consent endpoint, which
-// writes an append-only proof row, so no widening of UpdatePersonRequest can
+// contact update at all: it moves only through the consent endpoint, which
+// writes an append-only proof row, so no widening of UpdateContactRequest can
 // make this key spellable.
 //
 // The address columns are NOT an example, and neither is `emails`. Both are
@@ -127,7 +127,7 @@ func TestAnImageThatFiltersToNothingIsRefusedAsNoBeforeImage(t *testing.T) {
 // to either reversible.
 func TestAnImageTheShapeCannotSpellIsRefusedByNamingTheField(t *testing.T) {
 	answer := evaluateWithoutTheTrail(t, Evaluator{},
-		personRow(`{"title":"CTO","consent_status":"granted"}`))
+		contactRow(`{"title":"CTO","consent_status":"granted"}`))
 	if answer.Reason != ReasonNotRestorableByThisPath {
 		t.Fatalf("reason = %q, want %q", answer.Reason, ReasonNotRestorableByThisPath)
 	}
@@ -143,19 +143,19 @@ func TestAnImageTheShapeCannotSpellIsRefusedByNamingTheField(t *testing.T) {
 // systems by the time anyone noticed.
 func TestARecordHeldInAnExternalSystemIsRefusedBeforeAnythingIsWritten(t *testing.T) {
 	e := Evaluator{ExternallyGoverned: func(context.Context) (bool, error) { return true, nil }}
-	answer := evaluateWithoutTheTrail(t, e, personRow(`{"title":"CTO"}`))
+	answer := evaluateWithoutTheTrail(t, e, contactRow(`{"title":"CTO"}`))
 	if answer.Reason != ReasonNotRestorableByThisPath {
 		t.Errorf("reason = %q, want %q", answer.Reason, ReasonNotRestorableByThisPath)
 	}
 }
 
 // An archived record's update path refuses on its own terms. Naming it here
-// makes the refusal legible instead of a surprise the person reads as a bug.
+// makes the refusal legible instead of a surprise the reader reads as a bug.
 func TestAnArchivedRecordIsRefusedBeforeTheTrailIsRead(t *testing.T) {
 	e := Evaluator{Archived: func(context.Context, pgx.Tx, string, ids.UUID) (bool, error) {
 		return true, nil
 	}}
-	answer := evaluateWithoutTheTrail(t, e, personRow(`{"full_name":"Greta"}`))
+	answer := evaluateWithoutTheTrail(t, e, contactRow(`{"full_name":"Greta"}`))
 	if answer.Reason != ReasonRecordArchived {
 		t.Errorf("reason = %q, want %q", answer.Reason, ReasonRecordArchived)
 	}
@@ -169,7 +169,7 @@ func TestACallerWhoCannotWriteTheRecordGetsAnHonestButton(t *testing.T) {
 	e := Evaluator{Writable: func(context.Context, pgx.Tx, string, ids.UUID) error {
 		return errNotYours
 	}}
-	answer := evaluateWithoutTheTrail(t, e, personRow(`{"full_name":"Greta"}`))
+	answer := evaluateWithoutTheTrail(t, e, contactRow(`{"full_name":"Greta"}`))
 	if answer.Reason != ReasonNotWritableByCaller {
 		t.Errorf("reason = %q, want %q", answer.Reason, ReasonNotWritableByCaller)
 	}
@@ -179,16 +179,16 @@ func TestACallerWhoCannotWriteTheRecordGetsAnHonestButton(t *testing.T) {
 }
 
 // A field the record type CAN clear is put back to nothing rather than refused.
-// This is the common case a person reaches for undo on: they filled a field in
+// This is the common case a contact reaches for undo on: they filled a field in
 // by mistake and want it empty again.
 func TestAFieldTheRecordTypeCanClearIsClearedRatherThanRefused(t *testing.T) {
 	patch := map[string]json.RawMessage{
 		"title":     json.RawMessage("null"),
 		"full_name": json.RawMessage(`"Greta"`),
 	}
-	values, cleared, unclearable := splitNulls("person", patch)
+	values, cleared, unclearable := splitNulls("contact", patch)
 	if len(unclearable) > 0 {
-		t.Fatalf("person cannot clear %v; a title it filled in is not undoable", unclearable)
+		t.Fatalf("contact cannot clear %v; a title it filled in is not undoable", unclearable)
 	}
 	if len(cleared) != 1 || cleared[0] != "title" {
 		t.Errorf("cleared = %v, want [title]", cleared)
@@ -250,14 +250,14 @@ var errNotYours = fmt.Errorf("record not found: %w", apperrors.ErrNotFound)
 var errPortFailed = fmt.Errorf("connection reset")
 
 // A restore button is drawn from a check that may not have run. Reporting a
-// database fault as "you may not change this record" tells the person a retry
+// database fault as "you may not change this record" tells the contact a retry
 // is pointless when a retry is the entire answer, and on the write path it
 // becomes a 409 whose code says the same.
 func TestAFailedWritabilityCheckIsAFaultAndNotARefusal(t *testing.T) {
 	e := Evaluator{Writable: func(context.Context, pgx.Tx, string, ids.UUID) error {
 		return errPortFailed
 	}}
-	_, err := e.Evaluate(context.Background(), nil, personRow(`{"full_name":"Greta"}`), Binding)
+	_, err := e.Evaluate(context.Background(), nil, contactRow(`{"full_name":"Greta"}`), Binding)
 	if !errors.Is(err, errPortFailed) {
 		t.Errorf("err = %v, want the port's own failure to reach the caller", err)
 	}
@@ -312,7 +312,7 @@ func TestAnAddressIsNotFoldedForAShapeThatCannotTakeOne(t *testing.T) {
 // which is how "there was none" is said. A bare null would decode to "not
 // supplied" and the restore would report success having changed nothing.
 func TestANullObjectFieldIsRestoredAsAnEmptyObject(t *testing.T) {
-	patch, unspellable, err := filterImage("person", json.RawMessage(`{"social":null}`))
+	patch, unspellable, err := filterImage("contact", json.RawMessage(`{"social":null}`))
 	if err != nil {
 		t.Fatalf("filter: %v", err)
 	}
@@ -323,7 +323,7 @@ func TestANullObjectFieldIsRestoredAsAnEmptyObject(t *testing.T) {
 		t.Errorf("social = %s, want an empty object", patch["social"])
 	}
 	// And so it is not a clear the module has to refuse.
-	if _, _, unclearable := splitNulls("person", patch); len(unclearable) > 0 {
+	if _, _, unclearable := splitNulls("contact", patch); len(unclearable) > 0 {
 		t.Errorf("social still reads as an unclearable null: %v", unclearable)
 	}
 }
@@ -333,7 +333,7 @@ func TestANullObjectFieldIsRestoredAsAnEmptyObject(t *testing.T) {
 // absent from the row's jsonb and the query skips it — so this holds the one
 // exclusion that is a judgement rather than a fact about the schema.
 func TestAStampIsNotComparedForSupersession(t *testing.T) {
-	asked, err := coupledImage("person", json.RawMessage(`{"updated_at":"2026-01-01T00:00:00Z","title":"CTO"}`))
+	asked, err := coupledImage("contact", json.RawMessage(`{"updated_at":"2026-01-01T00:00:00Z","title":"CTO"}`))
 	if err != nil {
 		t.Fatalf("narrow the image: %v", err)
 	}
@@ -342,10 +342,10 @@ func TestAStampIsNotComparedForSupersession(t *testing.T) {
 		t.Fatalf("the narrowed image is not an object: %v", err)
 	}
 	if _, judged := compared["updated_at"]; judged {
-		t.Error("a stamp was compared; the write path set it, not a person")
+		t.Error("a stamp was compared; the write path set it, not a contact")
 	}
 	if _, judged := compared["title"]; !judged {
-		t.Error("title was not compared; it is a person's decision and must be judged")
+		t.Error("title was not compared; it is a contact's decision and must be judged")
 	}
 }
 
@@ -354,7 +354,7 @@ func TestAStampIsNotComparedForSupersession(t *testing.T) {
 // such a row — it compares a *string against a string and cannot tell — and
 // offering a button for it is a button that does nothing.
 func TestAnEntryThatChangedNothingHasNothingToPutBack(t *testing.T) {
-	row := personRow(`{"title":"CTO"}`)
+	row := contactRow(`{"title":"CTO"}`)
 	row.After = json.RawMessage(`{"title":"CTO"}`)
 	answer := evaluateWithoutTheTrail(t, Evaluator{}, row)
 	if answer.Reason != ReasonNoBeforeImage {
@@ -366,9 +366,9 @@ func TestAnEntryThatChangedNothingHasNothingToPutBack(t *testing.T) {
 }
 
 // A derived stamp moving is not a change worth reversing on its own: the write
-// path set it, not a person.
+// path set it, not a contact.
 func TestAnEntryWhoseOnlyDifferenceIsAStampHasNothingToPutBack(t *testing.T) {
-	row := personRow(`{"title":"CTO","updated_at":"2026-01-01T00:00:00Z"}`)
+	row := contactRow(`{"title":"CTO","updated_at":"2026-01-01T00:00:00Z"}`)
 	row.After = json.RawMessage(`{"title":"CTO","updated_at":"2026-02-02T00:00:00Z"}`)
 	if answer := evaluateWithoutTheTrail(t, Evaluator{}, row); answer.Reason != ReasonNoBeforeImage {
 		t.Errorf("reason = %q, want %q", answer.Reason, ReasonNoBeforeImage)
@@ -413,7 +413,7 @@ func TestSettingACustomFieldFromEmptyIsRefusedRatherThanSilentlyDropped(t *testi
 		"cf_referral_code": json.RawMessage("null"),
 		"title":            json.RawMessage(`"CTO"`),
 	}
-	values, cleared, unclearable := splitNulls("person", patch)
+	values, cleared, unclearable := splitNulls("contact", patch)
 	if len(unclearable) != 1 || unclearable[0] != "cf_referral_code" {
 		t.Errorf("unclearable = %v, want the custom field named", unclearable)
 	}

@@ -13,7 +13,7 @@ import (
 	company360svc "github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -34,13 +34,13 @@ func TestContactPageWalksTheWholeAccountInRankedOrder(t *testing.T) {
 	const contacts = 30
 	var waiting ids.UUID
 	for i := range contacts {
-		person := e.SeedPerson(t, fmt.Sprintf("Contact %02d", i), nil)
-		employ(t, e, person, company, "Fleet")
-		waiting = person
+		contact := e.SeedContact(t, fmt.Sprintf("Contact %02d", i), nil)
+		employ(t, e, contact, company, "Fleet")
+		waiting = contact
 	}
 	mail := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: your proposal",
 		"inbound", company360Clock.AddDate(0, 0, -3))
-	integration.LinkActivity(t, owner, mail, "person", waiting)
+	integration.LinkActivity(t, owner, mail, "contact", waiting)
 
 	limit := 10
 	seen := map[ids.UUID]bool{}
@@ -53,10 +53,10 @@ func TestContactPageWalksTheWholeAccountInRankedOrder(t *testing.T) {
 			t.Fatalf("page %d: %v", page, err)
 		}
 		if page == 0 {
-			first = ids.UUID(got.Data[0].PersonId)
+			first = ids.UUID(got.Data[0].ContactId)
 		}
 		for _, row := range got.Data {
-			id := ids.UUID(row.PersonId)
+			id := ids.UUID(row.ContactId)
 			if seen[id] {
 				t.Fatalf("page %d repeats contact %s — a reader would write to them twice", page, id)
 			}
@@ -89,34 +89,34 @@ func TestContactPageNarrowsByEngagement(t *testing.T) {
 	svc := company360Service(e)
 
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
-	waiting := e.SeedPerson(t, "Sabine Vogel", nil)
-	answered := e.SeedPerson(t, "Dietmar Rietsch", nil)
-	silent := e.SeedPerson(t, "Philipp Koenigs", nil)
-	untried := e.SeedPerson(t, "Ute Sommer", nil)
+	waiting := e.SeedContact(t, "Sabine Vogel", nil)
+	answered := e.SeedContact(t, "Dietmar Rietsch", nil)
+	silent := e.SeedContact(t, "Philipp Koenigs", nil)
+	untried := e.SeedContact(t, "Ute Sommer", nil)
 	for _, p := range []ids.UUID{waiting, answered, silent, untried} {
 		employ(t, e, p, company, "Fleet")
 	}
 	unanswered := integration.AccountMailDirectedAt(t, owner, e.WS, "Question", "inbound",
 		company360Clock.AddDate(0, 0, -4))
-	integration.LinkActivity(t, owner, unanswered, "person", waiting)
+	integration.LinkActivity(t, owner, unanswered, "contact", waiting)
 	in := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: proposal", "inbound",
 		company360Clock.AddDate(0, 0, -3))
-	integration.LinkActivity(t, owner, in, "person", answered)
+	integration.LinkActivity(t, owner, in, "contact", answered)
 	reply := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: Re: proposal", "outbound",
 		company360Clock.AddDate(0, 0, -2))
-	integration.LinkActivity(t, owner, reply, "person", answered)
+	integration.LinkActivity(t, owner, reply, "contact", answered)
 	out := integration.AccountMailDirectedAt(t, owner, e.WS, "Introduction", "outbound",
 		company360Clock.AddDate(0, 0, -10))
-	integration.LinkActivity(t, owner, out, "person", silent)
+	integration.LinkActivity(t, owner, out, "contact", silent)
 
 	for _, tc := range []struct {
-		state people.Engagement
+		state contacts.Engagement
 		want  ids.UUID
 	}{
-		{people.EngagementWaiting, waiting},
-		{people.EngagementAnswered, answered},
-		{people.EngagementNoReply, silent},
-		{people.EngagementUntried, untried},
+		{contacts.EngagementWaiting, waiting},
+		{contacts.EngagementAnswered, answered},
+		{contacts.EngagementNoReply, silent},
+		{contacts.EngagementUntried, untried},
 	} {
 		state := tc.state
 		got, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},
@@ -128,7 +128,7 @@ func TestContactPageNarrowsByEngagement(t *testing.T) {
 			t.Fatalf("%s returned %d contacts, want exactly the one seeded in that state",
 				state, len(got.Data))
 		}
-		if id := ids.UUID(got.Data[0].PersonId); id != tc.want {
+		if id := ids.UUID(got.Data[0].ContactId); id != tc.want {
 			t.Fatalf("%s returned %s, want %s", state, id, tc.want)
 		}
 		if got.Data[0].Engagement != crmcontracts.ContactEngagement(state) {
@@ -144,15 +144,15 @@ func TestContactPageSearchesNameAndTitle(t *testing.T) {
 	svc := company360Service(e)
 
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
-	byName := e.SeedPerson(t, "Dietmar Rietsch", nil)
-	byTitle := e.SeedPerson(t, "Ute Sommer", nil)
-	neither := e.SeedPerson(t, "Jan Roth", nil)
+	byName := e.SeedContact(t, "Dietmar Rietsch", nil)
+	byTitle := e.SeedContact(t, "Ute Sommer", nil)
+	neither := e.SeedContact(t, "Jan Roth", nil)
 	employ(t, e, byName, company, "Fleet")
 	employ(t, e, byTitle, company, "Chief Financial Officer")
 	employ(t, e, neither, company, "Workshop")
 
-	// The title lives on the person, not the employment edge, so set it there.
-	e.WsExec(t, `UPDATE person SET title = 'Chief Financial Officer' WHERE id = $1`, byTitle)
+	// The title lives on the contact, not the employment edge, so set it there.
+	e.WsExec(t, `UPDATE contact SET title = 'Chief Financial Officer' WHERE id = $1`, byTitle)
 
 	for _, tc := range []struct {
 		needle string
@@ -170,7 +170,7 @@ func TestContactPageSearchesNameAndTitle(t *testing.T) {
 		if len(got.Data) != 1 {
 			t.Fatalf("%q matched %d contacts, want 1", needle, len(got.Data))
 		}
-		if id := ids.UUID(got.Data[0].PersonId); id != tc.want {
+		if id := ids.UUID(got.Data[0].ContactId); id != tc.want {
 			t.Fatalf("%q matched %s, want %s", needle, id, tc.want)
 		}
 	}
@@ -188,8 +188,8 @@ func TestContactPageRefusesACursorFromAnotherOrder(t *testing.T) {
 
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
 	for i := range 5 {
-		person := e.SeedPerson(t, fmt.Sprintf("Contact %02d", i), nil)
-		employ(t, e, person, company, "Fleet")
+		contact := e.SeedContact(t, fmt.Sprintf("Contact %02d", i), nil)
+		employ(t, e, contact, company, "Fleet")
 	}
 	limit := 2
 	first, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},
@@ -239,8 +239,8 @@ func TestContactPageTreatsAnOmittedSortAsRecommended(t *testing.T) {
 
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
 	for i := range 5 {
-		person := e.SeedPerson(t, fmt.Sprintf("Contact %02d", i), nil)
-		employ(t, e, person, company, "Fleet")
+		contact := e.SeedContact(t, fmt.Sprintf("Contact %02d", i), nil)
+		employ(t, e, contact, company, "Fleet")
 	}
 	limit := 2
 	first, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},
@@ -271,8 +271,8 @@ func TestContactPageSortsEachColumnBothWays(t *testing.T) {
 
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
 	for _, name := range []string{"Zara Zimmer", "Anna Adler", "Mia Mueller"} {
-		person := e.SeedPerson(t, name, nil)
-		employ(t, e, person, company, "Fleet")
+		contact := e.SeedContact(t, name, nil)
+		employ(t, e, contact, company, "Fleet")
 	}
 
 	ascending, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},

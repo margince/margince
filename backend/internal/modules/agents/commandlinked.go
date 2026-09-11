@@ -143,7 +143,7 @@ func (r *accountSendResolver) Subject(ctx context.Context, cmd SendAccountEmailC
 //
 // What this does not pre-empt, so neither reads as covered: the consent gate's
 // per-purpose verdict, the workspace's mailbox send capability, and whether an
-// address belongs to a person on file. All are refusals a human's yes cannot
+// address belongs to a contact on file. All are refusals a human's yes cannot
 // fix, and all need reads staging does not have.
 func (r *accountSendResolver) Guards(ctx context.Context, cmd SendAccountEmailCommand) error {
 	if err := requireAddressee(cmd.To); err != nil {
@@ -171,7 +171,7 @@ func requireAccountSendLinks(links []RecordLink) error {
 	return &BadArgsError{
 		Cause: errors.New("`links` needs at least one entry: a message filed under no record " +
 			"is one nobody finds again, and the store refuses it"),
-		Guidance: "name the company, person or deal this conversation is about",
+		Guidance: "name the company, contact or deal this conversation is about",
 	}
 }
 

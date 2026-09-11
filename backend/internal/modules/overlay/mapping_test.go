@@ -37,7 +37,7 @@ func TestTargetKindString(t *testing.T) {
 // ChildRow so the separator is the only thing left to reject it.
 func TestApplyTargetChildRejectsAMalformedTo(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []overlay.FieldMapping{{
 			From: []string{"email"}, To: "email", Kind: overlay.TargetChild,
 			Child: &overlay.ChildRow{Position: 0},
@@ -55,7 +55,7 @@ func TestApplyTargetChildRejectsAMalformedTo(t *testing.T) {
 // is a declaration error, never silently dropped.
 func TestApplyUnknownTargetKindErrors(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person",
+		Source: "contacts", Target: "contact",
 		Fields: []overlay.FieldMapping{{From: []string{"firstname"}, To: "first_name", Kind: overlay.TargetKind(99)}},
 	}
 	if _, _, err := overlay.Apply(m, map[string]any{"firstname": "Christian"}); err == nil {
@@ -68,7 +68,7 @@ func TestApplyUnknownTargetKindErrors(t *testing.T) {
 // other than exactly one From property is a declaration error.
 func TestApplyRequiresExactlyOneFromForANonAssemblerField(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person",
+		Source: "contacts", Target: "contact",
 		Fields: []overlay.FieldMapping{{From: []string{"firstname", "lastname"}, To: "first_name", Kind: overlay.TargetColumn}},
 	}
 	if _, _, err := overlay.Apply(m, map[string]any{"firstname": "Christian", "lastname": "Mueller"}); err == nil {
@@ -82,7 +82,7 @@ func TestApplyRequiresExactlyOneFromForANonAssemblerField(t *testing.T) {
 // a spurious empty string on the mirror.
 func TestApplyEmptyStringIsTreatedAsAbsent(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person",
+		Source: "contacts", Target: "contact",
 		Fields: []overlay.FieldMapping{{From: []string{"jobtitle"}, To: "title", Kind: overlay.TargetColumn}},
 	}
 	out, _, err := overlay.Apply(m, map[string]any{"jobtitle": ""})
@@ -99,7 +99,7 @@ func TestApplyEmptyStringIsTreatedAsAbsent(t *testing.T) {
 // the lookup itself (mapping.go's own doc on applyTransform).
 func TestApplyResolveFieldPassesRawValueThrough(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person",
+		Source: "contacts", Target: "contact",
 		Fields: []overlay.FieldMapping{{From: []string{"hubspot_owner_id"}, To: "owner_id", Kind: overlay.TargetColumn, Resolve: "mirror_user_map"}},
 	}
 	out, _, err := overlay.Apply(m, map[string]any{"hubspot_owner_id": "1197833249"})
@@ -117,7 +117,7 @@ func TestApplyResolveFieldPassesRawValueThrough(t *testing.T) {
 // an assembler field is still a declaration error like any other field.
 func TestApplyAssemblerSkipsAbsentSourcesAndErrorsOnBadTransform(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person",
+		Source: "contacts", Target: "contact",
 		Fields: []overlay.FieldMapping{
 			{From: []string{"address", "city"}, To: "address", Kind: overlay.TargetAssembler, Transform: "address_json"},
 		},
@@ -131,7 +131,7 @@ func TestApplyAssemblerSkipsAbsentSourcesAndErrorsOnBadTransform(t *testing.T) {
 	}
 
 	bad := overlay.ObjectMapping{
-		Source: "contacts", Target: "person",
+		Source: "contacts", Target: "contact",
 		Fields: []overlay.FieldMapping{
 			{From: []string{"address"}, To: "address", Kind: overlay.TargetAssembler, Transform: "titlecase"},
 		},
@@ -146,7 +146,7 @@ func TestApplyAssemblerSkipsAbsentSourcesAndErrorsOnBadTransform(t *testing.T) {
 // a panic.
 func TestTransformLowercaseRejectsNonString(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person",
+		Source: "contacts", Target: "contact",
 		Fields: []overlay.FieldMapping{{From: []string{"n"}, To: "x", Kind: overlay.TargetColumn, Transform: "lowercase"}},
 	}
 	if _, _, err := overlay.Apply(m, map[string]any{"n": 42.0}); err == nil {
@@ -227,7 +227,7 @@ func TestTransformEmployeesToSizeBandBuckets(t *testing.T) {
 // know rides through under its own name rather than being dropped.
 func TestTransformAddressJSONDropsEmptyAndNilFields(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person",
+		Source: "contacts", Target: "contact",
 		Fields: []overlay.FieldMapping{
 			{From: []string{"address", "city", "state", "floor"}, To: "address", Kind: overlay.TargetAssembler, Transform: "address_json"},
 		},
@@ -260,7 +260,7 @@ func TestTransformAddressJSONDropsEmptyAndNilFields(t *testing.T) {
 func TestApplyRejectsUnknownTransform(t *testing.T) {
 	m := overlay.ObjectMapping{
 		Source: "contacts",
-		Target: "person",
+		Target: "contact",
 		Fields: []overlay.FieldMapping{
 			{From: []string{"firstname"}, To: "first_name", Kind: overlay.TargetColumn, Transform: "titlecase"},
 		},
@@ -356,14 +356,14 @@ func TestApplyAmountToMinorRejectsNonFiniteAndOverflow(t *testing.T) {
 // held a single row could express only one of them.
 func TestChildTargetsLandAsACollection(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []overlay.FieldMapping{
 			{
-				From: []string{"phone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+				From: []string{"phone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "work", "is_primary": true}, Position: 0},
 			},
 			{
-				From: []string{"mobilephone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+				From: []string{"mobilephone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "mobile", "is_primary": false}, Position: 1},
 			},
 		},
@@ -374,12 +374,12 @@ func TestChildTargetsLandAsACollection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
-	rows, ok := out["person_phone"].([]map[string]any)
+	rows, ok := out["contact_phone"].([]map[string]any)
 	if !ok {
-		t.Fatalf("person_phone = %T, want a []map[string]any collection", out["person_phone"])
+		t.Fatalf("contact_phone = %T, want a []map[string]any collection", out["contact_phone"])
 	}
 	if len(rows) != 2 {
-		t.Fatalf("person_phone has %d rows, want 2 — work and mobile are separate rows", len(rows))
+		t.Fatalf("contact_phone has %d rows, want 2 — work and mobile are separate rows", len(rows))
 	}
 	if rows[0]["phone"] != "+4930111" || rows[0]["phone_type"] != "work" || rows[0]["is_primary"] != true {
 		t.Errorf("row 0 = %v, want the work number carrying its declared attributes", rows[0])
@@ -396,14 +396,14 @@ func TestChildTargetsLandAsACollection(t *testing.T) {
 // contact with no mobile number must not publish a blank mobile.
 func TestChildCollectionOmitsRowsTheIncumbentDidNotSend(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []overlay.FieldMapping{
 			{
-				From: []string{"phone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+				From: []string{"phone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "work"}, Position: 0},
 			},
 			{
-				From: []string{"mobilephone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+				From: []string{"mobilephone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "mobile"}, Position: 1},
 			},
 		},
@@ -412,12 +412,12 @@ func TestChildCollectionOmitsRowsTheIncumbentDidNotSend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
-	rows, ok := out["person_phone"].([]map[string]any)
+	rows, ok := out["contact_phone"].([]map[string]any)
 	if !ok {
-		t.Fatalf("person_phone = %T, want a []map[string]any collection", out["person_phone"])
+		t.Fatalf("contact_phone = %T, want a []map[string]any collection", out["contact_phone"])
 	}
 	if len(rows) != 1 || rows[0]["phone_type"] != "work" {
-		t.Errorf("person_phone = %v, want only the work row the incumbent actually sent", rows)
+		t.Errorf("contact_phone = %v, want only the work row the incumbent actually sent", rows)
 	}
 }
 
@@ -426,14 +426,14 @@ func TestChildCollectionOmitsRowsTheIncumbentDidNotSend(t *testing.T) {
 // first record mapped rather than on some unlucky later one.
 func TestChildRowsCollidingOnPositionAreADeclarationError(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []overlay.FieldMapping{
 			{
-				From: []string{"phone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+				From: []string{"phone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "work"}, Position: 0},
 			},
 			{
-				From: []string{"mobilephone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+				From: []string{"mobilephone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "mobile"}, Position: 0},
 			},
 		},
@@ -444,7 +444,7 @@ func TestChildRowsCollidingOnPositionAreADeclarationError(t *testing.T) {
 	if err == nil {
 		t.Fatal("Apply accepted two child rows at position 0; a collection with an arbitrary order is a declaration defect")
 	}
-	if !strings.Contains(err.Error(), "person_phone") {
+	if !strings.Contains(err.Error(), "contact_phone") {
 		t.Errorf("error %q does not name the colliding parent, so it does not say where to look", err)
 	}
 }
@@ -452,9 +452,9 @@ func TestChildRowsCollidingOnPositionAreADeclarationError(t *testing.T) {
 // A child field with no ChildRow cannot say which row it belongs to.
 func TestChildTargetWithoutARowDeclarationIsAnError(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []overlay.FieldMapping{
-			{From: []string{"email"}, To: "person_email.email", Kind: overlay.TargetChild},
+			{From: []string{"email"}, To: "contact_email.email", Kind: overlay.TargetChild},
 		},
 	}
 	// The record carries none of the mapped properties, so only a check made
@@ -463,7 +463,7 @@ func TestChildTargetWithoutARowDeclarationIsAnError(t *testing.T) {
 	if err == nil {
 		t.Fatal("Apply accepted a child target with no ChildRow; the row it lands on is then undeclared")
 	}
-	if !strings.Contains(err.Error(), "person_email.email") {
+	if !strings.Contains(err.Error(), "contact_email.email") {
 		t.Errorf("error %q does not name the offending target, so it does not say where to look", err)
 	}
 }
@@ -481,9 +481,9 @@ func TestChildRowAttributesMayNotShadowTheRowsOwnMembers(t *testing.T) {
 	}
 	for _, s := range shadowing {
 		m := overlay.ObjectMapping{
-			Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+			Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 			Fields: []overlay.FieldMapping{{
-				From: []string{"email"}, To: "person_email.email", Kind: overlay.TargetChild,
+				From: []string{"email"}, To: "contact_email.email", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{s.attr: "shadow"}, Position: 0},
 			}},
 		}
@@ -500,14 +500,14 @@ func TestChildRowAttributesMayNotShadowTheRowsOwnMembers(t *testing.T) {
 // in slice order.
 func TestChildCollectionIsOrderedByDeclaredPosition(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []overlay.FieldMapping{
 			{
-				From: []string{"mobilephone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+				From: []string{"mobilephone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "mobile"}, Position: 1},
 			},
 			{
-				From: []string{"phone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+				From: []string{"phone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "work"}, Position: 0},
 			},
 		},
@@ -518,12 +518,12 @@ func TestChildCollectionIsOrderedByDeclaredPosition(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
-	rows, ok := out["person_phone"].([]map[string]any)
+	rows, ok := out["contact_phone"].([]map[string]any)
 	if !ok {
-		t.Fatalf("person_phone = %T, want a []map[string]any collection", out["person_phone"])
+		t.Fatalf("contact_phone = %T, want a []map[string]any collection", out["contact_phone"])
 	}
 	if len(rows) != 2 {
-		t.Fatalf("person_phone has %d rows, want 2", len(rows))
+		t.Fatalf("contact_phone has %d rows, want 2", len(rows))
 	}
 	if rows[0]["phone_type"] != "work" || rows[1]["phone_type"] != "mobile" {
 		t.Errorf("rows read back %v/%v, want position 0 before position 1 regardless of declaration order",
@@ -538,7 +538,7 @@ func TestChildCollectionIsOrderedByDeclaredPosition(t *testing.T) {
 // dropped every unmapped key unconditionally would otherwise pass unnoticed.
 func TestApplyFlagsARawKeyNoMappingConsumes(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []overlay.FieldMapping{
 			{From: []string{"firstname"}, To: "first_name", Kind: overlay.TargetColumn},
 		},
@@ -559,7 +559,7 @@ func TestApplyFlagsARawKeyNoMappingConsumes(t *testing.T) {
 // pair below is the flat case: one column, two writers.
 func TestTwoColumnFieldsWritingOneTargetAreADeclarationError(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []overlay.FieldMapping{
 			{From: []string{"firstname"}, To: "display_name", Kind: overlay.TargetColumn},
 			{From: []string{"lastname"}, To: "display_name", Kind: overlay.TargetColumn},
@@ -585,22 +585,22 @@ func TestTwoColumnFieldsWritingOneTargetAreADeclarationError(t *testing.T) {
 // value.
 func TestAColumnWritingAChildCollectionsParentIsADeclarationError(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []overlay.FieldMapping{
 			{
-				From: []string{"email"}, To: "person_email.email", Kind: overlay.TargetChild,
+				From: []string{"email"}, To: "contact_email.email", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"email_type": "work"}, Position: 0},
 			},
-			{From: []string{"work_email"}, To: "person_email", Kind: overlay.TargetColumn},
+			{From: []string{"work_email"}, To: "contact_email", Kind: overlay.TargetColumn},
 		},
 	}
 	// The record carries NEITHER colliding property, so only a check made on
 	// the declaration itself can catch it.
 	_, _, err := overlay.Apply(m, map[string]any{"hs_object_id": "1"})
 	if err == nil {
-		t.Fatal("Apply accepted a column writing person_email, the parent key a child collection lands under")
+		t.Fatal("Apply accepted a column writing contact_email, the parent key a child collection lands under")
 	}
-	if !strings.Contains(err.Error(), "person_email") {
+	if !strings.Contains(err.Error(), "contact_email") {
 		t.Errorf("error %q does not name the contested target, so it does not say where to look", err)
 	}
 }
@@ -619,7 +619,7 @@ func TestAFieldWritingAStructuralTargetIsADeclarationError(t *testing.T) {
 	} {
 		t.Run(tc.target, func(t *testing.T) {
 			m := overlay.ObjectMapping{
-				Source: "contacts", Target: "person",
+				Source: "contacts", Target: "contact",
 				ExternalKey: "hs_object_id", Baseline: "hs_lastmodifieddate",
 				Fields: []overlay.FieldMapping{
 					{From: []string{"hs_legacy_key"}, To: tc.target, Kind: overlay.TargetColumn},
@@ -648,7 +648,7 @@ func TestAFieldWritingAStructuralTargetIsADeclarationError(t *testing.T) {
 // empty string as a target of its own.
 func TestAFieldMayWriteAStructuralKeyNoDeclarationClaims(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person",
+		Source: "contacts", Target: "contact",
 		Fields: []overlay.FieldMapping{
 			{From: []string{"hs_object_id"}, To: "external_id", Kind: overlay.TargetColumn},
 			{From: []string{"hs_lastmodifieddate"}, To: "last_synced_at", Kind: overlay.TargetColumn},
@@ -667,14 +667,14 @@ func TestAFieldMayWriteAStructuralKeyNoDeclarationClaims(t *testing.T) {
 // parent key by design, and each declares its own position within it.
 func TestTwoChildRowsOfOneCollectionAreNotACollision(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []overlay.FieldMapping{
 			{
-				From: []string{"phone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+				From: []string{"phone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "work"}, Position: 0},
 			},
 			{
-				From: []string{"mobilephone"}, To: "person_phone.phone", Kind: overlay.TargetChild,
+				From: []string{"mobilephone"}, To: "contact_phone.phone", Kind: overlay.TargetChild,
 				Child: &overlay.ChildRow{Attrs: map[string]any{"phone_type": "mobile"}, Position: 1},
 			},
 		},

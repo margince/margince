@@ -9,14 +9,14 @@ package integration
 // wired into the segregated lead store — active cf_* columns ride create /
 // update writes and get / list / replay / disqualify reads like core fields,
 // same drop-on-mismatch and workspace-isolation posture as the
-// person/company/deal suites. Reuses the shared people cfvFixture
-// (setupCFV) since leads live in the people store.
+// contact/company/deal suites. Reuses the shared contacts cfvFixture
+// (setupCFV) since leads live in the contacts store.
 
 import (
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -25,7 +25,7 @@ func TestCustomFieldValues_LeadRoundTrip(t *testing.T) {
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Is Cool", Type: customfields.TypeBoolean, Source: "ui"})
 
-	created, _, err := f.store.CreateLead(f.ctx, people.CreateLeadInput{
+	created, _, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
 		FullName: strp("Grace Hopper"), Source: "ui",
 		CustomFields: map[string]any{col: true},
 	})
@@ -40,7 +40,7 @@ func TestCustomFieldValues_LeadRoundTrip(t *testing.T) {
 	}
 	assertCF(t, got.AdditionalProperties, col, true)
 
-	updated, err := f.store.UpdateLead(f.ctx, leadIDOf(ids.UUID(created.Id)), people.UpdateLeadInput{
+	updated, err := f.store.UpdateLead(f.ctx, leadIDOf(ids.UUID(created.Id)), contacts.UpdateLeadInput{
 		CustomFields: map[string]any{col: false},
 	})
 	if err != nil {
@@ -48,7 +48,7 @@ func TestCustomFieldValues_LeadRoundTrip(t *testing.T) {
 	}
 	assertCF(t, updated.AdditionalProperties, col, false)
 
-	list, _, err := f.store.ListLeads(f.ctx, people.ListLeadsInput{})
+	list, _, err := f.store.ListLeads(f.ctx, contacts.ListLeadsInput{})
 	if err != nil {
 		t.Fatalf("ListLeads: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestCustomFieldValues_LeadSourceReplayCarriesCustomFields(t *testing.T) {
 	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Tier", Type: customfields.TypeText, Source: "ui"})
 	system, id := "crm", "ext-42"
 
-	created, wasCreated, err := f.store.CreateLead(f.ctx, people.CreateLeadInput{
+	created, wasCreated, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
 		FullName: strp("Ada"), Source: "import", SourceSystem: &system, SourceID: &id,
 		CustomFields: map[string]any{col: "gold"},
 	})
@@ -74,7 +74,7 @@ func TestCustomFieldValues_LeadSourceReplayCarriesCustomFields(t *testing.T) {
 	}
 	assertCF(t, created.AdditionalProperties, col, "gold")
 
-	replay, wasCreated, err := f.store.CreateLead(f.ctx, people.CreateLeadInput{
+	replay, wasCreated, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
 		FullName: strp("Ada"), Source: "import", SourceSystem: &system, SourceID: &id,
 		CustomFields: map[string]any{col: "silver"},
 	})
@@ -94,7 +94,7 @@ func TestCustomFieldValues_LeadDisqualifyPreservesCustomFields(t *testing.T) {
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Is Cool", Type: customfields.TypeBoolean, Source: "ui"})
 
-	created, _, err := f.store.CreateLead(f.ctx, people.CreateLeadInput{
+	created, _, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
 		FullName: strp("Otto"), Source: "ui",
 		CustomFields: map[string]any{col: true},
 	})
@@ -102,7 +102,7 @@ func TestCustomFieldValues_LeadDisqualifyPreservesCustomFields(t *testing.T) {
 		t.Fatalf("CreateLead: %v", err)
 	}
 
-	disqualified, err := f.store.DisqualifyLead(f.ctx, leadIDOf(ids.UUID(created.Id)), people.DisqualifyLeadInput{})
+	disqualified, err := f.store.DisqualifyLead(f.ctx, leadIDOf(ids.UUID(created.Id)), contacts.DisqualifyLeadInput{})
 	if err != nil {
 		t.Fatalf("DisqualifyLead: %v", err)
 	}

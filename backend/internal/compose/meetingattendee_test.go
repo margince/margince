@@ -19,18 +19,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestTheBriefOpensOnAPersonTheMeetingNames(t *testing.T) {
-	person := ids.NewV7()
-	got := personOnMeeting(withLinks(
+func TestTheBriefOpensOnAContactTheMeetingNames(t *testing.T) {
+	contact := ids.NewV7()
+	got := contactOnMeeting(withLinks(
 		link("company", ids.NewV7()),
-		link("person", person),
+		link("contact", contact),
 	))
-	if got != person {
-		t.Errorf("personOnMeeting = %v, want the person link %v", got, person)
+	if got != contact {
+		t.Errorf("contactOnMeeting = %v, want the contact link %v", got, contact)
 	}
 }
 
-// The FIRST person link, in the row's own order.
+// The FIRST contact link, in the row's own order.
 //
 // A meeting with several attendees has several honest answers and the row draws
 // one. Taking the store's order makes two reads of an unchanged meeting choose
@@ -38,24 +38,24 @@ func TestTheBriefOpensOnAPersonTheMeetingNames(t *testing.T) {
 // for, and anything unstable moves a control under the reader between reads.
 func TestSeveralAttendeesResolveToTheSamePageEveryRead(t *testing.T) {
 	first, second := ids.NewV7(), ids.NewV7()
-	row := withLinks(link("person", first), link("person", second))
+	row := withLinks(link("contact", first), link("contact", second))
 	for range 3 {
-		if got := personOnMeeting(row); got != first {
-			t.Fatalf("personOnMeeting = %v, want the first person link %v", got, first)
+		if got := contactOnMeeting(row); got != first {
+			t.Fatalf("contactOnMeeting = %v, want the first contact link %v", got, first)
 		}
 	}
 }
 
-// A meeting naming no person at all yields nothing, and the row then offers no
+// A meeting naming no contact at all yields nothing, and the row then offers no
 // brief. An internal meeting is the honest common case; a meeting whose
 // attendees the caller may not read arrives the same way, because the links are
 // already scoped. Both mean there is no page to read the brief on.
-func TestAMeetingLinkingNoPersonNamesNobody(t *testing.T) {
-	if got := personOnMeeting(withLinks(link("deal", ids.NewV7()))); !got.IsZero() {
-		t.Errorf("personOnMeeting = %v, want nobody", got)
+func TestAMeetingLinkingNoContactNamesNobody(t *testing.T) {
+	if got := contactOnMeeting(withLinks(link("deal", ids.NewV7()))); !got.IsZero() {
+		t.Errorf("contactOnMeeting = %v, want nobody", got)
 	}
-	if got := personOnMeeting(crmcontracts.Activity{}); !got.IsZero() {
-		t.Errorf("personOnMeeting(no links at all) = %v, want nobody", got)
+	if got := contactOnMeeting(crmcontracts.Activity{}); !got.IsZero() {
+		t.Errorf("contactOnMeeting(no links at all) = %v, want nobody", got)
 	}
 }
 

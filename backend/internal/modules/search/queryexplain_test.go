@@ -68,12 +68,12 @@ func TestAMembershipTestReadsItsList(t *testing.T) {
 // The sentence carries the predicate that did NOT run, and says what that cost
 // the answer. A note in a machine field nobody reads is a note nobody reads.
 func TestTheNarrativeNamesThePredicateThatCouldNotRun(t *testing.T) {
-	// A PERSON, not a company: this product does not geocode where people live,
+	// A CONTACT, not a company: this product does not geocode where contacts live,
 	// so a radius on one is genuinely unanswerable and the narrative has to say
 	// so. A company's radius runs now, and a narrative claiming otherwise would
 	// be the thing this test exists to catch.
-	plan := validatedPlanDoc(readerFor(entityPerson), t, `{
-		"version": "v1", "target": "person",
+	plan := validatedPlanDoc(readerFor(entityContact), t, `{
+		"version": "v1", "target": "contact",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"center": "Stuttgart", "radius_km": 50}}]}`)
 	got := explainPlan(plan)

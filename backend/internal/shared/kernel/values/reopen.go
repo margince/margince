@@ -25,7 +25,7 @@ const (
 	// ReopenOnTime lifts at a stored instant — the original snooze.
 	ReopenOnTime ReopenCondition = "time"
 	// ReopenOnReply lifts when the counterparty writes back. No instant: the
-	// wait is on a person, and putting a deadline on it would re-surface work
+	// wait is on a contact, and putting a deadline on it would re-surface work
 	// on a day nothing happened.
 	ReopenOnReply ReopenCondition = "reply"
 	// ReopenOnMeeting lifts once a named meeting is over. It names the meeting,

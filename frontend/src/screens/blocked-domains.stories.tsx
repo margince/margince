@@ -11,7 +11,7 @@ import {
 } from "./story-utils";
 
 // The three sources side by side, because telling them apart is the card's whole
-// job: a model verdict, a heuristic, and a person who deliberately let a domain
+// job: a model verdict, a heuristic, and a contact who deliberately let a domain
 // back in. The admitted row carries a company id — the McKinsey case, where
 // unblocking re-asked the company question and one landed.
 const BY_VERDICT = {

@@ -8,10 +8,10 @@ package capture
 // a DocuSign envelope from dse@eu.docusign.net, a conference blast from
 // no-reply@event.gitex.com, a SendGrid relay. Naming a company after that
 // domain manufactures junk ("eu.docusign.net" as a company). This gate
-// suppresses BOTH person and company derivation for such senders while KEEPING the
+// suppresses BOTH contact and company derivation for such senders while KEEPING the
 // activity — a DocuSign envelope is a real timeline item, it just has no CRM
 // counterparty. That is the difference from the free-mail gate (CAP-PARAM-5),
-// which suppresses only the company and keeps the person.
+// which suppresses only the company and keeps the contact.
 //
 // Precedence is deliberate and conservative, because a false suppression hides a
 // real contact:
@@ -59,13 +59,13 @@ var transactionalBaseline = map[string]struct{}{
 //
 // They are kept OUT of transactionalBaseline deliberately. That set is read by
 // IsMachineAddress, which the attention queue uses to drop rows — and these are
-// companies with named salespeople, not relay infrastructure like sendgrid.net.
+// companies with named salescontacts, not relay infrastructure like sendgrid.net.
 // Listing them there would hide a real human waiting on a reply, which the
 // queue's reader cannot recover from because nothing on the page says somebody
 // was hidden.
 //
 // What they DO justify is refusing to mint a contact from the owner's own
-// traffic with the service. Each one put a person in a real CRM — an expense
+// traffic with the service. Each one put a contact in a real CRM — an expense
 // tool's "Receipts", an itinerary service's "Plans" — because a founder
 // replying to their own receipts reads as correspondence.
 var personalServiceDomains = map[string]struct{}{
@@ -127,7 +127,7 @@ func NewTransactionalList(extra, never []string) *TransactionalList {
 
 // Suppress reports whether record creation must be suppressed for this sender,
 // and a stable reason breadcrumb (recorded for observability). The activity is
-// unaffected — only person/company derivation is gated.
+// unaffected — only contact/company derivation is gated.
 func (l *TransactionalList) Suppress(in TransactionalInput) (bool, string) {
 	base := freemail.Registrable(in.Domain)
 	if base == "" {
@@ -196,7 +196,7 @@ func isMachineLocalpart(localpart string) bool {
 //
 // Kept to markers that are unambiguous ON THEIR OWN. "notification" and
 // "no-reply" mean the same thing wherever they appear in a name; "mail" or
-// "info" do not, and a rule that swept those would hide real people.
+// "info" do not, and a rule that swept those would hide real contacts.
 // machineMarkers are the words a sending SYSTEM names itself with. Listed once:
 // the three places below ask about the same vocabulary, and three copies of it
 // drift into meaning three different things.
@@ -211,11 +211,11 @@ func hasMachineMarker(localpart string) bool {
 	// or at either END of it. Two rules learned from real addresses.
 	//
 	// Separators are boundaries, not noise: stripping them turned
-	// `connor.eply@` into `connoreply` and matched "noreply" inside a person's
+	// `connor.eply@` into `connoreply` and matched "noreply" inside a contact's
 	// name.
 	//
 	// And position matters. `esignature-noreply@` is a machine while
-	// `anna.notify.weber@` is a person, so a marker buried in the middle of a
+	// `anna.notify.weber@` is a contact, so a marker buried in the middle of a
 	// name proves nothing — only the ends, where a service names itself.
 	local := strings.ToLower(strings.TrimSpace(localpart))
 	parts := strings.FieldsFunc(local, func(r rune) bool {
@@ -270,7 +270,7 @@ func normalizedSet(values []string) map[string]struct{} {
 }
 
 // IsMachineAddress reports whether an address belongs to a machine rather than
-// a person: a no-reply style local part, or a domain that exists to send
+// a contact: a no-reply style local part, or a domain that exists to send
 // transactional mail.
 //
 // It is the ADDRESS-ONLY half of Suppress, exported for readers that have an

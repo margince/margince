@@ -34,7 +34,7 @@ describe("mailbox", () => {
 });
 
 describe("telUri", () => {
-  it("dials a number written the way people write them", () => {
+  it("dials a number written the way contacts write them", () => {
     expect(telUri("+33 6 12 44 08 91")).toBe("tel:+33612440891");
     expect(telUri("(030) 123-45.67")).toBe("tel:0301234567");
   });

@@ -125,9 +125,9 @@ type ParkedSend struct {
 	// Reason is the dispatcher's own words for giving up.
 	Reason   string
 	ParkedAt time.Time
-	// PersonID is the person the send's activity is filed under, zero when it
+	// ContactID is the contact the send's activity is filed under, zero when it
 	// is filed under none — the card then offers no open.
-	PersonID ids.UUID
+	ContactID ids.UUID
 }
 
 // Bounces is the reader's own sends whose delivery reports came back hard —
@@ -148,12 +148,12 @@ type BouncedSend struct {
 	// Reason is the receiving side's own words for the refusal.
 	Reason    string
 	BouncedAt time.Time
-	// PersonID is the person the send's activity is filed under, zero when it
+	// ContactID is the contact the send's activity is filed under, zero when it
 	// is filed under none — the card then offers no open.
-	PersonID ids.UUID
+	ContactID ids.UUID
 	// Recipient is the address that refused the send.
 	//
-	// Without it the card names a person and a subject, and a rep opening a
+	// Without it the card names a contact and a subject, and a rep opening a
 	// contact who carries three addresses cannot tell which one is dead — the
 	// row reports a failure and leaves the reader to guess at the fix. Empty
 	// when the send carries none, and the card then says nothing about where it

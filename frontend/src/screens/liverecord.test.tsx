@@ -7,7 +7,6 @@ import { createQueryClient } from "../app/queryclient";
 import { useCompany360 } from "./company360";
 import { useDeal } from "./deals";
 import { useDealStatusCard } from "./dealstatus";
-import { usePerson360 } from "./person360";
 import { useProject360 } from "./project360";
 
 // A RECORD RE-READS ITSELF WHILE SOMEBODY IS LOOKING AT IT (FE-PARAM-5).
@@ -110,7 +109,7 @@ describe("a record the reader has open", () => {
   // One case per composite read, and each names the record kind rather than
   // sharing a loop: a page that drops the options fails by name here.
   const reads: ReadonlyArray<[string, () => unknown, string]> = [
-    ["a contact", () => usePerson360("p-1"), "/v1/people/p-1/360"],
+    ["a contact", () => useContact360("p-1"), "/v1/contacts/p-1/360"],
     ["an account", () => useCompany360("o-1"), "/v1/companies/o-1/360"],
     ["a project", () => useProject360("pr-1"), "/v1/projects/pr-1/360"],
     // The deal reads its RECORD live and its briefing not at all: that one is
@@ -148,7 +147,7 @@ describe("a record the reader has open", () => {
   // FE-PARAM-1's thirty seconds is served the cache and waits out the
   // interval — the one case the cadence was made slower on the strength of.
   it("re-reads on the way back in, inside the stale window", async () => {
-    const { paths } = mount(() => usePerson360("p-1"));
+    const { paths } = mount(() => useContact360("p-1"));
     await advance(0);
 
     await leaveAndReturn(5_000);
@@ -158,7 +157,7 @@ describe("a record the reader has open", () => {
   it("stops re-reading once the reader has closed it", async () => {
     // The interval belongs to the mounted query. A page left behind that went
     // on asking would be every record a rep opened all day, forever.
-    const { unmount, paths } = mount(() => usePerson360("p-1"));
+    const { unmount, paths } = mount(() => useContact360("p-1"));
     await advance(0);
     unmount();
 

@@ -50,7 +50,7 @@ package privacy
 // bit-identical to one the subject let lapse. Reporting it as
 // "expired_unanswered" would tell a subject they ignored a link the workspace
 // itself withdrew — a statement about their conduct that is not true. The
-// matching clauses mirror the writer's: same person, same kind, same purpose,
+// matching clauses mirror the writer's: same contact, same kind, same purpose,
 // which is exactly the scope it supersedes within.
 func sarConsentLinkSections(pkg *SARPackage) []sarSection {
 	return []sarSection{
@@ -59,7 +59,7 @@ func sarConsentLinkSections(pkg *SARPackage) []sarSection {
 		          CASE WHEN ct.consumed_at IS NOT NULL THEN 'answered'
 		               WHEN EXISTS (
 		                   SELECT 1 FROM confirm_token later
-		                    WHERE later.person_id = ct.person_id
+		                    WHERE later.contact_id = ct.contact_id
 		                      AND later.kind = ct.kind
 		                      AND later.purpose_id IS NOT DISTINCT FROM ct.purpose_id
 		                      AND later.issued_at > ct.issued_at
@@ -70,6 +70,6 @@ func sarConsentLinkSections(pkg *SARPackage) []sarSection {
 		          END AS outcome
 		   FROM confirm_token ct
 		   LEFT JOIN consent_purpose cp ON cp.id = ct.purpose_id
-		   WHERE ct.person_id = $1`, nil},
+		   WHERE ct.contact_id = $1`, nil},
 	}
 }

@@ -42,7 +42,7 @@ const (
 	// ownerUnstated is the zero value, and it is not an answer. A row carrying
 	// it reached a page from a lane that never said, which the census fails on.
 	ownerUnstated ownerKind = iota
-	// ownerNamed: this lane resolved a person.
+	// ownerNamed: this lane resolved a contact.
 	ownerNamed
 	// ownerNobody: this lane's rows are genuinely unheld.
 	ownerNobody
@@ -77,7 +77,7 @@ type ownerRef struct {
 	user ids.UUID
 }
 
-// ownedBy is a producer naming the person who answers for a row.
+// ownedBy is a producer naming the contact who answers for a row.
 func ownedBy(user ids.UUID) ownerRef { return ownerRef{kind: ownerNamed, user: user} }
 
 // unassigned is a producer saying nobody has taken this yet.
@@ -89,8 +89,8 @@ func unassigned() ownerRef { return ownerRef{kind: ownerNobody} }
 
 // ownedByWhoeverIsReading is the answer for the intrinsically per-user sources.
 //
-// A notice is addressed to one person, a mailbox belongs to one person, a
-// promise was made by one person, an approved action failed for the person who
+// A notice is addressed to one contact, a mailbox belongs to one contact, a
+// promise was made by one contact, an approved action failed for the contact who
 // approved it. Those reads are bound to the acting user INSIDE the modules that
 // own them — `mineOnly`'s own comment says so — so the row is the reader's by
 // construction of the read.
@@ -98,14 +98,14 @@ func unassigned() ownerRef { return ownerRef{kind: ownerNobody} }
 // This is NOT "the reader can see it, so it is theirs". That inference is
 // available two lines away and is wrong: a rep can read a colleague's deal and
 // owes nothing on it. What this says is narrower and true — the query that
-// produced this row took the acting user as a parameter, so no other person's
+// produced this row took the acting user as a parameter, so no other contact's
 // row could have come back.
 func ownedByWhoeverIsReading() ownerRef { return ownerRef{kind: ownerTheReader} }
 
 // deferredToTheDeal is a lane whose rows are owned through their deal.
 //
 // The at-risk and brief lanes classify before dealfacts fills OwnerId onto the
-// wire, so they cannot name the person here — but they know exactly where the
+// wire, so they cannot name the contact here — but they know exactly where the
 // answer comes from, and saying so is a statement rather than a silence. The
 // wire step reads the deal the facts pass attached.
 func deferredToTheDeal() ownerRef { return ownerRef{kind: ownerFromTheDeal} }
@@ -116,7 +116,7 @@ func deferredToTheDeal() ownerRef { return ownerRef{kind: ownerFromTheDeal} }
 // the order matters for the reason answersTo documents: a waiting row absorbs a
 // drifting deal's facts for display between two passes, so asking the deal
 // first can answer differently on the second pass than on the first, and a
-// customer lands on neither person's queue.
+// customer lands on neither contact's queue.
 func ownerOnTheWire(row ranked, reader ids.UUID) *crmcontracts.WorklistOwner {
 	switch row.ownerRef.kind {
 	case ownerNamed:
@@ -227,7 +227,7 @@ func ownerFromAssignee(assignee *openapi_types.UUID) ownerRef {
 // see — so the label carries the same visibility rule the board does, and a
 // name the reader could not otherwise reach never arrives through this field.
 // A second query with its own scope clause would be a second answer to "whose
-// name may this person read", and the two would drift.
+// name may this contact read", and the two would drift.
 //
 // A missing name is left ABSENT rather than filled with the id: the contract
 // says a client draws the row without a name in that case, and an id on screen

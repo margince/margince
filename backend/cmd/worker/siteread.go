@@ -334,16 +334,16 @@ func renderExtraction(w io.Writer, r compose.SiteReadDebugReport) {
 	for _, f := range r.Extraction.Facts {
 		p("  %-9s %-15s %.2f  %q  (%s)\n", f.Category, f.Field, f.Confidence, truncate(f.Value, 80), f.SourceURL)
 	}
-	p("\nPEOPLE (%d)\n", len(r.Extraction.People))
-	for _, person := range r.Extraction.People {
-		contact := ""
-		if person.PublishedEmail != "" {
-			contact += "  " + person.PublishedEmail
+	p("\nCONTACTS (%d)\n", len(r.Extraction.Contacts))
+	for _, contact := range r.Extraction.Contacts {
+		links := ""
+		if contact.PublishedEmail != "" {
+			links += "  " + contact.PublishedEmail
 		}
-		if person.LinkedinURL != "" {
-			contact += "  " + person.LinkedinURL
+		if contact.LinkedinURL != "" {
+			links += "  " + contact.LinkedinURL
 		}
-		p("  %s — %s%s  (%s)\n", person.Name, person.Role, contact, person.SourceURL)
+		p("  %s — %s%s  (%s)\n", contact.Name, contact.Role, links, contact.SourceURL)
 	}
 
 	if len(r.Extraction.Dropped) > 0 {

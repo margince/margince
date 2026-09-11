@@ -153,13 +153,13 @@ func TestARedeliveredMeetingThatDidNotMoveWritesNothing(t *testing.T) {
 	}
 }
 
-// A replay does not overwrite what a person wrote.
+// A replay does not overwrite what a contact wrote.
 //
 // The provider is authoritative for the meeting's lifecycle and for nothing
 // else. A rep who corrected the subject keeps their correction when the
 // calendar sends its own version again — which is why this moves the status
 // alone rather than patching every mutable field.
-func TestARedeliveryLeavesTheSubjectAPersonCorrected(t *testing.T) {
+func TestARedeliveryLeavesTheSubjectAContactCorrected(t *testing.T) {
 	e := setupSend(t)
 	start := time.Now().Add(48 * time.Hour)
 	first := deliverMeeting(t, e, "evt-subject-1", "mtg", start,
@@ -182,7 +182,7 @@ func TestARedeliveryLeavesTheSubjectAPersonCorrected(t *testing.T) {
 	}
 	if subject != corrected {
 		t.Errorf("subject = %q, want the rep's correction %q — the provider's own version "+
-			"came back and overwrote a person's work", subject, corrected)
+			"came back and overwrote a contact's work", subject, corrected)
 	}
 	if status != "held" {
 		t.Errorf("meeting_status = %q, want held", status)

@@ -68,7 +68,7 @@ func TestTheSigDashIsMatchedExactlyAndNotByNearMisses(t *testing.T) {
 		{name: "the RFC sig-dash with its trailing space", body: "line\n-- \nsig", cuts: true},
 		{name: "the sig-dash without the trailing space", body: "line\n--\nsig", cuts: true},
 		{name: "a horizontal rule is not a sig-dash", body: "line\n---\nmore", cuts: false},
-		{name: "a person writing a dash before their name", body: "line\n-- Lars\nmore", cuts: false},
+		{name: "a contact writing a dash before their name", body: "line\n-- Lars\nmore", cuts: false},
 		{name: "a dash inside prose", body: "a line -- with a dash\nmore", cuts: false},
 	}
 	for _, c := range cases {

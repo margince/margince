@@ -61,7 +61,7 @@ func renderableDescriptionDefect(spec mcp.ToolSpec) string {
 }
 
 // governanceOnlyPhrases are the words the GENERATED description was made of.
-// A written description may say that a person approves a call — that is a real
+// A written description may say that a human approves a call — that is a real
 // limit a caller plans around — but reaching for these is the generated line
 // coming back, and governance already reaches the client appended to the
 // written half.
@@ -122,7 +122,7 @@ func duplicateDescription(specs []mcp.ToolSpec) (first, second string, shared bo
 // spec carrying exactly one defect, so a rule that silently stopped detecting
 // its own subject fails here rather than passing over a clean tree forever.
 func TestTheDescriptionRulesFailOnTheDefectsTheyDescribe(t *testing.T) {
-	written := "Find people and companies by name when you do not yet know which record you mean."
+	written := "Find contacts and companies by name when you do not yet know which record you mean."
 	for _, tc := range []struct {
 		name string
 		spec mcp.ToolSpec
@@ -132,7 +132,7 @@ func TestTheDescriptionRulesFailOnTheDefectsTheyDescribe(t *testing.T) {
 		// \x01 rather than a newline: TrimSpace catches trailing whitespace one
 		// branch earlier, so a newline would have proved the framing rule twice
 		// and the rune loop never once.
-		{"carrying a control character", mcp.ToolSpec{Name: "t", Description: "Find people" + "\x01" + " by name, when you do not yet know which record you mean."}},
+		{"carrying a control character", mcp.ToolSpec{Name: "t", Description: "Find contacts" + "\x01" + " by name, when you do not yet know which record you mean."}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if renderableDescriptionDefect(tc.spec) == "" {

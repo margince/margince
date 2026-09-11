@@ -336,7 +336,7 @@ it("pairs a Field's label with its control, and two Fields never collide", () =>
 // as a name, the whole help text is announced on every focus.
 it("describes a Field's control by its hint without naming it that", () => {
   render(
-    <Field label="Reason" hint="Shown to the person you are sharing with">
+    <Field label="Reason" hint="Shown to the contact you are sharing with">
       {(control) => <Textarea {...control} />}
     </Field>,
   );
@@ -345,7 +345,7 @@ it("describes a Field's control by its hint without naming it that", () => {
   const describedBy = control.getAttribute("aria-describedby");
   expect(describedBy).toBeTruthy();
   expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-    "Shown to the person you are sharing with",
+    "Shown to the contact you are sharing with",
   );
 });
 
@@ -583,7 +583,7 @@ it("keeps a delayed pending body up while it stays mounted", async () => {
 function Reading({ onOpen }: Readonly<{ onOpen: () => void }>) {
   return (
     <StatCard
-      label="The people"
+      label="The contacts"
       value="1 of 3 engaged"
       detail="a champion is named"
       onOpen={onOpen}
@@ -604,7 +604,7 @@ it("opens the tab from the door's own words", async () => {
   // "Open" is not announced twice.
   const door = screen.getByRole("button", {
     name: "Open",
-    description: "The people",
+    description: "The contacts",
   });
   const arrow = door.querySelector(".stat-card-arrow");
   expect(door.textContent).toBe(`Open${"\u2192"}`);

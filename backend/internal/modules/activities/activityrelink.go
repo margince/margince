@@ -34,7 +34,7 @@ func relinkAdmittedRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 }
 
 // deleteVisibleLinksOfType drops the activity's links of one entity type and
-// answers the person ids that delete actually displaced. Those ids come from
+// answers the contact ids that delete actually displaced. Those ids come from
 // the delete ITSELF. Inferring them instead — "whoever is a participant but no
 // longer linked" — sweeps up participants that were never linked in the first
 // place, and repoints conversations the correction never mentioned.
@@ -75,7 +75,7 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 		DELETE FROM activity_link
 		WHERE activity_id = $%d AND entity_type = $%d
 		  AND EXISTS (SELECT 1 FROM %s t WHERE t.id = activity_link.%s AND %s)
-		RETURNING person_id`,
+		RETURNING contact_id`,
 		idPos, typePos, entityType, column, visible), args...)
 	if err != nil {
 		return nil, err
@@ -95,23 +95,23 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	if err != nil {
 		return nil, err
 	}
-	return slices.DeleteFunc(displaced, func(personID ids.UUID) bool { return personID == ids.Nil }), nil
+	return slices.DeleteFunc(displaced, func(contactID ids.UUID) bool { return contactID == ids.Nil }), nil
 }
 
 // repointDisplacedParticipants moves the displaced contacts' participant rows
-// onto the relink target. A relink to a PERSON is a human saying "this
+// onto the relink target. A relink to a CONTACT is a human saying "this
 // conversation was actually with someone else", so the participant row naming
 // the old contact is now wrong (ACT-DDL-3). Repointing it keeps the
 // participants and the links telling one story.
 //
-// The DISPLACED person carries the row scope too. The relink already gated the
+// The DISPLACED contact carries the row scope too. The relink already gated the
 // new target; without this the old one is rewritten sight unseen, so a caller
 // could repoint a participant naming a contact they cannot read — including an
 // owner-private captured one. The link delete scopes for the same reason; this
 // is its participant twin.
 //
 // KNOWN GAP, stated rather than papered over: the graph consumer derives its
-// affected (user, person) pairs from the participant rows, and by the time it
+// affected (user, contact) pairs from the participant rows, and by the time it
 // runs they name the NEW contact — so the OLD edge is not recomputed and keeps
 // counting an interaction that no longer points at it. The nightly rebuild
 // clears it, which bounds the staleness to the same 24h the window counts
@@ -125,7 +125,7 @@ func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.Activit
 	var pargs []any
 	parg := func(v any) int { pargs = append(pargs, v); return len(pargs) }
 	idPos, targetPos, displacedPos := parg(id), parg(target), parg(displaced)
-	visible, err := auth.ScopeClauseFor(ctx, linkEntityPerson, "op", parg)
+	visible, err := auth.ScopeClauseFor(ctx, linkEntityContact, "op", parg)
 	if err != nil {
 		return err
 	}
@@ -146,8 +146,8 @@ func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.Activit
 	//     them qualified and each was rewritten to the target, colliding on
 	//     uq_activity_participant.
 	//
-	// The uniqueness is per (activity, role, user, person, address), not per
-	// person, so both the skip test and the collision are decided by the whole
+	// The uniqueness is per (activity, role, user, contact, address), not per
+	// contact, so both the skip test and the collision are decided by the whole
 	// tuple. Within each such group exactly one displaced row is promoted to
 	// the target — and only when the target holds no row of that shape
 	// already — and the rest are deleted. Either way the target is named once
@@ -161,22 +161,22 @@ func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.Activit
 			           ORDER BY ap.id) AS rank
 			  FROM activity_participant ap
 			 WHERE ap.activity_id = $%d
-			   -- Exactly the people the link delete removed, and no
+			   -- Exactly the contacts the link delete removed, and no
 			   -- others. A participant can name somebody who was never
 			   -- linked at all, and inferring the displaced set from "no
 			   -- longer linked" would rewrite them too.
-			   AND ap.person_id = ANY($%d::uuid[])
-			   AND ap.person_id <> $%d
-			   AND EXISTS (SELECT 1 FROM person op WHERE op.id = ap.person_id AND (`+visible+`))
+			   AND ap.contact_id = ANY($%d::uuid[])
+			   AND ap.contact_id <> $%d
+			   AND EXISTS (SELECT 1 FROM contact op WHERE op.id = ap.contact_id AND (`+visible+`))
 		), promoted AS (
-			UPDATE activity_participant ap SET person_id = $%d
+			UPDATE activity_participant ap SET contact_id = $%d
 			  FROM scoped s
 			 WHERE ap.id = s.id AND s.rank = 1
 			   AND NOT EXISTS (
 			       SELECT 1 FROM activity_participant other
 			        WHERE other.activity_id = ap.activity_id
 			          AND other.role = s.role
-			          AND other.person_id = $%d
+			          AND other.contact_id = $%d
 			          AND coalesce(other.user_id, `+nilUUID+`) = coalesce(s.user_id, `+nilUUID+`)
 			          AND coalesce(other.address, '') = coalesce(s.address, ''))
 			RETURNING ap.id

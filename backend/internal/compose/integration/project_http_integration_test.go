@@ -45,7 +45,7 @@ type projectListDTO struct {
 type relationshipDTO struct {
 	ID        string  `json:"id"`
 	Kind      string  `json:"kind"`
-	PersonID  *string `json:"person_id"`
+	ContactID *string `json:"contact_id"`
 	ProjectID *string `json:"project_id"`
 	Role      *string `json:"role"`
 }
@@ -101,18 +101,18 @@ func anchorCompany(t *testing.T, e *apptest.AppEnv, name string) string {
 	return company.ID
 }
 
-// anchorPerson creates someone to put on a project's roster.
-func anchorPerson(t *testing.T, e *apptest.AppEnv, full string) string {
+// anchorContact creates someone to put on a project's roster.
+func anchorContact(t *testing.T, e *apptest.AppEnv, full string) string {
 	t.Helper()
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": full, "source": "manual",
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("POST /people → %d, want 201", status)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("POST /contacts → %d, want 201", status)
 	}
-	return person.ID
+	return contact.ID
 }
 
 // A project's whole life over HTTP: it opens in `initiative`, answers a read,
@@ -317,14 +317,14 @@ func TestCreateProjectRefusesAnIncompleteBodyOverHTTP(t *testing.T) {
 	}
 }
 
-// The roster is idempotent per person: attaching someone already attached is a
+// The roster is idempotent per contact: attaching someone already attached is a
 // role correction, never a second edge. That is the whole contract of a PUT
 // here, and it is the property a uniqueness race must not break.
 func TestProjectStakeholderRosterOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Stark Industries")
-	person := anchorPerson(t, e, "Pepper Potts")
+	contact := anchorContact(t, e, "Pepper Potts")
 
 	var project projectDTO
 	if status := e.Call(t, "POST", "/v1/projects", AnyMap{
@@ -335,7 +335,7 @@ func TestProjectStakeholderRosterOverHTTP(t *testing.T) {
 
 	var edge relationshipDTO
 	if status := e.Call(t, "PUT", "/v1/projects/"+project.ID+"/stakeholders", AnyMap{
-		"person_id": person, "role": "sponsor",
+		"contact_id": contact, "role": "sponsor",
 	}, nil, &edge); status != http.StatusOK {
 		t.Fatalf("PUT stakeholder → %d, want 200", status)
 	}
@@ -343,10 +343,10 @@ func TestProjectStakeholderRosterOverHTTP(t *testing.T) {
 		t.Fatalf("role = %v, want sponsor", edge.Role)
 	}
 
-	// The same person again: the role moves, the edge does not multiply.
+	// The same contact again: the role moves, the edge does not multiply.
 	var recorrected relationshipDTO
 	if status := e.Call(t, "PUT", "/v1/projects/"+project.ID+"/stakeholders", AnyMap{
-		"person_id": person, "role": "project_lead",
+		"contact_id": contact, "role": "project_lead",
 	}, nil, &recorrected); status != http.StatusOK {
 		t.Fatalf("re-attaching → %d, want 200", status)
 	}
@@ -363,13 +363,13 @@ func TestProjectStakeholderRosterOverHTTP(t *testing.T) {
 		t.Fatalf("GET stakeholders → %d, want 200", status)
 	}
 	if len(roster.Data) != 1 {
-		t.Fatalf("roster holds %d edges after two attaches of one person, want 1", len(roster.Data))
+		t.Fatalf("roster holds %d edges after two attaches of one contact, want 1", len(roster.Data))
 	}
 
-	// Detaching archives the edge: the person's involvement stays on the
+	// Detaching archives the edge: the contact's involvement stays on the
 	// record, it simply stops being current.
 	if status := e.Call(t, "DELETE",
-		fmt.Sprintf("/v1/projects/%s/stakeholders/%s", project.ID, person), nil, nil, nil); status != http.StatusNoContent {
+		fmt.Sprintf("/v1/projects/%s/stakeholders/%s", project.ID, contact), nil, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("DELETE stakeholder → %d, want 204", status)
 	}
 	var afterDetach relationshipListDTO
@@ -387,7 +387,7 @@ func TestAReadSeatCannotWriteAProjectOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Cyberdyne")
-	person := anchorPerson(t, e, "Miles Dyson")
+	contact := anchorContact(t, e, "Miles Dyson")
 
 	var project projectDTO
 	if status := e.Call(t, "POST", "/v1/projects", AnyMap{
@@ -415,12 +415,12 @@ func TestAReadSeatCannotWriteAProjectOverHTTP(t *testing.T) {
 	// verbs sit behind the same ceiling. Detach is asserted because it is the
 	// one that used to check only the relationship grant.
 	if status := e.Call(t, "PUT", "/v1/projects/"+project.ID+"/stakeholders", AnyMap{
-		"person_id": person, "role": "sponsor",
+		"contact_id": contact, "role": "sponsor",
 	}, nil, nil); status != http.StatusForbidden {
 		t.Fatalf("a read seat attaching a stakeholder → %d, want 403", status)
 	}
 	if status := e.Call(t, "DELETE",
-		fmt.Sprintf("/v1/projects/%s/stakeholders/%s", project.ID, person), nil, nil, nil); status != http.StatusForbidden {
+		fmt.Sprintf("/v1/projects/%s/stakeholders/%s", project.ID, contact), nil, nil, nil); status != http.StatusForbidden {
 		t.Fatalf("a read seat detaching a stakeholder → %d, want 403", status)
 	}
 }

@@ -68,11 +68,11 @@ func (p *Provider) writeIncumbent(ctx context.Context) (Incumbent, error) {
 //craft:ignore naked-any the ten generated contract request structs share no interface; the return is a StrictDecode target by design
 func writeContractTarget(entityType datasource.EntityType, forUpdate bool) (any, error) {
 	switch entityType {
-	case datasource.EntityPerson:
+	case datasource.EntityContact:
 		if forUpdate {
-			return &crmcontracts.UpdatePersonRequest{}, nil
+			return &crmcontracts.UpdateContactRequest{}, nil
 		}
-		return &crmcontracts.CreatePersonRequest{}, nil
+		return &crmcontracts.CreateContactRequest{}, nil
 	case datasource.EntityCompany:
 		if forUpdate {
 			return &crmcontracts.UpdateCompanyRequest{}, nil

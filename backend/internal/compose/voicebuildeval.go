@@ -34,7 +34,7 @@ const (
 	// active version before it counts as a quality regression.
 	voiceEvalRegressionSlack = 0.05
 	// Material-drift floors: below either jaccard the candidate reads as a
-	// different person and a human reviews before it activates.
+	// different contact and a human reviews before it activates.
 	voiceEvalIdentityFloor  = 0.5
 	voiceEvalSignatureFloor = 0.4
 )

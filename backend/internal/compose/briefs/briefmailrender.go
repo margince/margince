@@ -48,7 +48,7 @@ func MailBody(run BriefRun, homeURL string, words mailcopy.Copy) string {
 	}
 
 	// The sentence first, when a pass wrote one. It is the only part that reads
-	// as a person talking, so it goes above the count rather than under it.
+	// as a contact talking, so it goes above the count rather than under it.
 	//
 	// FLATTENED like every rendered string, and this is the one that most needs
 	// it: a model wrote it, and a model is exactly the source somebody can steer

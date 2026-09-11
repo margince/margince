@@ -79,8 +79,8 @@ func TestTheRoleEditorRefusesAVerbTheCallerDoesNotHold(t *testing.T) {
 		Roles: []string{"custom"},
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				// Holds read and update on people, and nothing else.
-				"person": {Read: true, Update: true},
+				// Holds read and update on contacts, and nothing else.
+				"contact": {Read: true, Update: true},
 			},
 		},
 	}
@@ -93,11 +93,11 @@ func TestTheRoleEditorRefusesAVerbTheCallerDoesNotHold(t *testing.T) {
 		grant   storedGrant
 		refused bool
 	}{
-		{"a verb the caller holds", delegated, "person", storedGrant{Read: true}, false},
-		{"both verbs the caller holds", delegated, "person", storedGrant{Read: true, Update: true}, false},
-		{"a verb the caller lacks", delegated, "person", storedGrant{Delete: true}, true},
-		{"create, which the caller lacks", delegated, "person", storedGrant{Create: true}, true},
-		{"one held verb beside one lacked", delegated, "person", storedGrant{Read: true, Delete: true}, true},
+		{"a verb the caller holds", delegated, "contact", storedGrant{Read: true}, false},
+		{"both verbs the caller holds", delegated, "contact", storedGrant{Read: true, Update: true}, false},
+		{"a verb the caller lacks", delegated, "contact", storedGrant{Delete: true}, true},
+		{"create, which the caller lacks", delegated, "contact", storedGrant{Create: true}, true},
+		{"one held verb beside one lacked", delegated, "contact", storedGrant{Read: true, Delete: true}, true},
 		// An object the caller holds nothing on at all is the same question with
 		// every verb missing, and the commonest shape of the mistake.
 		{"any verb on an unheld object", delegated, "system_reset", storedGrant{Delete: true}, true},

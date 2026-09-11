@@ -42,7 +42,7 @@ const (
 	ReasonCounterparty = "counterparty"
 	// ReasonConfidentialMarker: the sender said so in the subject line. The one
 	// confidentiality signal that needs no model, and it outranks a later
-	// verdict for the same reason a counterparty hold does — a person marked
+	// verdict for the same reason a counterparty hold does — a contact marked
 	// this message, and a classifier disagreeing does not unmark it.
 	ReasonConfidentialMarker = "explicitly_confidential"
 	// ReasonNoRecord: the message is filed under no record because something

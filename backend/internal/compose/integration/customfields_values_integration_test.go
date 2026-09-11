@@ -5,8 +5,8 @@
 
 package integration
 
-// Custom-field VALUES riding person/company records (CF-T05, arc
-// 2a-ii T2): the fieldcatalog seam wired into the people store makes a
+// Custom-field VALUES riding contact/company records (CF-T05, arc
+// 2a-ii T2): the fieldcatalog seam wired into the contacts store makes a
 // workspace's active cf_* columns participate in create/update writes
 // and get/list reads like core fields. Store-level suites prove the
 // value semantics (six-type round trip, drop-on-mismatch, unknown-key
@@ -24,8 +24,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -38,7 +38,7 @@ var cfvPerms = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field":          {Create: true, Read: true, Update: true, Delete: true},
-		"person":                {Create: true, Read: true, Update: true, Delete: true},
+		"contact":               {Create: true, Read: true, Update: true, Delete: true},
 		"company":               {Create: true, Read: true, Update: true, Delete: true},
 		"lead":                  {Create: true, Read: true, Update: true, Delete: true},
 		"installation_settings": {Read: true},
@@ -47,12 +47,12 @@ var cfvPerms = principal.Permissions{
 }
 
 // cfvFixture is the store-level fixture: one Env plus a catalog-wired
-// people store and the schema-pool-backed customfields service that
+// contacts store and the schema-pool-backed customfields service that
 // defines the fields the tests write into.
 type cfvFixture struct {
 	e     *Env
 	svc   *customfields.Service
-	store *people.Store
+	store *contacts.Store
 	ctx   context.Context
 }
 
@@ -63,7 +63,7 @@ func setupCFV(t *testing.T) cfvFixture {
 	return cfvFixture{
 		e:     e,
 		svc:   svc,
-		store: people.NewStore(e.DB()).WithFieldCatalog(svc),
+		store: contacts.NewStore(e.DB()).WithFieldCatalog(svc),
 		ctx:   e.As(e.Rep1, nil, cfvPerms),
 	}
 }
@@ -101,39 +101,39 @@ func assertNoCF(t *testing.T, got map[string]any, key string) {
 	}
 }
 
-func TestCustomFieldValues_PersonRoundTrip(t *testing.T) {
+func TestCustomFieldValues_ContactRoundTrip(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Tier", Type: customfields.TypeText, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Tier", Type: customfields.TypeText, Source: "ui"})
 
-	created, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Ada Lovelace", Source: "ui",
 		CustomFields: map[string]any{col: "gold"},
 	})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
 	assertCF(t, created.AdditionalProperties, col, "gold")
 
-	got, err := f.store.GetPerson(f.ctx, PersonIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
+	got, err := f.store.GetContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
 	if err != nil {
-		t.Fatalf("GetPerson: %v", err)
+		t.Fatalf("GetContact: %v", err)
 	}
 	assertCF(t, got.AdditionalProperties, col, "gold")
 
-	updated, err := f.store.UpdatePerson(f.ctx, PersonIDOf(ids.UUID(created.Id)), people.UpdatePersonInput{
+	updated, err := f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
 		CustomFields: map[string]any{col: "silver"},
 	})
 	if err != nil {
-		t.Fatalf("UpdatePerson: %v", err)
+		t.Fatalf("UpdateContact: %v", err)
 	}
 	assertCF(t, updated.AdditionalProperties, col, "silver")
 
-	list, _, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{})
+	list, _, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{})
 	if err != nil {
-		t.Fatalf("ListPeople: %v", err)
+		t.Fatalf("ListContacts: %v", err)
 	}
 	if len(list) != 1 {
-		t.Fatalf("ListPeople returned %d rows, want 1", len(list))
+		t.Fatalf("ListContacts returned %d rows, want 1", len(list))
 	}
 	assertCF(t, list[0].AdditionalProperties, col, "silver")
 }
@@ -142,7 +142,7 @@ func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "company", Label: "Region", Type: customfields.TypeText, Source: "ui"})
 
-	created, err := f.store.CreateCompany(f.ctx, people.CreateCompanyInput{
+	created, err := f.store.CreateCompany(f.ctx, contacts.CreateCompanyInput{
 		DisplayName: "Acme GmbH", Source: "ui",
 		CustomFields: map[string]any{col: "emea"},
 	})
@@ -157,7 +157,7 @@ func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
 	}
 	assertCF(t, got.AdditionalProperties, col, "emea")
 
-	updated, err := f.store.UpdateCompany(f.ctx, companyIDOf(ids.UUID(created.Id)), people.UpdateCompanyInput{
+	updated, err := f.store.UpdateCompany(f.ctx, companyIDOf(ids.UUID(created.Id)), contacts.UpdateCompanyInput{
 		CustomFields: map[string]any{col: "apac"},
 	})
 	if err != nil {
@@ -165,7 +165,7 @@ func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
 	}
 	assertCF(t, updated.AdditionalProperties, col, "apac")
 
-	list, _, err := f.store.ListCompanies(f.ctx, people.ListCompaniesInput{})
+	list, _, err := f.store.ListCompanies(f.ctx, contacts.ListCompaniesInput{})
 	if err != nil {
 		t.Fatalf("ListCompanies: %v", err)
 	}
@@ -187,14 +187,14 @@ func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
 func TestCustomFieldValues_AllSixTypesRoundTrip(t *testing.T) {
 	f := setupCFV(t)
 	eur := "EUR"
-	text := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Note", Type: customfields.TypeText, Source: "ui"})
-	number := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
-	date := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Renewal", Type: customfields.TypeDate, Source: "ui"})
-	currency := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"})
-	picklist := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Route", Type: customfields.TypePicklist, Options: []string{"direct", "partner"}, Source: "ui"})
-	boolean := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Strategic", Type: customfields.TypeBoolean, Source: "ui"})
+	text := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Note", Type: customfields.TypeText, Source: "ui"})
+	number := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	date := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Renewal", Type: customfields.TypeDate, Source: "ui"})
+	currency := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"})
+	picklist := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Route", Type: customfields.TypePicklist, Options: []string{"direct", "partner"}, Source: "ui"})
+	boolean := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Strategic", Type: customfields.TypeBoolean, Source: "ui"})
 
-	created, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Grace Hopper", Source: "ui",
 		CustomFields: map[string]any{
 			text:     "prefers morning calls",
@@ -206,12 +206,12 @@ func TestCustomFieldValues_AllSixTypesRoundTrip(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
 
-	got, err := f.store.GetPerson(f.ctx, PersonIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
+	got, err := f.store.GetContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
 	if err != nil {
-		t.Fatalf("GetPerson: %v", err)
+		t.Fatalf("GetContact: %v", err)
 	}
 	assertCF(t, got.AdditionalProperties, text, "prefers morning calls")
 	assertCF(t, got.AdditionalProperties, number, json.Number("42.5"))
@@ -227,30 +227,30 @@ func TestCustomFieldValues_AllSixTypesRoundTrip(t *testing.T) {
 // update's drop leaves the stored value standing).
 func TestCustomFieldValues_WrongShapeDropped(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
 
-	created, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Mismatch On Create", Source: "ui",
 		CustomFields: map[string]any{col: true},
 	})
 	if err != nil {
-		t.Fatalf("CreatePerson with mismatched value shape: %v", err)
+		t.Fatalf("CreateContact with mismatched value shape: %v", err)
 	}
 	assertNoCF(t, created.AdditionalProperties, col)
 
-	if _, err := f.store.UpdatePerson(f.ctx, PersonIDOf(ids.UUID(created.Id)), people.UpdatePersonInput{
+	if _, err := f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
 		CustomFields: map[string]any{col: float64(7)},
 	}); err != nil {
-		t.Fatalf("UpdatePerson (valid shape): %v", err)
+		t.Fatalf("UpdateContact (valid shape): %v", err)
 	}
-	if _, err := f.store.UpdatePerson(f.ctx, PersonIDOf(ids.UUID(created.Id)), people.UpdatePersonInput{
+	if _, err := f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
 		CustomFields: map[string]any{col: "not-a-number"},
 	}); err != nil {
-		t.Fatalf("UpdatePerson with mismatched value shape: %v", err)
+		t.Fatalf("UpdateContact with mismatched value shape: %v", err)
 	}
-	got, err := f.store.GetPerson(f.ctx, PersonIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
+	got, err := f.store.GetContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
 	if err != nil {
-		t.Fatalf("GetPerson: %v", err)
+		t.Fatalf("GetContact: %v", err)
 	}
 	assertCF(t, got.AdditionalProperties, col, json.Number("7"))
 }
@@ -263,9 +263,9 @@ func TestCustomFieldValues_WrongShapeDropped(t *testing.T) {
 func TestCustomFieldValues_WrongShapeDroppedAcrossTypes(t *testing.T) {
 	f := setupCFV(t)
 	eur := "EUR"
-	currency := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"})
-	date := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Renewal", Type: customfields.TypeDate, Source: "ui"})
-	boolean := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Strategic", Type: customfields.TypeBoolean, Source: "ui"})
+	currency := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"})
+	date := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Renewal", Type: customfields.TypeDate, Source: "ui"})
+	boolean := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Strategic", Type: customfields.TypeBoolean, Source: "ui"})
 
 	cases := map[string]struct {
 		col string
@@ -278,12 +278,12 @@ func TestCustomFieldValues_WrongShapeDroppedAcrossTypes(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			created, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+			created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 				FullName: "Mismatch", Source: "ui",
 				CustomFields: map[string]any{tc.col: tc.wrong},
 			})
 			if err != nil {
-				t.Fatalf("CreatePerson: %v", err)
+				t.Fatalf("CreateContact: %v", err)
 			}
 			assertNoCF(t, created.AdditionalProperties, tc.col)
 		})
@@ -299,32 +299,32 @@ func TestCustomFieldValues_WrongShapeDroppedAcrossTypes(t *testing.T) {
 // same posture as every other type mismatch).
 func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
 
-	fromJSONNumber, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+	fromJSONNumber, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Via json.Number", Source: "ui",
 		CustomFields: map[string]any{col: json.Number("42.5")},
 	})
 	if err != nil {
-		t.Fatalf("CreatePerson (json.Number): %v", err)
+		t.Fatalf("CreateContact (json.Number): %v", err)
 	}
 	assertCF(t, fromJSONNumber.AdditionalProperties, col, json.Number("42.5"))
 
-	fromString, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+	fromString, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Via decimal string", Source: "ui",
 		CustomFields: map[string]any{col: "7.25"},
 	})
 	if err != nil {
-		t.Fatalf("CreatePerson (decimal string): %v", err)
+		t.Fatalf("CreateContact (decimal string): %v", err)
 	}
 	assertCF(t, fromString.AdditionalProperties, col, json.Number("7.25"))
 
-	unparseable, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+	unparseable, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Via unparseable string", Source: "ui",
 		CustomFields: map[string]any{col: "not-a-number-string"},
 	})
 	if err != nil {
-		t.Fatalf("CreatePerson (unparseable string): %v", err)
+		t.Fatalf("CreateContact (unparseable string): %v", err)
 	}
 	assertNoCF(t, unparseable.AdditionalProperties, col)
 }
@@ -336,14 +336,14 @@ func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T)
 // drop-on-mismatch posture every other unrepresentable value gets.
 func TestCustomFieldValues_NumberNaNDropped(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
 
-	created, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "NaN Score", Source: "ui",
 		CustomFields: map[string]any{col: math.NaN()},
 	})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
 	assertNoCF(t, created.AdditionalProperties, col)
 }
@@ -351,12 +351,12 @@ func TestCustomFieldValues_NumberNaNDropped(t *testing.T) {
 func TestCustomFieldValues_UnknownKeyDropped(t *testing.T) {
 	f := setupCFV(t)
 
-	created, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "No Such Column", Source: "ui",
 		CustomFields: map[string]any{"cf_never_defined": "x"},
 	})
 	if err != nil {
-		t.Fatalf("CreatePerson with unknown cf_ key: %v", err)
+		t.Fatalf("CreateContact with unknown cf_ key: %v", err)
 	}
 	assertNoCF(t, created.AdditionalProperties, "cf_never_defined")
 }
@@ -368,18 +368,18 @@ func TestCustomFieldValues_UnknownKeyDropped(t *testing.T) {
 // un-retire is a catalog re-activation away).
 func TestCustomFieldValues_RetiredFieldHiddenButPreserved(t *testing.T) {
 	f := setupCFV(t)
-	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{Object: "person", Label: "Legacy Tier", Type: customfields.TypeText, Source: "ui"})
+	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{Object: "contact", Label: "Legacy Tier", Type: customfields.TypeText, Source: "ui"})
 	if err != nil {
 		t.Fatalf("defining field: %v", err)
 	}
 	col := *field.ColumnName
 
-	created, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Retire Me", Source: "ui",
 		CustomFields: map[string]any{col: "gold"},
 	})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
 	assertCF(t, created.AdditionalProperties, col, "gold")
 
@@ -387,24 +387,24 @@ func TestCustomFieldValues_RetiredFieldHiddenButPreserved(t *testing.T) {
 		t.Fatalf("Retire: %v", err)
 	}
 
-	got, err := f.store.GetPerson(f.ctx, PersonIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
+	got, err := f.store.GetContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
 	if err != nil {
-		t.Fatalf("GetPerson after retire: %v", err)
+		t.Fatalf("GetContact after retire: %v", err)
 	}
 	assertNoCF(t, got.AdditionalProperties, col)
 
 	// A write against the retired key is dropped like any unknown key.
-	if _, err := f.store.UpdatePerson(f.ctx, PersonIDOf(ids.UUID(created.Id)), people.UpdatePersonInput{
+	if _, err := f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
 		CustomFields: map[string]any{col: "silver"},
 	}); err != nil {
-		t.Fatalf("UpdatePerson against retired key: %v", err)
+		t.Fatalf("UpdateContact against retired key: %v", err)
 	}
 
 	// The stored value is untouched underneath.
 	var stored *string
 	err = database.WithWorkspaceTx(f.ctx, f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx,
-			`SELECT `+col+` FROM person WHERE id = $1`, ids.UUID(created.Id)).Scan(&stored)
+			`SELECT `+col+` FROM contact WHERE id = $1`, ids.UUID(created.Id)).Scan(&stored)
 	})
 	if err != nil {
 		t.Fatalf("reading retired column directly: %v", err)
@@ -419,26 +419,26 @@ func TestCustomFieldValues_RetiredFieldHiddenButPreserved(t *testing.T) {
 // carries the change with no extra bookkeeping.
 func TestCustomFieldValues_UpdateAuditCarriesDiff(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "person", Label: "Tier", Type: customfields.TypeText, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Tier", Type: customfields.TypeText, Source: "ui"})
 
-	created, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{
+	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Audit Trail", Source: "ui",
 		CustomFields: map[string]any{col: "gold"},
 	})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
-	if _, err := f.store.UpdatePerson(f.ctx, PersonIDOf(ids.UUID(created.Id)), people.UpdatePersonInput{
+	if _, err := f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
 		CustomFields: map[string]any{col: "silver"},
 	}); err != nil {
-		t.Fatalf("UpdatePerson: %v", err)
+		t.Fatalf("UpdateContact: %v", err)
 	}
 
 	var before, after map[string]any
 	err = database.WithWorkspaceTx(f.ctx, f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx,
 			`SELECT before, after FROM audit_log
-			 WHERE entity_type = 'person' AND entity_id = $1 AND action = 'update'
+			 WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'update'
 			 ORDER BY occurred_at DESC LIMIT 1`, ids.UUID(created.Id)).Scan(&before, &after)
 	})
 	if err != nil {

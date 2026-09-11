@@ -2,7 +2,7 @@
 
 **Using the product rather than changing it?** The end-to-end walkthroughs for a
 rep or a delivery lead live in [`user-guide/`](../user-guide/README.md). This tree
-is mostly for the person changing the code — with one deliberate exception:
+is mostly for the contact changing the code — with one deliberate exception:
 `how-to/` carries product how-tos (working your pipeline, setting up projects,
 partner programs) beside the engineering ones, because a how-to is a thing you
 return to for one answer whichever audience you are in.
@@ -14,7 +14,7 @@ refuses a second. The docs follow the [Diátaxis](https://diataxis.fr/) split: *
 **[principles](principles/README.md)** — the handful of statements about this codebase's shape that
 settle a class of arguments before they start.
 
-**Designing anything a person can see?** [`DESIGN.md`](../DESIGN.md) at the
+**Designing anything a reader can see?** [`DESIGN.md`](../DESIGN.md) at the
 repository root is the visual language: the look every new surface is designed
 against, and the research behind it. The plan for landing it, one PR per
 step, is [how-to/adopt-the-design.md](how-to/adopt-the-design.md), continued in
@@ -32,7 +32,7 @@ maps the codebase and links everything below.
 
 ### Handbook — how to USE the product
 
-The only tree here written for the person using Margince rather than building it:
+The only tree here written for the contact using Margince rather than building it:
 no code, no API, just the app.
 
 - [handbook/README.md](handbook/README.md) — eleven pages covering records, the
@@ -128,6 +128,7 @@ budget rather than keeping its own list of which pages are generated.
 - [make-targets.md](reference/make-targets.md) — every `make` target.
 - [system-requirements.md](reference/system-requirements.md) — what an installation needs, for both deployment shapes: one node, or the api / worker / web / database on separate nodes.
 - [ai-egress.md](reference/ai-egress.md) — every declared AI task, and whether the text it reads can leave the installation. Generated from `backend/api/ai-tasks.yaml`, never hand-edited.
+- [record-vocabulary.md](reference/record-vocabulary.md) — the rule both record nouns hold: the reader and the program say the same word, and the schema follows. Why it is this way round, the words that merely spell those letters and stay, and the four gates that keep a second spelling out.
 - [issue-labels.md](reference/issue-labels.md) — the full issue-label taxonomy. The binding short form is in `AGENTS.md`.
 - [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md`.)
 - [sonarcloud-deviations.md](reference/sonarcloud-deviations.md) — the SonarCloud findings that stay open on purpose, one entry each saying what would break if somebody applied the rule. Everything not listed there is a finding to fix.
@@ -158,14 +159,14 @@ budget rather than keeping its own list of which pages are generated.
 - [channel-capture-parity.md](explanation/channel-capture-parity.md) — whose correspondence a captured chat is: the rule that a member-bound credential puts it on the mailbox path while a shared one keeps it workspace business, which rungs of the birth ladder each faces, what makes the import row's delivery evidence sound, and a capability-by-capability table of what each side gets.
 - [outbound-messaging.md](explanation/outbound-messaging.md) — the egress twin of capture: the staging row, the transmit-time gates, receipt-before-bookkeeping, and the channel reply.
 - [outbound-webhooks.md](explanation/outbound-webhooks.md) — the governed egress surface: subscription config vs. delivery engine, secret sealing, the contract-first payload pipeline (`api/public-events.yaml` + `gen-payloads` + the typed `EmitEvent` seam) and its additive-only versioning, the retry/dead-letter state machine, the owner-scope fan-out gate (incl. the ratified deferred-delivery exceptions), and the Settings → Integrations UI.
-- [scheduling.md](explanation/scheduling.md) — how a meeting time is proposed: whose working hours decide which slots are offerable (the person's, not the installation's), what a person sets and what the unset fallback is, which clock the hours are read on and why that is this page's decision rather than the general zone rule's, and how `activities` reaches a fact `identity` owns.
+- [scheduling.md](explanation/scheduling.md) — how a meeting time is proposed: whose working hours decide which slots are offerable (the contact's, not the installation's), what a contact sets and what the unset fallback is, which clock the hours are read on and why that is this page's decision rather than the general zone rule's, and how `activities` reaches a fact `identity` owns.
 - [privacy-and-consent.md](explanation/privacy-and-consent.md) — the authorization engine that decides whether each message may go, and the GDPR engines (erasure / SAR / retention).
 
 **AI, retrieval and automation**
 
 - [ai-runtime.md](explanation/ai-runtime.md) — the AI task contract, tiers/ladders, the routing config, the one Router gate, honest tracing, and certification.
 - [agent-surface.md](explanation/agent-surface.md) — the Surface-B reasoning loop and the model runtime.
-- [ai-activity-rail.md](explanation/ai-activity-rail.md) — what the AI is doing for you while it does it: the one `ai_task_run` projection, who reports into it (router vs. carrier vs. step), how an occurrence is attributed to a person, the read's one-statement/two-arm shape and its derived `stalled`, and the separate question of which of the 23 kinds a reader is actually shown — with the written reason for each of the 17 that are not.
+- [ai-activity-rail.md](explanation/ai-activity-rail.md) — what the AI is doing for you while it does it: the one `ai_task_run` projection, who reports into it (router vs. carrier vs. step), how an occurrence is attributed to a contact, the read's one-statement/two-arm shape and its derived `stalled`, and the separate question of which of the 23 kinds a reader is actually shown — with the written reason for each of the 17 that are not.
 - [search-and-retrieval.md](explanation/search-and-retrieval.md) — the lexical and hybrid lanes, row scope inside the query, embedding identity, and the two kinds of staleness with their two different answers.
 - [relationship-graph.md](explanation/relationship-graph.md) — who on our team knows this contact: participants, the interaction projection, warmth, deal coverage and its risk rules.
 - [company-context.md](explanation/company-context.md) — the cold start, the governed company profile (profile fields, facts, site reads), and how bounded company context reaches AI tasks. This is the *installation's own* company; for the company **record** page see below.

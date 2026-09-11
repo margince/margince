@@ -366,13 +366,13 @@ function PreviewSentence({
   if (preview.data.outcome === "create") {
     return <p className="t-caption">{t("lead.previewCreate")}</p>;
   }
-  if (!preview.data.person) {
+  if (!preview.data.contact) {
     return <p className="t-caption">{t("lead.previewMergeWithheld")}</p>;
   }
   return (
     <p className="t-caption">
       {t("lead.previewMerge")}{" "}
-      <EntityRef kind="person" id={preview.data.person.id} />
+      <EntityRef kind="contact" id={preview.data.contact.id} />
     </p>
   );
 }

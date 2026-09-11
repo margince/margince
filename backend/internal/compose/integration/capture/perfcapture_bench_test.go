@@ -145,8 +145,8 @@ func assertTimelineRenderIsNotBlockedByCapture(t *testing.T, e *integration.Sear
 	var n int
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT count(*) FROM activity_link al JOIN person_email pe ON pe.person_id = al.person_id
-			WHERE al.entity_type = 'person' AND pe.email = 'nobody@uncaptured.example'`).Scan(&n)
+			SELECT count(*) FROM activity_link al JOIN contact_email pe ON pe.contact_id = al.contact_id
+			WHERE al.entity_type = 'contact' AND pe.email = 'nobody@uncaptured.example'`).Scan(&n)
 	})
 	if err != nil {
 		t.Fatalf("the timeline render waited on a capture that never came (AC3.4): %v", err)
@@ -157,14 +157,14 @@ func assertTimelineRenderIsNotBlockedByCapture(t *testing.T, e *integration.Sear
 }
 
 // timelineActivityCount is what "visible on the matched timeline" means in the
-// schema: activities linked to the person the message was matched to.
+// schema: activities linked to the contact the message was matched to.
 func timelineActivityCount(t *testing.T, e *integration.SearchEnv, email string) int {
 	t.Helper()
 	var n int
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT count(*) FROM activity_link al JOIN person_email pe ON pe.person_id = al.person_id
-			WHERE al.entity_type = 'person' AND pe.email = $1`, email).Scan(&n)
+			SELECT count(*) FROM activity_link al JOIN contact_email pe ON pe.contact_id = al.contact_id
+			WHERE al.entity_type = 'contact' AND pe.email = $1`, email).Scan(&n)
 	})
 	if err != nil {
 		t.Fatalf("reading %s's timeline: %v", email, err)

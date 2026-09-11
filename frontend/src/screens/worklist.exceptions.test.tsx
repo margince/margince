@@ -202,7 +202,7 @@ describe("the page answers what before who", () => {
             exceptions: [
               {
                 kind: "response_breached",
-                subject: { type: "person", id: "p-1", label: "Kirsten Bauer" },
+                subject: { type: "contact", id: "p-1", label: "Kirsten Bauer" },
                 owner: { kind: "user", id: "u-1", label: "Lena Fischer" },
                 basis: "past the policy's own deadline",
               },
@@ -276,7 +276,7 @@ describe("an owner the reader cannot name is not nobody", () => {
     exceptions: [
       {
         kind: "response_breached",
-        // A real person holds it. The caller may not resolve their name.
+        // A real contact holds it. The caller may not resolve their name.
         owner: { kind: "user", id: "01a05500-0000-7000-8000-0000000000aa" },
         subject: { type: "lead", id: "l1", label: "Kirsten at LOXXESS" },
         since: "2026-09-01T09:00:00Z",
@@ -302,7 +302,7 @@ describe("an owner the reader cannot name is not nobody", () => {
   //
   // Reading `owner.id ?? ""` gets the withheld-name row right by accident — the
   // id is there, so it routes correctly — and gets THIS one wrong: it would
-  // send a lead to a person's queue for work the wire says nobody holds. Only a
+  // send a lead to a contact's queue for work the wire says nobody holds. Only a
   // fixture carrying both an `unassigned` kind and an id can fail one reading
   // and pass the other.
   it("opens the unassigned scope for work nobody holds, whatever id rides along", async () => {
@@ -331,7 +331,7 @@ describe("an owner the reader cannot name is not nobody", () => {
     expect(opened).toEqual([""]);
   });
 
-  it("opens that owner's queue when a person holds it", async () => {
+  it("opens that owner's queue when a contact holds it", async () => {
     stubExceptions(heldByAStranger);
     const opened: string[] = [];
     renderPanel((id) => opened.push(id));

@@ -23,7 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -48,7 +48,7 @@ func refusedBy(t *testing.T, err error, want Reason) {
 //
 // The tombstone lands on the record whose history is being read — the one end
 // the admission deliberately does not bound, because a row behind a boundary
-// should be refused with a reason a person can act on rather than reported
+// should be refused with a reason a contact can act on rather than reported
 // absent. What makes that division of labour honest is that the refusal is
 // actually reachable, and for a link it is only reachable through the ENDS: the
 // row's own identity is ('relationship', edge_id), and no write path in this tree
@@ -61,19 +61,19 @@ func refusedBy(t *testing.T, err error, want Reason) {
 // boundary was asked or not.
 func TestReversingALinkBehindAnEndsErasureBoundaryRefusesByName(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Selma Subject", nil)
+	contact := e.SeedContact(t, "Selma Subject", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, company)
+	edge := seedEmploymentEdge(t, e, contact, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
-	e.SeedScrubTombstone(t, "person", person, time.Now().Add(time.Hour).UTC())
+	e.SeedScrubTombstone(t, "contact", contact, time.Now().Add(time.Hour).UTC())
 	if !edgeIsLive(t, e, edge) {
 		t.Fatal("the link is already archived, so the refusal below could come from that " +
 			"and say nothing about the erasure boundary")
 	}
 
-	_, err := restoreSeamFor(e).Restore(e.Admin(), "person", person, auditID,
-		currentVersion(t, e, "person", person))
+	_, err := restoreSeamFor(e).Restore(e.Admin(), "contact", contact, auditID,
+		currentVersion(t, e, "contact", contact))
 	refusedBy(t, err, ReasonBehindErasureBoundary)
 	if !edgeIsLive(t, e, edge) {
 		t.Error("the refused reverse removed the link anyway")
@@ -86,9 +86,9 @@ func TestReversingALinkBehindAnEndsErasureBoundaryRefusesByName(t *testing.T) {
 // somebody remembered.
 func TestReversingALinkBehindTheOtherEndsErasureBoundaryRefusesByName(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
+	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Erased Holdings GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, company)
+	edge := seedEmploymentEdge(t, e, contact, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
 	// On the COMPANY, read from the COMPANY: the anchor's own boundary,
@@ -109,14 +109,14 @@ func TestReversingALinkBehindTheOtherEndsErasureBoundaryRefusesByName(t *testing
 // and refusing it would make every such link permanently un-reversible.
 func TestALinkWrittenAfterAnEndsErasureIsStillReversible(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
+	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
-	e.SeedScrubTombstone(t, "person", person, time.Now().Add(-time.Hour).UTC())
+	e.SeedScrubTombstone(t, "contact", contact, time.Now().Add(-time.Hour).UTC())
 
-	edge := seedEmploymentEdge(t, e, person, company)
+	edge := seedEmploymentEdge(t, e, contact, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
-	if _, err := restoreSeamFor(e).Restore(e.Admin(), "person", person, auditID,
-		currentVersion(t, e, "person", person)); err != nil {
+	if _, err := restoreSeamFor(e).Restore(e.Admin(), "contact", contact, auditID,
+		currentVersion(t, e, "contact", contact)); err != nil {
 		t.Fatalf("a link made after the erasure: %v", err)
 	}
 	if edgeIsLive(t, e, edge) {
@@ -142,12 +142,12 @@ func TestALinkWrittenAfterAnEndsErasureIsStillReversible(t *testing.T) {
 // quietly dropped.
 func TestALinkInAnOverlayGovernedWorkspaceIsStillReversible(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
+	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, company)
+	edge := seedEmploymentEdge(t, e, contact, company)
 	title := "COO"
-	if _, err := e.People.UpdatePerson(e.Admin(), ids.From[ids.PersonKind](person),
-		people.UpdatePersonInput{Title: &title, Source: "manual"}); err != nil {
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact),
+		contacts.UpdateContactInput{Title: &title, Source: "manual"}); err != nil {
 		t.Fatalf("change a field through the real writer: %v", err)
 	}
 
@@ -157,14 +157,14 @@ func TestALinkInAnOverlayGovernedWorkspaceIsStillReversible(t *testing.T) {
 	seam := restoreSeamFor(e)
 	seam.evaluator.ExternallyGoverned = func(context.Context) (bool, error) { return true, nil }
 
-	recordEntry := latestAuditRowID(t, e, "person", person, "update")
-	_, err := seam.Restore(e.Admin(), "person", person, recordEntry,
-		currentVersion(t, e, "person", person))
+	recordEntry := latestAuditRowID(t, e, "contact", contact, "update")
+	_, err := seam.Restore(e.Admin(), "contact", contact, recordEntry,
+		currentVersion(t, e, "contact", contact))
 	refusedBy(t, err, ReasonNotRestorableByThisPath)
 
 	edgeEntry := latestAuditRowID(t, e, edgeEntityType, edge, "create")
-	if _, err := seam.Restore(e.Admin(), "person", person, edgeEntry,
-		currentVersion(t, e, "person", person)); err != nil {
+	if _, err := seam.Restore(e.Admin(), "contact", contact, edgeEntry,
+		currentVersion(t, e, "contact", contact)); err != nil {
 		t.Fatalf("reversing a link in an overlay-governed workspace: %v", err)
 	}
 	if edgeIsLive(t, e, edge) {
@@ -177,20 +177,20 @@ func TestALinkInAnOverlayGovernedWorkspaceIsStillReversible(t *testing.T) {
 // which is the outcome the boundary exists to prevent.
 func TestReplayingALinksPreErasureImageIsRefusedByName(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Selma Subject", nil)
+	contact := e.SeedContact(t, "Selma Subject", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, company)
+	edge := seedEmploymentEdge(t, e, contact, company)
 	changed := "coo"
-	if _, err := e.People.UpdateRelationship(e.Admin(), edge,
-		people.UpdateRelationshipInput{Role: &changed}); err != nil {
+	if _, err := e.Contacts.UpdateRelationship(e.Admin(), edge,
+		contacts.UpdateRelationshipInput{Role: &changed}); err != nil {
 		t.Fatalf("change the link through the real writer: %v", err)
 	}
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "update")
 
-	e.SeedScrubTombstone(t, "person", person, time.Now().Add(time.Hour).UTC())
+	e.SeedScrubTombstone(t, "contact", contact, time.Now().Add(time.Hour).UTC())
 
-	_, err := restoreSeamFor(e).Restore(e.Admin(), "person", person, auditID,
-		currentVersion(t, e, "person", person))
+	_, err := restoreSeamFor(e).Restore(e.Admin(), "contact", contact, auditID,
+		currentVersion(t, e, "contact", contact))
 	refusedBy(t, err, ReasonBehindErasureBoundary)
 	if role := roleOf(t, e, edge); role != changed {
 		t.Errorf("the link's role is %q; the refused reverse wrote the pre-erasure value back", role)

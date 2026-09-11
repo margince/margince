@@ -10,7 +10,7 @@ package compose
 // A connector re-syncs the same upstream record every cycle, so it hits the same
 // collision every cycle. The pending check the stager had could absorb the
 // repeat only while a proposal was still waiting — and a rejection is exactly
-// what stops it waiting. So a rep who said "these are not the same person" was
+// what stops it waiting. So a rep who said "these are not the same contact" was
 // asked again on the next sync, and every sync after, until they gave in.
 //
 // Giving in here is destructive: a merge is the one action that removes the
@@ -134,7 +134,7 @@ func TestARejectedMergeStaysRefusedWhenTheCapturedFieldsChange(t *testing.T) {
 	e.capturedLead(t, "hubspot", "h-9", "Dana Duplicate", "dana@example.test")
 	e.rejectMerge(t, incumbent)
 
-	// Upstream fills in a fuller name for the same person at the same address.
+	// Upstream fills in a fuller name for the same contact at the same address.
 	e.capturedLead(t, "hubspot", "h-9", "Dana Duplicate-Smith", "dana@example.test")
 	if got := e.pendingMerges(t, incumbent); got != 0 {
 		t.Errorf("a re-sync carrying a corrected name staged %d proposals over a "+

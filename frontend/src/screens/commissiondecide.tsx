@@ -88,7 +88,7 @@ async function decide(
   const { data, error } = await api.POST("/commissions/{id}/decide", {
     params: {
       path: { id: entry.id },
-      // The entry carries its own version, so two people deciding the same
+      // The entry carries its own version, so two contacts deciding the same
       // row at once get a 409 rather than the second one silently winning.
       ...ifMatch(entry.version ?? 0),
     },

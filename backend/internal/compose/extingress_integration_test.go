@@ -93,7 +93,7 @@ func bindCaptureForTest(t *testing.T, e *extRuntimeEnv) {
 }
 
 // capturePolicy is the narrowest grant that lets a captured message land: the
-// activity itself, plus the person and company the counterparty ladder may
+// activity itself, plus the contact and company the counterparty ladder may
 // mint beside it.
 //
 // Narrow rather than an admin document on purpose. What these tests assert is
@@ -101,7 +101,7 @@ func bindCaptureForTest(t *testing.T, e *extRuntimeEnv) {
 // enough that taking it away is visibly the reason the next landing is refused.
 const capturePolicy = `{"objects":{
 	"activity":{"read":true,"create":true,"update":true},
-	"person":{"read":true,"create":true,"update":true},
+	"contact":{"read":true,"create":true,"update":true},
 	"company":{"read":true,"create":true,"update":true}},
 	"row_scope":"all"}`
 
@@ -319,7 +319,7 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 		owner := integration.OwnerConn(t)
 		for _, statement := range []string{
 			`DELETE FROM activity WHERE channel_provider = $1`,
-			`DELETE FROM person_channel_identity WHERE provider = $1`,
+			`DELETE FROM contact_channel_identity WHERE provider = $1`,
 			`DELETE FROM channel_provider WHERE provider = $1`,
 		} {
 			if _, err := owner.Exec(context.Background(), statement, ingressProbeProvider); err != nil {
@@ -330,7 +330,7 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 }
 
 // A unit's captured chat message lands as a MESSAGE on the unit's own transport,
-// with the account it can be answered at bound to the person behind it.
+// with the account it can be answered at bound to the contact behind it.
 //
 // This is the whole point of the slice, and each half is separately load-bearing.
 // The kind and the provider are the two axes stated separately (ADR-0107/A158):
@@ -370,7 +370,7 @@ func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 	// The binding, which is what makes the recipient resolvable — and it names
 	// the account the UNIT reported, not one derived from the address.
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM person_channel_identity WHERE provider = $1 AND channel_user_id = $2`,
+		`SELECT count(*) FROM contact_channel_identity WHERE provider = $1 AND channel_user_id = $2`,
 		ingressProbeProvider, "probe-channel-1"); got != 1 {
 		t.Errorf("channel identity bindings = %d, want the one the reply path resolves its recipient from", got)
 	}
@@ -430,7 +430,7 @@ func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
 	}
 }
 
-// The counterparty ladder, as it actually decides — which is NOT "a person
+// The counterparty ladder, as it actually decides — which is NOT "a contact
 // appears". A first-time corporate address is captured and DEFERRED to the
 // pending inbox, and that is the common case for a chat connector.
 func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
@@ -446,15 +446,15 @@ func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
 		t.Errorf("pending counterparty rows = %d, want the deferral the ladder writes for a first-time corporate sender", got)
 	}
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM person_email WHERE email = $1`, "buyer@acme-corp.test"); got != 0 {
-		t.Errorf("person rows = %d, want none — the record is captured, and who it is with is not decided yet", got)
+		`SELECT count(*) FROM contact_email WHERE email = $1`, "buyer@acme-corp.test"); got != 0 {
+		t.Errorf("contact rows = %d, want none — the record is captured, and who it is with is not decided yet", got)
 	}
 }
 
 // The other arm of the same ladder: a freemail sender ALSO defers, and differs
 // in leaving no company question behind. Both arms are asserted because a suite that pinned only
 // one would describe the pipeline as doing whichever it happened to check.
-func TestAFreemailSenderDefersThePersonAndNamesNoCompany(t *testing.T) {
+func TestAFreemailSenderDefersTheContactAndNamesNoCompany(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -464,15 +464,15 @@ func TestAFreemailSenderDefersThePersonAndNamesNoCompany(t *testing.T) {
 	}
 	// An extension's record walks the SAME tier ladder as a mailbox sync, which
 	// is the point of this arm: a consumer mailbox settles the company
-	// question by itself and settles nothing about the person, so the sender
+	// question by itself and settles nothing about the contact, so the sender
 	// goes to the verdict rather than being minted on sight. An extension that
 	// could mint what a mailbox defers would be a second answer on a public
 	// surface.
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM person_email WHERE email = $1`, "someone@gmail.com"); got != 0 {
-		t.Errorf("person rows = %d, want none — a free-mail sender defers to the verdict", got)
+		`SELECT count(*) FROM contact_email WHERE email = $1`, "someone@gmail.com"); got != 0 {
+		t.Errorf("contact rows = %d, want none — a free-mail sender defers to the verdict", got)
 	}
-	// The SUPPRESSED half, which the person count cannot see. Capture withholds
+	// The SUPPRESSED half, which the contact count cannot see. Capture withholds
 	// a company rather than creating one, so what a corporate domain leaves
 	// behind is the domain row and the OPEN QUESTION about it — and gmail.com
 	// must leave neither. Without these the arm reads as asserted while a

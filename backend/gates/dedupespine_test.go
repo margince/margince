@@ -7,9 +7,9 @@ package gates
 
 // The identity-spine fitness functions.
 //
-// Duplicate people, companies and leads do not get in through the
+// Duplicate contacts, companies and leads do not get in through the
 // matching engine — that engine (PO-F-1/PO-F-2 in
-// internal/modules/people/dedupe.go) is good. They get in through a NEW create
+// internal/modules/contacts/dedupe.go) is good. They get in through a NEW create
 // path that forgets to ask it, or asks it with half the inputs. Every real
 // duplicate found in a live workspace so far arrived exactly that way: capture
 // asked PO-F-2 about a domain and never about a name; cold start asked nothing
@@ -33,24 +33,24 @@ import (
 )
 
 // mintSite matches an INSERT into one of the three identity tables. The
-// trailing [\s(] is what keeps `person_email`, `company_domain` and
+// trailing [\s(] is what keeps `contact_email`, `company_domain` and
 // `lead_routing_rule` out: Go's \b treats `_` as a word character, so it would
 // match every child table too.
-var mintSite = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(person|company|lead)[\s(]`)
+var mintSite = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(contact|company|lead)[\s(]`)
 
 // sanctionedMintSites is the whole list of files allowed to mint an identity
 // row, each with the reason it is on it. Adding an entry is a deliberate
 // decision about where duplicates can enter the system, which is why it is
 // spelled out rather than pattern-matched.
 var sanctionedMintSites = gatekit.Waive(map[string]string{
-	// The chokepoint. createPerson/createCompany take the PO-F ladder's
+	// The chokepoint. createContact/createCompany take the PO-F ladder's
 	// verdict as an argument, so a create that never consulted it cannot be
 	// written, and they refuse outright when the verdict is an exact-key
 	// collision.
-	"internal/modules/people/resolvecreate.go": "the identity chokepoint itself",
+	"internal/modules/contacts/resolvecreate.go": "the identity chokepoint itself",
 
 	// The lead's second write shape. Leads carry exact keys of their own
-	// (ADR-0008 keeps them out of person matching), and a captured lead is
+	// (ADR-0008 keeps them out of contact matching), and a captured lead is
 	// created behind guards that live above it in capture.Sink.Upsert — the
 	// connector-principal check, the RC-2 exclusion gate and the raw_capture
 	// evidence write. Its identity probes are storekit's, shared with the
@@ -59,7 +59,7 @@ var sanctionedMintSites = gatekit.Waive(map[string]string{
 
 	// The direct lead create: same probes, different policy on a hit (409 with
 	// the incumbent's id rather than a staged merge).
-	"internal/modules/people/lead.go": "the direct lead write shape",
+	"internal/modules/contacts/lead.go": "the direct lead write shape",
 
 	// Test seeding, not a product path.
 	"internal/compose/integration/seed.go": "integration-harness row seeding",
@@ -82,9 +82,9 @@ func TestEveryIdentityInsertGoesThroughTheChokepoint(t *testing.T) {
 		}
 		rel := filepath.ToSlash(path)
 		if !sanctionedMintSites.Waived(t, rel) {
-			t.Errorf("%s mints a person, company or lead row directly.\n"+
+			t.Errorf("%s mints a contact, company or lead row directly.\n"+
 				"Identity rows are minted only through the chokepoint in "+
-				"internal/modules/people/resolvecreate.go, which requires the PO-F-1/PO-F-2 "+
+				"internal/modules/contacts/resolvecreate.go, which requires the PO-F-1/PO-F-2 "+
 				"verdict and refuses an exact-key collision. Route the insert through it — "+
 				"or, if this really is a new write shape, enroll it in sanctionedMintSites "+
 				"with the reason it cannot.", rel)
@@ -105,7 +105,7 @@ var leadClaimCheckSQL = regexp.MustCompile(`(?is)SELECT\s+id\s+FROM\s+lead\s+WHE
 // ONE question. They answer a claimed identity differently on purpose — the
 // direct create refuses, capture stages a merge — but when each owned its own
 // probe they drifted: the LinkedIn key had a probe written for it that nothing
-// ever called, so two imports of one person under different addresses both
+// ever called, so two imports of one contact under different addresses both
 // landed.
 func TestLeadIdentityProbesAreSingleSourced(t *testing.T) {
 	t.Parallel()
@@ -135,13 +135,13 @@ func TestLeadIdentityProbesAreSingleSourced(t *testing.T) {
 }
 
 // mergedIntoWrite matches a write of the merge redirect pointer.
-var mergedIntoWrite = regexp.MustCompile(`(?is)(UPDATE\s+(person|company)\s+SET[^;]*merged_into_id\s*=|INSERT\s+INTO\s+(person|company)\b[^;]*merged_into_id)`)
+var mergedIntoWrite = regexp.MustCompile(`(?is)(UPDATE\s+(contact|company)\s+SET[^;]*merged_into_id\s*=|INSERT\s+INTO\s+(contact|company)\b[^;]*merged_into_id)`)
 
 // sanctionedMergeWriters own the redirect pointer that retires one record into
 // another.
 var sanctionedMergeWriters = gatekit.Waive(map[string]string{
-	"internal/modules/people/mergerelink.go":   "the person merge path's satellite relink",
-	"internal/modules/people/merge_company.go": "the company merge path",
+	"internal/modules/contacts/mergerelink.go":   "the contact merge path's satellite relink",
+	"internal/modules/contacts/merge_company.go": "the company merge path",
 })
 
 // TestOnlyTheMergePathRetiresARecord is the structural half of the
@@ -172,7 +172,7 @@ func TestOnlyTheMergePathRetiresARecord(t *testing.T) {
 		}
 		t.Errorf("%s writes merged_into_id.\n"+
 			"Retiring one record into another is the merge path's alone "+
-			"(internal/modules/people/merge.go, merge_company.go), reached only by a "+
+			"(internal/modules/contacts/merge.go, merge_company.go), reached only by a "+
 			"human's disposition on the dedupe queue — DEDUPE_FUZZY_AUTOMERGE is pinned never.", rel)
 	}
 }

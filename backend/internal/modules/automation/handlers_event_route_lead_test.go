@@ -106,7 +106,7 @@ func TestRouteLeadSpecNamesTheCatalogKey(t *testing.T) {
 }
 
 // TestRouteLeadMatchFiresForEveryLeadSomebodyAskedFor proves Match narrows on
-// ONE thing: whether a person asked us for anything.
+// ONE thing: whether a contact asked us for anything.
 //
 // Every lead that came from a human — a form, a reply, a referral, a hand-typed
 // row — gets its follow-up, and unlike stage_change_create_task there is no

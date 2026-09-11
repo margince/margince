@@ -39,19 +39,19 @@ func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID)
 // thing that confirms one is the subject spending a single-use link that was
 // mailed to their own live primary address. Non-DOI paths return nil.
 //
-// The round trip is person-keyed, so a DOI grant on a lead subject is refused
+// The round trip is contact-keyed, so a DOI grant on a lead subject is refused
 // rather than recorded unconfirmed — the lead promotes first, then confirms.
 func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, requiresDOI bool) (*time.Time, error) {
 	if ConsentState(in.NewState) != StateGranted || !requiresDOI {
 		return nil, nil
 	}
-	if sub.entityType != "person" {
+	if sub.entityType != entityContact {
 		return nil, &ValidationError{
 			// The subject, not the purpose: the purpose is fine and the caller
 			// cannot fix it. What they must change is which subject they named,
 			// which is the field consentSubject's own refusals already use.
 			Field:  "subject",
-			Reason: "a double opt-in purpose needs a person subject; promote the lead before granting it",
+			Reason: "a double opt-in purpose needs a contact subject; promote the lead before granting it",
 		}
 	}
 	// A mailbox already proven by the single-use link that carried the subject
@@ -62,7 +62,7 @@ func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in Record
 		return &confirmed, nil
 	}
 	// Nothing else confirms. An operator-held token used to satisfy this, which
-	// meant the round trip could be completed by the same person who started it
+	// meant the round trip could be completed by the same contact who started it
 	// — the subject's mailbox never took part, and the grant recorded a
 	// confirmation that had not happened. A grant reaching here has no mailbox
 	// behind it, so it is refused rather than recorded half-true.
@@ -76,7 +76,7 @@ func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in Record
 //
 // It used to coalesce to the literal 'recorded via API', which made every
 // wordless grant produce a row that reads like proof and demonstrates nothing —
-// and a subject access export would return that sentence as what the person was
+// and a subject access export would return that sentence as what the contact was
 // shown. admitRecord now refuses a grant with no wording (requireWordingForGrant),
 // so a NULL reaching here belongs to a withdrawal, where there is nothing to
 // demonstrate and a placeholder would invent a claim.
@@ -84,11 +84,11 @@ func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in Record
 // upsertConsentWithProof writes the state row and appends the immutable
 // proof row — one concept: the current state is always backed by an
 // append-only consent_event that says when, how, and by whom. The upsert
-// targets the subject arm's own unique key (person×purpose or
+// targets the subject arm's own unique key (contact×purpose or
 // lead×purpose); the other arm's column stays NULL.
 func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, doiConfirmedAt *time.Time, capturedAt time.Time, actorID string) error {
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO person_consent (`+sub.column+`, purpose_id, state, lawful_basis, captured_at, source)
+		INSERT INTO contact_consent (`+sub.column+`, purpose_id, state, lawful_basis, captured_at, source)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (`+sub.column+`, purpose_id)
 		DO UPDATE SET state = EXCLUDED.state, lawful_basis = EXCLUDED.lawful_basis,

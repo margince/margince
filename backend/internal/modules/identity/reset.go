@@ -50,7 +50,7 @@ import (
 const resetTokenTTL = time.Hour
 
 // inviteTokenTTL is the set-password link's lifetime for a new member — longer
-// than a reset because an invited person has no account yet and may take a few
+// than a reset because an invited contact has no account yet and may take a few
 // days to act on the mail.
 const inviteTokenTTL = 7 * 24 * time.Hour
 

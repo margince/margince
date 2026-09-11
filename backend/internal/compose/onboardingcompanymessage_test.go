@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -31,12 +31,12 @@ func (s onboardingStateReaderStub) Get(context.Context) (identity.OnboardingStat
 }
 
 type onboardingSiteReadReaderStub struct {
-	read        people.SiteRead
-	comparisons []people.SiteReadComparison
+	read        contacts.SiteRead
+	comparisons []contacts.SiteReadComparison
 	err         error
 }
 
-func (s onboardingSiteReadReaderStub) GetCompanySiteRead(context.Context, ids.UUID) (people.SiteRead, []people.SiteReadComparison, error) {
+func (s onboardingSiteReadReaderStub) GetCompanySiteRead(context.Context, ids.UUID) (contacts.SiteRead, []contacts.SiteReadComparison, error) {
 	return s.read, s.comparisons, s.err
 }
 
@@ -85,7 +85,7 @@ func TestOnboardingCompanyMessageAnswersAndReturnsTheDeterministicNextField(t *t
 				OfferSummary: stringPtr("CRM software"), ICP: stringPtr("Revenue teams"),
 			},
 		}},
-		people: onboardingSiteReadReaderStub{}, brain: brain, runtime: runtime,
+		contacts: onboardingSiteReadReaderStub{}, brain: brain, runtime: runtime,
 	}
 
 	recorder := onboardingCompanyRequest(&assistant, `{
@@ -117,8 +117,8 @@ func TestOnboardingCompanyStatusReportsLiveResearchWithoutCallingTheModel(t *tes
 	runtime := &onboardingRuntimeStub{summary: ai.RunSummary{Currency: "USD"}}
 	assistant := onboardingCompanyAssistant{
 		state: onboardingStateReaderStub{state: identity.OnboardingState{ID: stateID, SiteReadID: &readID}},
-		people: onboardingSiteReadReaderStub{read: people.SiteRead{
-			ID: readID, Status: "running", ProfileFields: []people.DeepReadField{{
+		contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{
+			ID: readID, Status: "running", ProfileFields: []contacts.DeepReadField{{
 				Field: "offer_summary", Value: "CRM software", EvidenceSnippet: "CRM software", SourceURL: "https://acme.example",
 			}},
 		}},
@@ -145,9 +145,9 @@ func TestOnboardingCompanyStatusOffersConfirmationOnlyWhenComplete(t *testing.T)
 		DisplayName: stringPtr("Acme"), OfferSummary: stringPtr("CRM software"), ICP: stringPtr("Revenue teams"),
 	}
 	assistant := onboardingCompanyAssistant{
-		state:  onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID, CompanyDraft: complete}},
-		people: onboardingSiteReadReaderStub{read: people.SiteRead{ID: readID, Status: siteReadWireStatusDone}},
-		brain:  &replyBrainStub{}, runtime: &onboardingRuntimeStub{summary: ai.RunSummary{Currency: "USD"}},
+		state:    onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID, CompanyDraft: complete}},
+		contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID, Status: siteReadWireStatusDone}},
+		brain:    &replyBrainStub{}, runtime: &onboardingRuntimeStub{summary: ai.RunSummary{Currency: "USD"}},
 	}
 
 	recorder := onboardingCompanyRequest(&assistant, `{"message":"Wie ist der Status?","locale":"de"}`)
@@ -192,8 +192,8 @@ func TestOnboardingCompanyMessageUsesTheLiveDraftAndRequestedLanguage(t *testing
 	brain := &validatedOnboardingBrainStub{response: model.Response{Text: `{
 		"kind":"answer","message":"Das passt.","proposed_changes":[],"source_ids":[]}`}}
 	assistant := onboardingCompanyAssistant{
-		state:  onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}},
-		people: onboardingSiteReadReaderStub{}, brain: brain,
+		state:    onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}},
+		contacts: onboardingSiteReadReaderStub{}, brain: brain,
 		runtime: &onboardingRuntimeStub{summary: ai.RunSummary{Currency: "USD"}},
 	}
 	recorder := onboardingCompanyRequest(&assistant, `{
@@ -238,15 +238,15 @@ func TestOnboardingCompanyMessageReturnsDependencyFailures(t *testing.T) {
 			state: onboardingStateReaderStub{err: want}, brain: &replyBrainStub{}, runtime: &onboardingRuntimeStub{},
 		},
 		"site read": {
-			state:  onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
-			people: onboardingSiteReadReaderStub{err: want}, brain: &replyBrainStub{}, runtime: &onboardingRuntimeStub{},
+			state:    onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
+			contacts: onboardingSiteReadReaderStub{err: want}, brain: &replyBrainStub{}, runtime: &onboardingRuntimeStub{},
 		},
 		"model": {
-			state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}}, people: onboardingSiteReadReaderStub{},
+			state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}}, contacts: onboardingSiteReadReaderStub{},
 			brain: &replyBrainStub{err: want}, runtime: &onboardingRuntimeStub{},
 		},
 		"runtime": {
-			state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}}, people: onboardingSiteReadReaderStub{},
+			state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}}, contacts: onboardingSiteReadReaderStub{},
 			brain: &replyBrainStub{}, runtime: &onboardingRuntimeStub{err: want},
 		},
 	}
@@ -276,9 +276,9 @@ func TestAClickedClarifyOptionIsRecordedEvenWhenTheModelWillNotAnswer(t *testing
 		state: onboardingStateReaderStub{
 			state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID},
 		},
-		people: onboardingSiteReadReaderStub{read: people.SiteRead{
+		contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{
 			DraftVersion: 1,
-			LegalEntities: []people.SiteReadLegalEntity{
+			LegalEntities: []contacts.SiteReadLegalEntity{
 				{Name: "Acme GmbH", RegisteredAddress: "Musterstraße 1, Berlin"},
 				{Name: "Acme Holding AG", RegisteredAddress: "Bahnhofstrasse 2, Zug"},
 			},
@@ -318,10 +318,10 @@ func TestAClickedClarifyOptionIsRecordedEvenWhenTheModelWillNotAnswer(t *testing
 // unreachable.
 func TestAModelOutageWithNoSelectionStillRefuses(t *testing.T) {
 	assistant := onboardingCompanyAssistant{
-		state:   onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}},
-		people:  onboardingSiteReadReaderStub{},
-		brain:   &replyBrainStub{err: errors.New("the assistant did not answer")},
-		runtime: &onboardingRuntimeStub{},
+		state:    onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}},
+		contacts: onboardingSiteReadReaderStub{},
+		brain:    &replyBrainStub{err: errors.New("the assistant did not answer")},
+		runtime:  &onboardingRuntimeStub{},
 	}
 
 	recorder := onboardingCompanyRequest(&assistant, `{"message":"Tell me about this company","locale":"en"}`)

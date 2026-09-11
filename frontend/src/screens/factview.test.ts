@@ -228,7 +228,7 @@ describe("groupFacts", () => {
   });
 
   it("breaks a value tie in the READER's alphabet, not in code units", () => {
-    // Both values are rendered, so the tiebreaker is a list a person scans.
+    // Both values are rendered, so the tiebreaker is a list a contact scans.
     // Code-unit order puts every accented vowel after Z, which is why a German
     // reader used to find "Ähnliche Marken" below "Zielgruppe" — the two
     // orderings disagree here, and only one of them is what the reader expects.

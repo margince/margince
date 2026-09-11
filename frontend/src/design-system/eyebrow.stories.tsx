@@ -34,9 +34,9 @@ function HeadingDemo() {
   return (
     <section>
       <Eyebrow as="h3">Our side</Eyebrow>
-      <p className="t-body">Two people at Margince know someone here.</p>
+      <p className="t-body">Two contacts at Margince know someone here.</p>
       <Eyebrow as="h3">Their side</Eyebrow>
-      <p className="t-body">Four people at Brandt know someone here.</p>
+      <p className="t-body">Four contacts at Brandt know someone here.</p>
     </section>
   );
 }

@@ -10,7 +10,7 @@ import { useConnectors } from "./connectors";
  * Writing to an address, from wherever the address is shown.
  *
  * An address on a record header, in a rail's details row, on a card listing
- * the account's people: each is a way to ACT, and the act is the product's
+ * the account's contacts: each is a way to ACT, and the act is the product's
  * composer — the one place a message is drafted, gated on consent, sent and
  * filed against the record it was written from. Handing the address to the
  * reader's own mail client instead (a `mailto:`) sent the message AROUND the
@@ -112,10 +112,10 @@ export function WriteToHost({ children }: Readonly<{ children: ReactNode }>) {
           key={target.entityId}
           entityType={target.entityType}
           entityId={target.entityId}
-          // A person IS the contact the composer files under; every other
-          // record resolves its people from its own links.
-          personId={
-            target.entityType === "person" ? target.entityId : undefined
+          // A contact IS the contact the composer files under; every other
+          // record resolves its contacts from its own links.
+          contactId={
+            target.entityType === "contact" ? target.entityId : undefined
           }
           recordAddress={target.address}
           kind="email"

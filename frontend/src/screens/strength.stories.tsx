@@ -10,7 +10,7 @@ import {
 } from "./story-utils";
 import { StrengthPanel } from "./strength";
 
-// StrengthPanel fetches its own data (GET /people/{id}/strength or
+// StrengthPanel fetches its own data (GET /contacts/{id}/strength or
 // /companies/{id}/strength) — the shared fetch stub (story-utils.tsx)
 // mirrors the strength fixtures already exercised in contacts.test.tsx.
 const meta: Meta = {
@@ -42,11 +42,11 @@ export const Strong: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /people/p-1/strength": () => jsonResponse(strongStrength),
+      "GET /contacts/p-1/strength": () => jsonResponse(strongStrength),
     });
     return (
       <StoryProviders>
-        <StrengthPanel kind="person" id="p-1" />
+        <StrengthPanel kind="contact" id="p-1" />
       </StoryProviders>
     );
   },
@@ -59,11 +59,11 @@ export const Dormant: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /people/p-1/strength": () => jsonResponse(dormantStrength),
+      "GET /contacts/p-1/strength": () => jsonResponse(dormantStrength),
     });
     return (
       <StoryProviders>
-        <StrengthPanel kind="person" id="p-1" />
+        <StrengthPanel kind="contact" id="p-1" />
       </StoryProviders>
     );
   },

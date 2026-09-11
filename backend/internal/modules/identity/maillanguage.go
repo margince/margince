@@ -39,7 +39,7 @@ import (
 //
 // Nothing is widened by it. The value is the installation's own label, chosen
 // by an administrator and shown on a settings screen; it is not tenant data,
-// and the language a message is written in is not a fact about the person
+// and the language a message is written in is not a fact about the contact
 // receiving it.
 //
 // It answers the FALLBACK language on any failure, and logs it, for the reason

@@ -49,15 +49,15 @@ type approvalListBody struct {
 // so every approved member runs its registered accept effect, and a placeholder
 // body would report effect_failed for reasons that have nothing to do with
 // bundling.
-func siteReadPayload(kind, companyID, readID, person string) string {
+func siteReadPayload(kind, companyID, readID, contact string) string {
 	if kind == "deepread" {
 		return `{"company_id":"` + companyID + `","source_url":"https://acme.example",` +
 			`"site_read_id":"` + readID + `","fields":[{"field":"industry","value":"Industrial valves",` +
 			`"evidence_snippet":"Acme makes industrial valves.","source_url":"https://acme.example","confidence":0.9}],"facts":[]}`
 	}
-	return `{"company_id":"` + companyID + `","site_read_id":"` + readID + `","natural_key":"` + person +
-		`","name":"` + person + `","role":"CTO","published_email":"` + person + `@acme.example",` +
-		`"evidence_snippet":"` + person + `, CTO","source_url":"https://acme.example/team"}`
+	return `{"company_id":"` + companyID + `","site_read_id":"` + readID + `","natural_key":"` + contact +
+		`","name":"` + contact + `","role":"CTO","published_email":"` + contact + `@acme.example",` +
+		`"evidence_snippet":"` + contact + `, CTO","source_url":"https://acme.example/team"}`
 }
 
 // stageBundleRows puts one act's proposals in the inbox through the owner
@@ -74,7 +74,7 @@ func stageBundleRows(t *testing.T, e *apptest.AppEnv, companyID string, kinds ..
 		t.Fatalf("admin lookup: %v", err)
 	}
 	for i, kind := range kinds {
-		payload := siteReadPayload(kind, companyID, readID.String(), fmt.Sprintf("person%d", i))
+		payload := siteReadPayload(kind, companyID, readID.String(), fmt.Sprintf("contact%d", i))
 		if _, err := e.Owner.Exec(ctx, `
 			INSERT INTO approval (kind, proposed_by, on_behalf_of, target_entity_type,
 			                      target_entity_id, summary, proposed_change, diff_hash, expires_at, bundle_id)
@@ -90,7 +90,7 @@ func stageBundleRows(t *testing.T, e *apptest.AppEnv, companyID string, kinds ..
 
 // One act, one question, and a body that still answers for every proposal in it.
 // The second call is the part worth having: a client that retries — or two
-// people clearing the same inbox — must not re-decide anything, and must be told
+// contacts clearing the same inbox — must not re-decide anything, and must be told
 // so per member rather than by a bare 409 that says nothing about which.
 func TestABundleIsListedAndDecidedThroughTheAPI(t *testing.T) {
 	e := apptest.SetupApp(t)

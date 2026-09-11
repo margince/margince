@@ -13,7 +13,7 @@ import { installFetchStub, StoryProviders } from "./story-utils";
 // the provenance of the forwardable note, and it is the fact that changes what
 // the colleague is deciding: they are about to send those words under their own
 // name. So the mark is indigo when a model drafted them and absent when a
-// person wrote them — the two frames below are the whole difference.
+// contact wrote them — the two frames below are the whole difference.
 //
 // EVERY INSTANT IS FIXED. `make fe-clock-drift` runs the suite at +200 days and
 // requires the same verdict.
@@ -23,7 +23,7 @@ const NOTE =
 
 const request: IntroRequest = {
   id: "3f7c1a90-0000-4000-8000-00000000a001",
-  person_id: "3f7c1a90-0000-4000-8000-00000000c001",
+  contact_id: "3f7c1a90-0000-4000-8000-00000000c001",
   requester_user_id: "3f7c1a90-0000-4000-8000-00000000u001",
   requester_display_name: "Jonas Weber",
   introducer_user_id: "3f7c1a90-0000-4000-8000-00000000u002",
@@ -52,8 +52,8 @@ function drawer(over: Partial<IntroRequest>) {
     return (
       <StoryProviders>
         <IntroDecisionDrawer
-          personId={request.person_id}
-          personName="Dana Buyer"
+          contactId={request.contact_id}
+          contactName="Dana Buyer"
           request={{ ...request, ...over }}
           open
           onClose={() => {}}

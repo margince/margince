@@ -119,7 +119,7 @@ func sendableCarriage(sendable []string, core map[string]connector.Carriage) map
 // could disagree with the column's.
 //
 // It never DELETEs. A provider whose supplier is gone on a later boot keeps
-// its row — activity and person_channel_identity rows still reference it, the
+// its row — activity and contact_channel_identity rows still reference it, the
 // FK would refuse the delete anyway, and ErrConnectorNotConfigured already
 // parks a send against it rather than needing the row gone.
 func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, providers []string) error {

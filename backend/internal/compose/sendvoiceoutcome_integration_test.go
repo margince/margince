@@ -65,7 +65,7 @@ const (
 var voiceSenderPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":        {Create: true, Read: true, Update: true},
+		"contact":       {Create: true, Read: true, Update: true},
 		"activity":      {Create: true, Read: true, Update: true},
 		"voice_profile": {Read: true, Update: true},
 	},
@@ -167,8 +167,8 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	e := integration.Setup(t)
 
 	const recipient = "reader@buyer.test"
-	person := e.SeedPerson(t, "Draft Reader", &e.Rep1)
-	addPersonEmail(t, e, person, recipient)
+	contact := e.SeedContact(t, "Draft Reader", &e.Rep1)
+	addContactEmail(t, e, contact, recipient)
 	admin := e.Admin()
 	store := consent.NewStore(InstallationDB(e.Pool))
 	purpose, err := store.CreatePurpose(admin, "transactional", "Transactional", false)
@@ -176,7 +176,7 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 		t.Fatalf("create purpose: %v", err)
 	}
 	if _, err := store.Record(admin, consent.RecordInput{
-		PersonID: ids.From[ids.PersonKind](person), PurposeID: purpose.ID, NewState: "granted",
+		ContactID: ids.From[ids.ContactKind](contact), PurposeID: purpose.ID, NewState: "granted",
 		PolicyText: &grantedWording,
 	}); err != nil {
 		t.Fatalf("grant: %v", err)

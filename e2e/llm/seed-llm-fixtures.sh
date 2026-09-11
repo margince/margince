@@ -14,7 +14,7 @@
 # runs on any checkout.
 #
 # Idempotent by GUARD, not by the API's refusals. Every create sits behind a
-# lookup for the record it would write — company_id_by_name, person_id_by_email,
+# lookup for the record it would write — company_id_by_name, contact_id_by_email,
 # tag_id_by_name, lead_id_by_email — because create_or_die STOPS on a response
 # carrying no id, and a 409 on a natural key is exactly that shape. So a missed
 # guard is fatal on the second run by design: the seed names the record it could
@@ -145,15 +145,15 @@ days_ago() {
     || date -u -d "$1 days ago" '+%Y-%m-%dT%H:%M:%SZ'
 }
 
-# person_id_by_email finds a seeded person, or prints nothing.
+# contact_id_by_email finds a seeded contact, or prints nothing.
 #
 # It searches by NAME and matches the email from the rows that come back.
-# `/people?q=` matches display names, not addresses — querying it with an email
+# `/contacts?q=` matches display names, not addresses — querying it with an email
 # returns zero rows, which read as "not seeded yet" and made the second run try
 # to create Mai Nguyen again and die on 409 duplicate_email.
-person_id_by_email() {
+contact_id_by_email() {
   local name="$1" email="$2"
-  api GET "/people?q=$(url_encode "$name")&limit=50" | python3 -c 'import json,sys
+  api GET "/contacts?q=$(url_encode "$name")&limit=50" | python3 -c 'import json,sys
 want = sys.argv[1].lower()
 for row in json.load(sys.stdin).get("data", []):
     for e in row.get("emails", []):
@@ -265,21 +265,21 @@ if [[ "$(status_of GET /users)" = "403" ]]; then
   echo "  admin now owns its own password"
 fi
 
-# link_employment records that a person works for a company, or STOPS.
+# link_employment records that a contact works for a company, or STOPS.
 #
 # Four fixtures rest on this one edge — case 5's Mai Nguyen, case 6's Katrin
 # Sommer, case 23's Henning Voss and case 42's Nuria Sanz — and each of them was
 # written as a bare POST whose response went to /dev/null. A refusal there
-# leaves the person floating unattached to the company the case asks about, and
+# leaves the contact floating unattached to the company the case asks about, and
 # the seed reports success all the same: the same shape as the `|| true`
 # incident create_or_die exists to prevent.
 #
 # 409 is the one answer that is allowed through: the employment is already
 # recorded, which is what a re-run whose guard let it through finds.
 link_employment() {
-  local person="$1" company="$2" what="$3" body code
-  body="$(printf '{"kind":"employment","person_id":"%s","company_id":"%s"}' \
-    "$person" "$company")"
+  local contact="$1" company="$2" what="$3" body code
+  body="$(printf '{"kind":"employment","contact_id":"%s","company_id":"%s"}' \
+    "$contact" "$company")"
   code="$(status_of POST /relationships "$body")"
   [[ "$code" = "201" || "$code" = "409" ]] || {
     echo "employing $what answered HTTP $code" >&2; exit 1; }
@@ -362,10 +362,10 @@ if [[ -z "$vietnam" ]]; then
   vietnam="$(create_or_die "/companies" "$body" "Vietnam Partner JSC")"
 fi
 
-mai="$(person_id_by_email "Mai Nguyen" "mai.nguyen@vietnampartner.test")"
+mai="$(contact_id_by_email "Mai Nguyen" "mai.nguyen@vietnampartner.test")"
 if [[ -z "$mai" ]]; then
   body="$(printf '{"full_name":"Mai Nguyen","owner_id":"%s","emails":[{"email":"mai.nguyen@vietnampartner.test","is_primary":true}]}' "$colleague")"
-  mai="$(create_or_die "/people" "$body" "Mai Nguyen")"
+  mai="$(create_or_die "/contacts" "$body" "Mai Nguyen")"
   link_employment "$mai" "$vietnam" "Mai Nguyen at Vietnam Partner JSC"
 
   # THE PROMISE, AND IT HAS TO BE ONE. Criterion 5 is whether a model notices
@@ -375,10 +375,10 @@ if [[ -z "$mai" ]]; then
   # reading it as delivered reads it correctly and the gap the case rests on is
   # not in the data at all. A deadline makes it a promise, and the silence after
   # it measurable.
-  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","body":"Die Aufstellung schicke ich Ihnen bis Ende der Woche nach.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","body":"Die Aufstellung schicke ich Ihnen bis Ende der Woche nach.","links":[{"entity_type":"contact","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 18)" "$mai" "$vietnam")"
   create_or_die "/activities" "$body" "the unkept promise" >/dev/null
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","body":"Cảm ơn — we will review the appendix this week.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","body":"Cảm ơn — we will review the appendix this week.","links":[{"entity_type":"contact","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 20)" "$mai" "$vietnam")"
   create_or_die "/activities" "$body" "the inbound reply" >/dev/null
 fi
@@ -394,14 +394,14 @@ if [[ -z "$reply" ]]; then
   reply="$(create_or_die "/companies" "$body" "Reply Deutschland")"
 fi
 
-katrin="$(person_id_by_email "Katrin Sommer" "katrin.sommer@reply.test")"
+katrin="$(contact_id_by_email "Katrin Sommer" "katrin.sommer@reply.test")"
 if [[ -z "$katrin" ]]; then
   body="$(printf '{"full_name":"Katrin Sommer","owner_id":"%s","emails":[{"email":"katrin.sommer@reply.test","is_primary":true}]}' "$colleague")"
-  katrin="$(create_or_die "/people" "$body" "Katrin Sommer")"
+  katrin="$(create_or_die "/contacts" "$body" "Katrin Sommer")"
   link_employment "$katrin" "$reply" "Katrin Sommer at Reply Deutschland"
 
   # The record. September. This date is the assertion case 6 rests on.
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-09-18T09:12:00Z","subject":"Wechsel der Ansprechpartner","body":"Der ständige Wechsel der Ansprechpartner ist für uns ein echtes Problem.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-09-18T09:12:00Z","subject":"Wechsel der Ansprechpartner","body":"Der ständige Wechsel der Ansprechpartner ist für uns ein echtes Problem.","links":[{"entity_type":"contact","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
     "$katrin" "$reply")"
   create_or_die "/activities" "$body" "the September complaint" >/dev/null
 
@@ -427,8 +427,8 @@ done
 # The admin's OWN seat, resolved once. Case 40's lead queue is the CALLER's
 # queue and case 8's ownership proposal hands an account to the caller: leads
 # owned by the colleague would make case 40 quietly about somebody else's work,
-# and a proposal moving an account between two other people is a change the
-# person deciding it has no stake in.
+# and a proposal moving an account between two other contacts is a change the
+# contact deciding it has no stake in.
 me="$(api GET '/users?q=admin@demo.test' | python3 -c 'import json,sys
 rows = json.load(sys.stdin).get("data", [])
 print(rows[0]["id"] if rows else "")')"
@@ -472,7 +472,7 @@ tag_record() {
 }
 
 # lead_id_by_email finds a seeded lead, or prints nothing. Same shape as
-# person_id_by_email and for the same reason: `/leads?q=` matches names.
+# contact_id_by_email and for the same reason: `/leads?q=` matches names.
 lead_id_by_email() {
   local name="$1" email="$2"
   api GET "/leads?q=$(url_encode "$name")&limit=50" | python3 -c 'import json,sys
@@ -584,7 +584,7 @@ print(len(json.load(sys.stdin).get("data", [])))')"
 #
 # One mail on Rheinufer AG that is Dom Digital's, and three mails on Vorort
 # Systeme KG that are Aachener Metallwerke's. Three rather than two
-# because the person asks for them to move as ONE act, and a number is what an
+# because the contact asks for them to move as ONE act, and a number is what an
 # all-or-nothing answer reports.
 domdigital="$(company_id_by_name "Dom Digital GmbH")"
 rheinufer="$(company_id_by_name "Rheinufer AG")"
@@ -594,7 +594,7 @@ vorort="$(company_id_by_name "Vorort Systeme KG")"
 
 # A CALL CANNOT REACH A COMPANY THROUGH EITHER DOOR, so these are mails.
 # Migration 1788000100 restored the rule 1787570000 had withdrawn — a call or a
-# meeting is with a PERSON, and the company is reached through that person's
+# meeting is with a CONTACT, and the company is reached through that contact's
 # employer — and it holds the relink door as well as the create door. An earlier
 # version of this fixture logged calls unfiled and relinked them onto the
 # company, which the estate answered 422 to before a single scenario ran.
@@ -616,7 +616,7 @@ if [[ -z "$aachen" ]]; then
   aachen="$(create_or_die "/companies" "$body" "Aachener Metallwerke GmbH")"
 
   # THE MISFILED MAIL. Linked to Rheinufer and to nothing else, and its own text
-  # says whose it is — the assistant has to find it from the word the person
+  # says whose it is — the assistant has to find it from the word the contact
   # used ("Wartungsvertrag") and read who it is actually about.
   body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Wartungsvertrag – Verlängerung","body":"Wir würden den Wartungsvertrag für Dom Digital gern um zwei Jahre verlängern.","links":[{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 4)" "$rheinufer")"
@@ -628,7 +628,7 @@ if [[ -z "$aachen" ]]; then
   done
 fi
 
-# --- CASE 2: the person the card names is already here, once -----------------
+# --- CASE 2: the contact the card names is already here, once -----------------
 #
 # Case 2 asserts that the assistant REPORTS the duplicate its create filed —
 # "a queue nobody is told about is a queue nobody reads". Nothing seeded the
@@ -637,20 +637,20 @@ fi
 # ("neither she nor Terralogic existed, so I created both") scored FAIL.
 #
 # A NAME COLLISION is the lane that files a review row on a manual create.
-# manualDedupePerson passes QueueNameCollisions, so a second "Lucy Vo" is
+# manualDedupeContact passes QueueNameCollisions, so a second "Lucy Vo" is
 # queued for a human rather than refused — which is exactly the state the case
 # describes. The email and phone are deliberately DIFFERENT: an exact address
 # match is a claimed-address refusal, not a duplicate report, and that would
 # test the opposite thing.
 #
-# She sits at another company on purpose. Two people really can share a name,
+# She sits at another company on purpose. Two contacts really can share a name,
 # so the review row is a question; if this Lucy were at Terralogic the honest
-# answer would be "that is the same person", and the case is about reporting
+# answer would be "that is the same contact", and the case is about reporting
 # the QUEUE, not about being right.
-lucy_twin="$(person_id_by_email "Lucy Vo" "l.vo@saigontech.test")"
+lucy_twin="$(contact_id_by_email "Lucy Vo" "l.vo@saigontech.test")"
 if [[ -z "$lucy_twin" ]]; then
   body="$(printf '{"full_name":"Lucy Vo","owner_id":"%s","title":"Procurement Lead","emails":[{"email":"l.vo@saigontech.test","is_primary":true}],"phones":[{"phone":"+842839334455","is_primary":true}]}' "$colleague")"
-  lucy_twin="$(create_or_die "/people" "$body" "the Lucy Vo already on file")"
+  lucy_twin="$(create_or_die "/contacts" "$body" "the Lucy Vo already on file")"
 fi
 
 # --- CASE 20 + 21: a priced pipeline, and one deal nobody put a number on ----
@@ -773,7 +773,7 @@ echo "  case 21 pipeline closes ${close_dates[0]} … ${close_dates[6]}"
 
 # NOT "Rheinufer Wartungsvertrag". Case 9's premise is that the Wartungsvertrag
 # mail on Rheinufer has nothing to do with Rheinufer, and search_context sweeps
-# deals: a deal named after the account and the word would contradict the person
+# deals: a deal named after the account and the word would contradict the contact
 # asking, and a careful model is right to stop.
 seed_deal "Dom Digital Rahmenvertrag"      4800000 "${close_dates[0]}"
 seed_deal "Rheinufer Netzmodernisierung"   1250000 "${close_dates[1]}"
@@ -931,7 +931,7 @@ print("  the seeded pipeline is intact")
 # connector exists, and only POST /bookings sets host_user_id — POST /activities
 # has no field for it. So these are booked, not logged.
 #
-# Booked against a PERSON, and against a company nothing else asks about. A
+# Booked against a CONTACT, and against a company nothing else asks about. A
 # meeting cannot be filed against a company at all (the create door
 # refuses it, see case 9), and a block landing on Vietnam Partner or on Reply
 # would put a meeting in front of case 5's briefing and case 6's search.
@@ -941,10 +941,10 @@ if [[ -z "$nordholz" ]]; then
   nordholz="$(create_or_die "/companies" "$body" "Nordholz Anlagenbau GmbH")"
 fi
 
-henning="$(person_id_by_email "Henning Voss" "henning.voss@nordholz-anlagenbau.test")"
+henning="$(contact_id_by_email "Henning Voss" "henning.voss@nordholz-anlagenbau.test")"
 if [[ -z "$henning" ]]; then
   body="$(printf '{"full_name":"Henning Voss","owner_id":"%s","emails":[{"email":"henning.voss@nordholz-anlagenbau.test","is_primary":true}]}' "$me")"
-  henning="$(create_or_die "/people" "$body" "Henning Voss")"
+  henning="$(create_or_die "/contacts" "$body" "Henning Voss")"
   link_employment "$henning" "$nordholz" "Henning Voss at Nordholz Anlagenbau"
 fi
 
@@ -953,7 +953,7 @@ fi
 # and anything else is a seed reporting a full calendar it never wrote.
 book_block() {
   local subject="$1" days="$2" hour="$3" body code
-  body="$(printf '{"start":"%sT%02d:00:00Z","end":"%sT%02d:00:00Z","subject":"%s","links":[{"entity_type":"person","entity_id":"%s"}]}' \
+  body="$(printf '{"start":"%sT%02d:00:00Z","end":"%sT%02d:00:00Z","subject":"%s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
     "$(days_ahead "$days")" "$hour" "$(days_ahead "$days")" "$((hour + 2))" "$subject" "$henning")"
   code="$(status_of POST /bookings "$body")"
   [[ "$code" = "201" || "$code" = "409" ]] || {
@@ -1004,7 +1004,7 @@ fi
 # "Strategic Account" and "Strategic Accts", not "Key Account" and "key
 # accounts": check.py matches case-insensitively over the whole answer, so a
 # duplicate whose name contains the survivor's cannot be told from it by any
-# pattern. The truncated spelling is a duplicate a person really makes AND one
+# pattern. The truncated spelling is a duplicate a contact really makes AND one
 # an assertion can name. Neither word carries a description — writing one onto
 # the survivor is case 32's third criterion.
 #
@@ -1134,7 +1134,7 @@ if [[ -z "$bruno" ]]; then
   #
   # The subject does not say "Wartungsvertrag". That word is case 9's handle on
   # the one mail it asks about, and search_context has no way to tell a lead's
-  # cold outbound from the message the person meant.
+  # cold outbound from the message the contact meant.
   body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","subject":"Instandhaltung Kälteanlagen","body":"Hätten Sie Interesse an einem Gespräch?","links":[{"entity_type":"lead","entity_id":"%s"}]}' \
     "$(days_ago 187)" "$bruno")"
   create_or_die "/activities" "$body" "the outbound nobody answered" >/dev/null
@@ -1208,10 +1208,10 @@ if [[ -z "$levante" ]]; then
   levante="$(create_or_die "/companies" "$body" "Levante Cold Chain SL")"
 fi
 
-nuria="$(person_id_by_email "Nuria Sanz" "nuria.sanz@levantecoldchain.test")"
+nuria="$(contact_id_by_email "Nuria Sanz" "nuria.sanz@levantecoldchain.test")"
 if [[ -z "$nuria" ]]; then
   body="$(printf '{"full_name":"Nuria Sanz","owner_id":"%s","emails":[{"email":"nuria.sanz@levantecoldchain.test","is_primary":true}]}' "$me")"
-  nuria="$(create_or_die "/people" "$body" "Nuria Sanz")"
+  nuria="$(create_or_die "/contacts" "$body" "Nuria Sanz")"
   link_employment "$nuria" "$levante" "Nuria Sanz at Levante Cold Chain"
 fi
 
@@ -1219,7 +1219,7 @@ fi
 #
 # The seats above are the fixture's most silent failure mode. A seat that stays
 # `invited` is not a colleague, list_colleagues answers `[]`, and a run reads
-# that as "this person does not work here" — a scenario failure with the fixture
+# that as "this contact does not work here" — a scenario failure with the fixture
 # as its cause and nothing saying so. It went unnoticed across whole sweeps.
 #
 # Asked of the ROSTER READ the tools use, not of the rows this script created:

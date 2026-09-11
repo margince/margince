@@ -237,7 +237,7 @@ const summaryBytes = 32
 
 // summarize describes what was found without quoting it back at length: a result
 // is this server's own output, but it can carry captured text, and a defect line
-// goes to a log a person reads.
+// goes to a log a reader reads.
 func summarize(value json.RawMessage) string {
 	trimmed := strings.TrimSpace(string(value))
 	switch {
@@ -248,7 +248,7 @@ func summarize(value json.RawMessage) string {
 	}
 	// Cut on a RUNE boundary. The comment above says a result can carry captured
 	// text, and captured text is exactly where a multi-byte rune sits — a byte
-	// slice through one writes invalid UTF-8 into a line a person reads.
+	// slice through one writes invalid UTF-8 into a line a reader reads.
 	cut := trimmed[:summaryBytes]
 	for len(cut) > 0 && !utf8.ValidString(cut) {
 		cut = cut[:len(cut)-1]

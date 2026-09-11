@@ -47,11 +47,11 @@ export {
   SegmentedControl,
   TextInput,
 } from "../design-system/atoms";
-// Callout, because a unit sometimes has to warn a person about a choice it is
+// Callout, because a unit sometimes has to warn a contact about a choice it is
 // nonetheless going to let them make.
 //
 // The case that earned it: zalo-personal's capture card offers "everyone I talk
-// to, except the people I leave out", which puts a rep's family, friends and
+// to, except the contacts I leave out", which puts a rep's family, friends and
 // doctor into the company CRM. That is a legitimate answer and it is warned
 // about, not blocked — and a warning composed by a unit out of a Badge and a
 // paragraph carries no ground, no border and none of the weight the same
@@ -65,7 +65,7 @@ export {
 export { Callout, type CalloutTone } from "../design-system/callout";
 // ChoiceList, because a unit offering an either/or has otherwise to hide it in a
 // dropdown: `Select` was the only closed-choice control published, and a menu
-// covering two options makes a person open it to discover what the alternative
+// covering two options makes a contact open it to discover what the alternative
 // was. A binary a rep has to weigh is the one choice that must be readable at
 // rest, and no radio group existed to publish until this one.
 export { type Choice, ChoiceList } from "../design-system/choicelist";
@@ -84,7 +84,7 @@ export { type Choice, ChoiceList } from "../design-system/choicelist";
 // connected is not editing it.
 export { type Fact, FactList } from "../design-system/factlist";
 // RecordPicker, because the alternative is every unit that touches a core
-// record asking a person to paste a UUID.
+// record asking a contact to paste a UUID.
 //
 // Picking a record is the one interaction a unit cannot avoid the moment it
 // writes anything the product owns, and it is not a control anybody should
@@ -145,8 +145,8 @@ export { Row, type SpaceStep, Stack } from "../design-system/stack";
 // and looks like the product until somebody pastes.
 // TokenList, because a set somebody assembled has to READ as a set.
 //
-// A unit that renders "name, then a remove button" per person produces a run of
-// sentences — eight of them for eight people — and it cannot do better, because
+// A unit that renders "name, then a remove button" per contact produces a run of
+// sentences — eight of them for eight contacts — and it cannot do better, because
 // the chip ground, the gap and the placement of the X are all stylesheet, which
 // a unit does not ship. This is the same token `TokenInput` draws, deliberately
 // from the same file: one visual, one home.

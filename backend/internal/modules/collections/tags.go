@@ -391,7 +391,7 @@ func (s *Store) EnsureTaggable(ctx context.Context, entityType string, entityID 
 }
 
 // maxTagNameRunes bounds a tag name. Counted in RUNES, not bytes: the limit is
-// about what a person can read on a badge, and a byte cap would let an English
+// about what a contact can read on a badge, and a byte cap would let an English
 // name run half again as long as a German one.
 const maxTagNameRunes = 64
 

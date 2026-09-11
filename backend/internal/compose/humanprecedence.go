@@ -33,7 +33,7 @@ type fieldOwnership struct {
 // back to the stricter answer rather than to an identifier built from
 // caller input.
 var precedenceTables = newRecordTypeSet(
-	"person", string(recordTypeCompany), "deal", "lead", "activity",
+	"contact", string(recordTypeCompany), "deal", "lead", "activity",
 	"offer", "offer_template", "product", "list", "tag",
 	"relationship", "custom_field", "saved_view", "webhook_subscription",
 )
@@ -78,7 +78,7 @@ func unauditedHolder(table string) string {
 //
 // That second clause is the fail-closed half, and it exists because the
 // create paths do not audit what the human typed. Each of them records a
-// single headline key — {name} for a deal, {full_name} for a person,
+// single headline key — {name} for a deal, {full_name} for a contact,
 // {display_name} for a company — while the UPDATE paths record the
 // real per-field before/after images. So the premise this file opens with
 // holds for updates and is false for creates, and a deal a human created

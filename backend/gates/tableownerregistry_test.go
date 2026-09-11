@@ -37,65 +37,65 @@ var tableOwners = map[string]string{
 	"oauth_grant":              "internal/modules/identity",
 	"oauth_refresh_token":      "internal/modules/identity",
 	"onboarding_wizard_state":  "internal/modules/identity",
-	// people
-	"person":        "internal/modules/people",
-	"person_email":  "internal/modules/people",
-	"person_social": "internal/modules/people",
-	"person_phone":  "internal/modules/people",
-	// The channel identity is a resolution key on the person, not connection
-	// state: it answers "which Person is this Telegram user", so it lives with
+	// contacts
+	"contact":        "internal/modules/contacts",
+	"contact_email":  "internal/modules/contacts",
+	"contact_social": "internal/modules/contacts",
+	"contact_phone":  "internal/modules/contacts",
+	// The channel identity is a resolution key on the contact, not connection
+	// state: it answers "which Contact is this Telegram user", so it lives with
 	// the one dedupe implementation that resolves them.
-	"person_channel_identity": "internal/modules/people",
+	"contact_channel_identity": "internal/modules/contacts",
 	// What was promised, asked and decided in captured conversations
-	// (ADR-0097 D1). It lives with people because a claim is an attribute of
-	// the PERSON it is about, written through the same store that owns them.
-	"conversation_claim":        "internal/modules/people",
-	"company":                   "internal/modules/people",
-	"company_domain":            "internal/modules/people",
-	"company_relationship_type": "internal/modules/people",
+	// (ADR-0097 D1). It lives with contacts because a claim is an attribute of
+	// the CONTACT it is about, written through the same store that owns them.
+	"conversation_claim":        "internal/modules/contacts",
+	"company":                   "internal/modules/contacts",
+	"company_domain":            "internal/modules/contacts",
+	"company_relationship_type": "internal/modules/contacts",
 	"signal_thread_scan":        "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose
 	// package that writes it, the way compose/weekly owns team_weekly_review.
 	"worklist_snapshot":      "internal/compose/worklistsnap",
-	"relationship":           "internal/modules/people",
-	"partner":                "internal/modules/people",
-	"lead":                   "internal/modules/people",
-	"lead_score_history":     "internal/modules/people",
-	"lead_manual_signal":     "internal/modules/people",
-	"lead_source":            "internal/modules/people",
-	"lead_disqualify_reason": "internal/modules/people",
+	"relationship":           "internal/modules/contacts",
+	"partner":                "internal/modules/contacts",
+	"lead":                   "internal/modules/contacts",
+	"lead_score_history":     "internal/modules/contacts",
+	"lead_manual_signal":     "internal/modules/contacts",
+	"lead_source":            "internal/modules/contacts",
+	"lead_disqualify_reason": "internal/modules/contacts",
 	// A prospect passed from an SDR to an account executive: the row carrying
 	// its current state, the append-only transitions behind it, and the
-	// administered reason a refusal names. people owns them because the SUBJECT
-	// is a lead or a person; the deal an acceptance produces is an outcome, and
+	// administered reason a refusal names. contacts owns them because the SUBJECT
+	// is a lead or a contact; the deal an acceptance produces is an outcome, and
 	// compose wires the caller that does both.
-	"sdr_handoff":           "internal/modules/people",
-	"sdr_handoff_event":     "internal/modules/people",
-	"sdr_handoff_reason":    "internal/modules/people",
-	"company_profile_field": "internal/modules/people",
-	"company_vat_check":     "internal/modules/people",
-	"person_profile_field":  "internal/modules/people",
-	// The signature pass's per-person read cursor (PO-F-2a): which mail was
+	"sdr_handoff":           "internal/modules/contacts",
+	"sdr_handoff_event":     "internal/modules/contacts",
+	"sdr_handoff_reason":    "internal/modules/contacts",
+	"company_profile_field": "internal/modules/contacts",
+	"company_vat_check":     "internal/modules/contacts",
+	"contact_profile_field": "internal/modules/contacts",
+	// The signature pass's per-contact read cursor (PO-F-2a): which mail was
 	// already shown to the model, so the same empty signature is not re-read
 	// every night.
-	"person_signature_enrich_state": "internal/modules/people",
-	"company_fact":                  "internal/modules/people",
-	"company_geocode_state":         "internal/modules/people",
-	"geocode_cache":                 "internal/modules/people",
+	"contact_signature_enrich_state": "internal/modules/contacts",
+	"company_fact":                   "internal/modules/contacts",
+	"company_geocode_state":          "internal/modules/contacts",
+	"geocode_cache":                  "internal/modules/contacts",
 	// What a technical lookup last read for one company, per public source,
 	// and what those sources answered. The cache is installation-global for
 	// the same reason geocode_cache is — a domain's DNS records are the same
-	// for every tenant — and people owns both because it owns the company
+	// for every tenant — and contacts owns both because it owns the company
 	// record they describe.
-	"company_technical_state": "internal/modules/people",
-	"technical_lookup_cache":  "internal/modules/people",
+	"company_technical_state": "internal/modules/contacts",
+	"technical_lookup_cache":  "internal/modules/contacts",
 	// What a mail domain is allowed to create. It governs COMPANY
-	// creation, which people owns, so the verdict lives with the records it
+	// creation, which contacts owns, so the verdict lives with the records it
 	// authorizes rather than with the capture path that asks the question.
-	"company_domain_disposition": "internal/modules/people",
-	"site_read":                  "internal/modules/people",
+	"company_domain_disposition": "internal/modules/contacts",
+	"site_read":                  "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
-	"dedupe_candidate": "internal/modules/people",
+	"dedupe_candidate": "internal/modules/contacts",
 	// deals (incl. the E03 offer engine: rate-card + versioned offers)
 	"commission_entry":          "internal/modules/commissions",
 	"contract":                  "internal/modules/contracts",
@@ -177,11 +177,11 @@ var tableOwners = map[string]string{
 	// primitives, which a module may not do.
 	"graph_interaction_edge": "internal/modules/search",
 	"graph_contact_edge":     "internal/modules/search",
-	// CG-DDL-2: LinkedIn ghosts. Owned by people because the work they exist
+	// CG-DDL-2: LinkedIn ghosts. Owned by contacts because the work they exist
 	// for is identity matching — the same dedupe rules, the same chokepoint.
-	"email_signature":     "internal/modules/people",
-	"linkedin_account":    "internal/modules/people",
-	"linkedin_connection": "internal/modules/people",
+	"email_signature":     "internal/modules/contacts",
+	"linkedin_account":    "internal/modules/contacts",
+	"linkedin_connection": "internal/modules/contacts",
 	"attachment":          "internal/modules/activities",
 	"deal_document_hide":  "internal/modules/activities",
 	"booking_page":        "internal/modules/activities",
@@ -194,13 +194,13 @@ var tableOwners = map[string]string{
 	// consent (the DSR case queue and the retention-policy catalog are
 	// consent's; the engines that EXECUTE them live in privacy)
 	"consent_purpose":   "internal/modules/consent",
-	"person_consent":    "internal/modules/consent",
+	"contact_consent":   "internal/modules/consent",
 	"consent_event":     "internal/modules/consent",
 	"consent_doi_token": "internal/modules/consent",
 	// What made business correspondence lawful, and the §7(3) flag: both are
 	// the gate's own evidence (ADR-0098 D2/D4), written where the gate that
 	// relies on them lives.
-	"person_acquisition_evidence":    "internal/modules/people",
+	"contact_acquisition_evidence":   "internal/modules/contacts",
 	"privacy_notice_case":            "internal/modules/consent",
 	"consent_text_version":           "internal/modules/consent",
 	"communication_decision":         "internal/modules/consent",
@@ -216,9 +216,9 @@ var tableOwners = map[string]string{
 	// marketing answer back, and what comes back through it. Consent's, because
 	// what the token authorises is a consent decision and the address it was
 	// delivered to is the evidence that decision rests on.
-	"confirm_token":             "internal/modules/consent",
-	"withdrawal_credential":     "internal/modules/consent",
-	"person_confirm_submission": "internal/modules/consent",
+	"confirm_token":              "internal/modules/consent",
+	"withdrawal_credential":      "internal/modules/consent",
+	"contact_confirm_submission": "internal/modules/consent",
 	// retention_policy sits in consent's DDL block (DM-DDL-10) but is OWNED by
 	// privacy, because ownership here names the module whose store owns the
 	// writes: privacy runs the nightly evaluator that reads it and, since the
@@ -315,14 +315,14 @@ var tableOwners = map[string]string{
 	"provider_connection_budget": "internal/modules/integrations",
 	"provider_run":               "internal/modules/integrations",
 	"provider_run_reservation":   "internal/modules/integrations",
-	// The purchased VALUES, owned by people rather than by integrations
+	// The purchased VALUES, owned by contacts rather than by integrations
 	// (migration 0219 says so in the DDL): the domain decides what a claim
 	// means and how it renders, while integrations owns the run that bought
-	// it. That split is what lets a person page show a bought email beside a
+	// it. That split is what lets a contact page show a bought email beside a
 	// canonical one and say which is which.
-	"provider_applied_field":       "internal/modules/people",
-	"person_provider_claim":        "internal/modules/people",
-	"relationship_nudge_dismissal": "internal/modules/people",
+	"provider_applied_field":       "internal/modules/contacts",
+	"contact_provider_claim":       "internal/modules/contacts",
+	"relationship_nudge_dismissal": "internal/modules/contacts",
 	"finance_external_customer":    "internal/modules/finance",
 	"finance_customer_link":        "internal/modules/finance",
 	"finance_invoice":              "internal/modules/finance",
@@ -373,7 +373,7 @@ var tableOwners = map[string]string{
 	"import_record_map": "internal/modules/migration",
 	// compose (HTTP replay protection is transport plumbing, not domain;
 	// the brief read model is the cross-module ranker's own snapshot —
-	// deals + people strength + activities compose only here)
+	// deals + contacts strength + activities compose only here)
 	"idempotency_key": "internal/compose",
 	// The MCP Tasks handle, beside the claim above and owned for the same
 	// reason: it is transport-owned operational state, not a domain record, and
@@ -421,7 +421,7 @@ var tableOwners = map[string]string{
 	"weekly_review_learning_citation": "internal/compose/weekly",
 	// The company view's per-user visit baseline: view state, not a record
 	// fact, so it is written without an audit row — the saved-view ruling.
-	// The person view acknowledges visits into the SAME table (one baseline
+	// The contact view acknowledges visits into the SAME table (one baseline
 	// per user per record, whatever kind of record it is), ratified below.
 	"user_record_view": "internal/compose/company360",
 	// Which activities have had their stored originals re-read for further
@@ -452,9 +452,9 @@ var tableOwners = map[string]string{
 	// The account scan's per-user row: the last findings the model read for
 	// this reader, and the job carrier of the read in flight. Same ruling.
 	"company_scan": "internal/compose/companyscan",
-	// The relationship brief's per-user cache — the person-side sibling of
+	// The relationship brief's per-user cache — the contact-side sibling of
 	// company_brief, and the same ruling for the same reasons.
-	"person_brief": "internal/compose/personbrief",
+	"contact_brief": "internal/compose/contactbrief",
 	// The deal status card's per-user cache — the deal-side sibling of the
 	// two above, and the same ruling: derived content, regenerable from the
 	// records at any time, readable by nobody but the user it was written
@@ -464,7 +464,7 @@ var tableOwners = map[string]string{
 	// against the evidence it fired on so it re-arms when that evidence moves
 	// (ADR-0096 D3). View state: no audit row, no outbox event, no other
 	// viewer's page.
-	"person_moment_dismissal": "internal/compose/person360",
+	"contact_moment_dismissal": "internal/compose/contact360",
 	// platform, the key vault: the local provider's ciphertext store. No
 	// workspace_id — a deployment credential belongs to the installation, not a
 	// tenant.

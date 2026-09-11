@@ -24,7 +24,7 @@ import (
 // reads its own --microsoft-signin-tenant, which falls back to --graph-tenant
 // when that already names one directory rather than an authority alias. An
 // installation running `common` capture therefore gets no Microsoft sign-in
-// until it says which directories its people are in, and the boot log says so.
+// until it says which directories its contacts are in, and the boot log says so.
 //
 // DIRECTORIES, plural, because a flag holding exactly one made "any Entra
 // tenant" mean "no sign-in at all". Each entry is a directory whose

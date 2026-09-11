@@ -56,7 +56,7 @@ func (s *Sink) internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 		return false, err
 	}
 	// The acting seat's own other addresses count as internal too. A founder
-	// writing between their work address and their private domain is one person
+	// writing between their work address and their private domain is one contact
 	// talking to themselves, which is less of a customer relationship than two
 	// colleagues talking — and the whole point of a declared alias is that it
 	// is not somebody else.
@@ -128,7 +128,7 @@ func (s *Sink) internalDomainTx(ctx context.Context, tx pgx.Tx, domain string) (
 // produced exactly one attested outbound, and that was enough to admit the
 // spammer ahead of every suppression rule — the record for "PE Insights" in a
 // real import came from precisely that reply. Declining is the one thing a
-// person writes that means the opposite of intent.
+// contact writes that means the opposite of intent.
 //
 // Everything else still counts on sight. A reply that engages — a question, a
 // price, a meeting — is intent no matter that it answered rather than opened,
@@ -185,7 +185,7 @@ func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (boo
 	}
 }
 
-// declinePhrases are what a person writes to end a conversation they never
+// declinePhrases are what a contact writes to end a conversation they never
 // wanted. Deliberately short and unambiguous: every entry here has to be a
 // phrase whose presence means "stop", because a false positive sends a genuine
 // prospect to the verdict engine (a delay, and recoverable) while a false
@@ -216,7 +216,7 @@ func isDecliningReply(text string) bool {
 
 // registrySuppresses runs T2 against the transactional/ESP registry
 // (CAP-PARAM-6): a DocuSign envelope or a SendGrid relay is not a
-// counterparty's company, so person AND company derivation are suppressed while the
+// counterparty's company, so contact AND company derivation are suppressed while the
 // activity stands — a signed envelope is a real timeline item — and the reason
 // lands on the ledger so a wrong registry entry is queryable, not only logged.
 //
@@ -304,8 +304,8 @@ func (s *PendingStore) CorrespondsWith(ctx context.Context, tx pgx.Tx, email str
 //
 // It is the other half of "a correspondence", and the stronger half. One
 // outbound message is intent, and intent is often unreturned: a founder mails
-// forty people about a conference and hears from six. Recording all forty as
-// contacts on the strength of the send alone is what filled a CRM with people
+// forty contacts about a conference and hears from six. Recording all forty as
+// contacts on the strength of the send alone is what filled a CRM with contacts
 // who never answered — and among them the test addresses, the one-off errands
 // and the introductions that went nowhere.
 //
@@ -412,9 +412,9 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 // metInPersonTx reports whether this workspace and that address share a meeting
 // a connector captured.
 //
-// It is the third shape of "we have actually dealt with this person", beside a
+// It is the third shape of "we have actually dealt with this contact", beside a
 // reply and two outbound threads, and it is the strongest of them. Mail is
-// evidence about intent — a founder mails forty people and hears from six — and
+// evidence about intent — a founder mails forty contacts and hears from six — and
 // a meeting is evidence about time: both sides put an hour in a calendar, which
 // nobody does by accident.
 //
@@ -427,8 +427,8 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 // The address is matched against the participant rows rather than
 // counterparty_email, because a meeting carries no counterparty: attendance is a
 // LIST and the calendar mapper leaves the field unset. Either the participant
-// row resolved to a person holding this address, or it is the bare address the
-// invitation named — a person the workspace does not have yet is exactly the
+// row resolved to a contact holding this address, or it is the bare address the
+// invitation named — a contact the workspace does not have yet is exactly the
 // case this decides.
 //
 // THREE BOUNDS, three of the four the consent arm applies (consent's
@@ -477,8 +477,8 @@ func metInPersonTx(
 		     AND a.occurred_at <= now() + $2::interval
 		     AND (lower(p.address) = $1
 		          OR EXISTS (
-		            SELECT 1 FROM person_email pe
-		             WHERE pe.person_id = p.person_id
+		            SELECT 1 FROM contact_email pe
+		             WHERE pe.contact_id = p.contact_id
 		               AND lower(pe.email) = $1
 		               AND pe.archived_at IS NULL))
 		     AND `+auth.ActivityAvailableClause("a"),

@@ -14,11 +14,11 @@ import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 // sarMessagingSections gather both directions of the messaging boundary: what
 // capture decided about mail arriving from the subject, and what this
 // installation sent out about or to them.
-func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []string, leads []ids.UUID) []sarSection {
+func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
 	return []sarSection{
 		{&pkg.CaptureDispositions, `SELECT p.email, p.display_name, p.status, p.disposition_reason, p.created_at, p.resolved_at
 		   FROM capture_pending_counterparty p
-		   WHERE p.email IN (SELECT email FROM person_email WHERE person_id = $1)`, nil},
+		   WHERE p.email IN (SELECT email FROM contact_email WHERE contact_id = $1)`, nil},
 		// The governed outbound messages this installation sent about or to the
 		// subject. Reached BOTH ways on purpose, unlike the erasure cascade: a
 		// send whose activity was never linked to their record still went to
@@ -30,14 +30,14 @@ func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []strin
 		// alone would miss the unlinked send.
 		//
 		// The PROJECTION is deliberate too: recipients and cc are returned
-		// whole, so a message the subject shared with other people hands the
-		// export those people's addresses as well — whichever arm matched the
+		// whole, so a message the subject shared with other contacts hands the
+		// export those contacts's addresses as well — whichever arm matched the
 		// row. Narrowing the arrays to the subject's own address would be the
 		// safer default in a self-serve export, and it is rejected here for two
 		// reasons. An address list is part of what the message WAS, and Art. 15
 		// owes the subject the data held about them rather than a redraft of
 		// it. And this assembly is admin-mediated (AssembleSAR demands the
-		// person.delete grant and an unbounded scope, above), so the disclosure
+		// contact.delete grant and an unbounded scope, above), so the disclosure
 		// is a human handing a package to a subject, not an endpoint answering
 		// one — the same posture, and the same tolerated over-inclusion, as the
 		// Activities and Attachments sections, whose free text and filenames
@@ -61,7 +61,7 @@ func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []strin
 		// The address match spans bcc, and the DISCLOSURE of it is narrowed to
 		// the subject's own address.
 		//
-		// Both halves are required and they pull opposite ways. A person bcc'd
+		// Both halves are required and they pull opposite ways. A contact bcc'd
 		// on a message with no activity link would otherwise be absent from
 		// their own export of a message they received — and exporting the
 		// whole bcc array would hand one subject every other blind recipient's
@@ -80,28 +80,28 @@ func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []strin
 		{&pkg.SentMessages, `SELECT o.subject, o.body, o.html_body, o.from_name, o.attachments, o.recipients, o.cc,
 		      (SELECT coalesce(jsonb_agg(addr), '[]'::jsonb)
 		         FROM jsonb_array_elements_text(coalesce(o.bcc, '[]'::jsonb)) AS addr
-		        WHERE lower(addr) IN (SELECT email FROM person_email WHERE person_id = $1)) AS bcc,
+		        WHERE lower(addr) IN (SELECT email FROM contact_email WHERE contact_id = $1)) AS bcc,
 		      o.consent_purpose,
 		      o.provider, o.channel_user_id, o.status, o.sent_at, o.created_at,
 		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) IN (
-		             SELECT email FROM person_email WHERE person_id = $1)
+		             SELECT email FROM contact_email WHERE contact_id = $1)
 		           THEN o.bounced_at END AS bounced_at,
 		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) IN (
-		             SELECT email FROM person_email WHERE person_id = $1)
+		             SELECT email FROM contact_email WHERE contact_id = $1)
 		           THEN o.bounce_kind END AS bounce_kind,
 		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) IN (
-		             SELECT email FROM person_email WHERE person_id = $1)
+		             SELECT email FROM contact_email WHERE contact_id = $1)
 		           THEN o.bounce_recipient END AS bounce_recipient
 		   FROM comms_outbound o
-		   WHERE o.activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.person_id = $1)
+		   WHERE o.activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)
 		      OR EXISTS (
 		           SELECT 1 FROM jsonb_array_elements_text(
 		                          o.recipients || o.cc || coalesce(o.bcc, '[]'::jsonb)) AS addr
-		           WHERE lower(addr) IN (SELECT email FROM person_email WHERE person_id = $1))`, nil},
+		           WHERE lower(addr) IN (SELECT email FROM contact_email WHERE contact_id = $1))`, nil},
 		// The messages nobody has sent yet. They hold the subject's address and
 		// the body BEFORE any activity exists, so none of the three routes the
 		// query above takes can reach them — and a message written to this
-		// person, sitting unsent, is data held about them that Art. 15 owes
+		// contact, sitting unsent, is data held about them that Art. 15 owes
 		// them sight of.
 		//
 		// Same two-sided address rule as the sent projection, pulling the same
@@ -145,7 +145,7 @@ func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []strin
 		      s.payload->'cc' AS cc,
 		      (SELECT coalesce(jsonb_agg(addr), '[]'::jsonb)
 		         FROM jsonb_array_elements_text(coalesce(s.payload->'bcc', '[]'::jsonb)) AS addr
-		        WHERE lower(addr) IN (SELECT email FROM person_email WHERE person_id = $1)) AS bcc,
+		        WHERE lower(addr) IN (SELECT email FROM contact_email WHERE contact_id = $1)) AS bcc,
 		      s.payload->>'consent_purpose' AS consent_purpose,
 		      s.status, s.held_reason, s.scheduled_at, s.scheduled_tz, s.created_at
 		   FROM scheduled_send s
@@ -154,7 +154,7 @@ func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []strin
 		                          coalesce(s.payload->'recipients', '[]'::jsonb)
 		                          || coalesce(s.payload->'cc', '[]'::jsonb)
 		                          || coalesce(s.payload->'bcc', '[]'::jsonb)) AS addr
-		           WHERE lower(addr) IN (SELECT email FROM person_email WHERE person_id = $1))`, nil},
+		           WHERE lower(addr) IN (SELECT email FROM contact_email WHERE contact_id = $1))`, nil},
 		// The messages still waiting for a human to decide them. A staged
 		// approval holds a whole composed message before any scheduled row or
 		// activity exists, so neither section above can see it — and a subject
@@ -203,7 +203,7 @@ func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []strin
 		// composed: it is a raw line lifted out of some record, so a row matched
 		// because a summary mentions the subject's address would otherwise hand
 		// them a verbatim sentence out of a meeting they were never part of,
-		// about people they have no relationship to. So the ROW is found by any
+		// about contacts they have no relationship to. So the ROW is found by any
 		// arm, and the QUOTATIONS are reduced to the ones that are the subject's
 		// to see: read out of a record they are linked to, or naming them
 		// outright. The rest belongs to another record.
@@ -216,14 +216,14 @@ func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []strin
 		      (SELECT coalesce(jsonb_agg(item), '[]'::jsonb)
 		         FROM jsonb_array_elements(` + evidenceArray + `) AS item
 		        WHERE item->>'source_id' IN (
-		                SELECT l.activity_id::text FROM activity_link l WHERE l.person_id = $1)
+		                SELECT l.activity_id::text FROM activity_link l WHERE l.contact_id = $1)
 		           OR item->>'evidence_snippet' ~* ANY($3::text[])) AS evidence,
 		      created_at, expires_at, decided_at
 		   FROM approval
 		   WHERE (` + subjectApprovalMatch + `)
 		      OR evidence::text ~* ANY($3::text[])
 		      OR ` + evidenceCitesSubjectActivity,
-			[]any{personID.UUID, leads, addressPatterns(emails)},
+			[]any{contactID.UUID, leads, addressPatterns(emails)},
 		},
 	}
 }

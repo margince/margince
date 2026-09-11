@@ -53,8 +53,8 @@ func seedPreferenceToken(t *testing.T, e *channelConsentEnv) string {
 	t.Helper()
 	token := "pref-" + ids.NewV7().String()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO preference_token (person_id, token, expires_at)
-		 VALUES ($1, $2, now() + interval '30 days')`, e.person, token); err != nil {
+		`INSERT INTO preference_token (contact_id, token, expires_at)
+		 VALUES ($1, $2, now() + interval '30 days')`, e.contact, token); err != nil {
 		t.Fatalf("seed preference token: %v", err)
 	}
 	return token
@@ -64,10 +64,10 @@ func consentStateOf(t *testing.T, e *channelConsentEnv, purpose ids.PurposeID) s
 	t.Helper()
 	var state string
 	err := e.owner.QueryRow(context.Background(),
-		`SELECT coalesce(max(state), '') FROM person_consent WHERE person_id = $1 AND purpose_id = $2`,
-		e.person, purpose).Scan(&state)
+		`SELECT coalesce(max(state), '') FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`,
+		e.contact, purpose).Scan(&state)
 	if err != nil {
-		t.Fatalf("read person_consent: %v", err)
+		t.Fatalf("read contact_consent: %v", err)
 	}
 	return state
 }
@@ -78,7 +78,7 @@ func consentStateOf(t *testing.T, e *channelConsentEnv, purpose ids.PurposeID) s
 // thing somebody in that state most needs this page to do.
 func TestASaveRecordsItsWithdrawalsEvenWhenAGrantIsRefused(t *testing.T) {
 	e := setupChannelConsent(t)
-	archiveConsentSubject(t, e.owner, "person", e.person.UUID)
+	archiveConsentSubject(t, e.owner, "contact", e.contact.UUID)
 	token := seedPreferenceToken(t, e)
 
 	// The grant is listed FIRST on purpose: in request order it refuses before

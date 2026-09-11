@@ -117,7 +117,7 @@ func identityLine(in Input) string {
 		parts = append(parts, in.Industry)
 	}
 	if in.SizeBand != "" {
-		parts = append(parts, in.SizeBand+" people")
+		parts = append(parts, in.SizeBand+" contacts")
 	}
 	line := strings.Join(parts, ", ") + "."
 	if in.ContactCount > 0 {

@@ -25,14 +25,14 @@ const (
 	PrincipalAgent     PrincipalType = "agent"
 	PrincipalConnector PrincipalType = "connector"
 	PrincipalSystem    PrincipalType = "system"
-	// PrincipalBuyer is an external person acting inside ONE Deal Room: no
+	// PrincipalBuyer is an external contact acting inside ONE Deal Room: no
 	// seat, no RBAC grant, no row scope. Their authority is the room session
 	// and nothing else, so every gate in platform/auth refuses them and the
 	// Deal Room's own store methods carry the room predicate that admits
 	// them. The kind exists so the audit log can attribute their action to
 	// THEM — `human` would send a reader to a member directory they will
 	// never appear in, and `system` would put the installation's name on a
-	// person's decision in an append-only ledger.
+	// contact's decision in an append-only ledger.
 	PrincipalBuyer PrincipalType = "buyer"
 )
 
@@ -318,7 +318,7 @@ func AgentRunID(ctx context.Context) (ids.UUID, bool) {
 	return id, ok
 }
 
-// WithSendingHuman names the person an outbound message goes out AS, when that
+// WithSendingHuman names the contact an outbound message goes out AS, when that
 // is somebody other than the acting principal.
 //
 // It exists for one question — whose voice is this written in — and answers
@@ -334,15 +334,15 @@ func AgentRunID(ctx context.Context) (ids.UUID, bool) {
 // a read or a write from this value.
 //
 // And it may only be CONSULTED where the actor names nobody. The one thing it
-// selects — which voice profile is loaded — is a read of that person's verbatim
+// selects — which voice profile is loaded — is a read of that contact's verbatim
 // writing, so a reader that let this override an actor who already names a
-// person would have made it an authorization input by the back door. ai's
+// contact would have made it an authorization input by the back door. ai's
 // voiceSender is that reader, and it asks the actor first.
 func WithSendingHuman(ctx context.Context, id ids.UUID) context.Context {
 	return context.WithValue(ctx, sendingHumanKey, id)
 }
 
-// SendingHuman returns the person an outbound message goes out as; ok is false
+// SendingHuman returns the contact an outbound message goes out as; ok is false
 // on every path where the actor IS the sender, which is most of them.
 func SendingHuman(ctx context.Context) (ids.UUID, bool) {
 	id, ok := ctx.Value(sendingHumanKey).(ids.UUID)
@@ -352,17 +352,17 @@ func SendingHuman(ctx context.Context) (ids.UUID, bool) {
 	return id, true
 }
 
-// HumanIDPrefix is how a Principal.ID names a person. It is the ONE spelling
+// HumanIDPrefix is how a Principal.ID names a contact. It is the ONE spelling
 // of that fact in this tree, and it is named so the callers that have to read
-// a person out of an id string cannot each invent their own.
+// a contact out of an id string cannot each invent their own.
 const HumanIDPrefix = "human:"
 
 // HumanUserID reads the app_user behind a principal id, reporting whether the
-// id names a person at all.
+// id names a contact at all.
 //
 // Only a HUMAN namespace can name a human owner. A system or connector
 // namespace that happened to carry a uuid would otherwise be attributed to a
-// person who did not ask for the work — the provenance mistake every caller of
+// contact who did not ask for the work — the provenance mistake every caller of
 // this was written to avoid, three times over, before the parse lived here.
 func HumanUserID(id string) (ids.UUID, bool) {
 	raw, found := strings.CutPrefix(id, HumanIDPrefix)

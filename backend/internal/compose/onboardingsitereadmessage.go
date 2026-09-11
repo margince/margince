@@ -14,7 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -94,7 +94,7 @@ func (e *deepReadEngine) messageCompanySiteRead(w http.ResponseWriter, r *http.R
 		httperr.Write(w, r, httperr.Validation("message", "too_long", "message must be at most 2000 characters"))
 		return
 	}
-	read, _, err := e.people.GetCompanySiteRead(r.Context(), ids.UUID(readID))
+	read, _, err := e.contacts.GetCompanySiteRead(r.Context(), ids.UUID(readID))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -400,7 +400,7 @@ func textContainsValue(text, value string) bool {
 	return needle != "" && strings.Contains(normalize(text), needle)
 }
 
-func companyReadEvidenceSet(read people.SiteRead) []companyReadEvidence {
+func companyReadEvidenceSet(read contacts.SiteRead) []companyReadEvidence {
 	evidence := make([]companyReadEvidence, 0, companyReadSourceLimit)
 	add := func(kind, field, value, quote, sourceURL string) {
 		if len(evidence) >= companyReadSourceLimit || strings.TrimSpace(sourceURL) == "" {

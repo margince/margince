@@ -17,7 +17,7 @@ import (
 // uuidArgs widens a repeated uuid query parameter to the store's own shape.
 // An absent parameter and an empty list are the same thing: no filter.
 //
-// A twin of the people module's own — a module never imports a sibling, and a
+// A twin of the contacts module's own — a module never imports a sibling, and a
 // four-line widening is not worth a platform seam of its own.
 func uuidArgs(in *[]openapi_types.UUID) []ids.UUID {
 	if in == nil {

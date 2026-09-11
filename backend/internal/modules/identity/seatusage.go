@@ -43,7 +43,7 @@ type SeatUsageStore struct {
 func NewSeatUsage(db *database.DB) *SeatUsageStore { return &SeatUsageStore{db: db} }
 
 // FullSeatsInUse counts the full seats this installation is using: every
-// non-deactivated one held by a person.
+// non-deactivated one held by a contact.
 //
 // Three decisions the count makes, each of which the meter would be wrong
 // without:
@@ -56,7 +56,7 @@ func NewSeatUsage(db *database.DB) *SeatUsageStore { return &SeatUsageStore{db: 
 // installation has already withdrawn.
 //
 // AN AGENT SEAT IS NOT COUNTED, because LICENSE says so: a Seat is "a single,
-// identified natural person", and automated agents that act under the authority
+// identified natural contact", and automated agents that act under the authority
 // of a counted Seat explicitly do not count. That document is what a customer
 // relies on and what this meter is measured against, so the meter follows it —
 // counting agents would cap an installation for something its licence gives
@@ -125,7 +125,7 @@ func (s *SeatUsageStore) countFullSeats(ctx context.Context) (int, error) {
 // to actually get it back.
 //
 // `NOT is_agent` is the licence's own exclusion and not a filter somebody added:
-// a Seat is a natural person there, so an agent row is not one of these however
+// a Seat is a natural contact there, so an agent row is not one of these however
 // much estate it touches. Removing it would meter what the licence gives away.
 //
 // It names the statuses that do NOT count rather than the one that does. A seat

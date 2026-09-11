@@ -28,11 +28,11 @@ import (
 )
 
 // seedWaitingOfKind writes one inbound message of the given kind, filed under a
-// person so it is sales mail rather than a rep's private correspondence — the
+// contact so it is sales mail rather than a rep's private correspondence — the
 // lane requires that link, and a message seeded without one correctly never
 // appears at all.
 func seedWaitingOfKind(
-	t *testing.T, e *integration.Env, person ids.UUID, kind, subject string, at time.Time,
+	t *testing.T, e *integration.Env, contact ids.UUID, kind, subject string, at time.Time,
 ) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
@@ -53,8 +53,8 @@ func seedWaitingOfKind(
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, id, person)
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, id, contact)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a waiting %s: %v", kind, err)
@@ -78,9 +78,9 @@ func waitingOf(rows []attention.WaitingCustomer, id ids.UUID) *attention.Waiting
 func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
 	e := integration.Setup(t)
 	asOf := time.Now()
-	person := seedLinkedPerson(t, e, "dana@acme.example")
-	mail := seedWaitingOfKind(t, e, person, "email", "Re: the renewal quote", asOf.Add(-3*24*time.Hour))
-	chat := seedWaitingOfKind(t, e, person, "message", "ping about the quote", asOf.Add(-2*24*time.Hour))
+	contact := seedLinkedContact(t, e, "dana@acme.example")
+	mail := seedWaitingOfKind(t, e, contact, "email", "Re: the renewal quote", asOf.Add(-3*24*time.Hour))
+	chat := seedWaitingOfKind(t, e, contact, "message", "ping about the quote", asOf.Add(-2*24*time.Hour))
 
 	seam := attentionWaiting{
 		store: activities.NewStore(e.DB()),
@@ -122,8 +122,8 @@ func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
 func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 	e := integration.Setup(t)
 	asOf := time.Now()
-	person := seedLinkedPerson(t, e, "dana@acme.example")
-	mail := seedWaitingOfKind(t, e, person, "email", "Severance terms", asOf.Add(-3*24*time.Hour))
+	contact := seedLinkedContact(t, e, "dana@acme.example")
+	mail := seedWaitingOfKind(t, e, contact, "email", "Severance terms", asOf.Add(-3*24*time.Hour))
 
 	// Admitted first, so the refusal below is the audience's doing rather than
 	// the fixture never having qualified.

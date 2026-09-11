@@ -33,12 +33,12 @@ function render(ui: ReactNode) {
   );
 }
 
-// A full seat holding person.update — the default these tests run under.
+// A full seat holding contact.update — the default these tests run under.
 const SEAT_MAY_WRITE = {
   user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
   authorization: {
     seat_type: "full",
-    objects: { person: { read: true, update: true } },
+    objects: { contact: { read: true, update: true } },
   },
 };
 
@@ -46,7 +46,7 @@ const SEAT_MAY_WRITE = {
 // caller per row, and the section fails closed without it — a fixture that
 // omits it describes a contact this reader may not edit, which is a different
 // test than the one each of these means to be.
-const writablePerson = { writable: true };
+const writableContact = { writable: true };
 
 const PURPOSES = {
   data: [
@@ -127,13 +127,14 @@ function stubRoutes(
       sent.push({ key, url: url.pathname + url.search, body });
       const override = overrides[key];
       if (override) return override();
-      // A full seat holding person.update, which every one of these tests
+      // A full seat holding contact.update, which every one of these tests
       // assumed before the grant was asked for: they are about what the
       // section SENDS, and a reader who may not write it sends nothing. The
       // permission axis has its own tests below.
       if (key === "GET /me") return jsonResponse(SEAT_MAY_WRITE);
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
-      if (key === "GET /people/person-1/consent") return jsonResponse(CONSENT);
+      if (key === "GET /contacts/contact-1/consent")
+        return jsonResponse(CONSENT);
       return jsonResponse({});
     }),
   );
@@ -162,14 +163,14 @@ afterEach(() => {
 describe("ConsentSection", () => {
   it("renders unknown distinctly from withdrawn — no record is not a withdrawal", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     expect(await screen.findByText(/no record/i)).toBeInTheDocument();
   });
 
-  // G-4: the events[] the Person 360 currently drops. Art. 7 demonstrability.
+  // G-4: the events[] the Contact 360 currently drops. Art. 7 demonstrability.
   it("shows the append-only proof log for a purpose", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     const row = await findConsentRow("Deal messages");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -184,14 +185,14 @@ describe("ConsentSection", () => {
   // ON, which is the half that decides whether the grant still stands.
   it("says what basis the current state stands on", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     const row = await findConsentRow("Deal messages");
     expect(within(row).getByText(/Art\. 6\(1\)\(b\)/)).toBeInTheDocument();
   });
 
   it("says what basis each recorded decision was argued from", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     const row = await findConsentRow("Deal messages");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -207,7 +208,7 @@ describe("ConsentSection", () => {
   // entered. The field is operator-authored free text, so absent is ordinary.
   it("claims no basis for a record that carries none", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     const row = await findConsentRow("Marketing");
     expect(within(row).queryByText(/Basis:/)).toBeNull();
   });
@@ -217,7 +218,7 @@ describe("ConsentSection", () => {
   // human who is not necessarily whoever is looking at this proof.
   it("names the actual human actor rather than claiming the viewer typed it", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     const row = await findConsentRow("Deal messages");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -231,7 +232,7 @@ describe("ConsentSection", () => {
   // wire never named is unknown, never a positive claim about the viewer.
   it("does not default a missing actor_type to a claim about the viewer", async () => {
     stubRoutes({
-      "GET /people/person-1/consent": () =>
+      "GET /contacts/contact-1/consent": () =>
         jsonResponse({
           state: CONSENT.state,
           events: [
@@ -245,7 +246,7 @@ describe("ConsentSection", () => {
           ],
         }),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     const row = await findConsentRow("Deal messages");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -258,7 +259,7 @@ describe("ConsentSection", () => {
   // log must still be reachable and say so honestly, not hide the toggle.
   it("shows the honest empty state for a purpose with no consent record", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     const row = await findConsentRow("Marketing");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -273,7 +274,7 @@ describe("ConsentSection", () => {
   // operator can type is a confirmation an operator can forge.
   it("offers no token field on a purpose that requires double opt-in", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     await screen.findByText("Marketing");
     expect(screen.queryByLabelText(/confirmation token/i)).toBeNull();
     expect(
@@ -286,7 +287,7 @@ describe("ConsentSection", () => {
   // subject's right and never needs a round trip.
   it("offers no Grant on a double-opt-in row nobody here can grant", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     await screen.findByText("Marketing");
     // The fixture holds a granted non-DOI purpose and an unknown DOI one. The
     // granted row keeps Withdraw; the DOI row offers nothing, so no Grant
@@ -299,7 +300,7 @@ describe("ConsentSection", () => {
 
   it("says who confirms a double-opt-in purpose, on that row only", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     await screen.findByText("Marketing");
     // One row requires DOI in the fixture; the note belongs to it alone.
     expect(
@@ -312,46 +313,50 @@ describe("ConsentSection", () => {
   // no token key reaches the server from this screen any more.
   it("never sends a token with a state write", async () => {
     const sent = stubRoutes({
-      "POST /people/person-1/consent": () =>
+      "POST /contacts/contact-1/consent": () =>
         jsonResponse({
           purpose_id: "p1",
           purpose_key: "transactional",
           state: "withdrawn",
         }),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     await screen.findByText("Marketing");
     await userEvent.click(
       screen.getAllByRole("button", { name: /^withdraw$/i })[0],
     );
     await waitFor(() =>
       expect(
-        sent.filter((s) => s.key === "POST /people/person-1/consent"),
+        sent.filter((s) => s.key === "POST /contacts/contact-1/consent"),
       ).toHaveLength(1),
     );
-    const posts = sent.filter((s) => s.key === "POST /people/person-1/consent");
+    const posts = sent.filter(
+      (s) => s.key === "POST /contacts/contact-1/consent",
+    );
     expect(posts.at(-1)?.body).not.toHaveProperty("double_opt_in_token");
   });
 
   it("omits the token key entirely when none was typed", async () => {
     const sent = stubRoutes({
-      "POST /people/person-1/consent": () =>
+      "POST /contacts/contact-1/consent": () =>
         jsonResponse({
           purpose_id: "p1",
           purpose_key: "transactional",
           state: "withdrawn",
         }),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     await userEvent.click(
       await screen.findByRole("button", { name: /^withdraw$/i }),
     );
     await waitFor(() =>
       expect(
-        sent.filter((s) => s.key === "POST /people/person-1/consent"),
+        sent.filter((s) => s.key === "POST /contacts/contact-1/consent"),
       ).toHaveLength(1),
     );
-    const posts = sent.filter((s) => s.key === "POST /people/person-1/consent");
+    const posts = sent.filter(
+      (s) => s.key === "POST /contacts/contact-1/consent",
+    );
     // An empty-string token must not be sent — the server would reject it as
     // "not a currently issued double opt-in token" rather than treat it as absent.
     expect(posts.at(-1)?.body).toEqual({
@@ -366,7 +371,7 @@ describe("ConsentSection", () => {
   // otherwise never reaches (it starts already granted).
   it("sends a plain grant with no token key for a purpose that does not require one", async () => {
     const sent = stubRoutes({
-      "GET /people/person-1/consent": () =>
+      "GET /contacts/contact-1/consent": () =>
         jsonResponse({
           state: [
             {
@@ -382,26 +387,28 @@ describe("ConsentSection", () => {
           ],
           events: [],
         }),
-      "POST /people/person-1/consent": () =>
+      "POST /contacts/contact-1/consent": () =>
         jsonResponse({
           purpose_id: "p1",
           purpose_key: "transactional",
           state: "granted",
         }),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     // Both p1 (withdrawn) and p2 (unknown) show a Grant button here; [0] is
-    // p1's — rows render in the order GET /people/{id}/consent lists them.
+    // p1's — rows render in the order GET /contacts/{id}/consent lists them.
     await screen.findByText("Deal messages");
     await userEvent.click(
       screen.getAllByRole("button", { name: /^grant$/i })[0],
     );
     await waitFor(() =>
       expect(
-        sent.filter((s) => s.key === "POST /people/person-1/consent"),
+        sent.filter((s) => s.key === "POST /contacts/contact-1/consent"),
       ).toHaveLength(1),
     );
-    const posts = sent.filter((s) => s.key === "POST /people/person-1/consent");
+    const posts = sent.filter(
+      (s) => s.key === "POST /contacts/contact-1/consent",
+    );
     // An exact match, so a token key reappearing in this body fails here — the
     // point of this test. The wording rides along because the server refuses a
     // grant that cannot say what the subject agreed to; this door has no screen
@@ -416,13 +423,13 @@ describe("ConsentSection", () => {
 
   // Defect-1 regression guard: the write endpoint's response can't carry the
   // new consent_event, so the proof log can only pick up the transition just
-  // made by re-reading GET /people/{id}/consent. Proves the refetch actually
+  // made by re-reading GET /contacts/{id}/consent. Proves the refetch actually
   // happens (not just that the badge flips) by having the second GET return
   // an event the first GET never had, then asserting it renders.
   it("re-reads the consent GET after a write so the proof log includes the new decision", async () => {
     let getCalls = 0;
     const sent = stubRoutes({
-      "GET /people/person-1/consent": () => {
+      "GET /contacts/contact-1/consent": () => {
         getCalls += 1;
         if (getCalls === 1) return jsonResponse(CONSENT);
         return jsonResponse({
@@ -436,7 +443,7 @@ describe("ConsentSection", () => {
               id: "e2",
               purpose_id: "p1",
               new_state: "withdrawn",
-              source: "person 360",
+              source: "contact 360",
               actor_type: "human",
               actor_id: "u1",
               occurred_at: "2026-06-01T00:00:00Z",
@@ -444,14 +451,14 @@ describe("ConsentSection", () => {
           ],
         });
       },
-      "POST /people/person-1/consent": () =>
+      "POST /contacts/contact-1/consent": () =>
         jsonResponse({
           purpose_id: "p1",
           purpose_key: "transactional",
           state: "withdrawn",
         }),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     const row = await findConsentRow("Deal messages");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -464,10 +471,10 @@ describe("ConsentSection", () => {
 
     await waitFor(() =>
       expect(
-        sent.filter((s) => s.key === "GET /people/person-1/consent"),
+        sent.filter((s) => s.key === "GET /contacts/contact-1/consent"),
       ).toHaveLength(2),
     );
-    expect(await screen.findByText(/person 360/i)).toBeInTheDocument();
+    expect(await screen.findByText(/contact 360/i)).toBeInTheDocument();
   });
 
   // This surface used to mint a DOI token and print it on screen, next to a
@@ -475,15 +482,15 @@ describe("ConsentSection", () => {
   // issuance endpoint, so there is no capability for an operator to read.
   it("never asks the server to issue a double-opt-in token", async () => {
     const sent = stubRoutes();
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     await screen.findByText("Marketing");
     await userEvent.click(
       screen.getAllByRole("button", { name: /^withdraw$/i })[0],
     );
     await waitFor(() =>
-      expect(sent.some((s) => s.key === "POST /people/person-1/consent")).toBe(
-        true,
-      ),
+      expect(
+        sent.some((s) => s.key === "POST /contacts/contact-1/consent"),
+      ).toBe(true),
     );
     expect(sent.some((s) => s.key.includes("double-opt-in"))).toBe(false);
   });
@@ -495,19 +502,19 @@ describe("ConsentSection", () => {
           data: [],
           page: { next_cursor: null, has_more: false },
         }),
-      "GET /people/person-1/consent": () =>
+      "GET /contacts/contact-1/consent": () =>
         jsonResponse({ state: [], events: [] }),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     expect(await screen.findByText(/no consent purposes/i)).toBeInTheDocument();
   });
 
   it("surfaces a load failure with a retry rather than a blank card", async () => {
     stubRoutes({
-      "GET /people/person-1/consent": () =>
+      "GET /contacts/contact-1/consent": () =>
         jsonResponse({ title: "boom", status: 500 }, 500),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     expect(
       await screen.findByRole("button", { name: /retry/i }),
     ).toBeInTheDocument();
@@ -522,7 +529,7 @@ describe("ConsentSection", () => {
     stubRoutes({
       "GET /consent-purposes": () => jsonResponse({ title: "boom" }, 500),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     expect(
       await screen.findByText(/couldn't load the consent purpose catalogue/i),
     ).toBeInTheDocument();
@@ -543,7 +550,7 @@ describe("asking a contact to confirm their details", () => {
     user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
     authorization: {
       seat_type: "full",
-      objects: { person: { read: true, update: true } },
+      objects: { contact: { read: true, update: true } },
     },
   };
 
@@ -552,7 +559,7 @@ describe("asking a contact to confirm their details", () => {
     stubRoutes(
       {
         "GET /me": () => jsonResponse(MAY_WRITE),
-        "POST /people/person-1/consent/confirm-request": () =>
+        "POST /contacts/contact-1/consent/confirm-request": () =>
           jsonResponse(
             {
               delivered_to: "ada@example.test",
@@ -565,7 +572,7 @@ describe("asking a contact to confirm their details", () => {
       },
       sent,
     );
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
 
     await userEvent.click(await screen.findByTestId("confirm-details-ask"));
 
@@ -582,7 +589,7 @@ describe("asking a contact to confirm their details", () => {
   it("says a queued link is on its way rather than claiming it was delivered", async () => {
     stubRoutes({
       "GET /me": () => jsonResponse(MAY_WRITE),
-      "POST /people/person-1/consent/confirm-request": () =>
+      "POST /contacts/contact-1/consent/confirm-request": () =>
         jsonResponse(
           {
             delivered_to: "ada@example.test",
@@ -593,7 +600,7 @@ describe("asking a contact to confirm their details", () => {
           201,
         ),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
 
     await userEvent.click(await screen.findByTestId("confirm-details-ask"));
 
@@ -608,7 +615,7 @@ describe("asking a contact to confirm their details", () => {
   it("says plainly when the link exists but nobody was sent it", async () => {
     stubRoutes({
       "GET /me": () => jsonResponse(MAY_WRITE),
-      "POST /people/person-1/consent/confirm-request": () =>
+      "POST /contacts/contact-1/consent/confirm-request": () =>
         jsonResponse(
           {
             delivered_to: "ada@example.test",
@@ -618,7 +625,7 @@ describe("asking a contact to confirm their details", () => {
           201,
         ),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
 
     await userEvent.click(await screen.findByTestId("confirm-details-ask"));
 
@@ -632,7 +639,7 @@ describe("asking a contact to confirm their details", () => {
   it("shows a contact with no address as a refusal", async () => {
     stubRoutes({
       "GET /me": () => jsonResponse(MAY_WRITE),
-      "POST /people/person-1/consent/confirm-request": () =>
+      "POST /contacts/contact-1/consent/confirm-request": () =>
         jsonResponse(
           {
             title: "Unprocessable Entity",
@@ -643,7 +650,7 @@ describe("asking a contact to confirm their details", () => {
           422,
         ),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
 
     await userEvent.click(await screen.findByTestId("confirm-details-ask"));
 
@@ -653,18 +660,18 @@ describe("asking a contact to confirm their details", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("is not offered to a caller who may not write the person", async () => {
+  it("is not offered to a caller who may not write the contact", async () => {
     stubRoutes({
       "GET /me": () =>
         jsonResponse({
           user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
           authorization: {
             seat_type: "read",
-            objects: { person: { read: true } },
+            objects: { contact: { read: true } },
           },
         }),
     });
-    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
 
     // Waited for rather than asserted immediately: the capability arrives
     // asynchronously, so an absence checked too early passes for the wrong

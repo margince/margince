@@ -125,7 +125,7 @@ type projectReadingAuthority struct{ backfillAuthority }
 func (projectReadingAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
-			"activity": {Create: true, Read: true}, "person": {Read: true},
+			"activity": {Create: true, Read: true}, "contact": {Read: true},
 			"project": {Read: true}, "deal": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
@@ -146,7 +146,7 @@ func TestMorningDigestOmitsTheProjectsSectionWithoutTheProjectGrant(t *testing.T
 	now := time.Now().UTC()
 	b.fileOnProject(t, "meeting", quiet, now.AddDate(0, 0, -40), nil)
 
-	// The harness authority grants activity and person only.
+	// The harness authority grants activity and contact only.
 	if err := b.registry.BuildDigests(b.human, now); err != nil {
 		t.Fatalf("BuildDigests without project.read: %v", err)
 	}

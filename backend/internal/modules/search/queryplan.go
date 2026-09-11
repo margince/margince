@@ -267,7 +267,7 @@ func childIsGrammar(frame *jsonFrame) bool {
 //
 // The scan needs it because encoding/json matches member names
 // CASE-INSENSITIVELY, and DisallowUnknownFields matches the same way: a plan
-// carrying `"TARGET": "person"` alongside `"target": "deal"` is neither an
+// carrying `"TARGET": "contact"` alongside `"target": "deal"` is neither an
 // unknown member nor — to a scan comparing exact strings — a duplicate, and
 // the decoder resolves it last-wins. The caller's target is silently replaced.
 // Requiring the canonical spelling is what closes that, and deriving the set

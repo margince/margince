@@ -36,10 +36,10 @@ A module never imports a sibling. Inject the dependency in compose as an adapter
 2. **Write the adapter in compose** that satisfies that interface, backed by module B's store:
    ```go
    // illustrative, not copy-paste Go — the real signature is signals.StrengthSource
-   type signalStrength struct{ people *people.Store }
-   func (a signalStrength) Strength(...) (...) { return a.people.Strength(...) } // delegate
+   type signalStrength struct{ contacts *contacts.Store }
+   func (a signalStrength) Strength(...) (...) { return a.contacts.Strength(...) } // delegate
    ```
-3. **Inject it in `newServer`**: `signalsHandlers: signals.NewHandlers(pool, signalStrength{people: people.NewStore(pool)})`.
+3. **Inject it in `newServer`**: `signalsHandlers: signals.NewHandlers(pool, signalStrength{contacts: contacts.NewStore(pool)})`.
    Now A depends on the interface, B is reached only through the compose adapter, and neither imports
    the other. (Existing examples: activities←consent gate, consent←privacy eraser, imap←capture
    registry — see the edge map in [composition-layer.md](../explanation/composition-layer.md).)

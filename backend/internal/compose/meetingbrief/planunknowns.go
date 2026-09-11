@@ -11,7 +11,7 @@ package meetingbrief
 // question is how we close one.
 //
 // THE RULE THAT MATTERS HERE. A question must name something only this account
-// would produce — a person, a promise, a subject somebody actually wrote. A
+// would produce — a contact, a promise, a subject somebody actually wrote. A
 // question that would read identically on any other prospect is not a prepared
 // question, it is a questionnaire, and printing five of them is how a
 // preparation surface teaches a rep it has nothing to say. So a template that
@@ -129,9 +129,9 @@ func askLines(claim ClaimIn) (string, string) {
 
 func askBasis(claim ClaimIn) string {
 	if claim.Kind == kindCommitmentOurs {
-		return fmt.Sprintf("We promised %s this and it is still open.", claim.PersonName)
+		return fmt.Sprintf("We promised %s this and it is still open.", claim.ContactName)
 	}
-	return fmt.Sprintf("%s raised this and it has not been closed out.", claim.PersonName)
+	return fmt.Sprintf("%s raised this and it has not been closed out.", claim.ContactName)
 }
 
 func relevanceOf(claim ClaimIn) crmcontracts.MeetingPlanTier {
@@ -143,7 +143,7 @@ func relevanceOf(claim ClaimIn) crmcontracts.MeetingPlanTier {
 
 // questionsFor is what to ask THEM.
 //
-// Claims first: a question built on something a named person actually said is
+// Claims first: a question built on something a named contact actually said is
 // specific by construction. Then the unknowns, but ONLY those whose question
 // can name a real fact from this account — see the rule at the top of this
 // file. An unknown with nothing to anchor on stays in `unknowns`, where it
@@ -158,7 +158,7 @@ func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question
 			Ask: fmt.Sprintf("You said %q — what has changed about that since?", claim.Body),
 			Why: fmt.Sprintf(
 				"It is the thing %s named, and the plan should be built on it rather than on what we assume.",
-				claim.PersonName),
+				claim.ContactName),
 			ListenFor: "Whether it still matters, who owns it now, and what it is costing them.",
 			Evidence:  []Evidence{{EntityType: citeActivity, EntityID: claim.SourceID}},
 		})
@@ -186,7 +186,7 @@ func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question
 }
 
 // accountAnchor is the one thing this plan can name that no other account
-// would produce: the company, or failing that the person in the room.
+// would produce: the company, or failing that the contact in the room.
 func accountAnchor(in Input) string {
 	if in.Company != "" {
 		return in.Company
@@ -220,6 +220,6 @@ func unknownListenFor(kind crmcontracts.MeetingPlanUnknownKind) string {
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured:
 		return "Names and roles: who approves, who pays, who can veto."
 	default:
-		return "Whether the answer names a person, a date, or neither."
+		return "Whether the answer names a contact, a date, or neither."
 	}
 }

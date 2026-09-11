@@ -78,7 +78,7 @@ func TestANoiseVerdictHidesEveryMessageThatSenderWrote(t *testing.T) {
 // correspondence with whoever was named.
 //
 // The scope is therefore narrower than the address: inbound only, never
-// provider-attested, never linked to a person, and it stops applying entirely
+// provider-attested, never linked to a contact, and it stops applying entirely
 // once the workspace has written to that address.
 func TestAForgedSenderCannotReachTheWorkspacesOwnCorrespondence(t *testing.T) {
 	e := integration.Setup(t)
@@ -186,8 +186,8 @@ func TestRedactionCollectsMailWhoseOriginalOutlivedItsText(t *testing.T) {
 func TestANoiseVerdictWithoutBulkCorroborationHidesButNeverDestroys(t *testing.T) {
 	e := integration.Setup(t)
 	// seedCapturedMail, NOT seedBulkCapturedMail: an ordinary message.
-	activityID := seedCapturedMail(t, e, "real.person@partner.example", "about the contract")
-	dispositionID := seedPendingDisposition(t, e, "real.person@partner.example", "partner.example", activityID)
+	activityID := seedCapturedMail(t, e, "real.contact@partner.example", "about the contract")
+	dispositionID := seedPendingDisposition(t, e, "real.contact@partner.example", "partner.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
@@ -330,12 +330,12 @@ func resolveAsNoise(t *testing.T, e *integration.Env, id ids.UUID) {
 
 // A contact merely COPIED on a newsletter does not exempt it from the sweep.
 //
-// The sweep's scope refuses mail "linked to a person" because a linked message
+// The sweep's scope refuses mail "linked to a contact" because a linked message
 // belongs to somebody's record. That read the link as evidence of who the
 // message is WITH, which held only while a message was filed under the party
 // the ladder judged. Capture now files a message under every participant it
 // resolves (capture/sinkmaillinks.go), so a blast naming one contact in Cc
-// carries a person link — and without the role test the predicate is never true
+// carries a contact link — and without the role test the predicate is never true
 // again for it: the message can never be hidden, and never redacted, however
 // plainly its sender is judged noise.
 //
@@ -347,7 +347,7 @@ func TestABlastIsHiddenThoughItCopiesAContact(t *testing.T) {
 	blast := seedBulkCapturedMail(t, e, "bulk@flood.example", "offer one")
 	// The contact the blast copied, filed under it exactly as capture files a
 	// resolved participant — a link plus a participant row that is NOT the author.
-	copied := seedPerson(t, e, "cc@partner.example")
+	copied := seedContact(t, e, "cc@partner.example")
 	fileUnderAs(t, e, blast, copied, "cc")
 
 	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", blast)
@@ -370,7 +370,7 @@ func TestTheSendersOwnRecordStillCallsTheSweepOff(t *testing.T) {
 	e := integration.Setup(t)
 
 	mail := seedBulkCapturedMail(t, e, "bulk@flood.example", "offer one")
-	sender := seedPerson(t, e, "bulk@flood.example")
+	sender := seedContact(t, e, "bulk@flood.example")
 	fileUnderAs(t, e, mail, sender, "from")
 
 	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", mail)
@@ -381,23 +381,23 @@ func TestTheSendersOwnRecordStillCallsTheSweepOff(t *testing.T) {
 	}
 
 	if n := countIn(t, e, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NULL`, mail); n != 1 {
-		t.Fatal("a message filed under the person who WROTE it was hidden — that message belongs " +
+		t.Fatal("a message filed under the contact who WROTE it was hidden — that message belongs " +
 			"to their record, and a stale disposition has no authority over it")
 	}
 }
 
-// seedPerson mints a contact at one address, for the link fixtures above.
-func seedPerson(t *testing.T, e *integration.Env, email string) ids.UUID {
+// seedContact mints a contact at one address, for the link fixtures above.
+func seedContact(t *testing.T, e *integration.Env, email string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO person (id, full_name, source, captured_by)
+			INSERT INTO contact (id, full_name, source, captured_by)
 			VALUES ($1, 'Someone', 'manual', 'human:x')`, id); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_email (person_id, email, source, captured_by)
+			INSERT INTO contact_email (contact_id, email, source, captured_by)
 			VALUES ($1, $2, 'manual', 'human:x')`, id, email)
 		return err
 	}); err != nil {
@@ -406,23 +406,23 @@ func seedPerson(t *testing.T, e *integration.Env, email string) ids.UUID {
 	return id
 }
 
-// fileUnderAs files a message under a person in the shape capture leaves: the
+// fileUnderAs files a message under a contact in the shape capture leaves: the
 // activity_link row, and the activity_participant row naming the role they were
 // on the message in. Both, because it is the PAIR the sweep now reads.
-func fileUnderAs(t *testing.T, e *integration.Env, activity, person ids.UUID, role string) {
+func fileUnderAs(t *testing.T, e *integration.Env, activity, contact ids.UUID, role string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, activity, person); err != nil {
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, activity, contact); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_participant (activity_id, person_id, role)
-			VALUES ($1, $2, $3)`, activity, person, role)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, $3)`, activity, contact, role)
 		return err
 	}); err != nil {
-		t.Fatalf("filing the message under the person as %q: %v", role, err)
+		t.Fatalf("filing the message under the contact as %q: %v", role, err)
 	}
 }
 
@@ -451,9 +451,9 @@ func (d *decidingBrain) Complete(ctx context.Context, req model.Request) (model.
 
 // The owner answers during the model call, and the answer counts.
 //
-// The contact half already re-checked under the person row lock. The MAIL half
+// The contact half already re-checked under the contact row lock. The MAIL half
 // did not: the hide and the workspace-wide domain suppression both ran on what
-// judgeOne read before the seat spoke — so a person who said "this is business"
+// judgeOne read before the seat spoke — so a contact who said "this is business"
 // watched the sender's whole domain get suppressed for every colleague, on the
 // strength of a read that was already stale when it was used.
 func TestAnOwnerDecidingDuringTheModelCallIsNotOverruled(t *testing.T) {

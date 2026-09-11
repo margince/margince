@@ -17,13 +17,13 @@ import (
 // native-UUID-stage, or occurred_at-writing implementation fails here by
 // construction.
 
-// OVA-MAP-W1 — person first_name/last_name → firstname/lastname; full_name is
+// OVA-MAP-W1 — contact first_name/last_name → firstname/lastname; full_name is
 // the assembled display field and is NEVER written back; a create carrying
 // only read-only fields sets no incumbent property.
-func TestMapWritePersonNamesW1(t *testing.T) {
-	got, err := mapWrite("person", map[string]any{"first_name": "Ada", "last_name": "Lovelace"}, false)
+func TestMapWriteContactNamesW1(t *testing.T) {
+	got, err := mapWrite("contact", map[string]any{"first_name": "Ada", "last_name": "Lovelace"}, false)
 	if err != nil {
-		t.Fatalf("mapWrite person: %v", err)
+		t.Fatalf("mapWrite contact: %v", err)
 	}
 	if got.ObjectClass != objectClassContacts {
 		t.Errorf("object class = %q, want %q", got.ObjectClass, objectClassContacts)
@@ -33,10 +33,10 @@ func TestMapWritePersonNamesW1(t *testing.T) {
 	}
 }
 
-func TestMapWritePersonFullNameIsReadOnlyW1(t *testing.T) {
-	got, err := mapWrite("person", map[string]any{"full_name": "Ada Lovelace"}, false)
+func TestMapWriteContactFullNameIsReadOnlyW1(t *testing.T) {
+	got, err := mapWrite("contact", map[string]any{"full_name": "Ada Lovelace"}, false)
 	if err != nil {
-		t.Fatalf("mapWrite person full_name only: %v", err)
+		t.Fatalf("mapWrite contact full_name only: %v", err)
 	}
 	if len(got.Props) != 0 {
 		t.Errorf("a write carrying only full_name must set no incumbent property, got %#v", got.Props)
@@ -46,14 +46,14 @@ func TestMapWritePersonFullNameIsReadOnlyW1(t *testing.T) {
 // Clear-field semantics: an explicit "" clears the property on UPDATE (sent to
 // HubSpot) but is nothing to set on CREATE (skipped).
 func TestMapWriteClearFieldOnUpdateOnly(t *testing.T) {
-	upd, err := mapWrite("person", map[string]any{"title": ""}, true)
+	upd, err := mapWrite("contact", map[string]any{"title": ""}, true)
 	if err != nil {
 		t.Fatalf("mapWrite update clear: %v", err)
 	}
 	if v, ok := upd.Props["jobtitle"]; !ok || v != "" {
 		t.Errorf("update title=\"\" must clear jobtitle (send \"\"), got props %#v", upd.Props)
 	}
-	cre, err := mapWrite("person", map[string]any{"title": ""}, false)
+	cre, err := mapWrite("contact", map[string]any{"title": ""}, false)
 	if err != nil {
 		t.Fatalf("mapWrite create empty title: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestMapWriteClearFieldOnUpdateOnly(t *testing.T) {
 // A non-string value in a string field is a type error (matching the native
 // provider's 422), never coerced into a HubSpot string property.
 func TestMapWriteRejectsNonStringScalar(t *testing.T) {
-	if _, err := mapWrite("person", map[string]any{"first_name": float64(42)}, false); err == nil {
+	if _, err := mapWrite("contact", map[string]any{"first_name": float64(42)}, false); err == nil {
 		t.Error("a numeric value in a string field must be a type error")
 	}
 }

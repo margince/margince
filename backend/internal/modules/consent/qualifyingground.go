@@ -7,7 +7,7 @@ package consent
 // has recorded no answer of their own.
 //
 // Split from verdict.go for the file-length ceiling, and the seam is the honest
-// one: that file decides a VERDICT from a person's own answer and this one
+// one: that file decides a VERDICT from a contact's own answer and this one
 // finds the IMPLIED ground beneath it. The two are asked in that order —
 // correspondenceVerdict reads the recorded state first and only reaches here
 // when there is none — so keeping them apart keeps the precedence visible.
@@ -27,7 +27,7 @@ import (
 // It looks in two places, and the order is the point. A TYPED row wins: an
 // in-person exchange or an inquiry is something a named human recorded, and it
 // carries the note or the reference a dispute asks for. Failing that the
-// captured timeline answers for itself — an inbound message from this person IS
+// captured timeline answers for itself — an inbound message from this contact IS
 // the qualifying event, which is what "deterministic and derivable from
 // captured data" means (ADR-0098 D2).
 //
@@ -47,15 +47,15 @@ import (
 // here — resolveCategory answers CategoryReplyToInbound from the anchor before
 // the legacy verdict is consulted — so a rep answering a months-old thread is
 // unaffected. The window governs contact the subject did not prompt.
-func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, since time.Time) (QualifyingEvent, eventSource, error) {
-	event, found, err := recordedQualifyingEvent(ctx, tx, personID, since)
+func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, eventSource, error) {
+	event, found, err := recordedQualifyingEvent(ctx, tx, contactID, since)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
 	if found {
 		return event, sourceRecorded, nil
 	}
-	event, found, err = inboundQualifyingEvent(ctx, tx, personID, since)
+	event, found, err = inboundQualifyingEvent(ctx, tx, contactID, since)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -67,7 +67,7 @@ func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sinc
 	// order costs nothing: each arm answers about a different record, so at most
 	// one of them describes any given fact, and reaching this one means neither
 	// a human nor the mail timeline had already answered.
-	event, found, err = meetingQualifyingEvent(ctx, tx, personID, since)
+	event, found, err = meetingQualifyingEvent(ctx, tx, contactID, since)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -114,19 +114,19 @@ const (
 // re-derived on the next send must not stack a second row claiming a second
 // event happened — and the guarantee is the database's unique index, not a
 // check this function performs and a concurrent caller races past.
-func RecordDerivedQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, event QualifyingEvent, capturedBy string) error {
-	// ON CONFLICT, not NOT EXISTS: two concurrent sends to the same person both
+func RecordDerivedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, event QualifyingEvent, capturedBy string) error {
+	// ON CONFLICT, not NOT EXISTS: two concurrent sends to the same contact both
 	// pass a read-then-write check and both insert. The unique index on the
 	// source record is what actually makes this idempotent.
 	_, err := tx.Exec(ctx, `
 		INSERT INTO consent_qualifying_event
-			(person_id, kind, source_entity_type, source_entity_id,
+			(contact_id, kind, source_entity_type, source_entity_id,
 			 occurred_at, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, 'derived', $6)
-		ON CONFLICT (person_id, source_entity_type, source_entity_id)
+		ON CONFLICT (contact_id, source_entity_type, source_entity_id)
 		  WHERE source_entity_id IS NOT NULL
 		  DO NOTHING`,
-		personID, event.Kind, event.SourceEntityType, event.SourceEntityID,
+		contactID, event.Kind, event.SourceEntityType, event.SourceEntityID,
 		event.OccurredAt, capturedBy)
 	if err != nil {
 		return fmt.Errorf("consent: stamp the qualifying event that allowed this send: %w", err)
@@ -135,15 +135,15 @@ func RecordDerivedQualifyingEvent(ctx context.Context, tx pgx.Tx, personID strin
 }
 
 // recordedQualifyingEvent reads a row a human or an integration wrote.
-func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, since time.Time) (QualifyingEvent, bool, error) {
+func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var sourceType, sourceID, note *string
 	err := tx.QueryRow(ctx, `
 		SELECT kind, occurred_at, source_entity_type, source_entity_id, note
 		FROM consent_qualifying_event
-		WHERE person_id = $1 AND occurred_at >= $2
+		WHERE contact_id = $1 AND occurred_at >= $2
 		ORDER BY occurred_at DESC
-		LIMIT 1`, personID, since).Scan(&event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
+		LIMIT 1`, contactID, since).Scan(&event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -166,9 +166,9 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, si
 // WROTE to us, and the message itself is the proof.
 //
 // Authorship, not filing. The activity is reached through activity_link — the
-// same table every person-scoped timeline read walks, so this cannot count a
+// same table every contact-scoped timeline read walks, so this cannot count a
 // message the record does not show — but a link is a FILING and says only that
-// the message belongs on this person's record. Being copied on a message
+// the message belongs on this contact's record. Being copied on a message
 // somebody else wrote is not the subject initiating correspondence, and
 // counting it would let anyone manufacture a lawful basis for writing to a
 // third party by putting them in Cc. So the participant row has to name them as
@@ -176,23 +176,23 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, si
 // same reason (authorIsTheSubject).
 //
 // Both halves are load-bearing. Without the link this would count a message
-// nobody filed under the person; without the authorship test it counts one they
+// nobody filed under the contact; without the authorship test it counts one they
 // merely received. Capture files a message under every participant it resolves
 // (capture/sinkmaillinks.go), so the link alone stopped meaning authorship the
 // moment a cc'd contact could be filed under.
-func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, since time.Time) (QualifyingEvent, bool, error) {
+func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var activityID string
 	err := tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
-		JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
+		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
 		JOIN activity_participant p ON p.activity_id = a.id
-		     AND p.role = 'from' AND p.person_id = $1::uuid
+		     AND p.role = 'from' AND p.contact_id = $1::uuid
 		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
 		  AND a.occurred_at >= $2
 		ORDER BY a.occurred_at DESC
-		LIMIT 1`, personID, since).Scan(&activityID, &event.OccurredAt)
+		LIMIT 1`, contactID, since).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -212,7 +212,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 // meeting means both sides put time in a calendar. So a partner we had invited,
 // and were meeting next week, was refused as somebody who "has never written to
 // you", and the invitation itself made it worse: the classifier read a machine
-// generated calendar mail as transactional and judged the person noise on it.
+// generated calendar mail as transactional and judged the contact noise on it.
 //
 // ATTENDANCE, from the participant rows, not the counterparty. A meeting names
 // no counterparty at all — attendance is a LIST, so the calendar mapper leaves
@@ -225,7 +225,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 //
 // A CONNECTOR must have captured it. `POST /activities` takes kind, occurred_at
 // and links from the request body, and the log path stamps a participant row for
-// every linked person (activities/participantlog.go) — so any seat that can see
+// every linked contact (activities/participantlog.go) — so any seat that can see
 // a contact could otherwise log a "meeting" naming them and mail them on the
 // strength of it. A connector-captured meeting came from a calendar the mailbox
 // owner actually holds. This is the same boundary capture's own noise sweep
@@ -265,13 +265,13 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 // message belongs on somebody's record, and being copied on somebody else's mail
 // initiates nothing. Attendance carries no such ambiguity: every attendee of a
 // meeting a connector captured is a party to it.
-func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, since time.Time) (QualifyingEvent, bool, error) {
+func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var activityID string
 	err := tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
-		JOIN activity_participant p ON p.activity_id = a.id AND p.person_id = $1::uuid
+		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND a.counterparty_email IS NULL
 		  AND a.captured_by LIKE 'connector:%'
@@ -279,7 +279,7 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 		  AND a.occurred_at >= $2
 		  AND a.occurred_at <= now() + $3::interval
 		ORDER BY a.occurred_at DESC
-		LIMIT 1`, personID, since, meetingHorizonInterval).Scan(&activityID, &event.OccurredAt)
+		LIMIT 1`, contactID, since, meetingHorizonInterval).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}

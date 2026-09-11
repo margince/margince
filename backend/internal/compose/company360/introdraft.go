@@ -5,7 +5,7 @@ package company360
 
 // Asking a colleague for an introduction.
 //
-// The People tab can already say that Sofia is the warmest way in to Philipp.
+// The Contacts tab can already say that Sofia is the warmest way in to Philipp.
 // This is the sentence that asks her, and it lives here because the facts it
 // rests on — who can reach this contact, how warm, how recently — are this
 // package's own reads under the caller's own scope. A separate package would
@@ -29,7 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -42,8 +42,8 @@ import (
 
 // IntroRequest names the introduction being asked for.
 type IntroRequest struct {
-	// PersonID is the contact to be introduced TO.
-	PersonID ids.PersonID
+	// ContactID is the contact to be introduced TO.
+	ContactID ids.ContactID
 	// ViaUserID is the colleague being asked.
 	ViaUserID ids.UserID
 	// DealID is the deal it is for, or the zero value for the account as a
@@ -81,7 +81,7 @@ type introFacts struct {
 func (s *Service) IntroRequestDraft(
 	ctx context.Context, lane Completer, companyID ids.CompanyID, req IntroRequest,
 ) (crmcontracts.AccountEmailDraft, error) {
-	// Human-only: this spends the workspace's model budget on prose a person
+	// Human-only: this spends the workspace's model budget on prose a contact
 	// will send under their own name.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
@@ -105,7 +105,7 @@ func (s *Service) IntroRequestDraft(
 	// connection of its own, and a second connection inside somebody else's
 	// transaction commits separately and can deadlock undetectably against a
 	// lock that transaction holds. Coverage reads it the same way.
-	active, err := s.people.ActiveCompanyColumns(ctx)
+	active, err := s.contacts.ActiveCompanyColumns(ctx)
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}
@@ -124,19 +124,19 @@ func (s *Service) IntroRequestDraft(
 // introFactsFor assembles the draft's material under the caller's own scope.
 func (s *Service) introFactsFor(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
-	active people.CustomColumns, req IntroRequest,
+	active contacts.CustomColumns, req IntroRequest,
 ) (introFacts, error) {
 	// The account first, and its refusal is the whole read's: a caller who
-	// cannot open the company has no business drafting about its people.
-	company, err := s.people.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
+	// cannot open the company has no business drafting about its contacts.
+	company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
 	if err != nil {
 		return introFacts{}, err
 	}
-	identity, err := contactIdentity(ctx, tx, companyID, []ids.PersonID{req.PersonID})
+	identity, err := contactIdentity(ctx, tx, companyID, []ids.ContactID{req.ContactID})
 	if err != nil {
 		return introFacts{}, err
 	}
-	who, known := identity[req.PersonID]
+	who, known := identity[req.ContactID]
 	if !known {
 		// Not on this account, or not one this caller may see. The two answer
 		// the same, because telling them apart would confirm the contact exists.
@@ -166,11 +166,11 @@ func (s *Service) introFactsFor(
 	// so a German account was being asked in English. What the contact actually
 	// wrote is the signal every other draft here uses, and this read already
 	// has it: the same authorship-bound messages the role reading quotes.
-	said, err := ownWords(ctx, tx, companyID, []ids.PersonID{req.PersonID}, s.now().UTC())
+	said, err := ownWords(ctx, tx, companyID, []ids.ContactID{req.ContactID}, s.now().UTC())
 	if err != nil {
 		return introFacts{}, err
 	}
-	facts.lang = textlang.Detect(correspondenceOf(said[req.PersonID.UUID]))
+	facts.lang = textlang.Detect(correspondenceOf(said[req.ContactID.UUID]))
 	return facts, nil
 }
 
@@ -192,11 +192,11 @@ func (s *Service) introRoute(
 		// contact, and a draft naming a colleague would disclose exactly that.
 		return crmcontracts.Company360Route{}, apperrors.ErrPermissionDenied
 	}
-	routes, err := contactRoutes(ctx, tx, []ids.UUID{req.PersonID.UUID}, s.now().UTC())
+	routes, err := contactRoutes(ctx, tx, []ids.UUID{req.ContactID.UUID}, s.now().UTC())
 	if err != nil {
 		return crmcontracts.Company360Route{}, err
 	}
-	for _, route := range routes[req.PersonID.UUID].Top {
+	for _, route := range routes[req.ContactID.UUID].Top {
 		if ids.UUID(route.UserId) == req.ViaUserID.UUID {
 			return route, nil
 		}
@@ -268,7 +268,7 @@ func introReasons(facts introFacts) []crmcontracts.AccountDraftReason {
 // correspondenceOf folds a contact's own messages into the text a language
 // detector reads.
 //
-// Subjects and bodies together, newest first, which is what the person-side
+// Subjects and bodies together, newest first, which is what the contact-side
 // draft folds for the same question. A detector fed record names instead
 // answers Unknown for almost every account, and the ask goes out in the wrong
 // language to a colleague who reads the right one every day.

@@ -217,7 +217,7 @@ describe("PassportCard — minting", () => {
   // the same guide again.
   //
   // Held here: the probe is re-run (so AuthGate re-evaluates and puts up the
-  // login screen), every other cached answer is dropped (so the next person to
+  // login screen), every other cached answer is dropped (so the next contact to
   // sign in this tab is not shown this one's passport list), and the refusal is
   // still reported. The boundary's own rendering is AuthGate's contract and is
   // covered where AuthGate is.

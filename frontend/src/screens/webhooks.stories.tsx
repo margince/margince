@@ -46,7 +46,7 @@ function meRoute(allow: GrantSpec) {
   return () =>
     jsonResponse({
       ...meFixture({ allow }),
-      user: { ...meFixture().user, email: "person@acme.test" },
+      user: { ...meFixture().user, email: "contact@acme.test" },
     });
 }
 
@@ -156,7 +156,7 @@ export const ManyEventTypes: Story = {
           "lead.created",
           "offer.accepted",
           "offer.rejected",
-          "person.merged",
+          "contact.merged",
           "company.updated",
         ],
       },

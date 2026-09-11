@@ -89,7 +89,7 @@ func TestADeliveryThisHandlerCannotActOnIsAcked(t *testing.T) {
 		event extension.Delivery
 	}{
 		{"a subject that is not an activity", extension.Delivery{
-			Type: "activity.archived", Entity: extension.EntityRef{Type: "person", ID: landedActivity},
+			Type: "activity.archived", Entity: extension.EntityRef{Type: "contact", ID: landedActivity},
 		}},
 		{"an event naming no subject at all", extension.Delivery{Type: "activity.archived"}},
 		{"a subject id that is not a uuid", extension.Delivery{

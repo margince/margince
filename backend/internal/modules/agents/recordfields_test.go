@@ -77,9 +77,9 @@ func TestContractFieldNamesReadsTheWireNames(t *testing.T) {
 			}
 		}
 	}
-	person := strings.Join(contractFieldNames(createShapes["person"]), ",")
-	if !strings.Contains(person, "full_name") || strings.Contains(person, "display_name") {
-		t.Errorf("person create fields = %q, want the contract's full_name and no display_name", person)
+	contact := strings.Join(contractFieldNames(createShapes["contact"]), ",")
+	if !strings.Contains(contact, "full_name") || strings.Contains(contact, "display_name") {
+		t.Errorf("contact create fields = %q, want the contract's full_name and no display_name", contact)
 	}
 }
 
@@ -104,16 +104,16 @@ func TestDescriptionsCarryNoControlCharacters(t *testing.T) {
 }
 
 // The writes real sessions lost data to. Each returned 200 with the value
-// discarded: company_id is not a person field at all, and `source` is a
-// person field on CREATE and no field at all on UPDATE — the shape a caller is
+// discarded: company_id is not a contact field at all, and `source` is a
+// contact field on CREATE and no field at all on UPDATE — the shape a caller is
 // most likely to get wrong, because it exists next door.
 //
 // Two cases have retired by being FIXED, which is the honest way for one here
-// to stop being real: `emails` was added to the person update so a bounced
+// to stop being real: `emails` was added to the contact update so a bounced
 // address could be corrected, and `phones` followed it so a reassigned number
-// could be. `source` is the last create/update asymmetry the person schema
+// could be. `source` is the last create/update asymmetry the contact schema
 // still carries — a patch's children are stamped `manual` because the request
-// has no field to carry an origin (people/mapping.go) — so it is what this
+// has no field to carry an origin (contacts/mapping.go) — so it is what this
 // watches now. If the patch ever gains it, the case retires the same way, and
 // whoever removes it should check whether any asymmetry is left to watch
 // rather than letting the list quietly shrink.
@@ -125,8 +125,8 @@ func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 		fields     string
 		wantNamed  string
 	}{
-		{"company_id on a person create", createWriteShapes, "person", `{"full_name":"A","company_id":"x"}`, "company_id"},
-		{"source on a person update", updateWriteShapes, "person", `{"source":"manual"}`, "source"},
+		{"company_id on a contact create", createWriteShapes, "contact", `{"full_name":"A","company_id":"x"}`, "company_id"},
+		{"source on a contact update", updateWriteShapes, "contact", `{"source":"manual"}`, "source"},
 		{"a typo next to a real field", createWriteShapes, "company", `{"displayname":"Firecrawl"}`, "displayname"},
 	}
 	for _, tc := range cases {
@@ -164,7 +164,7 @@ func TestWriteToolsAcceptRealFieldsAndTheCustomFieldChannel(t *testing.T) {
 		`{"full_name":"Alex Nucci","cf_priority":"high"}`,
 		`{}`,
 	} {
-		if err := rejectUnknownFields(createWriteShapes, "person", json.RawMessage(fields)); err != nil {
+		if err := rejectUnknownFields(createWriteShapes, "contact", json.RawMessage(fields)); err != nil {
 			t.Errorf("rejectUnknownFields(%s) = %v, want accepted", fields, err)
 		}
 	}
@@ -287,7 +287,7 @@ func TestWriteToolsRefuseTheCustomFieldPrefixWithNoSlug(t *testing.T) {
 		"null body":   `null`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			err := rejectUnknownFields(createWriteShapes, "person", json.RawMessage(fields))
+			err := rejectUnknownFields(createWriteShapes, "contact", json.RawMessage(fields))
 			if err == nil {
 				t.Fatalf("%s was accepted — the value would be discarded with no signal", fields)
 			}
@@ -299,7 +299,7 @@ func TestWriteToolsRefuseTheCustomFieldPrefixWithNoSlug(t *testing.T) {
 	}
 	// A real slug still passes: whether that field is ACTIVE is the store's
 	// question, and refusing it here would break every workspace that has one.
-	if err := rejectUnknownFields(createWriteShapes, "person", json.RawMessage(`{"full_name":"A","cf_priority":"high"}`)); err != nil {
+	if err := rejectUnknownFields(createWriteShapes, "contact", json.RawMessage(`{"full_name":"A","cf_priority":"high"}`)); err != nil {
 		t.Errorf("a real custom-field key was refused: %v", err)
 	}
 }
@@ -403,7 +403,7 @@ func TestARefusedFieldListCarriesTypesAndWhatIsRequired(t *testing.T) {
 			what: "a relationship create", shapes: createWriteShapes, record: "relationship",
 			fields: `{"who":"x"}`,
 			// The closed vocabulary of a required field, in the same line.
-			says: []string{`kind: "employment"|`, "person_id?: uuid"},
+			says: []string{`kind: "employment"|`, "contact_id?: uuid"},
 		},
 	}
 	for _, tc := range cases {

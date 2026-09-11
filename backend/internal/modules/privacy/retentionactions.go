@@ -39,18 +39,18 @@ type retentionExecutor func(s *RetentionService, ctx context.Context, tx pgx.Tx,
 // is what ParseRetentionScope is for scopes: the one gate, consulted by the
 // validator and by the pass.
 //
-// person/erase is registered with a NIL executor: it owns its own transaction
+// contact/erase is registered with a NIL executor: it owns its own transaction
 // (the Art. 17 cascade is ~30 statements plus object-store deletes), so apply
 // dispatches it before opening one. Nil means "runs outside the transaction",
 // never "unsupported" — membership is the key, not the value.
 var retentionActions = map[string]retentionExecutor{
-	"person/erase":          nil,
+	"contact/erase":         nil,
 	"activity/archive":      (*RetentionService).archiveActivity,
 	"activity/erase":        (*RetentionService).eraseActivityContent,
 	"deal/archive":          (*RetentionService).archiveDeal,
 	"ai_call_payload/erase": (*RetentionService).erasePayload,
 	"lead/anonymize":        (*RetentionService).anonymizeLead,
-	"person/anonymize":      (*RetentionService).anonymizePerson,
+	"contact/anonymize":     (*RetentionService).anonymizeContact,
 }
 
 // The executors. Named methods rather than closures in the table above, because
@@ -81,8 +81,8 @@ func (*RetentionService) erasePayload(ctx context.Context, tx pgx.Tx, id ids.UUI
 	return err
 }
 
-func (*RetentionService) anonymizePerson(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	return anonymizePersonRecord(ctx, tx, id)
+func (*RetentionService) anonymizeContact(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	return anonymizeContactRecord(ctx, tx, id)
 }
 
 // SupportsRetentionAction reports whether the engine can perform this action on
@@ -117,7 +117,7 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 		return fmt.Errorf("retention: no executor for %s", pair)
 	}
 	if executor == nil {
-		return s.eraser.ErasePerson(ctx, id, "retention")
+		return s.eraser.EraseContact(ctx, id, "retention")
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := executor(s, ctx, tx, id); err != nil {
@@ -151,7 +151,7 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 // eraseActivityContent is the activity/erase action. Transcript free-text is
 // the special-category risk; the record of the meeting stays, its content goes
 // — including any attached recording/transcript file (objects first, so the
-// purge shares the person-erase durability guarantee).
+// purge shares the contact-erase durability guarantee).
 //
 // `raw` goes with `body`. It is the re-parseable original the schema names, so
 // clearing the parsed copy and leaving the source erases nothing — the content
@@ -200,7 +200,7 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 	return err
 }
 
-// anonymizePersonRecord is the person/anonymize action: it strips the subject's
+// anonymizeContactRecord is the contact/anonymize action: it strips the subject's
 // own identifying fields and the rows that carry their addresses, so the record
 // stops naming them by any key it is resolved on. The subject may lawfully return, so no suppression entry is
 // written.
@@ -210,14 +210,16 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 // their lead rows and scores, their preference tokens, their deal-room seats.
 //
 // What survives is written down per table in
-// TestErasingAndAnonymizingClearTheSameTables (backend/gates/personscrub_test.go),
+// TestErasingAndAnonymizingClearTheSameTables (backend/gates/contactscrub_test.go),
 // which fails when the gap widens in either direction. That test compares which
 // TABLES each act writes and cannot see two acts clearing one table to
 // different depths, which is why the custom columns above are nulled here
 // deliberately rather than left for it to notice.
 //
-// Held by: TestErasingAndAnonymizingClearTheSameTables (backend/gates/personscrub_test.go)
-func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+// Held by: TestErasingAndAnonymizingClearTheSameTables (backend/gates/contactscrub_test.go)
+//
+//nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
+func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// The identifiers the graph holds the subject by, read BEFORE the deletes
 	// below destroy the rows they come from. subjectGraphIdentifiers says which
 	// they are and why the order matters.
@@ -229,7 +231,7 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// the ghost sweep matches on it, and by then it is the tombstone.
 	var subjectName string
 	if err := tx.QueryRow(ctx,
-		`SELECT coalesce(full_name, '') FROM person WHERE id = $1`, id).Scan(&subjectName); err != nil {
+		`SELECT coalesce(full_name, '') FROM contact WHERE id = $1`, id).Scan(&subjectName); err != nil {
 		return err
 	}
 	// The installation's own columns too. A custom field is where an operator
@@ -237,17 +239,17 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// address, a handle — so leaving them would anonymize the name and keep
 	// whatever somebody wrote beside it. The eraser nulls them by the same
 	// means; a record that still carries them has not stopped naming anyone.
-	personCustom, err := subjectCustomColumns(ctx, tx, "person")
+	contactCustom, err := subjectCustomColumns(ctx, tx, "contact")
 	if err != nil {
 		return err
 	}
 	_, err = tx.Exec(ctx, fmt.Sprintf(`
-		UPDATE person SET first_name = NULL, last_name = NULL, full_name = $2,
+		UPDATE contact SET first_name = NULL, last_name = NULL, full_name = $2,
 		  title = NULL, raw = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
 		  archived_at = coalesce(archived_at, now())%s
-		WHERE id = $1`, nullColumnAssignments(personCustom)), id, erasedName)
+		WHERE id = $1`, nullColumnAssignments(contactCustom)), id, erasedName)
 	if err == nil {
 		// The double-opt-in token goes with the addresses it was sent to. It is
 		// a bearer secret whose only function is to authorise a consent GRANT
@@ -256,40 +258,40 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		// longer names. An anonymized subject may lawfully return, which is
 		// what the suppression list is for — but they return by being invited
 		// again, not by an old token in an old mailbox still working.
-		_, err = tx.Exec(ctx, `DELETE FROM consent_doi_token WHERE person_id = $1`, id)
+		_, err = tx.Exec(ctx, `DELETE FROM consent_doi_token WHERE contact_id = $1`, id)
 	}
 	if err == nil {
 		// The confirm-details link goes for the same reason, and a stronger
 		// one: it does not merely authorise a grant, it DISPLAYS the record. A
 		// link left live would show an old mailbox the fields this statement
 		// has just emptied.
-		_, err = tx.Exec(ctx, `DELETE FROM confirm_token WHERE person_id = $1`, id)
+		_, err = tx.Exec(ctx, `DELETE FROM confirm_token WHERE contact_id = $1`, id)
 	}
 	if err == nil {
 		// The withdrawal link goes too, and it is the one that would linger
 		// longest: 24 months against the double-opt-in token's weeks. It also
 		// HOLDS THE ADDRESS the link was written to, in its own column, which
 		// is precisely the content the statement above just cleared from the
-		// person row — so leaving it would keep an anonymized subject's mailbox
+		// contact row — so leaving it would keep an anonymized subject's mailbox
 		// legible in a table the anonymization did not touch.
-		_, err = tx.Exec(ctx, `DELETE FROM withdrawal_credential WHERE person_id = $1`, id)
+		_, err = tx.Exec(ctx, `DELETE FROM withdrawal_credential WHERE contact_id = $1`, id)
 	}
 	if err == nil {
 		// And what came back through it, which is the subject's own name and
 		// address in plaintext — exactly the content the anonymization above
-		// just cleared from the person row.
-		_, err = tx.Exec(ctx, `DELETE FROM person_confirm_submission WHERE person_id = $1`, id)
+		// just cleared from the contact row.
+		_, err = tx.Exec(ctx, `DELETE FROM contact_confirm_submission WHERE contact_id = $1`, id)
 	}
 	if err == nil {
 		err = clearCommunicationRecord(ctx, tx, id, subjectEmails)
 	}
 	// Read BEFORE the delete below, for the reason the eraser gives at its own
 	// copy of this: the LinkedIn ghost sweep identifies rows by this address,
-	// and person_social is about to stop holding it.
+	// and contact_social is about to stop holding it.
 	var linkedInHandles []string
 	if err == nil {
 		linkedInHandles, err = collectStrings(ctx, tx,
-			`SELECT handle FROM person_social WHERE person_id = $1 AND platform = 'linkedin'`, id)
+			`SELECT handle FROM contact_social WHERE contact_id = $1 AND platform = 'linkedin'`, id)
 	}
 	if err == nil {
 		err = deleteIdentifyingSatellites(ctx, tx, id)
@@ -312,16 +314,16 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		// What a colleague wrote down to DO about them, on their own weekly
 		// plan. The SAME statement the Art. 17 cascade runs, called rather than
 		// copied: the two acts differ only by the suppression list, and a
-		// second spelling here would be the drift personscrub_test.go exists to
-		// catch. Nothing cascades to it — the table holds no person FK and is
+		// second spelling here would be the drift contactscrub_test.go exists to
+		// catch. Nothing cascades to it — the table holds no contact FK and is
 		// keyed to the rep who wrote it — so an anonymize that skipped it would
 		// leave the subject's name in a commitment beside an "Erased Subject"
 		// record.
-		err = redactCommitmentsNaming(ctx, tx, ids.From[ids.PersonKind](id))
+		err = redactCommitmentsNaming(ctx, tx, ids.From[ids.ContactKind](id))
 	}
 	if err == nil {
 		_, err = tx.Exec(ctx,
-			`DELETE FROM embedding WHERE entity_type = 'person' AND entity_id = $1`, id)
+			`DELETE FROM embedding WHERE entity_type = 'contact' AND entity_id = $1`, id)
 	}
 	if err == nil {
 		// A provenance row names where a field value came from — its source,
@@ -330,29 +332,29 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		// to anonymize: what identifies the subject IS the record of where they
 		// were found. The eraser deletes it for that reason and so does this.
 		_, err = tx.Exec(ctx,
-			`DELETE FROM field_provenance WHERE object_type = 'person' AND object_id = $1`, id)
+			`DELETE FROM field_provenance WHERE object_type = 'contact' AND object_id = $1`, id)
 	}
 	if err == nil {
-		// Feedback rows name this person as the subject an AI answer was judged
+		// Feedback rows name this contact as the subject an AI answer was judged
 		// about. The judgement is about them and cannot be held without them.
 		_, err = tx.Exec(ctx,
-			`DELETE FROM ai_feedback WHERE subject_type = 'person' AND subject_id = $1`, id)
+			`DELETE FROM ai_feedback WHERE subject_type = 'contact' AND subject_id = $1`, id)
 	}
 	if err == nil {
 		// Against the addresses READ AT THE TOP, not a subquery over
-		// person_email: those rows are already gone by here, so a subquery
+		// contact_email: those rows are already gone by here, so a subquery
 		// would match nothing and this statement would delete nothing while
 		// looking like it did.
 		//
 		// The ledger carries the address a message arrived at and the display
 		// name it arrived with, and it is the key a later capture re-matches
-		// on — left behind it keeps answering with the person this act just
+		// on — left behind it keeps answering with the contact this act just
 		// stopped naming.
 		_, err = tx.Exec(ctx, `
 			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
 	}
 	if err == nil {
-		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
+		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
 	}
 	return err
 }
@@ -363,23 +365,23 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 // reads this FILE's SQL literals to prove every satellite is handled, so a
 // helper elsewhere or a loop over identifiers is invisible to it.
 func deleteIdentifyingSatellites(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	// The anonymize UPDATES the person row rather than deleting it, so none of
+	// The anonymize UPDATES the contact row rather than deleting it, so none of
 	// these cascades — one skipped leaves the subject readable beside an
 	// "Erased Subject" record.
-	_, err := tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
+	_, err := tx.Exec(ctx, `DELETE FROM contact_social WHERE contact_id = $1`, id)
 	if err == nil {
-		_, err = tx.Exec(ctx, `DELETE FROM person_email WHERE person_id = $1`, id)
+		_, err = tx.Exec(ctx, `DELETE FROM contact_email WHERE contact_id = $1`, id)
 	}
 	if err == nil {
-		_, err = tx.Exec(ctx, `DELETE FROM person_phone WHERE person_id = $1`, id)
+		_, err = tx.Exec(ctx, `DELETE FROM contact_phone WHERE contact_id = $1`, id)
 	}
 	if err == nil {
 		// The sidecar holds their title and employer verbatim.
-		_, err = tx.Exec(ctx, `DELETE FROM person_profile_field WHERE person_id = $1`, id)
+		_, err = tx.Exec(ctx, `DELETE FROM contact_profile_field WHERE contact_id = $1`, id)
 	}
 	if err == nil {
 		// A resolution key: left behind it keeps binding inbound mail here.
-		_, err = tx.Exec(ctx, `DELETE FROM person_channel_identity WHERE person_id = $1`, id)
+		_, err = tx.Exec(ctx, `DELETE FROM contact_channel_identity WHERE contact_id = $1`, id)
 	}
 	return err
 }
@@ -389,20 +391,20 @@ func deleteIdentifyingSatellites(ctx context.Context, tx pgx.Tx, id ids.UUID) er
 // the identifying half of the runs that bought them.
 //
 // The same three statements the Art. 17 path runs, for the same reason:
-// anonymize-in-place leaves the person row standing, so nothing cascades, and
+// anonymize-in-place leaves the contact row standing, so nothing cascades, and
 // without these the page would show a bought email and employer beside an
 // "Erased Subject" name. The runs are scrubbed rather than deleted — what the
 // installation paid is an accounting fact about the installation once the row
 // names nobody.
 func purgeSubjectPurchases(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if _, err := tx.Exec(ctx, `DELETE FROM person_provider_claim WHERE person_id = $1`, id); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM contact_provider_claim WHERE contact_id = $1`, id); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM provider_applied_field WHERE person_id = $1`, id); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM provider_applied_field WHERE contact_id = $1`, id); err != nil {
 		return err
 	}
 	_, err := tx.Exec(ctx,
-		`UPDATE provider_run SET`+storekit.ScrubProviderRunColumns+` WHERE person_id = $1`, id)
+		`UPDATE provider_run SET`+storekit.ScrubProviderRunColumns+` WHERE contact_id = $1`, id)
 	return err
 }
 
@@ -425,11 +427,11 @@ func purgeSubjectPurchases(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 // be marketed to having never withdrawn it.
 func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addresses []string) error {
 	// Why this contact existed, cleared alongside the rest. It names one
-	// person and has no meaning after them, and both acts must clear the same
+	// contact and has no meaning after them, and both acts must clear the same
 	// tables — one that cleared it and one that did not would leave the
 	// subject's acquisition record standing after an operator was told the
-	// person had been anonymized.
-	if _, err := tx.Exec(ctx, `DELETE FROM person_acquisition_evidence WHERE person_id = $1`, id); err != nil {
+	// contact had been anonymized.
+	if _, err := tx.Exec(ctx, `DELETE FROM contact_acquisition_evidence WHERE contact_id = $1`, id); err != nil {
 		return err
 	}
 	// Per row, not one constant. A single delivery can carry two decisions for
@@ -444,8 +446,8 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 		 WHERE subject_id = $1`, id); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM privacy_notice_case WHERE person_id = $1`, id); err != nil {
-		return fmt.Errorf("clear the person's notice cases: %w", err)
+	if _, err := tx.Exec(ctx, `DELETE FROM privacy_notice_case WHERE contact_id = $1`, id); err != nil {
+		return fmt.Errorf("clear the contact's notice cases: %w", err)
 	}
 	// The same writer the eraser runs, for the reason the acquisition evidence
 	// above carries: both acts must clear the same tables, and a review left
@@ -459,18 +461,18 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	if err := tombstoneExceptionExplanations(ctx, tx, id, addresses); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE person_id = $1`, id); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE contact_id = $1`, id); err != nil {
 		return err
 	}
 	// The objection SURVIVES an anonymization, re-pinned to the address.
 	//
 	// This is where the anonymizer parts company with the eraser. The eraser
 	// hashes every address onto erasure_suppression, so an erased subject
-	// cannot be re-captured at all and a per-person objection has nothing left
+	// cannot be re-captured at all and a per-contact objection has nothing left
 	// to protect. The anonymizer deliberately writes no such row, because an
 	// anonymized subject may lawfully return — and if their objection were
 	// deleted here they would return unsuppressed, having never withdrawn it.
-	// So the person link is cut and the address kept, which is exactly what the
+	// So the contact link is cut and the address kept, which is exactly what the
 	// address-only row shape exists for.
 	// EVERY row is detached, revoked or not, and the revoked ones keep their
 	// revoked_at. Filtering on `revoked_at IS NULL` here was safe while nothing
@@ -482,13 +484,13 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	// rather than vanishing mid-transaction.
 	if _, err := tx.Exec(ctx, `
 		UPDATE communication_suppression
-		   SET person_id = NULL, address = coalesce(address, u.addr)
+		   SET contact_id = NULL, address = coalesce(address, u.addr)
 		  FROM unnest($2::text[]) AS u(addr)
-		 WHERE person_id = $1`, id, addresses); err != nil {
+		 WHERE contact_id = $1`, id, addresses); err != nil {
 		return err
 	}
 	// Whatever the detach could not reach — a row whose address is not among
-	// the subject's — names a person who is going, so it goes with them.
-	_, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE person_id = $1`, id)
+	// the subject's — names a contact who is going, so it goes with them.
+	_, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE contact_id = $1`, id)
 	return err
 }

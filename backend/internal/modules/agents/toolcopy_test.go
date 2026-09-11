@@ -62,7 +62,7 @@ func TestDescribeForClientLeadsWithTheWrittenTextAndAppendsGovernance(t *testing
 	if !strings.HasPrefix(got, "Put a mail on the wire.") {
 		t.Errorf("description = %q, want it to open with the written text", got)
 	}
-	if !strings.Contains(got, "a person approves every call before it runs") {
+	if !strings.Contains(got, "a human approves every call before it runs") {
 		t.Errorf("description = %q, want the confirm-first tier stated", got)
 	}
 	if !strings.Contains(got, `"send"`) {
@@ -87,10 +87,10 @@ func TestDescribeForClientStatesEachTierDistinctly(t *testing.T) {
 		t.Errorf("auto-execute reads %q, want it to promise the call runs and ask for no approval", got)
 	}
 	if got := describe(mcp.TierConfirmationRequired); !strings.Contains(got, "approves every call") {
-		t.Errorf("confirm-first reads %q, want every call named as needing a person", got)
+		t.Errorf("confirm-first reads %q, want every call named as needing a contact", got)
 	}
 	// The dynamic tier is the one a single sentence gets wrong by collapsing:
-	// it must promise neither that the call runs nor that a person approves it,
+	// it must promise neither that the call runs nor that a human approves it,
 	// because which one is true is decided per call from the arguments.
 	dynamic := describe(mcp.TierDynamic)
 	if !strings.Contains(dynamic, "decided per call") {

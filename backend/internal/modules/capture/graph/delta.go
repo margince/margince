@@ -56,7 +56,7 @@ func receivedBetweenFilter(after, before time.Time) string {
 }
 
 // The two well-known folders a standing sync follows. Named constants because
-// they are Microsoft's own identifiers rather than folder names a person chose,
+// they are Microsoft's own identifiers rather than folder names a contact chose,
 // and because which folder a message came from is what attests whether the
 // owner sent it.
 const (

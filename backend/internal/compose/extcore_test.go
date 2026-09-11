@@ -43,10 +43,10 @@ func TestAJobTickCannotWriteACoreRecord(t *testing.T) {
 }
 
 // The refusal classes are a MAPPING, and the property that matters is what does
-// not survive it: a unit is other people's code, so the core's own error text
+// not survive it: a unit is other contacts's code, so the core's own error text
 // must not reach it.
 func TestThePortMapsRefusalsAndLeaksNoDetail(t *testing.T) {
-	internal := errors.New("relation \"person\" violates constraint person_email_key")
+	internal := errors.New("relation \"contact\" violates constraint contact_email_key")
 	for name, probe := range map[string]struct {
 		in   error
 		want error
@@ -74,7 +74,7 @@ func TestThePortMapsRefusalsAndLeaksNoDetail(t *testing.T) {
 	if unclassified == nil {
 		t.Fatal("an unclassified fault was mapped to success")
 	}
-	if strings.Contains(unclassified.Error(), "person") || strings.Contains(unclassified.Error(), "constraint") {
+	if strings.Contains(unclassified.Error(), "contact") || strings.Contains(unclassified.Error(), "constraint") {
 		t.Errorf("the core's own error text reached the unit: %v", unclassified)
 	}
 }
@@ -106,7 +106,7 @@ func TestTheBridgeCarriesAWholeActivity(t *testing.T) {
 		Source:     "extension:notes",
 		CapturedBy: &capturedBy,
 		Links: &[]crmcontracts.ActivityLink{{
-			EntityType: crmcontracts.ActivityLinkEntityTypePerson,
+			EntityType: crmcontracts.ActivityLinkEntityTypeContact,
 			EntityId:   openapi_types.UUID(subjectID),
 		}},
 	}
@@ -136,8 +136,8 @@ func TestTheBridgeCarriesAWholeActivity(t *testing.T) {
 	if published.Links == nil || len(*published.Links) != 1 {
 		t.Fatalf("links = %v, want the one the record carries — a nested slice is where a bridge silently loses depth", published.Links)
 	}
-	if link := (*published.Links)[0]; link.EntityId != subjectID.String() || string(link.EntityType) != "person" {
-		t.Errorf("link = %s/%s, want person/%s", link.EntityType, link.EntityId, subjectID)
+	if link := (*published.Links)[0]; link.EntityId != subjectID.String() || string(link.EntityType) != "contact" {
+		t.Errorf("link = %s/%s, want contact/%s", link.EntityType, link.EntityId, subjectID)
 	}
 }
 
@@ -169,7 +169,7 @@ func TestTheBridgeCarriesARequestWithItsLinks(t *testing.T) {
 // silently.
 func TestLinkToAppends(t *testing.T) {
 	request := crm.CreateActivityRequest{Kind: crm.CreateActivityRequestKindNote, Source: "extension:probe"}.
-		LinkTo(crm.CreateActivityRequestLinksEntityTypePerson, "7c9e6679-7425-40de-944b-e07fc1f90ae7").
+		LinkTo(crm.CreateActivityRequestLinksEntityTypeContact, "7c9e6679-7425-40de-944b-e07fc1f90ae7").
 		LinkTo(crm.CreateActivityRequestLinksEntityTypeCompany, "3f2504e0-4f89-41d3-9a0c-0305e82c3301")
 	if request.Links == nil || len(*request.Links) != 2 {
 		t.Fatalf("links = %v, want both", request.Links)

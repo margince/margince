@@ -15,7 +15,7 @@ edge, and where this weaker evidence tier sits beside real interaction history �
 - **Not a LinkedIn integration.** There is no LinkedIn app to register, no OAuth app to approve, no API
   to be granted. This is your own data export, read by the importer.
 - **Not scraping.** Nothing here talks to LinkedIn at all. You download the file; you upload the file.
-- **Not a contact import.** The rows never become people. See
+- **Not a contact import.** The rows never become contacts. See
   [What the imported rows are](#what-the-imported-rows-are).
 
 **The onboarding LinkedIn card saves your profile, nothing more.** The connect scene asks for your
@@ -91,7 +91,7 @@ Concretely, an imported row:
 
 | | |
 |---|---|
-| **Is invisible to** | search, lists, the people screens, and the assistant's record tools |
+| **Is invisible to** | search, lists, the contacts screens, and the assistant's record tools |
 | **Cannot be written to** | no timeline, no activities, no fields — nothing can write to a ghost |
 | **Cannot be reached by outreach** | no email, no sequence, no send path resolves one |
 | **Belongs to** | the authenticated caller, always — `POST /me/linkedin-connections`, never `/users/{id}/…` |
@@ -101,33 +101,33 @@ The one thing a ghost ever contributes to a real record is deliberately narrow: 
 match, the *connection's own* profile URL is written to that contact as a `linkedin` handle — and
 nothing else. The ghost's name, employer, position and connection date stay where they are. (It is the
 connection's URL, not yours: stamping your own address on every contact you confirm would put the wrong
-person's address on the record. A row already carrying a `linkedin` handle is left alone — that handle
+contact's address on the record. A row already carrying a `linkedin` handle is left alone — that handle
 is somebody's statement, and confirming a match is not grounds to replace it, so the response tells you
 which happened rather than leaving you to guess.)
 
 ## What matching decides
 
 Matching runs immediately after the upload, so the response can say what your import actually achieved.
-It follows the same rule the rest of the people module obeys: **only an email address is an exact person
+It follows the same rule the rest of the contacts module obeys: **only an email address is an exact contact
 key.**
 
 | Evidence | Outcome | Why |
 |---|---|---|
 | **Exact email** matches a contact's address | **Confirmed automatically** | An address is identity here, exactly as it is on the capture path. Treating it as a suggestion would ask a human to re-confirm a fact the system is already certain of everywhere else. |
-| **Exact name + matched employer**, no other candidate | **Confirmed automatically** | The two strings are the same string, the employer agrees, and nobody else here is called that. Asking about it trains people to click through the queue without reading, which is what makes the genuinely uncertain ones dangerous. |
-| **Folded name + matched employer** ("André" vs "Andre") | **Suggested** — goes to the approval inbox | Whether two spellings are one person is a judgement, not a comparison. |
+| **Exact name + matched employer**, no other candidate | **Confirmed automatically** | The two strings are the same string, the employer agrees, and nobody else here is called that. Asking about it trains contacts to click through the queue without reading, which is what makes the genuinely uncertain ones dangerous. |
+| **Folded name + matched employer** ("André" vs "Andre") | **Suggested** — goes to the approval inbox | Whether two spellings are one contact is a judgement, not a comparison. |
 | **Ambiguous name** — two contacts of the same name at the same employer | **Nothing** | Picking one would be a guess wearing a confirmation's clothes. |
-| Name only, no employer match | **Nothing** on the person side | Name alone is not a match in any market and least of all in this one. There are two Andreas Müllers at every large German firm. |
+| Name only, no employer match | **Nothing** on the contact side | Name alone is not a match in any market and least of all in this one. There are two Andreas Müllers at every large German firm. |
 
 Two further rules the matcher applies:
 
 - The employment must be **live today** — `archived_at IS NULL` and `(ended_at IS NULL OR ended_at >
-  today)`. A future end date is still employment: a person leaving next month is at their desk today.
+  today)`. A future end date is still employment: a contact leaving next month is at their desk today.
 - It will not propose a contact some *other* ghost of yours is already confirmed against. One contact
   cannot be two different LinkedIn connections of the same colleague, and offering that choice invites a
   wrong click.
 
-**Nothing here ever creates a person.** A ghost that matches nothing stays a ghost, and its only
+**Nothing here ever creates a contact.** A ghost that matches nothing stays a ghost, and its only
 contribution is the account-level count — which needs no identity at all.
 
 ### Where the suggestions go
@@ -145,13 +145,13 @@ re-import, which is the case that matters when you refresh a five-thousand-row e
 ## Why nothing matched yet
 
 Zero matches on a fresh workspace is expected, not broken. Your export is uploaded during onboarding;
-the people and accounts it *could* match arrive over the following hours as mail capture runs. On a real
+the contacts and accounts it *could* match arrive over the following hours as mail capture runs. On a real
 5,064-row export, 54 of the workspace's contacts appeared in the file by name and the upload-time pass
-matched 13 — the rest were people and employers the CRM learned about minutes later.
+matched 13 — the rest were contacts and employers the CRM learned about minutes later.
 
 Two mechanisms close that gap, and neither needs you to re-upload:
 
-- **The event path** (`cg:linkedin-match`). `person.created`, `person.updated` and the company
+- **The event path** (`cg:linkedin-match`). `contact.created`, `contact.updated` and the company
   events already reach the outbox because the write shape puts them there, so manual entry, capture, a
   site read, a merge and an import all trigger a re-match without any of them knowing the matcher
   exists. Company events matter for a sharper reason: most unmatched ghosts are waiting on an
@@ -177,7 +177,7 @@ answer the import is for. Per account it reports:
 | **You know** | how many of *your* connections work there |
 | **Already contacts** | how many of those are confirmed matches, shown as `{on file} of {total}` |
 
-The gap between the two columns is the finding: **people you know at this account who are not in the
+The gap between the two columns is the finding: **contacts you know at this account who are not in the
 CRM.** Rows are ranked by connection count, then name, then id, so two reads of an unchanged network
 return the same order. A footnote states what the view cannot show — how many accounts were truncated
 by the page limit, and how many connections resolved to no account at all.
@@ -213,12 +213,12 @@ whole network would understate reach, which is the one thing this view exists to
 
 ## Re-importing a refreshed export
 
-Re-importing **updates** rather than duplicates. People re-export regularly, and a second import that
+Re-importing **updates** rather than duplicates. Contacts re-export regularly, and a second import that
 doubled everyone's network would make the reach counts meaningless. The upsert:
 
 - Keys on `(owner, normalized name, normalized company, connected-on date)` for CSV rows — an explicit
   best-effort dedupe key, not an identity claim. The connection date is in it precisely because two
-  same-named people at one company almost certainly did not connect on the same day.
+  same-named contacts at one company almost certainly did not connect on the same day.
 - Repairs stale keys **before** upserting. `normalized_company` is a derived part of that key, so rows
   written under an older normalizer would no longer collide with what the current import computes. This
   is not hypothetical: cleaning LinkedIn's headline company field once altered the key for every row
@@ -251,11 +251,11 @@ outlive that employment.
 **When a subject is erased, their ghosts go too.** An Art. 17 erasure deletes the subject's ghosts in
 the same single transaction as the rest of the cascade — a ghost holds the subject's name, employer and
 address, imported from a colleague's export without the subject ever being asked, and it is invisible to
-every person-keyed clause because a ghost is not a person row. Deletion runs on **suggestion-grade**
+every contact-keyed clause because a ghost is not a contact row. Deletion runs on **suggestion-grade**
 evidence rather than only a confirmed match: matched to them, carrying their address, carrying their
 LinkedIn URL, or bearing their name at an employer they actually work for. The asymmetry is deliberate —
 deleting one ghost too many costs a re-import of a file you still have, while keeping one too few leaves
-a named person's data behind after we certified it destroyed. Details in
+a named contact's data behind after we certified it destroyed. Details in
 [explanation/privacy-and-consent.md](../explanation/privacy-and-consent.md).
 
 **Your network is yours.** Every operation in this guide is `/me/…` and `x-agent-access: human-only`:
@@ -268,7 +268,7 @@ qualifications:
   — the grants the effect needs, plus visibility of the **contact** the proposal is about. So a
   colleague who can already read that contact can see that one proposal, which names the connection's
   own spelling of their name and employer. That is settled deliberately: who-knows-whom is
-  workspace-shared metadata, guarded by "you only see edges for a person you can see at all".
+  workspace-shared metadata, guarded by "you only see edges for a contact you can see at all".
 - The **audit row and the outbox event** for an import name **no connection at all** — only `rows`,
   `imported` and `skipped`. Recording the names there would defeat the invisibility that is the whole
   safety property of a ghost. Likewise, saving your profile records the URL in *your own* audit row but
@@ -279,8 +279,8 @@ qualifications:
 
 1. **The file was read.** The result card shows `Connections imported` > 0, and `Rows skipped` matches
    your expectation of how ragged the export was.
-2. **Nothing became a contact.** Search for an imported connection's name in the people screen and in
-   the global search — no result. `GET /people` does not list them.
+2. **Nothing became a contact.** Search for an imported connection's name in the contacts screen and in
+   the global search — no result. `GET /contacts` does not list them.
 3. **Matching obeyed the rule.** A connection whose exported address is already a contact's address
    shows as confirmed; a same-name-different-spelling one is waiting in the **approval inbox** as a
    `linkedin_match` proposal, not in a settings queue.

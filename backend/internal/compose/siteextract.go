@@ -73,7 +73,7 @@ func profileEvidenceReady(pages []crawlPage) bool {
 }
 
 // The read's two live phases, spelled as the site_read store accepts them
-// (people.Store.UpdateSiteReadProgress rejects anything else): the crawl
+// (contacts.Store.UpdateSiteReadProgress rejects anything else): the crawl
 // is still fetching, or the crawl is done and the model lanes are not.
 const (
 	sitePhaseCrawling   = "crawling"
@@ -302,7 +302,7 @@ func publishDraft(onDraft func(pageFactsResult), results []pageFactsResult, publ
 	snapshot := append([]pageFactsResult(nil), results...)
 	sort.Slice(snapshot, func(i, j int) bool { return snapshot[i].url < snapshot[j].url })
 	merged := mergePageResults(snapshot)
-	if slices.Equal(merged.facts, published.facts) && slices.Equal(merged.people, published.people) &&
+	if slices.Equal(merged.facts, published.facts) && slices.Equal(merged.contacts, published.contacts) &&
 		slices.Equal(merged.entities, published.entities) {
 		return published
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -28,8 +28,8 @@ func TestStrengthFoldDatesEachDirectionSeparately(t *testing.T) {
 	owner := integration.OwnerConn(t)
 
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
-	person := e.SeedPerson(t, "Dietmar Rietsch", nil)
-	employ(t, e, person, company, "Managing Director")
+	contact := e.SeedContact(t, "Dietmar Rietsch", nil)
+	employ(t, e, contact, company, "Managing Director")
 
 	// TWO inbound messages, not one: with a single reply the newest and the
 	// oldest are the same row, so a fold that took either would pass. The
@@ -38,13 +38,13 @@ func TestStrengthFoldDatesEachDirectionSeparately(t *testing.T) {
 	replied := company360Clock.AddDate(0, 0, -40)
 	chased := company360Clock.AddDate(0, 0, -5)
 	stale := integration.AccountMailDirectedAt(t, owner, e.WS, "First contact", "inbound", firstReply)
-	integration.LinkActivity(t, owner, stale, "person", person)
+	integration.LinkActivity(t, owner, stale, "contact", contact)
 	inbound := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: your proposal", "inbound", replied)
-	integration.LinkActivity(t, owner, inbound, "person", person)
+	integration.LinkActivity(t, owner, inbound, "contact", contact)
 	outbound := integration.AccountMailDirectedAt(t, owner, e.WS, "Following up", "outbound", chased)
-	integration.LinkActivity(t, owner, outbound, "person", person)
+	integration.LinkActivity(t, owner, outbound, "contact", contact)
 
-	got := foldOneContact(t, e, company, person)
+	got := foldOneContact(t, e, company, contact)
 
 	assertSameInstant(t, "last inbound", got.LastInbound, replied)
 	assertSameInstant(t, "last outbound", got.LastOutbound, chased)
@@ -56,8 +56,8 @@ func TestStrengthFoldDatesEachDirectionSeparately(t *testing.T) {
 		t.Fatalf("the inbound anchor is %s, want the message they sent (%s)",
 			*got.LastInboundActivity, inbound)
 	}
-	if people.EngagementOf(got) != people.EngagementAnswered {
-		t.Fatalf("a contact we replied to reads as %q, want answered", people.EngagementOf(got))
+	if contacts.EngagementOf(got) != contacts.EngagementAnswered {
+		t.Fatalf("a contact we replied to reads as %q, want answered", contacts.EngagementOf(got))
 	}
 }
 
@@ -69,14 +69,14 @@ func TestStrengthFoldLeavesTheInboundAnchorEmptyWhenNobodyWroteIn(t *testing.T) 
 	owner := integration.OwnerConn(t)
 
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
-	person := e.SeedPerson(t, "Philipp Königs", nil)
-	employ(t, e, person, company, "CFO")
+	contact := e.SeedContact(t, "Philipp Königs", nil)
+	employ(t, e, contact, company, "CFO")
 
 	sent := company360Clock.AddDate(0, 0, -12)
 	outbound := integration.AccountMailDirectedAt(t, owner, e.WS, "Introduction", "outbound", sent)
-	integration.LinkActivity(t, owner, outbound, "person", person)
+	integration.LinkActivity(t, owner, outbound, "contact", contact)
 
-	got := foldOneContact(t, e, company, person)
+	got := foldOneContact(t, e, company, contact)
 
 	if got.LastInbound != nil {
 		t.Fatalf("a contact who never wrote in carries an inbound date of %s", got.LastInbound)
@@ -85,8 +85,8 @@ func TestStrengthFoldLeavesTheInboundAnchorEmptyWhenNobodyWroteIn(t *testing.T) 
 		t.Fatalf("a contact who never wrote in carries an inbound anchor of %s", got.LastInboundActivity)
 	}
 	assertSameInstant(t, "last outbound", got.LastOutbound, sent)
-	if people.EngagementOf(got) != people.EngagementNoReply {
-		t.Fatalf("a contact we wrote to with no reply reads as %q", people.EngagementOf(got))
+	if contacts.EngagementOf(got) != contacts.EngagementNoReply {
+		t.Fatalf("a contact we wrote to with no reply reads as %q", contacts.EngagementOf(got))
 	}
 }
 
@@ -104,15 +104,15 @@ func TestStrengthFoldDropsAnInboundAnchorOlderThanTheWindow(t *testing.T) {
 	owner := integration.OwnerConn(t)
 
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
-	person := e.SeedPerson(t, "Ute Sommer", nil)
-	employ(t, e, person, company, "Procurement")
+	contact := e.SeedContact(t, "Ute Sommer", nil)
+	employ(t, e, contact, company, "Procurement")
 
 	longAgo := company360Clock.AddDate(0, 0, -400)
 	stale := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: 2025 tender", "inbound", longAgo)
-	integration.LinkActivity(t, owner, stale, "person", person)
-	integration.LinkActivitySender(t, owner, stale, person)
+	integration.LinkActivity(t, owner, stale, "contact", contact)
+	integration.LinkActivitySender(t, owner, stale, contact)
 
-	got := foldOneContact(t, e, company, person)
+	got := foldOneContact(t, e, company, contact)
 
 	// The history is kept: the date is what the page prints as "last heard from".
 	assertSameInstant(t, "last inbound", got.LastInbound, longAgo)
@@ -121,26 +121,26 @@ func TestStrengthFoldDropsAnInboundAnchorOlderThanTheWindow(t *testing.T) {
 		t.Fatalf("a reply from %s is outside the 90-day window and must not be offered as a reply anchor, got %s",
 			longAgo.Format("2006-01-02"), got.LastInboundActivity)
 	}
-	if people.EngagementOf(got) != people.EngagementLapsed {
+	if contacts.EngagementOf(got) != contacts.EngagementLapsed {
 		t.Fatalf("a contact whose only message predates the window reads as %q, want lapsed",
-			people.EngagementOf(got))
+			contacts.EngagementOf(got))
 	}
 }
 
 // foldOneContact runs the account roster read and returns the one contact's
 // §4 fold — through the real read rather than a hand-built row, so the test
 // measures what the page is served.
-func foldOneContact(t *testing.T, e *integration.Env, company, person ids.UUID) people.RelationshipStrength {
+func foldOneContact(t *testing.T, e *integration.Env, company, contact ids.UUID) contacts.RelationshipStrength {
 	t.Helper()
-	var found *people.RelationshipStrength
+	var found *contacts.RelationshipStrength
 	ctx := e.Admin()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		all, err := people.StrengthForCompanyContacts(ctx, tx, ids.CompanyID{UUID: company}, company360Clock, nil)
+		all, err := contacts.StrengthForCompanyContacts(ctx, tx, ids.CompanyID{UUID: company}, company360Clock, nil)
 		if err != nil {
 			return err
 		}
 		for _, c := range all {
-			if c.PersonID.UUID == person {
+			if c.ContactID.UUID == contact {
 				strength := c.Strength
 				found = &strength
 			}
@@ -150,7 +150,7 @@ func foldOneContact(t *testing.T, e *integration.Env, company, person ids.UUID) 
 		t.Fatalf("reading the account roster: %v", err)
 	}
 	if found == nil {
-		t.Fatalf("the roster did not carry the seeded contact %s", person)
+		t.Fatalf("the roster did not carry the seeded contact %s", contact)
 	}
 	return *found
 }

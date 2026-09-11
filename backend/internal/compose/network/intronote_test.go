@@ -3,7 +3,7 @@
 
 package network
 
-// The forwardable note, and the ways it could embarrass the person who sends
+// The forwardable note, and the ways it could embarrass the contact who sends
 // it.
 //
 // This note is the only text in the introduction workflow a CUSTOMER reads.
@@ -46,7 +46,7 @@ func TestTheFloorWritesANoteTheColleagueCanForward(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Philipp",      // addressed to the contact
-		"Lena Fischer", // the person being introduced
+		"Lena Fischer", // the contact being introduced
 		"developing",   // the relationship, in the page's own vocabulary
 		"2026-08-20",   // when they last spoke
 		"depot energy", // the rep's own reason
@@ -180,7 +180,7 @@ func outsideEveryNoteSpan(content, marker, needle string) bool {
 	return false
 }
 
-// A reply that does not name the two people it is about falls back to the
+// A reply that does not name the two contacts it is about falls back to the
 // template.
 //
 // A note addressed to nobody, or about nobody, is one the colleague has to
@@ -201,7 +201,7 @@ func TestAReplyThatNamesNobodyIsRefused(t *testing.T) {
 	good := `{"subject":"Introducing Lena Fischer",` +
 		`"body":"Hi Philipp Königs, I wanted to introduce Lena Fischer."}`
 	if _, err := parseIntroNote(good, facts); err != nil {
-		t.Errorf("a note naming both people was refused: %v", err)
+		t.Errorf("a note naming both contacts was refused: %v", err)
 	}
 }
 
@@ -279,7 +279,7 @@ func TestTheReasonsNameTheRouteAndOnlyWhatIsRecorded(t *testing.T) {
 	}
 	if !strings.Contains(reasons[0].Label, "Sofia Meier") ||
 		!strings.Contains(reasons[0].Label, "developing") {
-		t.Errorf("the relationship reason is %q; want the two people and the band",
+		t.Errorf("the relationship reason is %q; want the two contacts and the band",
 			reasons[0].Label)
 	}
 

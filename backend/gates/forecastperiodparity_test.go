@@ -147,7 +147,7 @@ func TestTheAgentToolOffersEveryWindowTheWireDoes(t *testing.T) {
 	for _, asked := range periodEnumAt(t, doc, []string{"paths", "/forecast", "get"}) {
 		if !strings.Contains(tool, `"`+asked+`"`) {
 			t.Errorf("the wire offers period %q and the agent tool's schema does not — "+
-				"an agent cannot ask for a window a person can", asked)
+				"an agent cannot ask for a window a contact can", asked)
 		}
 	}
 }

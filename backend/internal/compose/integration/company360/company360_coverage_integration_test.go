@@ -30,15 +30,15 @@ func TestCoverageCountsTheWholeAccount(t *testing.T) {
 	const contacts = 30
 	var waiting ids.UUID
 	for i := range contacts {
-		person := e.SeedPerson(t, fmt.Sprintf("Contact %02d", i), nil)
-		employ(t, e, person, company, "Fleet")
-		waiting = person
+		contact := e.SeedContact(t, fmt.Sprintf("Contact %02d", i), nil)
+		employ(t, e, contact, company, "Fleet")
+		waiting = contact
 	}
 	// One inbound with no reply from us: the contact is waiting, not answered —
 	// receiving mail is not the same fact as having answered it.
 	mail := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: proposal",
 		"inbound", company360Clock.AddDate(0, 0, -3))
-	integration.LinkActivity(t, owner, mail, "person", waiting)
+	integration.LinkActivity(t, owner, mail, "contact", waiting)
 
 	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
 	if err != nil {
@@ -57,7 +57,7 @@ func TestCoverageCountsTheWholeAccount(t *testing.T) {
 	if got.BestWayIn == nil {
 		t.Fatal("no way in named on an account where somebody is waiting on us")
 	}
-	if id := ids.UUID(got.BestWayIn.PersonId); id != waiting {
+	if id := ids.UUID(got.BestWayIn.ContactId); id != waiting {
 		t.Fatalf("the way in is %s, want the contact waiting on a reply (%s)", id, waiting)
 	}
 }
@@ -72,11 +72,11 @@ func TestCoverageNamesNoWayInWhenNobodyHasAnswered(t *testing.T) {
 	svc := company360Service(e)
 
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
-	person := e.SeedPerson(t, "Philipp Koenigs", nil)
-	employ(t, e, person, company, "CFO")
+	contact := e.SeedContact(t, "Philipp Koenigs", nil)
+	employ(t, e, contact, company, "CFO")
 	out := integration.AccountMailDirectedAt(t, owner, e.WS, "Introduction",
 		"outbound", company360Clock.AddDate(0, 0, -10))
-	integration.LinkActivity(t, owner, out, "person", person)
+	integration.LinkActivity(t, owner, out, "contact", contact)
 
 	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
 	if err != nil {
@@ -100,11 +100,11 @@ func TestCoverageReportsAChampionGapOnACompleteCommittee(t *testing.T) {
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
 	pipeline, openStage, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
-	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	buyer := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, buyer, company, "Procurement")
 	// The deal has to belong to this account for the coverage read to find it.
 	e.WsExec(t, `UPDATE deal SET company_id = $1 WHERE id = $2`, company, deal)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, buyer, deal)
 
 	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
@@ -115,7 +115,7 @@ func TestCoverageReportsAChampionGapOnACompleteCommittee(t *testing.T) {
 		t.Fatal("no committee for a caller who may read the deal")
 	}
 	if got.Committee.UnlistedSeats != 0 {
-		t.Fatalf("%d seats unlisted for an admin who can see every person",
+		t.Fatalf("%d seats unlisted for an admin who can see every contact",
 			got.Committee.UnlistedSeats)
 	}
 	// The economic buyer is held, the champion is not.
@@ -154,8 +154,8 @@ func TestCoverageSeparatesNoDealFromNoAccess(t *testing.T) {
 	svc := company360Service(e)
 
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
-	person := e.SeedPerson(t, "Jan Roth", nil)
-	employ(t, e, person, company, "Workshop")
+	contact := e.SeedContact(t, "Jan Roth", nil)
+	employ(t, e, contact, company, "Workshop")
 
 	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
 	if err != nil {
@@ -174,15 +174,15 @@ func TestCoverageSeparatesNoDealFromNoAccess(t *testing.T) {
 
 // The unlisted-seat count is what keeps a gap honest.
 //
-// deals.Stakeholders applies the person row scope itself, so a seat whose
+// deals.Stakeholders applies the contact row scope itself, so a seat whose
 // holder the reader cannot see is absent from the slice rather than anonymous.
 // If gaps were computed from that slice alone, a champion the reader may not
 // see would read as NO champion — a hole that does not exist. seatCount reads
 // the true total, and gaps stay empty whenever the two disagree.
 //
 // Seeded by archiving nothing and hiding nobody: this repo's access model lets
-// every reader see every person, so an unlisted seat is reachable here only by
-// removing the person row the seat points at. That is the shape the guard has
+// every reader see every contact, so an unlisted seat is reachable here only by
+// removing the contact row the seat points at. That is the shape the guard has
 // to survive, and it is why the count is read separately rather than taken
 // from len(seats).
 func TestCoverageReportsNoGapWhenASeatIsUnlisted(t *testing.T) {
@@ -195,13 +195,13 @@ func TestCoverageReportsNoGapWhenASeatIsUnlisted(t *testing.T) {
 	deal := e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
 	e.WsExec(t, `UPDATE deal SET company_id = $1 WHERE id = $2`, company, deal)
 
-	champion := e.SeedPerson(t, "Dietmar Rietsch", nil)
+	champion := e.SeedContact(t, "Dietmar Rietsch", nil)
 	employ(t, e, champion, company, "Managing Director")
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, champion, deal)
-	// The seat outlives the person row it names: the stakeholder read joins
-	// person and drops it, while the count still sees the relationship.
-	e.WsExec(t, `UPDATE person SET archived_at = now() WHERE id = $1`, champion)
+	// The seat outlives the contact row it names: the stakeholder read joins
+	// contact and drops it, while the count still sees the relationship.
+	e.WsExec(t, `UPDATE contact SET archived_at = now() WHERE id = $1`, champion)
 
 	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
 	if err != nil {
@@ -223,7 +223,7 @@ func TestCoverageReportsNoGapWhenASeatIsUnlisted(t *testing.T) {
 // A reader without the deal grant learns nothing about the deals.
 //
 // Row scope answers WHICH deals, never WHETHER this caller may ask: a caller
-// holding company, person and relationship but not deal was being served
+// holding company, contact and relationship but not deal was being served
 // deal names and the committee on them, because the read reached for
 // scopeClause and never for the object grant behind it.
 func TestCoverageWithholdsDealsFromAReaderWithoutTheGrant(t *testing.T) {
@@ -234,9 +234,9 @@ func TestCoverageWithholdsDealsFromAReaderWithoutTheGrant(t *testing.T) {
 	pipeline, openStage, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
 	e.WsExec(t, `UPDATE deal SET company_id = $1 WHERE id = $2`, company, deal)
-	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	buyer := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, buyer, company, "Procurement")
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, buyer, deal)
 
 	got, err := svc.Coverage(e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms),
@@ -263,7 +263,7 @@ func TestCoverageWithholdsDealsFromAReaderWithoutTheGrant(t *testing.T) {
 }
 
 // A seat carries who on our side can reach it, from the same reader the 360's
-// people section uses. A second route ranking would let the map and the roster
+// contacts section uses. A second route ranking would let the map and the roster
 // disagree about which colleague to ask.
 func TestCoverageSeatsCarryTheirRoutes(t *testing.T) {
 	e := integration.Setup(t)
@@ -276,9 +276,9 @@ func TestCoverageSeatsCarryTheirRoutes(t *testing.T) {
 	deal := e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
 	e.WsExec(t, `UPDATE deal SET company_id = $1 WHERE id = $2`, company, deal)
 
-	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	buyer := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, buyer, company, "Procurement")
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, buyer, deal)
 	// One colleague who has actually exchanged mail with them.
 	seedTouch(t, e, owner, "email", &e.Rep1, buyer)
@@ -302,7 +302,7 @@ func TestCoverageSeatsCarryTheirRoutes(t *testing.T) {
 	}
 }
 
-// A seat the product read out of messages is marked; one a person typed is not.
+// A seat the product read out of messages is marked; one a human typed is not.
 //
 // The mark comes off the row's own captured_by, which is the same identity
 // every agent write in this tree carries — so the card can say which part of
@@ -317,13 +317,13 @@ func TestCoverageMarksASeatTheProductRead(t *testing.T) {
 	deal := e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
 	e.WsExec(t, `UPDATE deal SET company_id = $1 WHERE id = $2`, company, deal)
 
-	typed := e.SeedPerson(t, "Ute Sommer", nil)
-	read := e.SeedPerson(t, "Dietmar Rietsch", nil)
+	typed := e.SeedContact(t, "Ute Sommer", nil)
+	read := e.SeedContact(t, "Dietmar Rietsch", nil)
 	employ(t, e, typed, company, "Procurement")
 	employ(t, e, read, company, "Managing Director")
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, typed, deal)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'ai_proposal', 'agent:propose_roles')`,
 		read, deal)
 
@@ -342,17 +342,17 @@ func TestCoverageMarksASeatTheProductRead(t *testing.T) {
 		t.Fatal("the seat the product read is not marked as suggested")
 	}
 	if marked["Ute Sommer"] {
-		t.Fatal("a seat a person typed is marked as the product's reading")
+		t.Fatal("a seat a human typed is marked as the product's reading")
 	}
 }
 
 // The mark is scoped to the deal it is about.
 //
-// A person can sit on two deals. Keyed by person alone, the provenance read
+// A contact can sit on two deals. Keyed by contact alone, the provenance read
 // carried whichever row the scan returned last — so a seat a colleague typed
 // on THIS deal could be marked as the product's reading because of an
 // unrelated deal somewhere else.
-func TestCoverageMarksPerDealRatherThanPerPerson(t *testing.T) {
+func TestCoverageMarksPerDealRatherThanPerContact(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -364,15 +364,15 @@ func TestCoverageMarksPerDealRatherThanPerPerson(t *testing.T) {
 	e.WsExec(t, `UPDATE deal SET company_id = $1 WHERE id = $2`, company, here)
 	e.WsExec(t, `UPDATE deal SET updated_at = now() - interval '1 day' WHERE id = $1`, elsewhere)
 
-	person := e.SeedPerson(t, "Ute Sommer", nil)
-	employ(t, e, person, company, "Procurement")
+	contact := e.SeedContact(t, "Ute Sommer", nil)
+	employ(t, e, contact, company, "Procurement")
 	// Typed by a colleague on the deal this page is about.
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
-		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, person, here)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, contact, here)
 	// Read by the product on a different deal entirely.
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'ai_proposal', 'agent:propose_roles')`,
-		person, elsewhere)
+		contact, elsewhere)
 
 	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
 	if err != nil {

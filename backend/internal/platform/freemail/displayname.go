@@ -3,7 +3,7 @@
 
 package freemail
 
-// Turning a mail domain into a name a person would recognise.
+// Turning a mail domain into a name a contact would recognise.
 //
 // It lives beside the consumer-provider question because the two are asked
 // TOGETHER, always and by everybody: a caller deriving a company from an
@@ -79,7 +79,7 @@ func DisplayName(domain string) string {
 // "docusign"; "acme.co.uk" → "acme".
 //
 // Exported because the label is read for its OWN sake as well as for a name:
-// people's domain triage asks whether a label looks like a person rather than
+// contacts's domain triage asks whether a label looks like a contact rather than
 // a business, and it has to ask about the same label this derives a name from
 // or the two answers are about different strings.
 func RegistrableLabel(domain string) string {

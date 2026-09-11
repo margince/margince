@@ -5,8 +5,8 @@ package privacy
 
 // What retention does to the communication record of a LEAD.
 //
-// Separate from the person arm in retentionactions.go because the two reach
-// their rows by different columns — lead_id against person_id — and separate
+// Separate from the contact arm in retentionactions.go because the two reach
+// their rows by different columns — lead_id against contact_id — and separate
 // from erasure_leadtwins.go because that path is an Art. 17 erasure: it deletes
 // a suppression and keeps the refusal alive as an erasure_suppression hash,
 // where this one has no hash to write and must carry the objection forward on
@@ -77,7 +77,7 @@ func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UU
 // clearLeadCommunicationRecord removes what the engine recorded about a lead.
 //
 // Split out because two callers need it and a lead's rows are reached by
-// lead_id where a person's are reached by person_id — sharing
+// lead_id where a contact's are reached by contact_id — sharing
 // clearCommunicationRecord would mean one function branching on a subject kind
 // its callers already know.
 func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, address *string) error {
@@ -85,7 +85,7 @@ func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, a
 		`DELETE FROM communication_basis WHERE lead_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the lead's communication bases: %w", err)
 	}
-	// A SUPPRESSION IS DETACHED, NOT DELETED, exactly as the person arm detaches
+	// A SUPPRESSION IS DETACHED, NOT DELETED, exactly as the contact arm detaches
 	// it. An anonymized subject may lawfully come back — re-captured from the
 	// same mailbox — and an objection deleted with them means they come back
 	// mailable, having never withdrawn it. Deleting is what an ERASURE does,

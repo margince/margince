@@ -10,7 +10,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // not empty — when nothing is waiting, which the Empty story below pins
 // deliberately: a demo account with a clean queue never shows it, so this
 // is the only place a reader sees the chip stay gone. The panel groups
-// same-kind proposals (a deep read stages one per person it found), which the
+// same-kind proposals (a deep read stages one per contact it found), which the
 // Populated story pins with two `send_email` rows under one heading.
 
 const meta: Meta = {

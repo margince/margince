@@ -78,7 +78,7 @@ const fieldSubjectType = "subject_type"
 // about a contact requires the grant to edit that contact.
 var feedbackSubjects = map[string]bool{
 	"company": true,
-	"person":  true,
+	"contact": true,
 	"deal":    true,
 	"lead":    true,
 }
@@ -110,7 +110,7 @@ func ClaimKey(path string) string {
 //
 // What the human SAID is reached through AsOf and nowhere else, and the fields
 // carrying it are unexported for that reason. A decision is about the value
-// that was in front of the person who made it; a surface that could read it
+// that was in front of the contact who made it; a surface that could read it
 // without saying which version of the value it is asking about would serve a
 // correction over an answer the human never saw. That was a live defect on the
 // 360 page, and unexported fields are what stops it being written again.
@@ -176,7 +176,7 @@ type Decision struct {
 // one.
 //
 // Against the VALUE and not against its timestamp, because a timestamp is not
-// the identity of what was shown. person_profile_field.updated_at moves on
+// the identity of what was shown. contact_profile_field.updated_at moves on
 // every update of the row, so a re-capture that revises only the source or the
 // evidence bumps it while the sentence on screen is unchanged — and comparing
 // stamps would refuse a verdict about a value still in front of the reader. The
@@ -307,7 +307,7 @@ func admitVerdict(ctx context.Context, in RecordInput) error {
 	if !feedbackSubjects[in.SubjectType] {
 		return &values.ParseError{
 			Field: fieldSubjectType, Code: "invalid_subject_type",
-			Message: "a claim is about a company, person, deal or lead",
+			Message: "a claim is about a company, contact, deal or lead",
 		}
 	}
 	if strings.TrimSpace(in.ClaimPath) == "" {
@@ -325,7 +325,7 @@ func admitVerdict(ctx context.Context, in RecordInput) error {
 			Message: "a corrected verdict carries the human's value, and no other verdict does",
 		}
 	}
-	// Human-only, because the whole point of the row is that a PERSON decided:
+	// Human-only, because the whole point of the row is that a CONTACT decided:
 	// the column is hard-coded source = 'human', and a verdict an agent could
 	// write would let a model launder its own claim into the ledger that is
 	// supposed to overrule it.
@@ -412,7 +412,7 @@ func (s *FeedbackStore) VerdictsForTx(ctx context.Context, tx pgx.Tx, subjectTyp
 	if !feedbackSubjects[subjectType] {
 		return nil, &values.ParseError{
 			Field: fieldSubjectType, Code: "invalid_subject_type",
-			Message: "a claim is about a company, person, deal or lead",
+			Message: "a claim is about a company, contact, deal or lead",
 		}
 	}
 	// A read grant on the subject, matching the read this consult decorates.

@@ -35,7 +35,7 @@
 # ext_openchannel_outbound are the read objects over what arrived and what left
 # — separate, because who has been messaging a member and who that member has
 # been messaging are two questions an operator may want to answer for two
-# different sets of people.
+# different sets of contacts.
 #
 # THE SIGNING SECRET IS RETURNED BY EXACTLY ONE OPERATION, ONCE. Nothing else
 # here returns it, masked or otherwise: a credential a governed surface can read
@@ -68,10 +68,10 @@ actions:
           tier: auto_execute
           scope: write
           description: >-
-            Open the calling person's own inbound endpoint, so a remote system
+            Open the calling contact's own inbound endpoint, so a remote system
             can be pointed at this CRM. It always opens the endpoint of whoever
             is calling: there is no way to open somebody else's, and every
-            person gets their own address. Opening does not by itself let
+            contact gets their own address. Opening does not by itself let
             anything in — until a signing secret is minted, every request that
             arrives is refused, because the secret is the only thing that admits
             one, and the address in the URL is not a secret. Asking twice
@@ -124,11 +124,11 @@ actions:
                       type: string
                       description: >-
                         The declared edge, second-to-last segment of the public path
-                        senders post to. It is the same for every person here.
+                        senders post to. It is the same for every contact here.
                     ref:
                       type: string
                       description: >-
-                        This person's own address on that edge — the last segment of the
+                        This contact's own address on that edge — the last segment of the
                         public path, minted when the endpoint was opened and unchanged by
                         re-opening it. IT IS NOT A SECRET: it appears in access logs and
                         in every proxy between a sender and this installation, exactly as
@@ -173,10 +173,10 @@ actions:
           tier: auto_execute
           scope: read
           description: >-
-            Report whether the calling person has opened an inbound endpoint,
+            Report whether the calling contact has opened an inbound endpoint,
             and if so what address senders should be pointed at, whether it is
             currently accepting, where it talks back to, and how much has passed
-            through it. It reports that person's own endpoint only, and never
+            through it. It reports that contact's own endpoint only, and never
             returns the signing secret — a lost secret is re-minted rather than
             recovered.
         responses:
@@ -192,7 +192,7 @@ actions:
                     opened:
                       type: boolean
                       description: >-
-                        Whether this person has opened an endpoint. False is the ordinary
+                        Whether this contact has opened an endpoint. False is the ordinary
                         state before anyone opens one, not an error.
                     endpoint:
                       type: object
@@ -250,7 +250,7 @@ actions:
           # own row.
           subject: { arg: endpoint_id, table: ext_openchannel_endpoint }
           description: >-
-            Mint the signing secret for the calling person's own inbound
+            Mint the signing secret for the calling contact's own inbound
             endpoint and return it once. The same operation opens and rotates,
             because after either every secret that endpoint previously issued
             stops working: any sender already configured has to be given the new
@@ -275,7 +275,7 @@ actions:
                     type: string
                     format: uuid
                     description: >-
-                      The calling person's own endpoint id, as returned by
+                      The calling contact's own endpoint id, as returned by
                       opening or reading it. Any other id is refused as not
                       found.
         responses:
@@ -338,7 +338,7 @@ actions:
           tier: auto_execute
           scope: write
           description: >-
-            Pause or resume the calling person's own inbound endpoint. A paused
+            Pause or resume the calling contact's own inbound endpoint. A paused
             endpoint refuses everything that arrives while keeping its owner and
             its signing secret, so resuming it puts every already-configured
             sender straight back to work — nothing has to be re-issued. Requests
@@ -413,7 +413,7 @@ actions:
           subject: { arg: endpoint_id, table: ext_openchannel_endpoint }
           description: >-
             Record the https address this connector should post to when it has
-            something to send for the calling person. It must be https and name
+            something to send for the calling contact. It must be https and name
             a host rather than an address literal, and it may not carry
             credentials — those would ride every request. Registering an address
             sends nothing by itself.
@@ -430,7 +430,7 @@ actions:
                     type: string
                     format: uuid
                     description: >-
-                      The calling person's own endpoint id, as returned by
+                      The calling contact's own endpoint id, as returned by
                       opening or reading it. Any other id is refused as not
                       found.
                   url:
@@ -487,10 +487,10 @@ actions:
           tier: auto_execute
           scope: read
           description: >-
-            List the most recent requests that arrived on the calling person's
+            List the most recent requests that arrived on the calling contact's
             own inbound endpoint, newest first, and what became of each: whether
             it is still waiting, how many times it has been attempted, and why
-            it stopped. It reports that person's own endpoint only. The payloads
+            it stopped. It reports that contact's own endpoint only. The payloads
             themselves are deliberately not returned — only their size — because
             they are bytes an anonymous remote party chose.
         responses:
@@ -571,9 +571,9 @@ actions:
           scope: read
           description: >-
             List the most recent messages this connector posted to the calling
-            person's own registered address, newest first, and what became of
+            contact's own registered address, newest first, and what became of
             each: accepted, refused by the receiving system, or left with no
-            answer ever coming back. It reports that person's own endpoint only.
+            answer ever coming back. It reports that contact's own endpoint only.
             The message bodies are deliberately not repeated here — they are on
             the CRM records the messages were sent from.
         responses:

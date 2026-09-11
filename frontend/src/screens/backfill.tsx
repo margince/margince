@@ -341,12 +341,12 @@ function EstimateCard({
 // it is the plain number, because a figure the server has finished with has
 // nothing left to count towards.
 const CAPTURE_STATS: {
-  key: "captured" | "people_created" | "companies_created";
+  key: "captured" | "contacts_created" | "companies_created";
   label: MessageKey;
   icon: typeof Mail;
 }[] = [
   { key: "captured", label: "backfill.statEmails", icon: Mail },
-  { key: "people_created", label: "backfill.statContacts", icon: Users },
+  { key: "contacts_created", label: "backfill.statContacts", icon: Users },
   {
     key: "companies_created",
     label: "backfill.statCompanies",

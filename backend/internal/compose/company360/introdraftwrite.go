@@ -76,18 +76,18 @@ This is a favour asked of a teammate, not a message to a customer. Write the way
 
 Rules you must not break:
 - Address the colleague by name: open with their first name, then the ask.
-- Say who you want to meet and why, in one sentence each, and name the person you want to meet in full.
+- Say who you want to meet and why, in one sentence each, and name the contact you want to meet in full.
 - Do not invent anything about the relationship. You are told how warm it is and when they last spoke; say no more than that.
 - Do not write the introduction itself, and do not write to the contact. The message is TO the colleague.
-- Write a short subject line in the "subject" field, naming the person you want to meet.
+- Write a short subject line in the "subject" field, naming the contact you want to meet.
 - No subject line inside the body.`
 
 // introRequest builds the model call.
 //
 // The facts are minted by this server — names read out of records, a band this
 // package computed — but they are still somebody's typed text: a contact's name
-// and a deal's name were both entered by a person, and on a shared account that
-// person may not be us. So they go inside the fence like everything else that
+// and a deal's name were both entered by a contact, and on a shared account that
+// contact may not be us. So they go inside the fence like everything else that
 // came from a human.
 func introRequest(facts introFacts) model.Request {
 	fence := promptfence.New()
@@ -107,7 +107,7 @@ func introRequest(facts introFacts) model.Request {
 		payload = []byte("{}")
 	}
 	return model.Request{
-		// The voice and the language rules, because this is PROSE a person
+		// The voice and the language rules, because this is PROSE a contact
 		// sends under their own name — the two things a reader would notice
 		// first if they were missing, and the two the shared rules already
 		// spell for every other drafting surface.

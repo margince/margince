@@ -270,26 +270,26 @@ func ReleaseEveryImportTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) e
 	return nil
 }
 
-// SelectPurgeablePeopleTx finds the people a purge may anonymise: those this
+// SelectPurgeableContactsTx finds the contacts a purge may anonymise: those this
 // seat's capture minted from the mail being destroyed, whom nothing else holds.
 //
 // "Nothing else holds them" is the whole rule, and it is deliberately
-// conservative. A person the owner later linked to a deal, gave a second
+// conservative. A contact the owner later linked to a deal, gave a second
 // address outside the rule, or that a colleague's own mailbox also produced is
 // somebody the CRM has an independent reason to know — destroying that record
 // to satisfy one seat's mailbox rule takes away work somebody did.
 //
 // Anonymised rather than deleted, through the retention module's own
-// person/anonymize action: the row survives with its identifying columns gone,
+// contact/anonymize action: the row survives with its identifying columns gone,
 // because deleting it would cascade into records that legitimately reference it
 // and leave a colleague's deal pointing at nothing.
-func SelectPurgeablePeopleTx(
+func SelectPurgeableContactsTx(
 	ctx context.Context, tx pgx.Tx, user ids.UUID, kind, value string,
 ) ([]ids.UUID, error) {
 	if user == ids.Nil || value == "" {
 		return nil, nil
 	}
-	// The rule is applied to the PERSON's addresses here rather than to an
+	// The rule is applied to the CONTACT's addresses here rather than to an
 	// activity's, so the two arms below read the same column and the match is
 	// written once for both.
 	match, args := purgeMatchClause(user, kind, value)
@@ -301,20 +301,20 @@ func SelectPurgeablePeopleTx(
 	//   a second live address outside the rule — the contact is more than what
 	//     the rule describes;
 	//   a deal — they are a stakeholder on one, or their mail is filed against
-	//     one, either way somebody did work against this person;
+	//     one, either way somebody did work against this contact;
 	//   another seat's import of their mail — a colleague knows them
 	//     independently of this mailbox;
 	//   no import of this seat's own — then this seat's mail is not why the
 	//     record exists, and the rule has no standing over it.
 	//
 	// "capture minted them" is asked through the import row, not through
-	// person.source: source carries the PROVIDER name (gmail, outlook), so a
+	// contact.source: source carries the PROVIDER name (gmail, outlook), so a
 	// filter on the literal 'capture' would match nothing and silently
 	// anonymise no one.
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT p.id
-		  FROM person p
-		  JOIN person_email pe ON pe.person_id = p.id AND pe.archived_at IS NULL
+		  FROM contact p
+		  JOIN contact_email pe ON pe.contact_id = p.id AND pe.archived_at IS NULL
 		 WHERE `+match+`
 		   AND p.archived_at IS NULL
 		   AND EXISTS (
@@ -322,18 +322,18 @@ func SelectPurgeablePeopleTx(
 		       JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
 		      WHERE lower(a.counterparty_email) = lower(pe.email))
 		   AND NOT EXISTS (
-		     SELECT 1 FROM person_email other
-		      WHERE other.person_id = p.id AND other.archived_at IS NULL
+		     SELECT 1 FROM contact_email other
+		      WHERE other.contact_id = p.id AND other.archived_at IS NULL
 		        AND NOT (`+outside+`))
 		   AND NOT EXISTS (
 		     SELECT 1 FROM relationship r
-		      WHERE r.person_id = p.id AND r.kind = 'deal_stakeholder'
+		      WHERE r.contact_id = p.id AND r.kind = 'deal_stakeholder'
 		        AND r.archived_at IS NULL)
 		   AND NOT EXISTS (
 		     SELECT 1 FROM activity_link pl
 		       JOIN activity_link dl ON dl.activity_id = pl.activity_id
 		                            AND dl.entity_type = 'deal'
-		      WHERE pl.person_id = p.id AND pl.entity_type = 'person')
+		      WHERE pl.contact_id = p.id AND pl.entity_type = 'contact')
 		   AND NOT EXISTS (
 		     SELECT 1 FROM capture_import mine
 		       JOIN activity ma ON ma.id = mine.activity_id
@@ -341,21 +341,21 @@ func SelectPurgeablePeopleTx(
 		        AND mine.user_id <> $1)
 		 ORDER BY p.id`, args...)
 	if err != nil {
-		return nil, fmt.Errorf("capture: selecting the people a purge may anonymise: %w", err)
+		return nil, fmt.Errorf("capture: selecting the contacts a purge may anonymise: %w", err)
 	}
 	defer rows.Close()
-	var people []ids.UUID
+	var contacts []ids.UUID
 	for rows.Next() {
 		var id ids.UUID
 		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("capture: selecting the people a purge may anonymise: %w", err)
+			return nil, fmt.Errorf("capture: selecting the contacts a purge may anonymise: %w", err)
 		}
-		people = append(people, id)
+		contacts = append(contacts, id)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("capture: selecting the people a purge may anonymise: %w", err)
+		return nil, fmt.Errorf("capture: selecting the contacts a purge may anonymise: %w", err)
 	}
-	return people, nil
+	return contacts, nil
 }
 
 // SelectWorkspacePurgeSubjectTx finds what a purge of one WORKSPACE rule would

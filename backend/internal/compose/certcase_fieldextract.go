@@ -151,7 +151,7 @@ func (c *fieldExtractCase) Run(ctx context.Context, completer aitasks.Completer)
 //
 // Nothing surviving is OutcomeInvalid and NOT an abstention, alone among the
 // grounding sites. Everywhere else a reply that grounds nothing is a completed
-// piece of work — the deep read carries on, the enrichment pass picks the person
+// piece of work — the deep read carries on, the enrichment pass picks the contact
 // up next cycle — but here extractGrounded turns an empty gate result into the
 // unreadable-source error a human is shown, so producing nothing IS this path's
 // failure and must not wear the word for a right answer.

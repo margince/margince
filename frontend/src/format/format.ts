@@ -482,7 +482,7 @@ export function formatDateAbbrev(
  * reader cannot tell which year is meant from the context.
  *
  * Four screens carried a byte-identical private copy of this before it lived
- * here, each with its own `undefined` locale — so the same person record
+ * here, each with its own `undefined` locale — so the same contact record
  * printed its dates in the browser's guessed locale on four surfaces and in
  * the reader's chosen one nowhere.
  */
@@ -584,7 +584,7 @@ export function calendarDaysBetween(from: Date, to: Date): number {
 }
 
 /**
- * relativeDays reads a timestamp the way a person says it: today, yesterday,
+ * relativeDays reads a timestamp the way a contact says it: today, yesterday,
  * or "N days".
  *
  * `never` is reserved for a read that HAPPENED and found nothing — the caller
@@ -592,7 +592,7 @@ export function calendarDaysBetween(from: Date, to: Date): number {
  * section is not "never"; it is unknown, and its card says so.
  *
  * It lives here because three screens wanted it and each wrote its own: two
- * private copies in personstrip.tsx and personrail.tsx, byte-equivalent and
+ * private copies in contactstrip.tsx and contactrail.tsx, byte-equivalent and
  * both counting milliseconds. format.ts's own INTL_LOCALE comment had been
  * pointing at this gap since it was written — "exported because a relative-time
  * formatter needs the same mapping".
@@ -604,21 +604,21 @@ export function relativeDays(
   now: Date = new Date(),
 ): string {
   if (!at) {
-    return t("person.strip.never");
+    return t("contact.strip.never");
   }
   const days = calendarDaysBetween(new Date(at), now);
   if (days <= 0) {
-    return t("person.strip.today");
+    return t("contact.strip.today");
   }
   if (days === 1) {
-    return t("person.strip.yesterday");
+    return t("contact.strip.yesterday");
   }
   // The count is a MAGNITUDE, so it is grouped in the reader's own notation.
   // Handed to `t` as a raw number it reached the catalog sentence through
-  // string coercion, which groups for nobody: a person last written to 1200
+  // string coercion, which groups for nobody: a contact last written to 1200
   // days ago read "1200 days" in a German sentence that spells every other
   // figure on the page "1.200".
-  return t("person.strip.days", { count: formatNumber(days, locale) });
+  return t("contact.strip.days", { count: formatNumber(days, locale) });
 }
 
 // Idle/SLA spans display as ABSOLUTE durations (no naive calendar diff —

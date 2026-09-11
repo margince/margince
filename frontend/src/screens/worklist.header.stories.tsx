@@ -101,7 +101,7 @@ export const BothDials: Story = {
 };
 
 /** A colleague's day. The named owner outranks the scope word, so the switch is
- *  gone and the picker stands alone with the person it chose on its face. */
+ *  gone and the picker stands alone with the contact it chose on its face. */
 export const AColleaguesDay: Story = {
   render: () => frame(["mine", "unassigned", "team", "all"], LENA),
 };

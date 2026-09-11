@@ -22,7 +22,7 @@ const VIEWER = "u-introducer";
 function ask(over: Record<string, unknown> = {}) {
   return {
     id: "ir-1",
-    person_id: "p-1",
+    contact_id: "p-1",
     requester_user_id: "u-requester",
     introducer_user_id: VIEWER,
     route_type: "direct",
@@ -94,7 +94,7 @@ function renderCard() {
   });
   return render(
     <QueryClientProvider client={client}>
-      <IntroAsksPanel personId="p-1" personName="Dana" />
+      <IntroAsksPanel contactId="p-1" contactName="Dana" />
     </QueryClientProvider>,
   );
 }
@@ -109,10 +109,10 @@ it("renders a name-drop as a name-drop and never as an introduction", async () =
   renderCard();
 
   await waitFor(() => {
-    expect(screen.getByText(en["person.intro.stateNameDropped"])).toBeTruthy();
+    expect(screen.getByText(en["contact.intro.stateNameDropped"])).toBeTruthy();
   });
   // The one sentence this card must never show for a name-drop.
-  expect(screen.queryByText(en["person.intro.stateIntroduced"])).toBeNull();
+  expect(screen.queryByText(en["contact.intro.stateIntroduced"])).toBeNull();
 });
 
 it("offers the answer only to the colleague being asked", async () => {
@@ -120,7 +120,7 @@ it("offers the answer only to the colleague being asked", async () => {
   renderCard();
 
   await waitFor(() => {
-    expect(screen.getByText(en["person.intro.answerAction"])).toBeTruthy();
+    expect(screen.getByText(en["contact.intro.answerAction"])).toBeTruthy();
   });
 });
 
@@ -132,9 +132,9 @@ it("shows the requester the state without an answer to give", async () => {
   renderCard();
 
   await waitFor(() => {
-    expect(screen.getByText(en["person.intro.stateRequested"])).toBeTruthy();
+    expect(screen.getByText(en["contact.intro.stateRequested"])).toBeTruthy();
   });
-  expect(screen.queryByText(en["person.intro.answerAction"])).toBeNull();
+  expect(screen.queryByText(en["contact.intro.answerAction"])).toBeNull();
 });
 
 it("renders nothing at all when nobody has asked", async () => {
@@ -144,7 +144,7 @@ it("renders nothing at all when nobody has asked", async () => {
   await waitFor(() => {
     expect(container.querySelector(".pn-asks")).toBeNull();
   });
-  expect(screen.queryByText(en["person.intro.asksTitle"])).toBeNull();
+  expect(screen.queryByText(en["contact.intro.asksTitle"])).toBeNull();
 });
 
 // The outcome (mark introduced / name used) and withdraw actions on an
@@ -156,7 +156,7 @@ it("offers either party the handshake once the colleague has accepted", async ()
   renderCard();
   await waitFor(() => {
     expect(
-      screen.getByText(en["person.intro.completeIntroducedAction"]),
+      screen.getByText(en["contact.intro.completeIntroducedAction"]),
     ).toBeTruthy();
   });
 
@@ -165,7 +165,7 @@ it("offers either party the handshake once the colleague has accepted", async ()
   renderCard();
   await waitFor(() => {
     expect(
-      screen.getByText(en["person.intro.completeIntroducedAction"]),
+      screen.getByText(en["contact.intro.completeIntroducedAction"]),
     ).toBeTruthy();
   });
 });
@@ -175,7 +175,7 @@ it("offers only the requester the name-drop, since only they can have used it", 
   renderCard();
   await waitFor(() => {
     expect(
-      screen.getByText(en["person.intro.completeNameDroppedAction"]),
+      screen.getByText(en["contact.intro.completeNameDroppedAction"]),
     ).toBeTruthy();
   });
 
@@ -184,11 +184,11 @@ it("offers only the requester the name-drop, since only they can have used it", 
   renderCard();
   await waitFor(() => {
     expect(
-      screen.getByText(en["person.intro.stateNameDropApproved"]),
+      screen.getByText(en["contact.intro.stateNameDropApproved"]),
     ).toBeTruthy();
   });
   expect(
-    screen.queryByText(en["person.intro.completeNameDroppedAction"]),
+    screen.queryByText(en["contact.intro.completeNameDroppedAction"]),
   ).toBeNull();
 });
 
@@ -198,7 +198,7 @@ it("lets only the requester withdraw a still-open ask, from any open status", as
     mockFetch([ask({ status })], "u-requester");
     renderCard();
     await waitFor(() => {
-      expect(screen.getByText(en["person.intro.withdrawAction"])).toBeTruthy();
+      expect(screen.getByText(en["contact.intro.withdrawAction"])).toBeTruthy();
     });
   }
 
@@ -209,17 +209,17 @@ it("lets only the requester withdraw a still-open ask, from any open status", as
   renderCard();
   await waitFor(() => {
     expect(
-      screen.getByText(en["person.intro.completeIntroducedAction"]),
+      screen.getByText(en["contact.intro.completeIntroducedAction"]),
     ).toBeTruthy();
   });
-  expect(screen.queryByText(en["person.intro.withdrawAction"])).toBeNull();
+  expect(screen.queryByText(en["contact.intro.withdrawAction"])).toBeNull();
 });
 
 const SETTLED_STATE_LABEL = {
-  declined: en["person.intro.stateDeclined"],
-  introduced: en["person.intro.stateIntroduced"],
-  name_dropped: en["person.intro.stateNameDropped"],
-  expired: en["person.intro.stateExpired"],
+  declined: en["contact.intro.stateDeclined"],
+  introduced: en["contact.intro.stateIntroduced"],
+  name_dropped: en["contact.intro.stateNameDropped"],
+  expired: en["contact.intro.stateExpired"],
 } as const;
 
 it("offers no withdraw once the ask is settled — declined, introduced, or expired", async () => {
@@ -232,7 +232,7 @@ it("offers no withdraw once the ask is settled — declined, introduced, or expi
     await waitFor(() => {
       expect(screen.getByText(SETTLED_STATE_LABEL[status])).toBeTruthy();
     });
-    expect(screen.queryByText(en["person.intro.withdrawAction"])).toBeNull();
+    expect(screen.queryByText(en["contact.intro.withdrawAction"])).toBeNull();
   }
 });
 
@@ -240,7 +240,7 @@ it("withdraws the ask the Withdraw button names, sending it to the cancel endpoi
   const calls: Call[] = [];
   mockFetch([ask({ status: "requested" })], "u-requester", calls);
   renderCard();
-  const withdraw = await screen.findByText(en["person.intro.withdrawAction"]);
+  const withdraw = await screen.findByText(en["contact.intro.withdrawAction"]);
 
   const user = userEvent.setup();
   await user.click(withdraw);
@@ -261,7 +261,7 @@ it("records the handshake the Mark introduced button names, sending it to the co
   mockFetch([ask({ status: "accepted" })], VIEWER, calls);
   renderCard();
   const markIntroduced = await screen.findByText(
-    en["person.intro.completeIntroducedAction"],
+    en["contact.intro.completeIntroducedAction"],
   );
 
   const user = userEvent.setup();
@@ -336,25 +336,25 @@ it("keeps a failed outcome on the row it belongs to, not the next row acted on",
   await screen.findByText("row one");
   await user.click(
     within(rowFor("row one")).getByText(
-      en["person.intro.completeIntroducedAction"],
+      en["contact.intro.completeIntroducedAction"],
     ),
   );
   await waitFor(() => {
     expect(
-      within(rowFor("row one")).getByText(en["person.intro.completeFailed"]),
+      within(rowFor("row one")).getByText(en["contact.intro.completeFailed"]),
     ).toBeTruthy();
   });
 
   await user.click(
-    within(rowFor("row two")).getByText(en["person.intro.withdrawAction"]),
+    within(rowFor("row two")).getByText(en["contact.intro.withdrawAction"]),
   );
   await waitFor(() => {
     expect(
-      within(rowFor("row two")).queryByText(en["person.intro.completeFailed"]),
+      within(rowFor("row two")).queryByText(en["contact.intro.completeFailed"]),
     ).toBeNull();
   });
   // ir-1's own failure is still exactly where it happened.
   expect(
-    within(rowFor("row one")).getByText(en["person.intro.completeFailed"]),
+    within(rowFor("row one")).getByText(en["contact.intro.completeFailed"]),
   ).toBeTruthy();
 });

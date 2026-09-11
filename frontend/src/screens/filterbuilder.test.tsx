@@ -92,7 +92,7 @@ function Harness({ start }: Readonly<{ start: Node }>) {
   );
 }
 
-/** The seats a record picker offers. Named, so an assertion reads as a person. */
+/** The seats a record picker offers. Named, so an assertion reads as a contact. */
 function stubSeats() {
   vi.stubGlobal(
     "fetch",

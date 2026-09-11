@@ -1,7 +1,7 @@
 # Approvals
 
 When an agent wants to do something it is not allowed to do on its own, it does
-not do it. It writes the intention down and puts it in front of a person. That
+not do it. It writes the intention down and puts it in front of a contact. That
 list of written-down intentions is the **approval inbox**.
 
 This page is about what lands there and how you answer it.
@@ -64,7 +64,7 @@ correct a value — and *the edited version is what executes*. Not the original.
 This is a real edit, not a comment.
 
 **Reject.** Nothing commits. No record changes. You can give a reason, and the
-reason is shared with the person the action was staged for, so a rejection is
+reason is shared with the contact the action was staged for, so a rejection is
 not a silent dead end.
 
 A rejection is a decision, not a free action. It demands exactly the same
@@ -85,7 +85,7 @@ out-of-scope record does.
 **Nobody releases their own proposal.** An agent may not approve a card its own
 credential staged. It may still reject it.
 
-A person's own direct action needs no approval — a human doing the thing
+A contact's own direct action needs no approval — a human doing the thing
 themselves *is* the confirmation.
 
 ## Editing, versions and clashes
@@ -115,7 +115,7 @@ against today's records. It should be proposed again, against the state it can
 actually see.
 
 **One kind never expires: a stopped scheduled message.** The message itself is
-being held and nothing else will reap it, so the card waits until a person
+being held and nothing else will reap it, so the card waits until a contact
 answers, however long that takes. A card that expired here would leave a
 message waiting with nothing asking about it — which is exactly the silent stop
 the card exists to prevent.
@@ -147,7 +147,7 @@ The most common way a card reaches your inbox without an agent being involved.
 Every step here is one you take yourself.
 
 1. Open the **contact** who was in the meeting — not the company: a meeting is
-   with a person, and a company page will ask you who was there before it can
+   with a contact, and a company page will ask you who was there before it can
    log one.
 2. **Log activity**, and choose **Meeting**.
 3. Give it a subject you will recognise later, then tick **This text is a

@@ -22,7 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -313,7 +313,7 @@ func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 	companyID := seedAcmeCompanyWithHumanIndustry(admin, t, e)
 
 	svc := approvals.NewService(e.DB())
-	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, people.NewStore(e.DB())))
+	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, contacts.NewStore(e.DB())))
 	engine := &coldStartEngine{extract: evidenceExtractor{fetch: acmePage, brain: brain}, approvals: svc}
 
 	proposal, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), fromURL("https://www.acme.example/about"))

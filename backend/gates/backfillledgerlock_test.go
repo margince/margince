@@ -8,7 +8,7 @@ package gates
 // A transaction that writes the backfill creation ledger locks the run row
 // first.
 //
-// The run's `people_created` / `companies_created` are a PROJECTION over
+// The run's `contacts_created` / `companies_created` are a PROJECTION over
 // `capture_backfill_creation`, refreshed by counting it. At READ COMMITTED two
 // recomputes running at once each count a snapshot without the other's
 // uncommitted rows, so the later committer can write a total missing the

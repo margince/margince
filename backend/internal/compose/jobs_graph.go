@@ -18,8 +18,8 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // addGraphJobs registers the graph workers and returns their periodic
@@ -39,10 +39,10 @@ func addGraphJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log
 	// do, so it carries the same audience derivation: a meeting it files is a
 	// meeting whose no-record hold has stopped being true.
 	links := newLinkReconcileWorker(pool,
-		people.NewStore(InstallationDB(pool)).
+		contacts.NewStore(InstallationDB(pool)).
 			WithAudienceRecompute(activities.RecomputeAudienceTx), log)
 	addDeclaredWorker[LinkReconcileArgs](reg, links)
-	rematch := newLinkedInRematchWorker(pool, people.NewStore(InstallationDB(pool)), identity.NewService(pool), log)
+	rematch := newLinkedInRematchWorker(pool, contacts.NewStore(InstallationDB(pool)), identity.NewService(pool), log)
 	addDeclaredWorker[LinkedInRematchArgs](reg, rematch)
 	return slices.Concat(
 		periodicFor(cfg, ParticipantBackfillArgs{}),

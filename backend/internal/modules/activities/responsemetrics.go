@@ -68,7 +68,7 @@ type ResponseMetrics struct {
 //
 // The PERCENTILE is the caller's too, and there are exactly two askers. The
 // metrics window takes the median, which is what "how fast do we answer" means
-// to a person reading a number. The waiting horizon takes a high one, because
+// to a reader reading a number. The waiting horizon takes a high one, because
 // its question is the opposite end: the point past which this installation
 // essentially does not answer at all (waitinghorizon.go). Shared rather than
 // copied because what must not drift is the DEFINITION of an answered sales
@@ -131,7 +131,7 @@ const firstResponseSQL = `
 	   AND EXISTS (
 	         SELECT 1 FROM activity_link sales
 	          WHERE sales.activity_id = inbound.id
-	            AND (sales.person_id IS NOT NULL
+	            AND (sales.contact_id IS NOT NULL
 	              OR sales.company_id IS NOT NULL
 	              OR EXISTS (SELECT 1 FROM deal d
 	                          WHERE d.id = sales.deal_id AND %[2]s)

@@ -84,12 +84,12 @@ func (s stubTags) TaggableTypes() []string { return s.taggable }
 // proves the composed wiring serves the store's list; this is the module-local
 // half, that taggingSchema actually reads its argument.
 func TestTheTaggingSchemasAdvertiseTheSeamsVocabulary(t *testing.T) {
-	seam := stubTags{taggable: []string{"person", "project"}}
+	seam := stubTags{taggable: []string{"contact", "project"}}
 	for name, raw := range map[string]json.RawMessage{
 		"apply_tag":  applyTag{tags: seam}.Spec().InputSchema,
 		"remove_tag": removeTag{tags: seam}.Spec().InputSchema,
 	} {
-		if !bytes.Contains(raw, []byte(`"enum":["person","project"]`)) {
+		if !bytes.Contains(raw, []byte(`"enum":["contact","project"]`)) {
 			t.Errorf("%s's record_type enum does not carry the seam's vocabulary: %s", name, raw)
 		}
 	}
@@ -135,8 +135,8 @@ func (s stubTags) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
 		name = given
 	}
 	return TagDetail{
-		Tag:    Tag{TagID: tagID, Name: name, Archived: s.retired[tagID]},
-		People: 2, Companies: 1, Deals: 0,
+		Tag:      Tag{TagID: tagID, Name: name, Archived: s.retired[tagID]},
+		Contacts: 2, Companies: 1, Deals: 0,
 	}, nil
 }
 
@@ -156,7 +156,7 @@ func (s stubTags) RecordTags(_ context.Context, _ string, _ ids.UUID) (RecordTag
 	}}}, nil
 }
 
-func (s stubTags) RecordTagTypes() []string { return []string{"person", "company", "deal"} }
+func (s stubTags) RecordTagTypes() []string { return []string{"contact", "company", "deal"} }
 
 func (s stubTags) ResolveTag(_ context.Context, name string) (ids.UUID, error) {
 	if s.ensured != nil {
@@ -206,7 +206,7 @@ func TestApplyAndRemoveReachTheSameTaggingBothWays(t *testing.T) {
 }
 
 // A NAME rather than an id is the capture flow's shape: "add tag: Champion" is
-// one act to the person asking. Making them call a lookup verb first, only to
+// one act to the contact asking. Making them call a lookup verb first, only to
 // hand its answer straight back, is a second call that exists for the
 // surface's convenience rather than theirs.
 func TestApplyTagTakesANameAndResolvesTheExistingWord(t *testing.T) {
@@ -311,7 +311,7 @@ func (r refusingTaggable) RecordTags(_ context.Context, _ string, _ ids.UUID) (R
 }
 
 func (r refusingTaggable) RecordTagTypes() []string {
-	return []string{"person", "company", "deal"}
+	return []string{"contact", "company", "deal"}
 }
 
 func (r refusingTaggable) ResolveTag(_ context.Context, name string) (ids.UUID, error) {

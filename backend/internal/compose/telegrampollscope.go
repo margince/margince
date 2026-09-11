@@ -43,8 +43,8 @@ type telegramPollRefusal struct {
 // Classifying HERE rather than in the worker that normalizes the payload later is
 // load-bearing, not tidiness. A group chat refused downstream has already left a
 // verbatim raw_capture row holding the sender's numeric id, handle, names and
-// full message text — and no Person, erasure, SAR or retention lane can reach it,
-// because every one of them drives off person_channel_identity, which only a
+// full message text — and no Contact, erasure, SAR or retention lane can reach it,
+// because every one of them drives off contact_channel_identity, which only a
 // captured record ever creates. Refusing before the insert is the only point at
 // which that data can be kept out.
 //
@@ -100,7 +100,7 @@ func polledBatchAccounts(updates []telegramPolledUpdate) []string {
 // caller took, never on its own: a bare probe-then-insert would let a whole
 // erasure commit between the two statements, and the row written afterwards would
 // hold the erased human's id, handle, names and message text with nothing left to
-// reach it by — the suppression guarantees person_channel_identity is never
+// reach it by — the suppression guarantees contact_channel_identity is never
 // recreated, and every lane that could find that row drives off exactly those
 // rows.
 func telegramAnySubjectSuppressed(ctx context.Context, tx pgx.Tx, accounts []string) (bool, error) {

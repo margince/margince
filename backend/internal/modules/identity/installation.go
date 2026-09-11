@@ -272,7 +272,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	actorType, actorID := "system", "installation-bootstrap"
 	if origin == originClaimed {
 		// 'human' is the vocabulary the audit surface already speaks
-		// (human|agent|connector|system); a claim is a person acting, so it
+		// (human|agent|connector|system); a claim is a contact acting, so it
 		// takes the existing word rather than widening the enum for one row.
 		actorType, actorID = "human", userID.String()
 	}

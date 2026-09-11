@@ -257,7 +257,7 @@ func TestAUnitCannotOpenATransactionWhileItIsIngesting(t *testing.T) {
 // A role that composes no capture pipeline has nowhere to put a record, and
 // says so by name. The alternative this refusal exists against is worse than an
 // error: a sink assembled at the call from the pool alone would compile, run,
-// land activities and silently create no people.
+// land activities and silently create no contacts.
 func TestARoleThatComposedNoCaptureRefusesByName(t *testing.T) {
 	composeIngressFor(t, "probe-unit", extension.IngressSource{
 		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
@@ -407,7 +407,7 @@ func TestTheConversionCarriesAWholeRecord(t *testing.T) {
 
 // The refusal classes are a MAPPING, and the property that matters is what does
 // not survive it: capture's errors carry table names, constraint names and SQL
-// state, and a unit is other people's code.
+// state, and a unit is other contacts's code.
 func TestIngressMapsRefusalsAndLeaksNoDetail(t *testing.T) {
 	rt := ingestingRuntime(t)
 	for name, probe := range map[string]struct {

@@ -50,7 +50,7 @@ import {
   useSorMode,
   useViewerId,
 } from "./common";
-import { MoneyPane, PeopleChips, ThreadFold } from "./company/glance";
+import { ContactsChips, MoneyPane, ThreadFold } from "./company/glance";
 import {
   type Company360Result,
   DealsCard,
@@ -70,6 +70,8 @@ import {
   openCitation,
 } from "./companycitations";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
+import { CompanyContactsList } from "./companycontacts/contacts";
+import { CoverageBand } from "./companycontacts/summary";
 import { CompanyContractsCard } from "./companycontracts";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { DossierPanel } from "./companydossier";
@@ -96,8 +98,6 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
-import { CompanyPeopleList } from "./companypeople/contacts";
-import { CoverageBand } from "./companypeople/summary";
 import { CompanyProfileForm } from "./companyprofiletab";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { wholeCount } from "./companyrailshared";
@@ -125,7 +125,7 @@ import {
   useOwnerChips,
   useTagChips,
 } from "./listquery";
-import { PersonMeetingBrief } from "./meetingbrief";
+import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { PartnerTab } from "./partners";
 import { RecordSpine } from "./record360";
@@ -334,7 +334,7 @@ export function CompaniesScreen() {
               ) : null,
           },
           {
-            // AC-companies-2/3: how many people work here that this reader may
+            // AC-companies-2/3: how many contacts work here that this reader may
             // see — the server counts under the caller's row scope. Zero is a
             // number: a reader must tell "no contacts" from "not shown".
             key: "contacts",
@@ -746,7 +746,7 @@ function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
     >
       <PanelBody>
         {/* Two sentences, so the head's one line would truncate the half that
-            says nothing is written until a person accepts it. */}
+            says nothing is written until a contact accepts it. */}
         <p className="t-sub">{t("deepread.sub")}</p>
         {start.isError && (
           <p className="t-caption" style={{ color: "var(--dangerText)" }}>
@@ -869,7 +869,7 @@ function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
 // PROFILE_FIELD_LABELS names the profile fields as statements ABOUT a company.
 //
 // The same fields are asked of the reader during onboarding, where the second
-// person is right — "What do you sell?" is a question to us. On a prospect's
+// contact is right — "What do you sell?" is a question to us. On a prospect's
 // record that framing put the reader in the wrong chair: the page appeared to
 // be interviewing us about a company we are trying to sell to.
 const PROFILE_FIELD_LABELS: Record<string, MessageKey> = {
@@ -904,7 +904,7 @@ export function profileFieldLabel(
   return key ? t(key) : coldFieldLabel(field, t);
 }
 
-// Overview · People · Deals · Tasks · History · Documents · Profile, the
+// Overview · Contacts · Deals · Tasks · History · Documents · Profile, the
 // mockup's strip. `timeline` IS the mockup's History — it presents as
 // "Verlauf"/"History" and carries the account's chronology; the id stays as
 // it is because it is in every saved URL. The audit spine is still not a tab:
@@ -953,7 +953,7 @@ function companyTabCounts(
     return {};
   }
   const counts: Partial<Record<CompanyTab, number>> = {};
-  const contacts = wholeCount(view.people);
+  const contacts = wholeCount(view.contacts);
   if (contacts != null) {
     counts.contacts = contacts;
   }
@@ -1242,7 +1242,7 @@ function useChronologySlots({
   const records = recordNamesIn(view);
   const colleagueName = (id: string) =>
     colleagues.get(id) ??
-    records("person", id) ??
+    records("contact", id) ??
     records("deal", id) ??
     records("company", id);
   const { filter, filters, setFilters, openCut, kinds } = useChronologyCut(
@@ -1439,7 +1439,7 @@ function useCitedReceipt() {
 }
 
 // What the composer is anchored on. A reply answers the message it names; an
-// account-started message names the person it is TO, because it has no thread
+// account-started message names the contact it is TO, because it has no thread
 // to inherit a recipient from.
 type ComposeAnchor =
   | { kind: "reply"; id: string }
@@ -1467,7 +1467,7 @@ function AccountComposer({
   return (
     <ComposeModal
       activityId={reply ? anchor.id : undefined}
-      personId={reply ? undefined : anchor.id}
+      contactId={reply ? undefined : anchor.id}
       entityType="company"
       entityId={companyId}
       kind="email"
@@ -1521,12 +1521,12 @@ function CompanyPage({
   // an id nothing on the page carries.
   const archivedReasonId = verbRefusal ? archivedParagraphId : undefined;
   // ONE composer, opened two ways. Anchored on a timeline message it answers
-  // that message; anchored on a person it starts a new one and grounds on the
+  // that message; anchored on a contact it starts a new one and grounds on the
   // account instead of a thread (ADR-0087 §1). Two pieces of state would let
   // both open at once, which is two composers over each other.
   const [composing, setComposing] = useState<ComposeAnchor | null>(null);
   // The header's own Write-email drawer. Separate state from `composing`,
-  // which anchors on a message or a person — but the same consequence for the
+  // which anchors on a message or a contact — but the same consequence for the
   // layout, because both open into the rail's column.
   const [writingEmail, setWritingEmail] = useState(false);
   const [decisionsOpen, setDecisionsOpen] = useState(false);
@@ -1838,7 +1838,7 @@ function CompanyRecordBody({
       {tab === "overview" && (
         <div className="record-stack">
           {failed && <EmptyState>{t("co.partial")}</EmptyState>}
-          {/* What needs a person, before anything that merely reports state. It
+          {/* What needs a contact, before anything that merely reports state. It
               is assembled from sections the page already read — open tasks, the
               calendar, what changed since the last visit, the suggestions — put
               in the order a rep works them, with facts, assessments and
@@ -1862,7 +1862,7 @@ function CompanyRecordBody({
           />
         </div>
       )}
-      <PersonMeetingBrief
+      <ContactMeetingBrief
         activityId={preparing}
         open={preparing !== null}
         onClose={() => setPreparing(null)}
@@ -1901,12 +1901,12 @@ function CompanyRecordBody({
           reader's anchor across tabs, not a second copy of the roster. */}
       {tab === "contacts" && (
         <div className="co-overview-stack">
-          {/* The account's people, ranked and paged. One representation, not
+          {/* The account's contacts, ranked and paged. One representation, not
               three: the roster card, the connections card and its diagram all
               answered "who works here" again in a different shape, and the
               reader's question is which of them to write to. */}
-          {!overlay && !view?.sections_omitted?.includes("people") && (
-            <CompanyPeopleList
+          {!overlay && !view?.sections_omitted?.includes("contacts") && (
+            <CompanyContactsList
               companyId={company.id}
               bandSlot={(narrow) => (
                 <CoverageBand
@@ -2013,11 +2013,11 @@ function nothingOnFile(view?: Company360View): boolean {
   }
   const withheld = new Set(view.sections_omitted ?? []);
   const empty = (
-    section: "people" | "deals" | "activities",
+    section: "contacts" | "deals" | "activities",
     rows: number | undefined,
   ) => !withheld.has(section) && rows === 0;
   return (
-    empty("people", view.people?.data.length) &&
+    empty("contacts", view.contacts?.data.length) &&
     empty("deals", view.deals?.data.length) &&
     empty("activities", view.activities?.data.length)
   );
@@ -2089,7 +2089,7 @@ function CompanyOverviewStack({
   onOpenTasks: () => void;
   // Opens the meeting brief for the day's meeting — not the composer.
   onPrepareMeeting: (activityId: string) => void;
-  onDraftTo: (personId: string) => void;
+  onDraftTo: (contactId: string) => void;
   onOpenTab: (tab: CompanyTab) => void;
   onPerform: (action: SuggestionAction) => void;
 }>) {
@@ -2139,7 +2139,7 @@ function CompanyOverviewStack({
       )}
       {/* An account with nothing on file is asked a different question from a
           running one: not "what should you do here" but "shall Margince go and
-          find out who these people are". So the research offer LEADS the
+          find out who these contacts are". So the research offer LEADS the
           column on such an account, and stands down the moment there is
           anything to read: on a live account the lead is the 360 below, and
           two leads is none. */}
@@ -2160,11 +2160,11 @@ function CompanyOverviewStack({
           <RecordSpine
             source={view}
             commercial={view?.state_strip?.commercial}
-            // The thread names the people on each conversation off the
+            // The thread names the contacts on each conversation off the
             // account's own roster: the links carry ids, and an id is not a
-            // person a reader recognises. Colleagues come from the workspace
-            // roster rather than the account — the person who held a meeting
-            // is one of ours, and the account's own people are the other side
+            // contact a reader recognises. Colleagues come from the workspace
+            // roster rather than the account — the contact who held a meeting
+            // is one of ours, and the account's own contacts are the other side
             // of it.
             nameOf={nameOf}
             // The page's own router, which already sends an `activity` to the
@@ -2187,7 +2187,7 @@ function CompanyOverviewStack({
           />
         </Company360Call>
       )}
-      {/* Two columns under the 360. Left: what needs a person, then the money.
+      {/* Two columns under the 360. Left: what needs a contact, then the money.
           Right: Ask, then what the account is, then who is there. Each is one
           pane, and the order is the order a rep works them. */}
       {!overlay && (
@@ -2256,7 +2256,11 @@ function CompanyOverviewStack({
             <Panel className="co-signals">
               <SignalsSection companyId={company.id} />
             </Panel>
-            <PeopleChips view={view} loading={loading} onOpenTab={onOpenTab} />
+            <ContactsChips
+              view={view}
+              loading={loading}
+              onOpenTab={onOpenTab}
+            />
           </div>
         </div>
       )}

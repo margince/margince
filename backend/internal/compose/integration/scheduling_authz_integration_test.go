@@ -65,16 +65,16 @@ func TestAvailabilityBusyReadHonorsRowScope(t *testing.T) {
 	e := Setup(t)
 	slotStart := time.Date(2026, 7, 7, 10, 0, 0, 0, time.UTC)
 
-	// rep1's meeting is linked to a person rep1 captured PRIVATELY — visible
-	// to rep1 alone. A person who is merely owned is readable by every seat
+	// rep1's meeting is linked to a contact rep1 captured PRIVATELY — visible
+	// to rep1 alone. A contact who is merely owned is readable by every seat
 	// with the grant, so capture privacy is what keeps the meeting out of a
 	// colleague's row scope.
-	target := e.SeedPerson(t, "Scoped Client", &e.Rep1)
-	e.MakeCapturePrivate(t, "person", target, e.Rep1)
+	target := e.SeedContact(t, "Scoped Client", &e.Rep1)
+	e.MakeCapturePrivate(t, "contact", target, e.Rep1)
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, SchedulerPerms)
 	if _, err := e.Activities.BookMeeting(rep1, activities.BookMeetingInput{
 		Host: ids.From[ids.UserKind](e.Rep1), Start: slotStart, End: slotStart.Add(time.Hour),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: target}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: target}},
 	}); err != nil {
 		t.Fatalf("booking: %v", err)
 	}

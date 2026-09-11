@@ -55,9 +55,9 @@ type chatMember struct {
 // `my_chat_member` reports a change to THE BOT's own membership, so
 // new_chat_member describes the bot's standing and new_chat_member.user IS the
 // bot: keying reachability on it would write against the bot's numeric id, an
-// id no Person ever carries, so the update would report success having changed
+// id no Contact ever carries, so the update would report success having changed
 // nothing. A private chat's id, by contrast, IS the counterpart user's id —
-// exactly the id person_channel_identity is keyed on. `from` names whoever
+// exactly the id contact_channel_identity is keyed on. `from` names whoever
 // PERFORMED the change, which coincides with the subject only because a private
 // chat holds nobody else; the chat is the subject definitionally, so that is
 // what this reads.

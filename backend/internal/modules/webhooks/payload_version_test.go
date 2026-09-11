@@ -223,37 +223,37 @@ func TestStageUpdatedWireSnapshot(t *testing.T) {
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
 
-// personSnapshotSource/personSnapshotTarget are fixed, memorable UUIDs so
-// the person/company family's golden snapshots (webhooks Task
-// 5b-personorg) are stable across test runs — a real ids.NewV7() would
+// contactSnapshotSource/contactSnapshotTarget are fixed, memorable UUIDs so
+// the contact/company family's golden snapshots (webhooks Task
+// 5b-contactorg) are stable across test runs — a real ids.NewV7() would
 // churn the fixtures on every regeneration for no reason.
 var (
-	personSnapshotSource = openapi_types.UUID(ids.MustParse("88888888-8888-8888-8888-888888888888"))
-	personSnapshotTarget = openapi_types.UUID(ids.MustParse("99999999-9999-9999-9999-999999999999"))
+	contactSnapshotSource = openapi_types.UUID(ids.MustParse("88888888-8888-8888-8888-888888888888"))
+	contactSnapshotTarget = openapi_types.UUID(ids.MustParse("99999999-9999-9999-9999-999999999999"))
 )
 
-// TestPersonCreatedWireSnapshot pins the person.created wire shape.
-func TestPersonCreatedWireSnapshot(t *testing.T) {
-	sample := crmcontracts.PublicEventPersonCreated{FullName: "Ada Lovelace"}
+// TestContactCreatedWireSnapshot pins the contact.created wire shape.
+func TestContactCreatedWireSnapshot(t *testing.T) {
+	sample := crmcontracts.PublicEventContactCreated{FullName: "Ada Lovelace"}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
 
-// TestPersonMergedWireSnapshot pins the person.merged wire shape.
-func TestPersonMergedWireSnapshot(t *testing.T) {
-	sample := crmcontracts.PublicEventPersonMerged{
-		MergedFromId: personSnapshotSource,
-		MergedIntoId: personSnapshotTarget,
-		Relinked: crmcontracts.PublicEventPersonMergedRelinkCounts{
+// TestContactMergedWireSnapshot pins the contact.merged wire shape.
+func TestContactMergedWireSnapshot(t *testing.T) {
+	sample := crmcontracts.PublicEventContactMerged{
+		MergedFromId: contactSnapshotSource,
+		MergedIntoId: contactSnapshotTarget,
+		Relinked: crmcontracts.PublicEventContactMergedRelinkCounts{
 			Emails: 2, Phones: 1, Relationships: 3, ActivityLinks: 5,
 		},
 	}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
 
-// TestPersonUpdatedWireSnapshot pins the person.updated wire shape — the
+// TestContactUpdatedWireSnapshot pins the contact.updated wire shape — the
 // OPEN changed_fields envelope, sampled with a flat column patch.
-func TestPersonUpdatedWireSnapshot(t *testing.T) {
-	sample := crmcontracts.PublicEventPersonUpdated{
+func TestContactUpdatedWireSnapshot(t *testing.T) {
+	sample := crmcontracts.PublicEventContactUpdated{
 		ChangedFields: map[string]any{"title": "VP Sales"},
 	}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
@@ -262,7 +262,7 @@ func TestPersonUpdatedWireSnapshot(t *testing.T) {
 // TestCompanyCreatedWireSnapshot pins the company.created wire
 // shape — the UNION struct, sampled with the direct-create subset
 // (display_name only; the other four sites' fields are exercised by the
-// people-package payload-builder unit tests).
+// contacts-package payload-builder unit tests).
 func TestCompanyCreatedWireSnapshot(t *testing.T) {
 	displayName := "Acme GmbH"
 	sample := crmcontracts.PublicEventCompanyCreated{DisplayName: &displayName}
@@ -272,8 +272,8 @@ func TestCompanyCreatedWireSnapshot(t *testing.T) {
 // TestCompanyMergedWireSnapshot pins the company.merged wire shape.
 func TestCompanyMergedWireSnapshot(t *testing.T) {
 	sample := crmcontracts.PublicEventCompanyMerged{
-		MergedFromId: personSnapshotSource,
-		MergedIntoId: personSnapshotTarget,
+		MergedFromId: contactSnapshotSource,
+		MergedIntoId: contactSnapshotTarget,
 	}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
@@ -288,20 +288,20 @@ func TestCompanyUpdatedWireSnapshot(t *testing.T) {
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
 
-// leadSnapshotPersonID is a fixed, memorable UUID so the lead family's
+// leadSnapshotContactID is a fixed, memorable UUID so the lead family's
 // golden snapshot is stable across test runs — a real ids.NewV7() would
 // churn the fixture on every regeneration for no reason.
-var leadSnapshotPersonID = openapi_types.UUID(ids.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
+var leadSnapshotContactID = openapi_types.UUID(ids.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
 
 // TestLeadPromotedWireSnapshot pins the lead.promoted wire shape, sampled
 // with an evidence_ref set.
 func TestLeadPromotedWireSnapshot(t *testing.T) {
 	evidenceRef := openapi_types.UUID(ids.MustParse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"))
 	sample := crmcontracts.PublicEventLeadPromoted{
-		PromotedPersonId: leadSnapshotPersonID,
-		DedupeOutcome:    "created",
-		Trigger:          "inbound_reply",
-		EvidenceRef:      &evidenceRef,
+		PromotedContactId: leadSnapshotContactID,
+		DedupeOutcome:     "created",
+		Trigger:           "inbound_reply",
+		EvidenceRef:       &evidenceRef,
 	}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
@@ -313,7 +313,7 @@ func TestLeadPromotedWireSnapshot(t *testing.T) {
 func TestLeadUpdatedWireSnapshot(t *testing.T) {
 	sample := crmcontracts.PublicEventLeadUpdated{
 		ChangedFields: map[string]any{
-			"delta":              map[string]any{"owner_id": leadSnapshotPersonID},
+			"delta":              map[string]any{"owner_id": leadSnapshotContactID},
 			"cf_lead_source_ref": "partner-9f2",
 		},
 	}
@@ -370,7 +370,7 @@ func TestEngagementReplyWireSnapshot(t *testing.T) {
 var consentSnapshotPurposeID = openapi_types.UUID(ids.MustParse("dddddddd-dddd-dddd-dddd-dddddddddddd"))
 
 // TestConsentChangedWireSnapshot pins the consent.changed wire shape —
-// this event's entity is dynamic (person XOR lead),
+// this event's entity is dynamic (contact XOR lead),
 // so unlike every prior family the subject never appears in the payload
 // itself, only in the envelope's entity ref (storekit.EmitEventForEntity's
 // separate entityType argument).
@@ -385,7 +385,7 @@ func TestConsentChangedWireSnapshot(t *testing.T) {
 
 // TestRetentionAppliedWireSnapshot pins the retention.applied wire shape —
 // like consent.changed, its entity is dynamic (ai_call / a policy's object
-// type / person, one per site), so the subject never appears in the
+// type / contact, one per site), so the subject never appears in the
 // payload. Sampled with the policy-driven sweep's subset (action + policy,
 // no reason) since that is the only site that sets both optional fields
 // together.
@@ -664,7 +664,7 @@ func TestMirrorBudgetDegradedWireSnapshot(t *testing.T) {
 // TestMirrorDeletedWireSnapshot pins mirror.deleted's wire shape.
 func TestMirrorDeletedWireSnapshot(t *testing.T) {
 	sample := crmcontracts.PublicEventMirrorDeleted{
-		ObjectClass: "person",
+		ObjectClass: "contact",
 		ExternalId:  "hs-9931",
 		DeletedAt:   time.Date(2026, 7, 22, 11, 0, 0, 0, time.UTC),
 	}

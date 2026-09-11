@@ -80,12 +80,12 @@ var profileVocabularyMirrors = []struct {
 		why:  "the company form can neither write nor read it back",
 	},
 	{
-		file: "internal/modules/people/anchorcompany.go",
+		file: "internal/modules/contacts/anchorcompany.go",
 		decl: "fieldOfferSummary",
 		why:  "the store has no constant for it",
 	},
 	{
-		file: "internal/modules/people/anchorcompany.go",
+		file: "internal/modules/contacts/anchorcompany.go",
 		decl: "companyFields",
 		why:  "the value is accepted at the API and then never written",
 	},
@@ -93,15 +93,15 @@ var profileVocabularyMirrors = []struct {
 
 // displayName is the company's own name, which the CHECK admits as a profile
 // field but the store writes through the company row instead
-// (SaveCompany sets it directly). So the two people-module mirrors legitimately
+// (SaveCompany sets it directly). So the two contacts-module mirrors legitimately
 // omit it, and this gate would otherwise demand a constant nothing should use.
 const displayName = "display_name"
 
 // mirrorsExemptFromDisplayName are the declarations that may omit it, by the
 // file and declaration name they are listed under above.
 var mirrorsExemptFromDisplayName = map[string]bool{
-	"internal/modules/people/anchorcompany.go:fieldOfferSummary": true,
-	"internal/modules/people/anchorcompany.go:companyFields":     true,
+	"internal/modules/contacts/anchorcompany.go:fieldOfferSummary": true,
+	"internal/modules/contacts/anchorcompany.go:companyFields":     true,
 }
 
 func TestTheCompanyProfileVocabularyIsSpelledOnceEverywhere(t *testing.T) {

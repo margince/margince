@@ -8,13 +8,13 @@ package compose
 // role crawls the company's site under the bounded siteCrawler,
 // folds the pages into a labeled corpus, and extracts it in ONE model
 // call (chunked only for outsized sites) through the no-guess evidence
-// gate — company fields, category facts, published people, and the
+// gate — company fields, category facts, published contacts, and the
 // site's legal-entity census. The gated findings LAND directly, in one
 // transaction: profile fields fill-empty exactly like a quick scrape,
 // category facts land in company_fact. Nobody is asked to confirm a
 // read they pressed the button for — the write is marked as model-derived
-// and stays reversible instead. Published PEOPLE are the exception and
-// still stage as leads. The dossier (people's site_read row) is the
+// and stays reversible instead. Published CONTACTS are the exception and
+// still stage as leads. The dossier (contacts's site_read row) is the
 // transparency surface the SPA polls: live phase and page counts while
 // running, then what was read and what it found.
 
@@ -30,8 +30,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/webread"
@@ -123,7 +123,7 @@ func siteDeepReadInsertOpts(priority int) *river.InsertOpts {
 // DeepReadPriorityLive when a human or agent action JOINS it rather than
 // starting it.
 //
-// The gap this closes: createOrJoinSiteRead's join branch (people/siteread.go)
+// The gap this closes: createOrJoinSiteRead's join branch (contacts/siteread.go)
 // never calls the enqueue callback — the job those args would produce already
 // exists, and River's own ByArgs uniqueness would silently drop a re-insert
 // anyway. So a live request arriving for the same company a boot-time
@@ -162,10 +162,10 @@ func promoteQueuedSiteReadPriority(ctx context.Context, pool *pgxpool.Pool, log 
 type siteDeepReadWorker struct {
 	// pool opens the ONE transaction an act's proposals are staged in, so the
 	// inbox never shows half of a read's findings as a whole question.
-	pool    *pgxpool.Pool
-	people  *people.Store
-	crawler *siteCrawler
-	extract evidenceExtractor
+	pool     *pgxpool.Pool
+	contacts *contacts.Store
+	crawler  *siteCrawler
+	extract  evidenceExtractor
 	// triageBrain answers the domain-triage classification. Its own lane, not
 	// the extractor's: one cheap question of one page must not bill the profile
 	// lane's premium-only ladder. Nil is a role that cannot classify, which
@@ -205,7 +205,7 @@ func newSiteDeepReadWorker(pool *pgxpool.Pool, brain, factBrain, triageBrain com
 	caps = caps.withDefaults()
 	return &siteDeepReadWorker{
 		pool:        pool,
-		people:      people.NewStore(InstallationDB(pool)),
+		contacts:    contacts.NewStore(InstallationDB(pool)),
 		crawler:     newSiteCrawler(fetcher, caps),
 		extract:     evidenceExtractor{fetch: fetcher, brain: brain, factBrain: factBrain},
 		triageBrain: triageBrain,
@@ -264,7 +264,7 @@ func (w *siteDeepReadWorker) reclaimAfter() time.Duration {
 func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) error {
 	ctx = deepReadWorkerCtx(ctx, args)
 
-	claim, err := w.people.BeginSiteRead(ctx, args.SiteReadID, w.reclaimAfter())
+	claim, err := w.contacts.BeginSiteRead(ctx, args.SiteReadID, w.reclaimAfter())
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			// The CAS miss: the read is no longer queued — a rival replica
@@ -282,7 +282,7 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 		return err
 	}
 
-	if err := w.people.UpdateSiteReadProgress(ctx, args.SiteReadID, "crawling", nil); err != nil {
+	if err := w.contacts.UpdateSiteReadProgress(ctx, args.SiteReadID, "crawling", nil); err != nil {
 		w.log.WarnContext(ctx, "site read progress update failed", "read", args.SiteReadID.String(), "err", err)
 	}
 	// Crawl and extraction OVERLAP (crawlAndExtract): page calls launch
@@ -337,7 +337,7 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 // enrichment path, which assumes one to enrich), or the honest failure of a
 // worker role with no model path. It reports whether it settled the read; not
 // settled is the ordinary enrichment read, which the caller crawls itself.
-func (w *siteDeepReadWorker) routeClaimedRead(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim) (bool, error) {
+func (w *siteDeepReadWorker) routeClaimedRead(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim) (bool, error) {
 	// Before ANY spend: an operator who turned auto-enrich off gets no further
 	// crawling and no further model calls, including from work queued while it
 	// was on. Only the automatic lane is gated — a human who asked for a read
@@ -388,19 +388,19 @@ func (w *siteDeepReadWorker) routeClaimedRead(ctx context.Context, args SiteDeep
 
 func (w *siteDeepReadWorker) progressiveCallbacks(ctx context.Context, readID ids.UUID) (func(string, []crawlPage), func(pageFactsResult)) {
 	progress := func(phase string, pages []crawlPage) {
-		if err := w.people.UpdateSiteReadProgress(ctx, readID, phase, siteReadPages(pages)); err != nil {
+		if err := w.contacts.UpdateSiteReadProgress(ctx, readID, phase, siteReadPages(pages)); err != nil {
 			w.log.WarnContext(ctx, "site read progress update failed", "read", readID.String(), "err", err)
 		}
 	}
 	publishDraft := func(partial pageFactsResult) {
-		found := siteReadPeople(partial.people)
+		found := siteReadContacts(partial.contacts)
 		entities := siteReadLegalEntities(partial.entities)
 		hash, err := siteReadProposalHash(nil, partial.facts, found, entities)
 		if err != nil {
 			w.log.WarnContext(ctx, "site read progressive draft hash failed", "read", readID.String(), "err", err)
 			return
 		}
-		if err := w.people.UpdateSiteReadDraft(ctx, readID, partial.facts, found, entities, hash); err != nil {
+		if err := w.contacts.UpdateSiteReadDraft(ctx, readID, partial.facts, found, entities, hash); err != nil {
 			w.log.WarnContext(ctx, "site read progressive draft update failed", "read", readID.String(), "err", err)
 		}
 	}
@@ -411,10 +411,10 @@ func (w *siteDeepReadWorker) progressiveCallbacks(ctx context.Context, readID id
 // The abstention refuses to APPLY a legal identity it cannot attribute; it
 // never had a reason to forget the identities it read, and the confirm
 // step turns them into the choice only a human can make.
-func siteReadLegalEntities(entities []corpusLegalEntity) []people.SiteReadLegalEntity {
-	out := make([]people.SiteReadLegalEntity, 0, len(entities))
+func siteReadLegalEntities(entities []corpusLegalEntity) []contacts.SiteReadLegalEntity {
+	out := make([]contacts.SiteReadLegalEntity, 0, len(entities))
 	for _, e := range entities {
-		out = append(out, people.SiteReadLegalEntity{
+		out = append(out, contacts.SiteReadLegalEntity{
 			Name:              e.Name,
 			RegisteredAddress: e.RegisteredAddress,
 			RegisterNumber:    e.RegisterNumber,
@@ -438,26 +438,26 @@ func terminalCtx(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 }
 
-func (w *siteDeepReadWorker) finish(ctx context.Context, readID ids.UUID, claim people.SiteReadClaim, status string, readPages []crawlPage, crawl siteCrawl, factCount int, proposalIDs []ids.UUID, fields []people.DeepReadField, facts []people.DeepReadFact, found []people.SiteReadPerson, entities []people.SiteReadLegalEntity, warnings []string, proposalHash string) error {
-	in := people.FinishSiteReadInput{
+func (w *siteDeepReadWorker) finish(ctx context.Context, readID ids.UUID, claim contacts.SiteReadClaim, status string, readPages []crawlPage, crawl siteCrawl, factCount int, proposalIDs []ids.UUID, fields []contacts.DeepReadField, facts []contacts.DeepReadFact, found []contacts.SiteReadContact, entities []contacts.SiteReadLegalEntity, warnings []string, proposalHash string) error {
+	in := contacts.FinishSiteReadInput{
 		ClaimedAt:     &claim.ClaimedAt,
 		Status:        status,
-		Pages:         make([]people.SiteReadPage, 0, len(readPages)),
-		Skipped:       make([]people.SiteReadSkip, 0, len(crawl.Skipped)),
+		Pages:         make([]contacts.SiteReadPage, 0, len(readPages)),
+		Skipped:       make([]contacts.SiteReadSkip, 0, len(crawl.Skipped)),
 		FactCount:     factCount,
 		ProposalIDs:   proposalIDs,
 		ProfileFields: fields,
 		Facts:         facts,
-		People:        found,
+		Contacts:      found,
 		LegalEntities: entities,
 		Warnings:      warnings,
 		ProposalHash:  proposalHash,
 	}
 	for _, p := range readPages {
-		in.Pages = append(in.Pages, people.SiteReadPage{URL: p.URL, Kind: string(p.Kind)})
+		in.Pages = append(in.Pages, contacts.SiteReadPage{URL: p.URL, Kind: string(p.Kind)})
 	}
 	for _, s := range crawl.Skipped {
-		in.Skipped = append(in.Skipped, people.SiteReadSkip{URL: s.URL, Reason: string(s.Reason)})
+		in.Skipped = append(in.Skipped, contacts.SiteReadSkip{URL: s.URL, Reason: string(s.Reason)})
 	}
 	if crawl.Stopped != nil {
 		reason := string(*crawl.Stopped)
@@ -465,7 +465,7 @@ func (w *siteDeepReadWorker) finish(ctx context.Context, readID ids.UUID, claim 
 	}
 	tctx, cancel := terminalCtx(ctx)
 	defer cancel()
-	if err := w.people.FinishSiteRead(tctx, readID, in); err != nil {
+	if err := w.contacts.FinishSiteRead(tctx, readID, in); err != nil {
 		return fmt.Errorf("site deep read %s: finish: %w", readID, err)
 	}
 	return nil

@@ -383,7 +383,7 @@ validated to the full identifier budget, so a name chosen today stays valid for 
   the core's and fixed by the contract (ADR-0107/A158); letting a unit name one would undo that axis
   split from outside the core. A unit shadowing a core provider — `telegram`, say — fails the boot,
   because every Telegram reply would otherwise leave on the unit's per-member credential instead of the
-  workspace's bot: the same message, sent by a different person, with nothing on screen different.
+  workspace's bot: the same message, sent by a different contact, with nothing on screen different.
 
 - **Its own frontend** — a `frontend/` directory whose screen is aliased into the SPA and rendered at
   the unit's route. Removing a unit is a one-place operation again: delete the unit directory. An
@@ -450,7 +450,7 @@ The tier is defended by fitness tests and scripts, so the guarantees can't rot i
 | An address may be offered as identity evidence only by a source that DECLARED the key — refused attributably at the gate, and held for every other caller of the pipeline by capture's own admission check | `internal/compose/extingress.go` (`refuseUndeclaredMergeKey`), `internal/modules/capture/sinkchannel.go` (`admitCounterpartyKeys`) |
 | The published record type cannot silently fall behind the core's capture envelope: every field is mirrored or waived with its reason | `internal/compose/extingressdrift_test.go` |
 | A unit may file a message on a transport it DECLARED and on no other, and no other kind may name a transport at all — a record claiming a journey it did not make is one the reply path would answer on | `internal/compose/extingress.go` (`refuseUndeclaredTransport`) |
-| A unit may bind a counterparty identity only under a provider it supplies — otherwise it could attach an account it controls to somebody else's person record and take that person's next reply | `internal/compose/extingress.go` (`refuseUnitIdentity`) |
+| A unit may bind a counterparty identity only under a provider it supplies — otherwise it could attach an account it controls to somebody else's contact record and take that contact's next reply | `internal/compose/extingress.go` (`refuseUnitIdentity`) |
 | A unit cannot shadow a core channel provider: the collision is caught in the RECONCILE, where both sets exist, and fails the boot rather than silently re-routing that provider's replies through the unit | `internal/compose/channelprovider.go` |
 | A `Send` without a `Live` is refused, and the core asks `Live` BEFORE handing over a message — a disconnected member parks where a human can see it, an unreachable provider is retried | `backend/pkg/extension/channel.go`, `internal/compose/extchannelsend.go` |
 | A unit's listener consumes only the streams its declared event types route to, and no core group consumes the extension stream | `internal/compose/extsubscribe.go`, `internal/shared/kernel/events/extensiontypes_test.go` |

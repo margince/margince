@@ -39,9 +39,9 @@ import (
 // never be told either of these, and they are distinctive enough that a
 // substring search over the whole answer is conclusive.
 const (
-	hiddenPersonName = "Zeta Privatkontakt"
-	visiblePersonNam = "Ada Lovelace"
-	hiddenProjectNam = "Confidential Zeta rollout"
+	hiddenContactName = "Zeta Privatkontakt"
+	visibleContactNam = "Ada Lovelace"
+	hiddenProjectNam  = "Confidential Zeta rollout"
 )
 
 // promiseEnv is one workspace with two reps, and records owned by each.
@@ -115,7 +115,7 @@ func (e *promiseEnv) as() context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"activity": {Read: true}, "person": {Read: true},
+				"activity": {Read: true}, "contact": {Read: true},
 				"deal": {Read: true}, "project": {Read: true},
 				"company": {Read: true},
 			},
@@ -133,41 +133,41 @@ func (e *promiseEnv) exec(t *testing.T, sql string, args ...any) {
 }
 
 // seedSplitTask writes the shape the disclosure rule is about: ONE open task
-// linked both to a person the caller owns and to a capture-private person
-// (visibility='owner') owned by somebody else. A person is workspace-readable
+// linked both to a contact the caller owns and to a capture-private contact
+// (visibility='owner') owned by somebody else. A contact is workspace-readable
 // identity, so only capture privacy still puts a linked record outside the
 // caller's row scope.
 //
-// The activity gate is an ANY-LINK rule, so the visible person makes the task
+// The activity gate is an ANY-LINK rule, so the visible contact makes the task
 // readable — and that is correct. What must not follow is being told the name
 // of the private contact on the other link.
-func (e *promiseEnv) seedSplitTask(t *testing.T) (taskID, hiddenPersonID ids.UUID) {
+func (e *promiseEnv) seedSplitTask(t *testing.T) (taskID, hiddenContactID ids.UUID) {
 	t.Helper()
-	personID := ids.NewV7()
-	hiddenPersonID, taskID = ids.NewV7(), ids.NewV7()
+	contactID := ids.NewV7()
+	hiddenContactID, taskID = ids.NewV7(), ids.NewV7()
 
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, $2, $3, 'seed', 'system')`, personID, visiblePersonNam, e.rep)
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, $2, $3, 'seed', 'system')`, contactID, visibleContactNam, e.rep)
 	// Captured privately by the OTHER rep, so nobody else can read it.
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
-		VALUES ($1, $2, $3, 'owner', 'seed', 'system')`, hiddenPersonID, hiddenPersonName, e.other)
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
+		VALUES ($1, $2, $3, 'owner', 'seed', 'system')`, hiddenContactID, hiddenContactName, e.other)
 
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, assignee_id, is_done, source, captured_by)
 		VALUES ($1, 'task', 'Renew the Zeta contract', now(), now() - interval '2 days',
 			$2, false, 'seed', 'system')`, taskID, e.rep)
-	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), taskID, personID)
-	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), taskID, hiddenPersonID)
-	return taskID, hiddenPersonID
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), taskID, contactID)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), taskID, hiddenContactID)
+	return taskID, hiddenContactID
 }
 
-// A task reachable through a visible person is readable in full. Being told
+// A task reachable through a visible contact is readable in full. Being told
 // what ELSE it is about is a second question, and the answer to it is bounded
 // by the caller's scope on each linked record — not by the task's.
 func TestAPromiseNamesOnlyTheRecordsItsReaderMaySee(t *testing.T) {
 	e := setupPromises(t)
-	taskID, hiddenPersonID := e.seedSplitTask(t)
+	taskID, hiddenContactID := e.seedSplitTask(t)
 
 	tasks, _, err := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).ListOpenTasks(e.as(), ListOpenTasksInput{})
 	if err != nil {
@@ -181,7 +181,7 @@ func TestAPromiseNamesOnlyTheRecordsItsReaderMaySee(t *testing.T) {
 		}
 	}
 	if found == nil {
-		t.Fatal("the task linked to a person the caller owns is missing — the any-link " +
+		t.Fatal("the task linked to a contact the caller owns is missing — the any-link " +
 			"rule makes it readable, so this test would prove nothing about what it names")
 	}
 
@@ -189,19 +189,19 @@ func TestAPromiseNamesOnlyTheRecordsItsReaderMaySee(t *testing.T) {
 	for _, about := range found.About {
 		named[about.EntityID.String()] = about.Name
 	}
-	if _, told := named[hiddenPersonID.String()]; told {
+	if _, told := named[hiddenContactID.String()]; told {
 		t.Errorf("the answer names another rep's capture-private contact (%s) — an activity readable "+
-			"through one visible link does not license disclosing the others", hiddenPersonID)
+			"through one visible link does not license disclosing the others", hiddenContactID)
 	}
 	for id, name := range named {
-		if name == hiddenPersonName {
+		if name == hiddenContactName {
 			t.Errorf("the answer carries the private contact's NAME against %s, which is the "+
 				"disclosure the link-visibility clause exists to prevent", id)
 		}
 	}
 	// And the visible half IS named, or the assertions above would pass over an
 	// answer that simply carries nothing.
-	if !strings.Contains(strings.Join(namesIn(named), "|"), visiblePersonNam) {
+	if !strings.Contains(strings.Join(namesIn(named), "|"), visibleContactNam) {
 		t.Errorf("the answer names none of the records the caller CAN see (%v) — the "+
 			"projection is empty, so its filtering proved nothing", named)
 	}

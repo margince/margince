@@ -64,7 +64,7 @@ export function ProviderCard() {
   const t = useT();
   const query = useProviderConnections();
   // Every seat reads this card — the balances and the spend are a rep's
-  // explanation for a dated value on a person record — while connecting and
+  // explanation for a dated value on a contact record — while connecting and
   // destroying are admin/ops. The two answers are computed HERE, once, so the
   // posture line below and the affordances inside cannot disagree about who
   // may do what.
@@ -432,7 +432,7 @@ function PolicyRow({
 //
 // Switching one on does not spend anything and does not schedule anything. It
 // decides which buy buttons a rep is offered on a contact — every purchase is
-// still a person pressing a priced button on one named record, which is the
+// still a contact pressing a priced button on one named record, which is the
 // split the free tier exists to keep. So the switch means "available to buy",
 // never "will be bought", and the row's own copy has to say so: an admin who
 // reads it as the latter leaves the whole paid half of the product switched off.
@@ -571,7 +571,7 @@ type CategoryPatch = {
 
 // Saving the fetch scope, with the version the card was rendered from.
 //
-// If-Match rather than a blind write: two admins on this card are two people
+// If-Match rather than a blind write: two admins on this card are two contacts
 // deciding what the installation may spend on, and a lost update there is a
 // category switched on by somebody who never saw it happen.
 function usePatchCategories() {

@@ -46,7 +46,7 @@ func (h Handlers) meResponse(
 			// The round trip was built at both ends and severed here. Signup
 			// captures the browser's zone, ParseTimezone validates it, and the
 			// row stores it — and this response then dropped it, so nothing
-			// downstream could localize an instant to the person reading it.
+			// downstream could localize an instant to the reader reading it.
 			// The twelve hard-coded "Europe/Berlin" literals on the frontend
 			// are what a caller does when no correct answer is served.
 			// margince/margince#26.

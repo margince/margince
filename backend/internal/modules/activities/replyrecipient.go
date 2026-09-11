@@ -10,7 +10,7 @@ package activities
 // author. That is not hypothetical: the certification judge floored a draft for
 // it, and it is the one defect holding the reply site back from certified.
 //
-// The name is not on the activity. It is on the person the message was WITH,
+// The name is not on the activity. It is on the contact the message was WITH,
 // which activity_participant records with the role they held, so this reads the
 // participants rather than inventing a second notion of "who this was with".
 
@@ -30,7 +30,7 @@ import (
 // ReplyRecipient is who a reply to an activity is addressed to.
 //
 // Every field may be empty, and that is an answer rather than a failure: an
-// activity linked to no person, or to one this caller cannot read, leaves the
+// activity linked to no contact, or to one this caller cannot read, leaves the
 // drafter with no name — and a draft that opens "Hallo," is correct there,
 // where one that guesses is not.
 type ReplyRecipient struct {
@@ -51,31 +51,31 @@ type ReplyRecipient struct {
 	LastName string
 }
 
-// ReplyRecipientFor names the person a reply to this activity is written to.
+// ReplyRecipientFor names the contact a reply to this activity is written to.
 //
 // It carries the row-scope gate the same way every other read here does: the
-// activity is gated by the link-walk, and the person by their own visibility,
-// so an activity the caller cannot reach and a person they cannot read both
+// activity is gated by the link-walk, and the contact by their own visibility,
+// so an activity the caller cannot reach and a contact they cannot read both
 // answer the empty recipient rather than leaking a name.
 //
-// One person, not a list. A reply is written to somebody, and the counterparty
+// One contact, not a list. A reply is written to somebody, and the counterparty
 // is read from the message's PARTICIPANTS by role — the sender of an inbound
 // message first, then an addressee, then anyone else on it — falling back to the
 // activity link only for rows that carry no participants. A group thread is a
 // real shape this does not model yet; it degrades to greeting the most likely
 // counterparty rather than to greeting nobody.
 func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (ReplyRecipient, error) {
-	// Naming a person is a person read, so it takes the person read GRANT as
+	// Naming a contact is a contact read, so it takes the contact read GRANT as
 	// well as the row scope. A caller permitted to read activities but not
-	// people would otherwise be told a name through this door that the people
+	// contacts would otherwise be told a name through this door that the contacts
 	// surface refuses them.
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return ReplyRecipient{}, err
 	}
 
 	var out ReplyRecipient
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The activity read applies the link-walk scope. Reaching a person
+		// The activity read applies the link-walk scope. Reaching a contact
 		// through an activity the caller cannot see would answer a name their
 		// own scope withholds.
 		if _, err := readActivityContent(ctx, tx, id, storekit.LiveOnly); err != nil {
@@ -83,12 +83,12 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		}
 
 		// ONE statement: the row scope, the archived test and the name are
-		// decided together. Split across two, a person archived or flipped to
+		// decided together. Split across two, a contact archived or flipped to
 		// owner-private between them still yields their name under READ
 		// COMMITTED — a race that is small, real, and needless when the scope
 		// composes into the predicate.
 		args := []any{id}
-		scope, err := auth.ScopeClauseFor(ctx, "person", "p", func(v any) int {
+		scope, err := auth.ScopeClauseFor(ctx, "contact", "p", func(v any) int {
 			args = append(args, v)
 			return len(args)
 		})
@@ -98,7 +98,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// The counterparty comes from the PARTICIPANTS, which record who was
 		// on the message and in what role, and only falls back to the link
 		// when an activity carries none. A link says what a message is about;
-		// a CC'd colleague and the person who wrote it are both linked, and
+		// a CC'd colleague and the contact who wrote it are both linked, and
 		// picking whichever was linked first addresses the reply to whoever
 		// happens to sort earliest.
 		//
@@ -108,22 +108,22 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		q := `
 			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
 			       coalesce((SELECT pe.email
-			                   FROM person_email pe
-			                  WHERE pe.person_id = p.id AND pe.archived_at IS NULL
+			                   FROM contact_email pe
+			                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL
 			                  ORDER BY pe.is_primary DESC, pe.position, pe.id
 			                  LIMIT 1), '')
-			  FROM person p
+			  FROM contact p
 			  JOIN (
-			       SELECT person_id,
+			       SELECT contact_id,
 			              CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
 			              created_at, id
 			         FROM activity_participant
-			        WHERE activity_id = $1 AND person_id IS NOT NULL
+			        WHERE activity_id = $1 AND contact_id IS NOT NULL
 			       UNION ALL
-			       SELECT person_id, 4 AS rank, created_at, id
+			       SELECT contact_id, 4 AS rank, created_at, id
 			         FROM activity_link
-			        WHERE activity_id = $1 AND person_id IS NOT NULL
-			  ) c ON c.person_id = p.id
+			        WHERE activity_id = $1 AND contact_id IS NOT NULL
+			  ) c ON c.contact_id = p.id
 			 WHERE p.archived_at IS NULL`
 		if scope != "" {
 			q += ` AND (` + scope + `)`
@@ -134,7 +134,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		err = tx.QueryRow(ctx, q, args...).Scan(
 			&out.FullName, &out.FirstName, &out.LastName, &address)
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Linked to nobody, or to a person out of scope. Both mean no
+			// Linked to nobody, or to a contact out of scope. Both mean no
 			// name, which the floor renders as an unnamed greeting rather
 			// than a refused draft.
 			return nil
@@ -142,7 +142,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		if err != nil {
 			return err
 		}
-		// A shared mailbox has a record and no person behind it, and its
+		// A shared mailbox has a record and no contact behind it, and its
 		// display name splits into a first name like any other: "steireif
 		// Partnernet" at partner@steireif.net greeted a company as "steireif,"
 		// in a message a rep was about to send.

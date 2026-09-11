@@ -32,7 +32,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -49,7 +49,7 @@ import (
 // and reading a site to decide whether to CREATE a company cannot enrich one.
 // And a deployment whose worker role registered no enricher rejects the kind at
 // insert, which is the honest answer rather than a row nothing will ever work.
-func (w *siteDeepReadWorker) askWhatTheCompanyRuns(ctx context.Context, claim people.SiteReadClaim) {
+func (w *siteDeepReadWorker) askWhatTheCompanyRuns(ctx context.Context, claim contacts.SiteReadClaim) {
 	if claim.CompanyID == nil {
 		return
 	}

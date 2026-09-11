@@ -107,7 +107,7 @@ queues:
       capture pool's reason names "delay sends, Telegram polls, and capture
       syncs" as the thing to avoid, and the send had since become a member of
       it. THREE rather than deep read's two: unlike a crawl, a send is a
-      message a person pressed a button for and is waiting on, so the pool is
+      message a contact pressed a button for and is waiting on, so the pool is
       wide enough that an ordinary text send is not queued behind two album
       uploads.
   deep_read:
@@ -339,7 +339,7 @@ kinds:
       attempt is ever lost to something the engine never sees — a worker killed
       mid-page, a rescue, a queue that dropped it — the row stays live with no
       job behind it, and the index then refuses every future StartBackfill for
-      that connection. The import stops and the only symptom is a person who
+      that connection. The import stops and the only symptom is a contact who
       cannot start one.
 
       It re-enqueues rather than deciding anything: the insert carries the same
@@ -418,7 +418,7 @@ kinds:
       reason: the ledger's due-index makes an empty pass one cheap probe, so the
       cadence is paid for by the mail that arrives rather than by the tick. An
       hour was the wrong price on the other side — a sender who writes just
-      after a tick waited most of an hour to become a record, and the person
+      after a tick waited most of an hour to become a record, and the contact
       waiting for them cannot tell that from the message not having arrived.
       Every stage runs in dependency order inside one workspace's job — judging
       fills the unsure backlog that staging then offers, and redaction only ever
@@ -566,7 +566,7 @@ kinds:
       leaves every one of them with nothing to say. Run at boot like the other
       passes here, and for a sharper reason than most: until the first run
       exists the read answers 404, which the tab renders as a failed panel — so
-      the gap between an install starting and its first check is time a person
+      the gap between an install starting and its first check is time a contact
       spends looking at what reads like a broken page.
 
 
@@ -754,7 +754,7 @@ kinds:
       value: 5m
       reason: >-
         Fetching a handful of small attachments from blob storage and writing
-        at most five people. No model call is in it, and the one dependency
+        at most five contacts. No model call is in it, and the one dependency
         read is scoped to this message's own attachments, so anything past
         this is a stuck database handle or an unreachable store rather than
         a large card.
@@ -1014,7 +1014,7 @@ kinds:
       One attempt, not three: the retry is the next tick, a minute away, and a
       row this pass did not apply is still pending then. A row that failed
       because its owner has gone or lost the grants is not a fault to retry at
-      all — it is a proposal waiting for a person, which is where it stays.
+      all — it is a proposal waiting for a contact, which is where it stays.
 
   # One job, not a dispatcher and a child (ADR-0103 §1). The delete it runs was
   # already table-wide once agent_task lost its tenant column, so the fan-out
@@ -1251,7 +1251,7 @@ kinds:
     registration: {when: [ProviderRuns.Registry, ProviderRuns.Vault], absent: registers_nothing}
     reason: >-
       Surfe resolves a bulk enrichment in seconds, so a 30-second scan keeps
-      the person page's in-progress state honest without hammering the fleet —
+      the contact page's in-progress state honest without hammering the fleet —
       the same cadence telegram_poll_sweep uses for the same promptness
       argument. A caught-up workspace costs one indexed probe of the due
       partial index.
@@ -1331,12 +1331,12 @@ kinds:
       Requested:
         scalar: true
         reason: >-
-          whether a person asked for this consultation, rather than a write
+          whether a contact asked for this consultation, rather than a write
           having earned it. It decides whether the worker asks about a number
           the register has already answered, so it cannot be resolved from the
           company the job names — the row says what the number is, never
           who wanted it re-checked. A bare true/false carrying no subject data:
-          it names no person, and erasing the contact who pressed the button
+          it names no contact, and erasing the contact who pressed the button
           leaves nothing here to erase.
     reason: >-
       One number, one consultation, plus the write — and the ceiling is set by

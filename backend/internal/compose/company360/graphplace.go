@@ -15,13 +15,13 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// placeContacts adds the employees, strongest relationship first with person
+// placeContacts adds the employees, strongest relationship first with contact
 // id as the tie-break, and counts the ones the cap left out.
 //
 // A contact whose strength the read did not resolve sorts strictly LAST,
@@ -29,18 +29,18 @@ import (
 // relationship here" against "we could not measure one" — and a bare map read
 // would collapse them, because a missing entry and a stored 0 look the same.
 func (g *graphAssembly) placeContacts() {
-	kept := make([]graphPersonEdge, len(g.employees))
+	kept := make([]graphContactEdge, len(g.employees))
 	copy(kept, g.employees)
 	sort.SliceStable(kept, func(i, j int) bool {
-		left, leftMeasured := g.strengths[kept[i].personID]
-		right, rightMeasured := g.strengths[kept[j].personID]
+		left, leftMeasured := g.strengths[kept[i].contactID]
+		right, rightMeasured := g.strengths[kept[j].contactID]
 		if leftMeasured != rightMeasured {
 			return leftMeasured
 		}
 		if left.Strength != right.Strength {
 			return left.Strength > right.Strength
 		}
-		return kept[i].personID.String() < kept[j].personID.String()
+		return kept[i].contactID.String() < kept[j].contactID.String()
 	})
 	if len(kept) > graphContactCap {
 		kept = kept[:graphContactCap]
@@ -50,8 +50,8 @@ func (g *graphAssembly) placeContacts() {
 	// what it happened to hold would understate a large account.
 	g.out.DroppedCount += g.employeeTotal - len(kept)
 	for _, edge := range kept {
-		g.addPersonNode(edge)
-		g.addEdge(g.companyID.UUID, edge.personID.UUID,
+		g.addContactNode(edge)
+		g.addEdge(g.companyID.UUID, edge.contactID.UUID,
 			crmcontracts.CompanyGraphEdgeKindEmployment, edge.role)
 	}
 }
@@ -70,7 +70,7 @@ func (g *graphAssembly) keptDeals() []graphDeal {
 }
 
 // placeDeals adds the open deals in amount order and, under each, the
-// stakeholder seats on it. A seat whose person the caller cannot read never
+// stakeholder seats on it. A seat whose contact the caller cannot read never
 // arrived, so no edge here can dangle.
 func (g *graphAssembly) placeDeals() {
 	kept := g.keptDeals()
@@ -90,8 +90,8 @@ func (g *graphAssembly) placeDeals() {
 		if !drawn[seat.dealID] {
 			continue
 		}
-		g.addPersonNode(seat.person)
-		g.addEdge(seat.dealID, seat.person.personID.UUID,
+		g.addContactNode(seat.contact)
+		g.addEdge(seat.dealID, seat.contact.contactID.UUID,
 			crmcontracts.CompanyGraphEdgeKindDealStakeholder, seat.role)
 	}
 }
@@ -138,7 +138,7 @@ func (g *graphAssembly) placeRelated(related []graphRelatedCompany) {
 			Id:      openapi_types.UUID(row.companyID),
 			Kind:    crmcontracts.CompanyGraphNodeKindCompany,
 			Label:   row.displayName,
-			LogoUrl: people.LogoURL(row.companyID, row.logoObjectKey, people.LogoWide),
+			LogoUrl: contacts.LogoURL(row.companyID, row.logoObjectKey, contacts.LogoWide),
 		})
 		from, to, kind := g.relatedEdge(row)
 		g.addEdge(from, to, kind, nil)
@@ -173,7 +173,7 @@ func (g *graphAssembly) relatedEdge(row graphRelatedCompany) (ids.UUID, ids.UUID
 // colleagues with recorded contact with the contacts the card is showing.
 //
 // No edge here can dangle: readInContactWith is given the contacts already
-// PLACED (drawnContactIDs), so every person an edge points at is a node before
+// PLACED (drawnContactIDs), so every contact an edge points at is a node before
 // this runs — the same already-drawn rule placeDeals applies to a stakeholder
 // seat on a dropped deal.
 //
@@ -197,7 +197,7 @@ func (g *graphAssembly) placeOurSide() {
 }
 
 // addUserNode adds one colleague. A user node carries a name and nothing else:
-// §4 measures our relationship with the account's people, not with each other,
+// §4 measures our relationship with the account's contacts, not with each other,
 // and how this colleague is connected is the EDGE's kind. The owner who also
 // emailed a contact dedupes through nodeIndex into ONE node with two edges.
 func (g *graphAssembly) addUserNode(user graphUser) {
@@ -213,22 +213,22 @@ func (g *graphAssembly) addUserNode(user graphUser) {
 //
 // It reports nothing unless that exact contact is already a node here. The
 // ranking is the warm room's own (signals.RankRouteIn), so the two surfaces
-// can only ever name the same person — and when the card is not showing that
-// person, because their only seat is on a deal it did not draw, saying
+// can only ever name the same contact — and when the card is not showing that
+// contact, because their only seat is on a deal it did not draw, saying
 // nothing is the honest answer. Naming the strongest contact it happens to
 // be showing would be a second, quieter ranking.
 func (g *graphAssembly) markIntroPath() {
 	if g.signalID == nil {
 		return
 	}
-	ranked := signals.RankRouteIn(g.routeIn, func(personID ids.PersonID) (int, bool) {
-		strength, ok := g.strengths[personID]
+	ranked := signals.RankRouteIn(g.routeIn, func(contactID ids.ContactID) (int, bool) {
+		strength, ok := g.strengths[contactID]
 		return strength.Strength, ok
 	})
 	if len(ranked) == 0 {
 		return
 	}
-	contactID := ranked[0].PersonID.UUID
+	contactID := ranked[0].ContactID.UUID
 	index, drawn := g.nodeIndex[contactID]
 	if !drawn {
 		return
@@ -241,21 +241,21 @@ func (g *graphAssembly) markIntroPath() {
 	}
 }
 
-// addPersonNode adds one contact, carrying the §4 score their node is
-// weighted by. A person the graph already holds keeps the node it has: the
+// addContactNode adds one contact, carrying the §4 score their node is
+// weighted by. A contact the graph already holds keeps the node it has: the
 // employment title is the durable description of who they are, and a
 // stakeholder seat arriving later must not overwrite it.
-func (g *graphAssembly) addPersonNode(edge graphPersonEdge) {
+func (g *graphAssembly) addContactNode(edge graphContactEdge) {
 	node := crmcontracts.CompanyGraphNode{
-		Id:     openapi_types.UUID(edge.personID.UUID),
-		Kind:   crmcontracts.CompanyGraphNodeKindPerson,
+		Id:     openapi_types.UUID(edge.contactID.UUID),
+		Kind:   crmcontracts.CompanyGraphNodeKindContact,
 		Label:  edge.fullName,
 		Detail: edge.title,
 	}
-	if strength, ok := g.strengths[edge.personID]; ok {
+	if strength, ok := g.strengths[edge.contactID]; ok {
 		score := strength.Strength
 		bucket := crmcontracts.CompanyGraphNodeStrengthBucket(
-			people.StrengthBucketToWire(strength.Bucket))
+			contacts.StrengthBucketToWire(strength.Bucket))
 		node.Strength = &score
 		node.StrengthBucket = &bucket
 	}
@@ -276,7 +276,7 @@ func (g *graphAssembly) addNode(node crmcontracts.CompanyGraphNode) {
 
 // addEdge appends one edge. Both ends are nodes by construction: every
 // caller places the far node first.
-// addContactEdge draws one colleague's contact with one person, carrying how
+// addContactEdge draws one colleague's contact with one contact, carrying how
 // warm that particular relationship is.
 //
 // The band is what a surface renders; the number is what it ranks by. A
@@ -287,7 +287,7 @@ func (g *graphAssembly) addContactEdge(edge ourSideEdge) {
 	bucket := crmcontracts.CompanyGraphEdgeStrengthBucket(edge.strength.Bucket)
 	wire := crmcontracts.CompanyGraphEdge{
 		From:           openapi_types.UUID(edge.user.userID),
-		To:             openapi_types.UUID(edge.personID),
+		To:             openapi_types.UUID(edge.contactID),
 		Kind:           crmcontracts.CompanyGraphEdgeKindInContactWith,
 		StrengthBucket: &bucket,
 	}

@@ -35,7 +35,7 @@ import "./worklist.row.css";
 // THE READER'S OWN SESSION, routed rather than left to the stub's fallback.
 //
 // One verb on this line asks who is holding the work: the hand-off names the
-// person a reassignment moves a task AWAY from, and on the reader's own queue
+// contact a reassignment moves a task AWAY from, and on the reader's own queue
 // that is whoever `/me` says. Unrouted, the stub answers a list-shaped body,
 // which reads as a malformed session — every capability then fails closed and
 // the frame draws a branch no story here is named for. The grants are empty on
@@ -104,7 +104,7 @@ function taskRow(): WorklistItem {
     actions: ["complete", "open"],
     version: 3,
     subject: {
-      type: "person",
+      type: "contact",
       id: "01a05500-0000-7000-8000-0000000000aa",
       label: "Kirsten Vogel",
     },

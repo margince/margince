@@ -55,7 +55,7 @@ function mount(body: unknown, status = 200) {
       }
     >
       <LocaleProvider initial="en">
-        <StrengthPanel kind="person" id="p-1" />
+        <StrengthPanel kind="contact" id="p-1" />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -140,7 +140,7 @@ describe("what the score was computed from", () => {
         }
       >
         <LocaleProvider initial="en">
-          <StrengthPanel kind="person" id="p-1" onOpenEmail={onOpenEmail} />
+          <StrengthPanel kind="contact" id="p-1" onOpenEmail={onOpenEmail} />
         </LocaleProvider>
       </QueryClientProvider>,
     );

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -79,12 +79,12 @@ func newRecordingCache() *recordingCache {
 	return &recordingCache{stored: map[string][]string{}}
 }
 
-func (c *recordingCache) LookupTechnical(_ context.Context, query, kind string) (people.CachedLookup, bool, error) {
+func (c *recordingCache) LookupTechnical(_ context.Context, query, kind string) (contacts.CachedLookup, bool, error) {
 	answer, hit := c.stored[kind+"|"+query]
-	return people.CachedLookup{Answer: answer, Found: len(answer) > 0}, hit, nil
+	return contacts.CachedLookup{Answer: answer, Found: len(answer) > 0}, hit, nil
 }
 
-func (c *recordingCache) RememberTechnical(_ context.Context, query, kind string, answer people.CachedLookup) error {
+func (c *recordingCache) RememberTechnical(_ context.Context, query, kind string, answer contacts.CachedLookup) error {
 	c.stored[kind+"|"+query] = answer.Answer
 	return nil
 }
@@ -124,11 +124,11 @@ func TestReadGathersEveryLane(t *testing.T) {
 		t.Errorf("stamped %s, want the injected clock's %s", got.ObservedAt, observedAt)
 	}
 	for _, want := range []struct{ field, key string }{
-		{people.FactMailProvider, "microsoft365"},
-		{people.FactEmailSecurity, "dmarc_reject"},
-		{people.FactHostingProvider, "hetzner"},
-		{people.FactOperatedService, "webshop"},
-		{people.FactOperatedService, "careers"},
+		{contacts.FactMailProvider, "microsoft365"},
+		{contacts.FactEmailSecurity, "dmarc_reject"},
+		{contacts.FactHostingProvider, "hetzner"},
+		{contacts.FactOperatedService, "webshop"},
+		{contacts.FactOperatedService, "careers"},
 	} {
 		if !observed(got, want.field, want.key) {
 			t.Errorf("did not read %s=%s; read %v", want.field, want.key, got.Observations)
@@ -155,7 +155,7 @@ func TestACertificateLogOutageCompletesNoLane(t *testing.T) {
 	got, _ := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
 
 	for _, lane := range got.Completed {
-		if lane == people.LaneCertLog {
+		if lane == contacts.LaneCertLog {
 			t.Fatal("the certificate lane completed on a query that failed; its rows would be wiped")
 		}
 	}
@@ -234,7 +234,7 @@ func TestASecondReadIsAnsweredFromTheCache(t *testing.T) {
 	if counting.calls != 1 {
 		t.Errorf("asked the certificate log %d times for one domain, want 1", counting.calls)
 	}
-	if !observed(second, people.FactOperatedService, "webshop") {
+	if !observed(second, contacts.FactOperatedService, "webshop") {
 		t.Error("the cached read lost the service the first read found")
 	}
 }
@@ -249,7 +249,7 @@ func (c *countingCertLog) Hostnames(ctx context.Context, domain string) ([]strin
 	return c.inner.Hostnames(ctx, domain)
 }
 
-func observed(in people.TechnicalEnrichment, field, key string) bool {
+func observed(in contacts.TechnicalEnrichment, field, key string) bool {
 	for _, observation := range in.Observations {
 		if observation.Field == field && observation.ValueKey == key {
 			return true

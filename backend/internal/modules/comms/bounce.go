@@ -44,7 +44,7 @@ const bounceReasonCap = 500
 // mail, and anyone can post a report-shaped message into a captured mailbox:
 //   - the named message is a row this store sent (message_id + status),
 //   - the row belongs to the mailbox owner whose capture is reporting
-//     (user_id = the connector principal's user — the person whose mailbox
+//     (user_id = the connector principal's user — the contact whose mailbox
 //     the report actually arrived in),
 //   - the address the report says failed is one the message actually went to.
 //

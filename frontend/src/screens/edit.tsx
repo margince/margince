@@ -27,7 +27,7 @@ import {
 // relationships, webhooks, pipeline stages...) gets none.
 const EDIT_MUTATION_HEAD: Readonly<Partial<Record<string, string>>> = {
   company: "company-edit",
-  person: "contact-edit",
+  contact: "contact-edit",
   deal: "deal-edit",
   lead: "lead-edit",
 };
@@ -88,7 +88,7 @@ export function useUpdateRecord<Updated extends { id: string }>({
       values: Record<string, unknown>;
       rows: FormRows;
       // The reading the form prefilled from, carried through the mutation so
-      // the write's baseline and version are the ones the person saw.
+      // the write's baseline and version are the ones the contact saw.
       opened?: Record<string, unknown> & { id: string; version?: number };
     }) => update(values, rows, opened),
     onSuccess: (updated) => {
@@ -214,8 +214,8 @@ export function EditRecordModal({
   // values on screen, the baseline the diff is taken against, and the version
   // the If-Match carries. `record` is recomputed on every render, so a
   // background refetch mid-edit moves the last two while the first stays as
-  // the person left it — and then the diff reports somebody else's change as
-  // this person's edit, and the fresh version makes the server's concurrency
+  // the contact left it — and then the diff reports somebody else's change as
+  // this contact's edit, and the fresh version makes the server's concurrency
   // check pass on the write that overwrites it.
   //
   // Carried ON the submit rather than published when it is taken, so it is
@@ -256,7 +256,7 @@ export function EditRecordModal({
   // under an open dialog without remounting it, and then the form is
   // showing one record's values while the caller's write
   // addresses another. Re-seeding on identity is not the same trade as
-  // re-seeding on every render: keeping what the person typed is only worth
+  // re-seeding on every render: keeping what the human typed is only worth
   // anything while it is about the record they are still editing.
   const [seededFor, setSeededFor] = useState<string | null>(null);
   // The reading the values were taken from, kept for the write. Set in the

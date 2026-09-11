@@ -12,7 +12,7 @@ package agents
 // They no longer stage by DEFAULT. A passport carries the granting human's own
 // seat, grants and row scope, so a verb this family holds is one its holder
 // could perform unaided in the web app, and requiring a second confirmation
-// from the same person made the agent surface weaker than the person behind
+// from the same contact made the agent surface weaker than the contact behind
 // it rather than safer. This is ADR-0055's argument — already accepted for
 // DECIDING an approval — applied to doing the thing itself.
 //
@@ -52,7 +52,7 @@ import (
 // rather than derived so adding a branch to Archive is a deliberate edit in
 // both places.
 var archivableRecordTypes = []string{
-	string(datasource.EntityPerson), string(datasource.EntityCompany),
+	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityProject),
 	string(datasource.EntityRelationship), string(datasource.EntityActivity),
 }
@@ -62,7 +62,7 @@ var archivableRecordTypes = []string{
 //
 // The list above is what the NATIVE provider archives, and for an installation
 // running in overlay mode that is three types too wide: overlay archives
-// person, company and deal, and refuses project, relationship and
+// contact, company and deal, and refuses project, relationship and
 // activity. A stage-time check reading the native list therefore admitted an
 // archive the executor was always going to refuse — the one failure this
 // tool's confirm-first shape exists to prevent, and the failure the comment on
@@ -108,9 +108,9 @@ func (t archiveRecord) Spec() mcp.ToolSpec {
 		Name: "archive_record", Title: "Archive a record", Version: toolVersionV1,
 		Description:   archiveRecordCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "archivePerson/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
+		OpenAPIOp: "archiveContact/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["person","company","deal","project","relationship","activity"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","project","relationship","activity"]},
 			"id":{"type":"string","format":"uuid"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
@@ -217,7 +217,7 @@ type promoteLead struct {
 
 func (t promoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "promote_lead", Title: "Promote a lead to a person", Version: toolVersionV1,
+		Name: "promote_lead", Title: "Promote a lead to a contact", Version: toolVersionV1,
 		Description:   promoteLeadCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "promoteLead",
@@ -270,7 +270,7 @@ func (t promoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 		return nil, fmt.Errorf("crmagents: promotion landed but read-back failed: %w", err)
 	}
 	noteEvidence(ctx, datasource.EntityLead, args.LeadID)
-	return json.Marshal(PromoteLeadResult{Merged: merged, Person: newWireRecord(ctx, rec)})
+	return json.Marshal(PromoteLeadResult{Merged: merged, Contact: newWireRecord(ctx, rec)})
 }
 
 // --- merge_records (🟡 write — collapses two records into one) ---
@@ -281,9 +281,9 @@ type mergeArgs struct {
 	TargetID   ids.UUID `json:"target_id"`
 }
 
-// mergeableTypes: only person and company have a merge verb (deals and
+// mergeableTypes: only contact and company have a merge verb (deals and
 // leads leave through their own lifecycle).
-var mergeableTypes = map[string]bool{importObjectPerson: true, importObjectCompany: true}
+var mergeableTypes = map[string]bool{importObjectContact: true, importObjectCompany: true}
 
 // mergeableTypeNames renders the vocabulary above for a refusal, sorted so the
 // message is byte-stable across processes rather than following map order.
@@ -305,9 +305,9 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
 		Description:   mergeRecordsCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "mergePerson/mergeCompany",
+		OpenAPIOp: "mergeContact/mergeCompany",
 		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
-			"record_type":{"type":"string","enum":["person","company"]},
+			"record_type":{"type":"string","enum":["contact","company"]},
 			"source_id":{"type":"string","format":"uuid","description":"The record merged away (archived, redirected to the survivor)"},
 			"target_id":{"type":"string","format":"uuid","description":"The surviving record everything relinks to"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},

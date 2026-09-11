@@ -18,12 +18,12 @@ import (
 // account never gets a signal about it.
 var companyArms = `FROM activity_link l
 		    LEFT JOIN deal d ON d.id = l.deal_id
-		    LEFT JOIN relationship r ON r.person_id = l.person_id AND r.kind = 'employment'
+		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
 		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL`
 
 // participantEmployerArm is the fourth arm: the employer of somebody who is on
 // the event as a participant rather than as a link. Without it a meeting whose
-// only person is on the invitation reaches no company at all, since a meeting
+// only contact is on the invitation reaches no company at all, since a meeting
 // may carry no direct company link.
 //
 // activities.participantEmployerArm is the same text, held equal to this one by
@@ -32,7 +32,7 @@ var companyArms = `FROM activity_link l
 // that deliberately stops at three arms (activities.CompanyReachSet says why).
 var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
-		      JOIN relationship emp ON emp.person_id = ap.person_id AND emp.kind = 'employment'
+		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
@@ -43,7 +43,7 @@ var participantEmployerArm = `EXISTS (
 // direct company link (migration 1788000100), so a flat
 // `activity_link.company_id` match — which is what this walk used to be —
 // reads an account's timeline with every meeting missing from it. The same was
-// already true of captured mail, which capture files against the PERSON it was
+// already true of captured mail, which capture files against the CONTACT it was
 // with: an account's busiest correspondence carried no company link at all
 // and this walk never saw it.
 //

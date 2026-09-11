@@ -15,7 +15,7 @@
 // nothing to say today" rather than as an authoritative empty answer.
 //
 // It returns hostnames and nothing else. A certificate carries an issuer, a
-// validity window and sometimes a person's name; this package parses none of
+// validity window and sometimes a contact's name; this package parses none of
 // that and offers no entry point that would return it — the narrowest surface
 // that answers the question is also the one that cannot leak the rest.
 package certlog

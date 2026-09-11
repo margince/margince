@@ -29,7 +29,7 @@ import (
 func waitingReplyEntityClause(entityType string, entityID ids.UUID, arg func(any) int) (string, error) {
 	if entityType == string(datasource.RecordCompany) {
 		// An account's timeline is wider than its direct links (mail is filed
-		// against the person it was with), so this reuses the SAME three-arm
+		// against the contact it was with), so this reuses the SAME three-arm
 		// walk the timeline list and the company view both read through —
 		// see CompanyLinkedActivityExists.
 		return CompanyLinkedActivityExists(arg(entityID)), nil

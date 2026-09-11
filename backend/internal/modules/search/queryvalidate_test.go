@@ -60,7 +60,7 @@ func errorAs(err error, target *apperrors.FieldFaults) bool {
 // with a code that names what was not understood — none is coerced, and none
 // is narrowed to the part that parsed.
 func TestAPlanOutsideTheVocabularyIsRefusedByClass(t *testing.T) {
-	ctx := readerFor("deal", "company", "person")
+	ctx := readerFor("deal", "company", "contact")
 	for name, tc := range map[string]struct {
 		doc  string
 		want string
@@ -225,7 +225,7 @@ func TestADeniedRecordTypesFieldIsRefusedAsAnUnknownTarget(t *testing.T) {
 	if _, err := validator.Validate(readerFor("deal"), plan); err != nil {
 		t.Fatalf("a caller who reads deals cannot ask about the workspace's own deal column: %v", err)
 	}
-	_, err = validator.Validate(readerFor("person"), plan)
+	_, err = validator.Validate(readerFor("contact"), plan)
 	fault := singleFault(t, err)
 	if fault.Code != CodeUnknownTarget {
 		t.Errorf("a caller who cannot read deals was refused with %q; want %q, which says nothing about what exists",
@@ -362,8 +362,8 @@ func TestTheClassifierOnlyExplainsARefusalItDidNotCause(t *testing.T) {
 	if !looksLikeSQL("converted_from_lead_id") {
 		t.Fatal("the fixture no longer exercises the classifier; pick a field it would call SQL")
 	}
-	plan, err := validateJSON(readerFor("person"), t,
-		`{"version":"v1","target":"person","where":[{"field":"converted_from_lead_id","op":"eq",`+
+	plan, err := validateJSON(readerFor("contact"), t,
+		`{"version":"v1","target":"contact","where":[{"field":"converted_from_lead_id","op":"eq",`+
 			`"value":"00000000-0000-7000-8000-000000000001"}]}`)
 	if err != nil {
 		t.Fatalf("a legitimate contract field the classifier would call SQL was refused: %v", err)
@@ -373,8 +373,8 @@ func TestTheClassifierOnlyExplainsARefusalItDidNotCause(t *testing.T) {
 	}
 	// And a token the classifier has no opinion about is still refused,
 	// because membership — not shape — is what decides.
-	_, err = validateJSON(readerFor("person"), t,
-		`{"version":"v1","target":"person","where":[{"field":"innocent_looking_name","op":"eq","value":"x"}]}`)
+	_, err = validateJSON(readerFor("contact"), t,
+		`{"version":"v1","target":"contact","where":[{"field":"innocent_looking_name","op":"eq","value":"x"}]}`)
 	if codes := refusalCodes(t, err); !slices.Contains(codes, CodeUnknownField) {
 		t.Errorf("an unrecognised but harmless-looking token was refused with %v; want %q", codes, CodeUnknownField)
 	}
@@ -539,7 +539,7 @@ func TestARepeatedMemberIsRefusedRatherThanResolvedLastWins(t *testing.T) {
 	for name, doc := range map[string]string{
 		"two where lists": `{"version":"v1","target":"deal",
 			"where":[{"field":"status","op":"eq","value":"open"}],"where":[]}`,
-		"two targets": `{"version":"v1","target":"deal","target":"person"}`,
+		"two targets": `{"version":"v1","target":"deal","target":"contact"}`,
 		"a repeat inside a predicate": `{"version":"v1","target":"deal",
 			"where":[{"field":"status","field":"name","op":"eq","value":"x"}]}`,
 		"a repeat inside a traversal": `{"version":"v1","target":"deal",
@@ -548,7 +548,7 @@ func TestARepeatedMemberIsRefusedRatherThanResolvedLastWins(t *testing.T) {
 			"traverse":{"relation":"company","where":[{"field":"industry","op":"eq","op":"neq","value":"x"}]}}`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := validateJSON(readerFor("deal", "company", "person"), t, doc)
+			_, err := validateJSON(readerFor("deal", "company", "contact"), t, doc)
 			if codes := refusalCodes(t, err); !slices.Contains(codes, CodeDuplicateMember) {
 				t.Errorf("refused with %v; want %q", codes, CodeDuplicateMember)
 			}
@@ -588,13 +588,13 @@ func TestTheDuplicateScanLeavesMalformedDocumentsToTheDecoder(t *testing.T) {
 // write. Only the canonical spelling is admitted.
 func TestACaseVariantMemberCannotOverwriteTheCanonicalOne(t *testing.T) {
 	for name, doc := range map[string]string{
-		"an upper-cased target":    `{"version":"v1","target":"deal","TARGET":"person"}`,
+		"an upper-cased target":    `{"version":"v1","target":"deal","TARGET":"contact"}`,
 		"a title-cased where":      `{"version":"v1","target":"deal","Where":[]}`,
 		"a variant inside a hop":   `{"version":"v1","target":"deal","traverse":{"Relation":"company"}}`,
 		"a variant operand member": `{"version":"v1","target":"deal","where":[{"field":"name","op":"eq","VALUE":"x"}]}`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := validateJSON(readerFor("deal", "company", "person"), t, doc)
+			_, err := validateJSON(readerFor("deal", "company", "contact"), t, doc)
 			if codes := refusalCodes(t, err); !slices.Contains(codes, CodeUnknownPlanMember) {
 				t.Errorf("refused with %v; want %q", codes, CodeUnknownPlanMember)
 			}
@@ -657,7 +657,7 @@ func TestANullOperandIsRefusedRatherThanReadAsAZero(t *testing.T) {
 		"a null unused operand": {`{"field":"name","op":"eq","value":"a","values":null}`, CodeValueNotApplicable},
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := validateJSON(readerFor("deal", "company", "person"), t,
+			_, err := validateJSON(readerFor("deal", "company", "contact"), t,
 				`{"version":"v1","target":"deal","where":[`+tc.doc+`]}`)
 			if codes := refusalCodes(t, err); !slices.Contains(codes, tc.want) {
 				t.Errorf("refused with %v; want %q", codes, tc.want)

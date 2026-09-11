@@ -41,7 +41,7 @@ import (
 // foreign key to anything else (a workspace, a user, a catalog row) is not an
 // endpoint whose visibility an edge inherits.
 var scopedEndpointTables = map[string]bool{
-	"person": true, "company": true, "deal": true, "project": true, "lead": true,
+	"contact": true, "company": true, "deal": true, "project": true, "lead": true,
 }
 
 // tenantColumn rides in every foreign key on a tenant table: the FKs here are

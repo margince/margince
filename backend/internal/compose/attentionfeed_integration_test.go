@@ -11,7 +11,7 @@ package compose
 // assembly and nothing about the producers: a stub returns a row because the
 // test told it to, so a producer that stopped reaching the surface would leave
 // every one of them green. These drive the REAL writers — the staging service,
-// the activity store, the person store — and read the whole feed back through
+// the activity store, the contact store — and read the whole feed back through
 // the same wiring the HTTP handler uses, so a break anywhere between the write
 // and the lane fails here.
 //
@@ -30,7 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -96,7 +96,7 @@ func logTask(t *testing.T, e *integration.Env, subject string, due time.Time, do
 // it — not a link to somewhere else it could be answered.
 func TestAStagedProposalReachesTheDecisionLane(t *testing.T) {
 	e := integration.Setup(t)
-	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "Anna Weber"})
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
 	if err != nil {
 		t.Fatalf("creating the target: %v", err)
 	}
@@ -106,8 +106,8 @@ func TestAStagedProposalReachesTheDecisionLane(t *testing.T) {
 		ProposedChange: json.RawMessage(`{"body":"the follow-up"}`),
 		DiffHash:       "feed-" + ids.NewV7().String(),
 		Summary:        "Send the follow-up to Anna Weber",
-		TargetType:     "person",
-		TargetID:       ids.UUID(person.Id),
+		TargetType:     "contact",
+		TargetID:       ids.UUID(contact.Id),
 	}); err != nil {
 		t.Fatalf("staging the proposal: %v", err)
 	}
@@ -133,10 +133,10 @@ func TestAStagedProposalReachesTheDecisionLane(t *testing.T) {
 // nobody can answer.
 func TestADetectedDuplicateReachesTheDecisionLane(t *testing.T) {
 	e := integration.Setup(t)
-	if _, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "Lucy Vo"}); err != nil {
+	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Lucy Vo"}); err != nil {
 		t.Fatalf("creating the incumbent: %v", err)
 	}
-	if _, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "LUCY VO"}); err != nil {
+	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "LUCY VO"}); err != nil {
 		t.Fatalf("creating the near-match: %v", err)
 	}
 
@@ -221,7 +221,7 @@ func containsAction(actions []crmcontracts.AttentionItemActions, want string) bo
 // The lane now reads the decision's own marker, which a deletion cannot rewrite.
 func TestADepartedColleaguesDecisionIsNotReportedAsTheSystemsWork(t *testing.T) {
 	e := integration.Setup(t)
-	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "Anna Weber"})
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
 	if err != nil {
 		t.Fatalf("creating the target: %v", err)
 	}
@@ -231,8 +231,8 @@ func TestADepartedColleaguesDecisionIsNotReportedAsTheSystemsWork(t *testing.T) 
 		ProposedChange: json.RawMessage(`{"body":"the follow-up"}`),
 		DiffHash:       "receipt-" + ids.NewV7().String(),
 		Summary:        "Send the follow-up to Anna Weber",
-		TargetType:     "person",
-		TargetID:       ids.UUID(person.Id),
+		TargetType:     "contact",
+		TargetID:       ids.UUID(contact.Id),
 	})
 	if err != nil {
 		t.Fatalf("staging the proposal: %v", err)
@@ -256,7 +256,7 @@ func TestADepartedColleaguesDecisionIsNotReportedAsTheSystemsWork(t *testing.T) 
 
 	day := assembleFeed(e.Admin(), t, e, time.Now().UTC())
 	if got := sourcesOn(day.DoneForYou); len(got) != 0 {
-		t.Fatalf("the done-for-you lane = %v, want nothing: a person decided this", got)
+		t.Fatalf("the done-for-you lane = %v, want nothing: a human decided this", got)
 	}
 }
 
@@ -301,14 +301,14 @@ func TestATaskDueExactlyAtTheBoundaryBelongsToTomorrow(t *testing.T) {
 func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 	e := integration.Setup(t)
 	now := time.Now().UTC()
-	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "Anna Weber"})
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
 	if err != nil {
 		t.Fatalf("creating the target: %v", err)
 	}
 	svc := approvals.NewService(e.DB())
 	// The receipt: staged first, so every later staging sorts above it, and
 	// marked as the system's own act decided just now.
-	old := stageFor(t, e, svc, person, "Filed a message under Riverty")
+	old := stageFor(t, e, svc, contact, "Filed a message under Riverty")
 	e.WsExec(t, `UPDATE approval
 		    SET status = 'approved', decided_by_system = true, decided_at = now(),
 		        created_at = now() - interval '7 days'
@@ -316,7 +316,7 @@ func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 	// Enough newer stagings, decided outside the window, to fill any page the
 	// lane would ask for.
 	for i := 0; i < doneLaneWidth+4; i++ {
-		id := stageFor(t, e, svc, person, fmt.Sprintf("An older act %d", i))
+		id := stageFor(t, e, svc, contact, fmt.Sprintf("An older act %d", i))
 		e.WsExec(t, `UPDATE approval
 			    SET status = 'approved', decided_by_system = true,
 			        decided_at = now() - interval '30 days'
@@ -329,9 +329,9 @@ func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 	}
 }
 
-// stageFor stages one proposal against a person through the real service.
+// stageFor stages one proposal against a contact through the real service.
 func stageFor(t *testing.T, e *integration.Env, svc *approvals.Service,
-	person crmcontracts.Person, summary string,
+	contact crmcontracts.Contact, summary string,
 ) ids.ApprovalID {
 	t.Helper()
 	id, err := svc.Stage(e.Admin(), approvals.StageInput{
@@ -339,8 +339,8 @@ func stageFor(t *testing.T, e *integration.Env, svc *approvals.Service,
 		ProposedChange: json.RawMessage(`{"body":"the follow-up"}`),
 		DiffHash:       "receipt-" + ids.NewV7().String(),
 		Summary:        summary,
-		TargetType:     "person",
-		TargetID:       ids.UUID(person.Id),
+		TargetType:     "contact",
+		TargetID:       ids.UUID(contact.Id),
 	})
 	if err != nil {
 		t.Fatalf("staging %q: %v", summary, err)

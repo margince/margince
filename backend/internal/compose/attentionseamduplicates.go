@@ -14,17 +14,17 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// attentionDuplicates reads the dedupe queue through the people store, which
+// attentionDuplicates reads the dedupe queue through the contacts store, which
 // applies the both-sides-visible rule to the page and the count alike.
-type attentionDuplicates struct{ store *people.Store }
+type attentionDuplicates struct{ store *contacts.Store }
 
 func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]attention.DuplicatePair, error) {
-	rows, _, err := d.store.ListDedupeCandidates(ctx, people.DedupeQueueInput{Limit: limit})
+	rows, _, err := d.store.ListDedupeCandidates(ctx, contacts.DedupeQueueInput{Limit: limit})
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]a
 func (d attentionDuplicates) DescribeMany(
 	ctx context.Context, entityType string, rowIDs []ids.UUID,
 ) (map[ids.UUID]attention.RecordFace, error) {
-	if entityType != flipObjectPerson && entityType != flipObjectCompany && entityType != flipObjectLead {
+	if entityType != flipObjectContact && entityType != flipObjectCompany && entityType != flipObjectLead {
 		return nil, apperrors.ErrNotFound
 	}
 	described, err := d.store.DescribeForMerge(ctx, entityType, rowIDs)
@@ -79,7 +79,7 @@ func (d attentionDuplicates) DescribeMany(
 func (d attentionDuplicates) DecidableSubset(
 	ctx context.Context, entityType string, rowIDs []ids.UUID,
 ) (map[ids.UUID]bool, error) {
-	if entityType != flipObjectPerson && entityType != flipObjectCompany && entityType != flipObjectLead {
+	if entityType != flipObjectContact && entityType != flipObjectCompany && entityType != flipObjectLead {
 		return nil, apperrors.ErrNotFound
 	}
 	return d.store.DecidableForMerge(ctx, entityType, rowIDs)
@@ -94,7 +94,7 @@ func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
 // Only companies have a refusal beyond authority: two companies each
 // carrying live work do not combine (PROJ-LIFE-4), because the merged company
 // would be running the same body of work twice or two different ones, and
-// nothing in the data says which. People and leads carry no such rule, so they
+// nothing in the data says which. Contacts and leads carry no such rule, so they
 // are settleable by construction rather than by a query nobody needs.
 //
 // It reads through the same store the merge refuses from, so the card's offer

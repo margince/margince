@@ -37,7 +37,7 @@ const maxProviderLength = 32
 // It is not a detail of the connection. It is the axis that decides whether a
 // captured message is the company's correspondence or one human's — a workspace
 // bot serves everybody, so its traffic is workspace business; a per-member
-// credential is one person's own account, so their chats are theirs, which is
+// credential is one contact's own account, so their chats are theirs, which is
 // the mailbox model with the same floor, holds and postures.
 //
 // IT DECIDES WHAT A CAPTURED MESSAGE IS BORN AS. `per_member` puts a chat on the
@@ -139,7 +139,7 @@ type ConnectionLiveChecker func(ctx context.Context, rt Runtime, member UserID) 
 // OutboundMessage is one message handed to a unit for transmission.
 type OutboundMessage struct {
 	// Member is WHOSE credential transmits — the rep who staged the send, not
-	// the caller who released it. A unit sends as a person, never as the
+	// the caller who released it. A unit sends as a contact, never as the
 	// installation.
 	Member UserID
 	// Recipient is the provider account id, never the username: a username is
@@ -179,7 +179,7 @@ type ChannelIdentity struct {
 	Provider string
 	// ChannelUserID is the provider's account id.
 	ChannelUserID string
-	// DisplayName is what a human calls them, for a person record that has no
+	// DisplayName is what a human calls them, for a contact record that has no
 	// other name yet. Never used for routing.
 	DisplayName string
 }
@@ -204,7 +204,7 @@ func (c Channel) Validate() error {
 	// not answered has not been asked yet, and costing them one line at boot is
 	// cheaper than either default costs the installation that gets it.
 	if !c.CredentialModel.Valid() {
-		return fmt.Errorf("%w: channel %q must declare CredentialModel — %s for one credential the whole installation shares (a bot, an official account), %s for one sealed credential per member. There is no default: it decides whether this transport's messages are the company's correspondence or one person's",
+		return fmt.Errorf("%w: channel %q must declare CredentialModel — %s for one credential the whole installation shares (a bot, an official account), %s for one sealed credential per member. There is no default: it decides whether this transport's messages are the company's correspondence or one contact's",
 			ErrInvalid, c.Provider, CredentialWorkspaceBot, CredentialPerMember)
 	}
 	// The pairing, refused HERE rather than at the send: a transport that can

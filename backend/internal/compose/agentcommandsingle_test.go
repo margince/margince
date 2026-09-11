@@ -30,7 +30,7 @@ import (
 // singlePurposeTools are the fourteen verbs whose every contract operation
 // this task put on the seam. Named as VERBS rather than as operationIds
 // because the mapping is the point: two of them serve two operations each
-// (merge_records is the person and company halves, enrich is the two
+// (merge_records is the contact and company halves, enrich is the two
 // depths), so a walk keyed on tool names finds sixteen routes and would find a
 // seventeenth the contract grew for any of them.
 var singlePurposeTools = []string{
@@ -72,7 +72,7 @@ var contractBodies = map[string]string{
 	"disqualifyLead":      `{"reason_id":"019ff000-0000-7000-8000-000000000007","note":"went with a competitor"}`,
 	"advanceProjectPhase": `{"to_phase":"pursuing"}`,
 	"advanceDeal":         `{"to_stage_id":"019ff000-0000-7000-8000-000000000003"}`,
-	"mergePerson":         `{"target_id":"019ff000-0000-7000-8000-000000000004"}`,
+	"mergeContact":        `{"target_id":"019ff000-0000-7000-8000-000000000004"}`,
 	"mergeCompany":        `{"target_id":"019ff000-0000-7000-8000-000000000005"}`,
 	"scrapeCompany":       `{"url":"https://acme.test/about"}`,
 	"deepReadCompany":     `{"url":"https://acme.test"}`,
@@ -96,10 +96,10 @@ var contractBodies = map[string]string{
 
 	// The operand family's own bodies, on the same rule: every required member
 	// crm.yaml declares, and nothing else.
-	"setProjectStakeholder":     `{"person_id":"019ff000-0000-7000-8000-000000000031","role":"champion"}`,
+	"setProjectStakeholder":     `{"contact_id":"019ff000-0000-7000-8000-000000000031","role":"champion"}`,
 	"setProjectCompany":         `{"company_id":"019ff000-0000-7000-8000-000000000032","role":"partner"}`,
-	"applyTag":                  `{"entity_type":"person","entity_id":"019ff000-0000-7000-8000-000000000033"}`,
-	"removeTag":                 `{"entity_type":"person","entity_id":"019ff000-0000-7000-8000-000000000034"}`,
+	"applyTag":                  `{"entity_type":"contact","entity_id":"019ff000-0000-7000-8000-000000000033"}`,
+	"removeTag":                 `{"entity_type":"contact","entity_id":"019ff000-0000-7000-8000-000000000034"}`,
 	"mergeTags":                 `{"into_tag_id":"019ff000-0000-7000-8000-000000000035"}`,
 	"demoteLead":                `{"reason":"the account went quiet"}`,
 	"createOffer":               `{"currency":"EUR","source":"manual"}`,
@@ -211,7 +211,7 @@ func mergeRequest(collection string, routed ids.UUID, body []byte) *http.Request
 // The behaviour change a merge's command buys, and it is a correction rather
 // than an addition.
 //
-// POST /v1/people/{id}/merge merges the ROUTED person INTO the body's
+// POST /v1/contacts/{id}/merge merges the ROUTED contact INTO the body's
 // target_id: the routed row is the one archived. The route walk read that
 // routed id as the staged target, so the approval bound to — and the pin was
 // taken from — the record about to be retired, while the tool door had always
@@ -221,7 +221,7 @@ func TestAMergeStagesTheSurvivorTheBodyNamesRatherThanTheRoutedRecord(t *testing
 		op, collection string
 		recordType     agentRecordType
 	}{
-		{"mergePerson", "/v1/people", recordTypePerson},
+		{"mergeContact", "/v1/contacts", recordTypeContact},
 		{"mergeCompany", "/v1/companies", recordTypeCompany},
 	} {
 		t.Run(c.op, func(t *testing.T) {

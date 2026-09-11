@@ -53,14 +53,14 @@ func (b *scriptedBrain) Complete(_ context.Context, _ model.Request) (model.Resp
 // seedMessage logs one captured email on a conversation, filed against the
 // given contact and nothing else.
 //
-// This is the shape capture actually writes: mail is linked to the PERSON it
+// This is the shape capture actually writes: mail is linked to the CONTACT it
 // was with, never to their employer. A fixture that seeds a direct company
 // link describes a row no connector produces, and proves the producer against
 // correspondence no workspace has.
 func seedMessage(t *testing.T, e *Env, contact ids.UUID, key, subject, body, direction string, at time.Time) ids.UUID {
 	t.Helper()
 	id := seedUnlinkedMessage(t, e, key, subject, body, direction, at)
-	LinkActivity(t, OwnerConn(t), id, "person", contact)
+	LinkActivity(t, OwnerConn(t), id, "contact", contact)
 	return id
 }
 
@@ -79,9 +79,9 @@ func seedUnlinkedMessage(t *testing.T, e *Env, key, subject, body, direction str
 // captured mail reaches it.
 func employeeOf(t *testing.T, e *Env, company ids.UUID, name string) ids.UUID {
 	t.Helper()
-	person := e.SeedPerson(t, name, &e.Rep1)
-	seedEmployment(t, OwnerConn(t), person, company)
-	return person
+	contact := e.SeedContact(t, name, &e.Rep1)
+	seedEmployment(t, OwnerConn(t), contact, company)
+	return contact
 }
 
 // seedThread logs one captured email on a conversation belonging to the
@@ -262,7 +262,7 @@ func TestAThreadWithATwoEmployerContactIsNotFiledAgainstEither(t *testing.T) {
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Acme", &e.Rep1)
 	contoso := e.SeedCompany(t, "Contoso", &e.Rep1)
-	moonlighter := e.SeedPerson(t, "Mo Moonlighter", &e.Rep1)
+	moonlighter := e.SeedContact(t, "Mo Moonlighter", &e.Rep1)
 	owner := OwnerConn(t)
 	seedEmployment(t, owner, moonlighter, acme)
 	seedEmployment(t, owner, moonlighter, contoso)
@@ -288,7 +288,7 @@ func TestAThreadReachesTheAccountThroughItsDealAlone(t *testing.T) {
 	pipeline, stage, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1)
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company)
-	unattached := e.SeedPerson(t, "Unaffiliated Ursula", &e.Rep1)
+	unattached := e.SeedContact(t, "Unaffiliated Ursula", &e.Rep1)
 	notice := seedMessage(t, e, unattached, "thread-deal", "Renewal for 2027",
 		"We have decided not to renew.", "inbound", extractClock.Add(-48*time.Hour))
 	LinkActivity(t, OwnerConn(t), notice, "deal", deal)
@@ -318,7 +318,7 @@ func TestAnUnplaceableMessageStillHoldsTheConversationOpen(t *testing.T) {
 		"We are still discussing it internally.", "inbound", extractClock.Add(-48*time.Hour))
 	// A stranger's reply, minutes ago: it reaches no account, but the
 	// conversation is plainly still moving.
-	seedMessage(t, e, e.SeedPerson(t, "Stranger Sam", &e.Rep1), "thread-live", "Renewal for 2027",
+	seedMessage(t, e, e.SeedContact(t, "Stranger Sam", &e.Rep1), "thread-live", "Renewal for 2027",
 		"Adding my thoughts before we decide.", "inbound", extractClock.Add(-time.Minute))
 
 	brain := &scriptedBrain{reply: `{"events": []}`}
@@ -364,7 +364,7 @@ func TestAConversationIsOwedAFreshReadingWhenItsAccountChanges(t *testing.T) {
 
 	owner := OwnerConn(t)
 	e.WsExec(t, `UPDATE relationship SET ended_at = $1
-		 WHERE person_id = $2 AND company_id = $3 AND kind = 'employment'`,
+		 WHERE contact_id = $2 AND company_id = $3 AND kind = 'employment'`,
 		extractClock.Add(-time.Hour), mover, acme)
 	seedEmployment(t, owner, mover, contoso)
 
@@ -375,7 +375,7 @@ func TestAConversationIsOwedAFreshReadingWhenItsAccountChanges(t *testing.T) {
 			"want the one reading the new account has never had", again.Due)
 	}
 	// The account it was FIRST read for keeps what its own mail stated. A
-	// signal is not withdrawn because the person who wrote it changed jobs.
+	// signal is not withdrawn because the contact who wrote it changed jobs.
 	if kinds := openSignalKinds(t, e, acme); len(kinds) != 1 || kinds[0] != "contract_ended" {
 		t.Fatalf("the original account carries %v, want the contract_ended it "+
 			"was told about while the contact still worked there", kinds)

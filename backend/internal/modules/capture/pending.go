@@ -10,7 +10,7 @@ package capture
 // a wrong registry entry is queryable rather than only a log line.
 //
 // This file owns the ledger's SQL and nothing else — capture never touches
-// person/company tables, and the resolver seam stays the only way records
+// contact/company tables, and the resolver seam stays the only way records
 // come into being.
 
 import (
@@ -63,15 +63,15 @@ func PendingStatuses() []string {
 // question from the row's lifecycle status above and is stored in its own
 // column (migration 0222).
 //
-// Only KindPerson may become a person record. The old binary vocabulary put "a
-// person or company" on one side of a single line, so a company writing
+// Only KindContact may become a contact record. The old binary vocabulary put "a
+// contact or company" on one side of a single line, so a company writing
 // under its own name became a contact named after the company — the real import
-// produced people called "Docsign", "VINASA" and "Expensify".
+// produced contacts called "Docsign", "VINASA" and "Expensify".
 const (
-	// KindPerson is a human with an interest in this business.
-	KindPerson = "person"
+	// KindContact is a human with an interest in this business.
+	KindContact = "contact"
 	// KindRoleMailbox is an address a company answers rather than a
-	// person: support@, info@, a shared team mailbox. The correspondence is
+	// contact: support@, info@, a shared team mailbox. The correspondence is
 	// real; there is simply no human named to record.
 	KindRoleMailbox = "role_mailbox"
 	// KindCompanySender is the company itself writing under its own
@@ -191,7 +191,7 @@ type PendingCounterparty struct {
 // can never reach it. That is a statement about this ledger only: the channel
 // key needs the same refusal, and it needs it wherever the record becomes
 // durable. It is taken in Sink.Upsert's own transaction (sink.go), under the
-// account's advisory lock; people's EnsureChannelCounterparty probes again
+// account's advisory lock; contacts's EnsureChannelCounterparty probes again
 // afterwards, but it runs after the activity has committed, so it is the second
 // gate and never the only one.
 func recordDisposition(ctx context.Context, tx pgx.Tx, in dispositionRow) (string, error) {
@@ -299,7 +299,7 @@ func NewPendingStore(db *database.DB) *PendingStore { return &PendingStore{db: d
 //
 // The no-opinion path: a registry rule or an erasure resolves a row without
 // concluding what kind of correspondent the address is. byOwner is false for the
-// same reason — none of these callers is a person deciding about a sender.
+// same reason — none of these callers is a contact deciding about a sender.
 func (s *PendingStore) Resolve(ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, reason string) (bool, error) {
 	// No measurement: a registry rule and an erasure are not model answers.
 	return s.ResolveAs(ctx, tx, p, status, "", reason, false, VerdictMeasurement{})
@@ -323,7 +323,7 @@ func (s *PendingStore) Resolve(ctx context.Context, tx pgx.Tx, p PendingCounterp
 // and a fabricated 1.0 would read as a model that was certain.
 //
 // byOwner records WHICH AUTHORITY answered. The purge of personal mail reads it
-// to decide how long to wait before destroying, so a caller that is not a person
+// to decide how long to wait before destroying, so a caller that is not a contact
 // acting deliberately passes false — the classifier, a sweep, a registry rule.
 func (s *PendingStore) ResolveAs(
 	ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, kind, reason string, byOwner bool,
@@ -416,8 +416,8 @@ func (s *PendingStore) Defer(ctx context.Context, p PendingCounterparty, backoff
 //
 // measured is the LAST answer, and this is the row where it matters most. A
 // sender retired here is one the model had an opinion about and could not hold
-// with enough confidence — "it said person at 0.78 twice" is the whole reason a
-// person is now being asked, and dropping it would leave the human with the
+// with enough confidence — "it said contact at 0.78 twice" is the whole reason a
+// contact is now being asked, and dropping it would leave the human with the
 // question and none of the evidence.
 func (s *PendingStore) Retire(
 	ctx context.Context, p PendingCounterparty, reason string, measured VerdictMeasurement,
@@ -441,7 +441,7 @@ func (s *PendingStore) Retire(
 }
 
 // normalizeEmail is the ONE spelling of the ledger's identity: lowercased and
-// trimmed, matching activity.counterparty_email and person_email so the verdict,
+// trimmed, matching activity.counterparty_email and contact_email so the verdict,
 // the correspondence gate, and the dedupe chokepoint agree on what the same
 // address is.
 func normalizeEmail(email string) string {

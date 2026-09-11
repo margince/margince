@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -84,14 +84,14 @@ func TestTheContactsListSortsByTheEmployerItDraws(t *testing.T) {
 	e := Setup(t)
 	ctx := e.Admin()
 
-	zeta := e.SeedPerson(t, "Zeta Person", &e.Rep1)
-	alma := e.SeedPerson(t, "Alma Person", &e.Rep1)
-	employPerson(t, e, zeta, e.SeedCompany(t, "Alma Werke", &e.Rep1), nil)
-	employPerson(t, e, alma, e.SeedCompany(t, "Zeta Holding", &e.Rep1), nil)
-	// A person with no employer at all shows nothing and orders by nothing.
-	unattached := e.SeedPerson(t, "Nobody's Person", &e.Rep1)
+	zeta := e.SeedContact(t, "Zeta Contact", &e.Rep1)
+	alma := e.SeedContact(t, "Alma Contact", &e.Rep1)
+	employContact(t, e, zeta, e.SeedCompany(t, "Alma Werke", &e.Rep1), nil)
+	employContact(t, e, alma, e.SeedCompany(t, "Zeta Holding", &e.Rep1), nil)
+	// A contact with no employer at all shows nothing and orders by nothing.
+	unattached := e.SeedContact(t, "Nobody's Contact", &e.Rep1)
 
-	rows, _, err := e.People.ListPeople(ctx, people.ListPeopleInput{Sort: strPtr("employer")})
+	rows, _, err := e.Contacts.ListContacts(ctx, contacts.ListContactsInput{Sort: strPtr("employer")})
 	if err != nil {
 		t.Fatalf("listing contacts by employer: %v", err)
 	}
@@ -129,16 +129,16 @@ func TestAnUnreadableEmployerOrdersTheContactsListByNothing(t *testing.T) {
 	// "Alma" sorts first of the two by name. Hidden from this reader, it must
 	// sort last instead.
 	hidden := e.SeedCompany(t, "Alma Werke", &e.Rep3)
-	secret := e.SeedPerson(t, "Zeta Person", &e.Rep1)
-	visible := e.SeedPerson(t, "Alma Person", &e.Rep1)
-	employPerson(t, e, secret, hidden, nil)
-	employPerson(t, e, visible, e.SeedCompany(t, "Mercator", &e.Rep1), nil)
+	secret := e.SeedContact(t, "Zeta Contact", &e.Rep1)
+	visible := e.SeedContact(t, "Alma Contact", &e.Rep1)
+	employContact(t, e, secret, hidden, nil)
+	employContact(t, e, visible, e.SeedCompany(t, "Mercator", &e.Rep1), nil)
 	// Made private AFTER the edge is filed, which is the real sequence.
 	e.MakeCapturePrivate(t, "company", hidden, e.Rep3)
 
 	listed := func(spec string) []ids.UUID {
 		t.Helper()
-		rows, _, err := e.People.ListPeople(ctx, people.ListPeopleInput{Sort: &spec})
+		rows, _, err := e.Contacts.ListContacts(ctx, contacts.ListContactsInput{Sort: &spec})
 		if err != nil {
 			t.Fatalf("listing contacts by %s: %v", spec, err)
 		}
@@ -149,8 +149,8 @@ func TestAnUnreadableEmployerOrdersTheContactsListByNothing(t *testing.T) {
 		return out
 	}
 
-	// Admitted first: the reader must SEE both people, so what the sort does
-	// below is the company's visibility and not the person's.
+	// Admitted first: the reader must SEE both contacts, so what the sort does
+	// below is the company's visibility and not the contact's.
 	if got := listed("full_name"); len(got) != 2 {
 		t.Fatalf("the reader sees %d contacts, want 2 — this case would prove nothing", len(got))
 	}
@@ -172,26 +172,26 @@ func TestAnUnreadableEmployerOrdersTheContactsListByNothing(t *testing.T) {
 func TestAReaderWhoSeesNoEmployerIsOrderedByNone(t *testing.T) {
 	e := Setup(t)
 
-	zeta := e.SeedPerson(t, "Zeta Person", &e.Rep1)
-	alma := e.SeedPerson(t, "Alma Person", &e.Rep1)
-	employPerson(t, e, zeta, e.SeedCompany(t, "Alma Werke", &e.Rep1), nil)
-	employPerson(t, e, alma, e.SeedCompany(t, "Zeta Holding", &e.Rep1), nil)
+	zeta := e.SeedContact(t, "Zeta Contact", &e.Rep1)
+	alma := e.SeedContact(t, "Alma Contact", &e.Rep1)
+	employContact(t, e, zeta, e.SeedCompany(t, "Alma Werke", &e.Rep1), nil)
+	employContact(t, e, alma, e.SeedCompany(t, "Zeta Holding", &e.Rep1), nil)
 
 	// No `relationship` grant: the edge is what an employer is read through.
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"person":  {Read: true},
+			"contact": {Read: true},
 			"company": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	})
-	rows, _, err := e.People.ListPeople(blind, people.ListPeopleInput{Sort: strPtr("employer")})
+	rows, _, err := e.Contacts.ListContacts(blind, contacts.ListContactsInput{Sort: strPtr("employer")})
 	if err != nil {
 		t.Fatalf("listing contacts by employer without the edge grant: %v", err)
 	}
 	if len(rows) != 2 {
-		t.Fatalf("the reader sees %d contacts, want 2 — they may read people", len(rows))
+		t.Fatalf("the reader sees %d contacts, want 2 — they may read contacts", len(rows))
 	}
 	for _, p := range rows {
 		if p.Employer != nil {
@@ -199,7 +199,7 @@ func TestAReaderWhoSeesNoEmployerIsOrderedByNone(t *testing.T) {
 		}
 	}
 	// Both rows in the tail, so the page falls back to its tie-breaker. Newest
-	// first is what that gives, and Alma Person was seeded last.
+	// first is what that gives, and Alma Contact was seeded last.
 	assertIDOrder(t, []ids.UUID{ids.UUID(rows[0].Id), ids.UUID(rows[1].Id)},
 		[]ids.UUID{alma, zeta}, "employer ascending, for a reader shown none")
 }
@@ -350,7 +350,7 @@ func projectIDsIn(ctx context.Context, t *testing.T, e *Env, spec string) []ids.
 
 func leadIDsIn(ctx context.Context, t *testing.T, e *Env, spec string) []ids.UUID {
 	t.Helper()
-	rows, _, err := e.People.ListLeads(ctx, people.ListLeadsInput{Sort: &spec})
+	rows, _, err := e.Contacts.ListLeads(ctx, contacts.ListLeadsInput{Sort: &spec})
 	if err != nil {
 		t.Fatalf("ListLeads(sort=%s): %v", spec, err)
 	}
@@ -369,7 +369,7 @@ func seedLeadSource(t *testing.T, e *Env, key, label string) {
 // seedLeadFromSource creates a lead filed under one catalog source.
 func seedLeadFromSource(t *testing.T, e *Env, name, source string) ids.UUID {
 	t.Helper()
-	l, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
+	l, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: &name, Source: source, OwnerID: userIDPtr(&e.Rep1),
 	})
 	if err != nil {

@@ -53,7 +53,7 @@ const archivedContactsJSON = `{
 // method against the archived-object list feed: it must request the
 // object's list endpoint with archived=true, map each archived record
 // into an overlay.Deletion keyed by the CANONICAL object class (contacts
-// → person, never the incumbent source name), carry archivedAt through as
+// → contact, never the incumbent source name), carry archivedAt through as
 // DeletedAt, and propagate the paging cursor.
 func TestAdapterDeletionsMapsArchivedRecords(t *testing.T) {
 	var gotPath, gotQuery string
@@ -86,8 +86,8 @@ func TestAdapterDeletionsMapsArchivedRecords(t *testing.T) {
 	if first.ExternalID != "100214862042" {
 		t.Errorf("Deletions[0].ExternalID = %q, want 100214862042", first.ExternalID)
 	}
-	if first.ObjectClass != "person" {
-		t.Errorf("Deletions[0].ObjectClass = %q, want the canonical person", first.ObjectClass)
+	if first.ObjectClass != "contact" {
+		t.Errorf("Deletions[0].ObjectClass = %q, want the canonical contact", first.ObjectClass)
 	}
 	wantDeletedAt := time.Date(2026, 6, 1, 10, 0, 0, 0, time.UTC)
 	if !first.DeletedAt.Equal(wantDeletedAt) {
@@ -179,8 +179,8 @@ func TestAdapterModifiedUsesLastModifiedDateWatermarkForContacts(t *testing.T) {
 	// ObjectClass is the canonical entity type (mapping.Target), not the
 	// incumbent source name — the datasource read seam reads mirror rows
 	// by canonical EntityType, so "contacts" must never leak here.
-	if first.ObjectClass != "person" {
-		t.Fatalf("first.ObjectClass = %q, want person (the canonical entity type, not the incumbent source name)", first.ObjectClass)
+	if first.ObjectClass != "contact" {
+		t.Fatalf("first.ObjectClass = %q, want contact (the canonical entity type, not the incumbent source name)", first.ObjectClass)
 	}
 	if got := first.Fields["first_name"]; got != "Christian" {
 		t.Fatalf("first.Fields[first_name] = %v, want Christian", got)

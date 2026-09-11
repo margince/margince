@@ -10,7 +10,7 @@
 // detail read fetches. Reading one per row would be a request per visible line.
 //
 // The drawer has the access block in hand, so it is the surface that can show
-// a reader who is currently named and let them remove one person without
+// a reader who is currently named and let them remove one contact without
 // retyping the other four.
 //
 // It also ends an inference. The timeline decides which of the two audience
@@ -50,7 +50,7 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 type EmailAccessStatus = components["schemas"]["EmailAccessStatus"];
 
 // The sentence under the mark: the mark says "Participants" in a word, and
-// this says what that means for the person reading. `withheld` has no entry
+// this says what that means for the reader reading. `withheld` has no entry
 // on purpose — the body below a withheld message already says it is not shared
 // with this reader, and the same sentence twice on one screen reads as a
 // surface that does not know what it has said.
@@ -112,7 +112,7 @@ export function EmailAccessEditor({
  * reader with no standing to edit the set has no standing to enumerate it. So
  * an absent list here is not an empty audience, and nothing is drawn for it:
  * printing "nobody" would be a false statement about a message that is in fact
- * limited to four people this reader may not name.
+ * limited to four contacts this reader may not name.
  *
  * The write's vocabulary is ids, not names — `AudienceMember` is a subject type
  * and a uuid, which is the right shape for a write and unreadable in a list. So
@@ -182,7 +182,7 @@ function ThreadContribution({
       // A share that did not open the thread means a colleague still holds it.
       // Saying so is the difference between a control that looks broken and
       // one that reports what happened — and it is a COUNT, never a name,
-      // because whose mail a person keeps private is itself private.
+      // because whose mail a contact keeps private is itself private.
       setHeld(outcome && !outcome.shared ? outcome.held_by_others : null);
     },
   });
@@ -233,7 +233,7 @@ function ThreadContribution({
  *
  * This is the whole reason the editor lives in the drawer. The timeline row's
  * dialog starts every `selected` audience blank, so a reader removing one
- * person from a set of five had to re-tick the other four and hope they
+ * contact from a set of five had to re-tick the other four and hope they
  * remembered them. Here `selected_members` is already loaded, so the checklist
  * opens with the real set ticked and the reader changes what they came to
  * change.
@@ -322,7 +322,7 @@ function MessageAudience({
 }
 
 /**
- * Whether two member sets name the same people, order disregarded.
+ * Whether two member sets name the same contacts, order disregarded.
  *
  * Order is not meaning here: the checklist appends in tick order and the server
  * returns its own, so comparing sequences would call every set changed the

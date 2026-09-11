@@ -61,7 +61,7 @@ func (w *financeSyncSweepWorker) Work(ctx context.Context, _ *river.Job[FinanceS
 //
 // The connector is the acting principal: every mirrored row carries
 // `connector:` provenance, so a reader can tell an imported invoice from
-// anything a person typed.
+// anything a human typed.
 //
 // PrincipalConnector and not PrincipalSystem, and the two have to agree: the
 // audit row stamps actor_type from the TYPE and actor_id from the ID, so a

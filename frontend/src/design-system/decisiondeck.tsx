@@ -57,7 +57,7 @@ import "./decisiondeck.css";
 // questions. Rendered flat it would be ten answers to something the reader
 // decided once.
 
-/** What a person can say about one staged proposal. */
+/** What a contact can say about one staged proposal. */
 export type DeckVerdict = "accept" | "edit" | "reject" | "skip";
 
 /**
@@ -356,7 +356,7 @@ export type DecisionDeckProps = Readonly<{
   /** Fired ONCE, on the explicit commit, with exactly what is in the tray. */
   onCommit: (staged: readonly StagedDecision[]) => void;
   /**
-   * Told when a PERSON puts a verdict in the tray or takes it back out, for a
+   * Told when a CONTACT puts a verdict in the tray or takes it back out, for a
    * caller keeping a count of its own. Neither sends anything.
    *
    * User-triggered only, and deliberately: the tray also empties on its own —
@@ -369,7 +369,7 @@ export type DecisionDeckProps = Readonly<{
   /**
    * Whether the commit the caller was handed is still in flight, or came back
    * refused. A refused commit KEEPS the tray: the verdicts are the only copy of
-   * a person's answers, and clearing them on failure would ask for all of them
+   * a contact's answers, and clearing them on failure would ask for all of them
    * again.
    */
   commitState?: "idle" | "sending" | "failed";
@@ -570,7 +570,7 @@ export function DecisionDeck({
    * The gesture taken away rather than finished — the browser cancelling the
    * pointer (a system gesture, a scroll takeover, the pen leaving range).
    *
-   * Nothing is staged. A cancelled drag is one the person never completed, and
+   * Nothing is staged. A cancelled drag is one the contact never completed, and
    * treating it as a release meant the system could decide a proposal on the
    * reader's behalf: a swipe interrupted past the threshold sent the card. The
    * card springs back instead, which is what a cancellation looks like.

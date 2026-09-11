@@ -157,7 +157,7 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"archiveOffer":         malformedRoutedID(http.MethodDelete, "/offers"),
 	"archiveOfferTemplate": malformedRoutedID(http.MethodDelete, "/offer-templates"),
 	"archiveCompany":       malformedRoutedID(http.MethodDelete, "/companies"),
-	"archivePerson":        malformedRoutedID(http.MethodDelete, "/people"),
+	"archiveContact":       malformedRoutedID(http.MethodDelete, "/contacts"),
 	"archiveProduct":       malformedRoutedID(http.MethodDelete, "/products"),
 	"archiveProject":       malformedRoutedID(http.MethodDelete, "/projects"),
 	"archiveRelationship":  malformedRoutedID(http.MethodDelete, "/relationships"),
@@ -173,7 +173,7 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"scrapeCompany":             malformedRoutedID(http.MethodPost, "/companies"),
 	"deepReadCompany":           malformedRoutedID(http.MethodPost, "/companies"),
 	"technicalEnrichCompany":    malformedRoutedID(http.MethodPost, "/companies"),
-	"mergePerson":               malformedRoutedID(http.MethodPost, "/people"),
+	"mergeContact":              malformedRoutedID(http.MethodPost, "/contacts"),
 	"mergeCompany":              malformedRoutedID(http.MethodPost, "/companies"),
 
 	"updateProject": {
@@ -256,16 +256,16 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"updateCompanyFact":          missingOperand(http.MethodPatch, "/v1/companies/%s/facts/", "factKey"),
 	"confirmCompanyProfileField": missingOperand(http.MethodPost, "/v1/companies/%s/profile-fields//confirm", "field"),
 	"updateCompanyProfileField":  missingOperand(http.MethodPatch, "/v1/companies/%s/profile-fields/", "field"),
-	"removeProjectStakeholder":   missingOperand(http.MethodDelete, "/v1/projects/%s/stakeholders/", "person_id"),
+	"removeProjectStakeholder":   missingOperand(http.MethodDelete, "/v1/projects/%s/stakeholders/", "contact_id"),
 	"removeProjectCompany":       missingOperand(http.MethodDelete, "/v1/projects/%s/companies/", "company_id"),
 
 	"setProjectStakeholder": {
-		refusal: namedMember("person_id", "invalid",
-			"the person_id in the body is not a uuid, so the edge names no person"),
+		refusal: namedMember("contact_id", "invalid",
+			"the contact_id in the body is not a uuid, so the edge names no contact"),
 		build: func() (*http.Request, []byte) {
 			id := ids.NewV7().String()
 			return routedFixture(http.MethodPut, "/v1/projects/"+id+"/stakeholders", id,
-				`{"person_id":"not-a-uuid","role":"champion"}`)
+				`{"contact_id":"not-a-uuid","role":"champion"}`)
 		},
 	},
 

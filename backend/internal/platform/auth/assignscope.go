@@ -116,7 +116,7 @@ func refuseIneligibleAssignee(permitted bool) error {
 // suspended colleague.
 //
 // Human-only on the ownerless arm, matching ClaimRecord. Putting a name on a
-// record nobody owns is a person's act; an agent may still hand on a row its
+// record nobody owns is a contact's act; an agent may still hand on a row its
 // delegated authority already covers.
 func EnsureAssignable(ctx context.Context, tx pgx.Tx, table string, id, dest ids.UUID) error {
 	if err := ensureAssignableSource(ctx, tx, table, id); err != nil {

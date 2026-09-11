@@ -4,9 +4,9 @@
 package capture
 
 // The ADR-0063 counterparty auto-create follow-up: after a captured mail
-// activity commits, the Sink ensures the human behind it exists — person
+// activity commits, the Sink ensures the human behind it exists — contact
 // always, company unless suppressed — through the resolver seam compose
-// injects. Capture itself never touches person/company SQL.
+// injects. Capture itself never touches contact/company SQL.
 
 import (
 	"context"
@@ -23,9 +23,9 @@ import (
 
 // CounterpartyEnsurer is the auto-create seam (ADR-0063): after a captured
 // mail activity commits, the pipeline ensures the human behind it exists —
-// person always, company unless suppressed — through the ONE dedupe
-// chokepoint. Compose injects the people module's implementation; capture
-// itself never touches person/company SQL.
+// contact always, company unless suppressed — through the ONE dedupe
+// chokepoint. Compose injects the contacts module's implementation; capture
+// itself never touches contact/company SQL.
 type CounterpartyEnsurer interface {
 	EnsureCounterparty(ctx context.Context, in EnsureRequest) (EnsureOutcome, error)
 }
@@ -35,12 +35,12 @@ type CounterpartyEnsurer interface {
 // its own pages; without them the run can only guess from a clock window, and a
 // guess credits it with every other connection's captures.
 type EnsureOutcome struct {
-	PersonCreated bool
-	// PersonID is the row that was created, and it is what makes the count a
+	ContactCreated bool
+	// ContactID is the row that was created, and it is what makes the count a
 	// count. The ledger is keyed on it, so writing the same creation twice
 	// writes it once — which is what lets the write be RETRIED, where an
 	// accumulated `+ 1` could only be lost.
-	PersonID ids.UUID
+	ContactID ids.UUID
 	// CompanyQueued reports that this counterparty's domain was put in the
 	// queue for a company verdict. Capture no longer creates companies
 	// itself — it withholds one until a site read says the domain deserves it —
@@ -49,7 +49,7 @@ type EnsureOutcome struct {
 	CompanyQueued bool
 	// QueuedDomain identifies that work, and it is a DOMAIN rather than a row
 	// id because there is no row: the verdict is what was opened. It keys the
-	// ledger for the same reason PersonID does.
+	// ledger for the same reason ContactID does.
 	QueuedDomain string
 }
 
@@ -62,10 +62,10 @@ type EnsureRequest struct {
 	ActivityID      ids.UUID
 	Source          string
 	CapturedBy      string
-	SuppressCompany bool // free-mail domain: person yes, company no
+	SuppressCompany bool // free-mail domain: contact yes, company no
 	// Replied says this counterparty wrote to US. A record is also created for
 	// somebody we wrote to twice with no answer, and the two must not be
-	// recorded as the same act: only the first is the person initiating
+	// recorded as the same act: only the first is the contact initiating
 	// contact, and that is the strongest acquisition in the vocabulary.
 	Replied bool
 }
@@ -86,10 +86,10 @@ func (s *Sink) WithEnsurer(ensurer CounterpartyEnsurer, transactional *Transacti
 
 // ensureCounterparty is the auto-create follow-up for one freshly captured
 // mail activity: the deterministic gates first (internal domain → skip
-// everything; free-mail → person only), then the resolver seam. Runs after
+// everything; free-mail → contact only), then the resolver seam. Runs after
 // the capture transaction committed, and NEVER fails the capture — a fault
 // lands in system_log, and the link_reconcile sweep links the message if a
-// person for that address turns up by any route (the link-less connector
+// contact for that address turns up by any route (the link-less connector
 // activity is the retry marker).
 func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef, decision counterpartyDecision) {
 	if !decision.create {
@@ -128,7 +128,7 @@ func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedR
 type counterpartyDecision struct {
 	create bool
 	// replied says the counterparty wrote to US, rather than merely being
-	// written to twice. Both create a record; only the first is the person
+	// written to twice. Both create a record; only the first is the contact
 	// initiating contact, and the acquisition evidence must not claim the
 	// stronger fact for the weaker case.
 	replied         bool
@@ -233,7 +233,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	}
 	corresponded := dealt.positive()
 	decision.create, decision.replied = dealt.create, dealt.replied
-	roleMailbox := refusesToNameAPerson(cp.Email, dealt.exchanged)
+	roleMailbox := refusesToNameAContact(cp.Email, dealt.exchanged)
 	if roleMailbox {
 		decision.create = false
 	}
@@ -257,7 +257,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// An address this workspace has ALREADY decided about is not the ambiguous
 	// class, whatever its domain — so this runs BEFORE the free-mail tier, which
 	// would otherwise set create=true and skip the check entirely, minting the
-	// person a prior `noise` verdict refused every time that sender wrote again.
+	// contact a prior `noise` verdict refused every time that sender wrote again.
 	alreadyKnown, settled, priorReason, err := s.alreadyDecided(ctx, tx, rec, cp.Email)
 	if err != nil {
 		return counterpartyDecision{}, err
@@ -295,7 +295,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 
 	// T3 free-mail (CAP-PARAM-5). A consumer mailbox says what it is not — an
 	// company — so the company is suppressed either way. What it does NOT say
-	// is whether the person behind it is a counterparty: a customer's private
+	// is whether the contact behind it is a counterparty: a customer's private
 	// gmail and a founder's sister arrive identically, and minting on sight put
 	// nineteen of the latter in a shared CRM. So the address defers to the
 	// verdict instead of creating, and only a prior admission (alreadyKnown,
@@ -335,10 +335,10 @@ func (s *Sink) alreadyDecided(ctx context.Context, tx pgx.Tx, rec connector.Norm
 	switch prior {
 	case PendingStatusReal:
 		return true, false, "", nil
-	case priorKnownNonPerson:
+	case priorKnownNonContact:
 		// Decided, and decided to be nobody. Settled so the question is not
 		// re-asked and re-billed on every later message, and NOT `known`, so no
-		// person is minted from a mailbox the verdict already judged has none.
+		// contact is minted from a mailbox the verdict already judged has none.
 		return false, true, TraceReasonDecidedPrior, nil
 	case PendingStatusNoise:
 		return false, true, TraceReasonNoisePrior, s.logBreadcrumbTx(ctx, tx, "capture_noise_sender", rec,
@@ -354,26 +354,26 @@ func (s *Sink) alreadyDecided(ctx context.Context, tx pgx.Tx, rec connector.Norm
 	}
 }
 
-// priorKnownNonPerson is what priorDispositionTx reports for an address the
+// priorKnownNonContact is what priorDispositionTx reports for an address the
 // workspace judged real correspondence with no human behind it — a shared
 // mailbox, or a company writing under its own name. It is not a stored
 // status; the ledger holds `real` plus a kind, and this is how that pair
 // reaches the tier ladder as one answer.
-const priorKnownNonPerson = "known_nonperson"
+const priorKnownNonContact = "known_noncontact"
 
 // priorDispositionTx reports what this workspace already concluded about an
-// address, or "" if it has never decided. A person that exists by any route —
+// address, or "" if it has never decided. A contact that exists by any route —
 // an earlier verdict, a human typing them in, an import — counts as `real`:
 // what matters is that the address is already a known counterparty, not which
 // path made it one.
 //
-// With ONE exception, and it is the reason person_email.from_correspondence
+// With ONE exception, and it is the reason contact_email.from_correspondence
 // exists: an address a channel connector's directory vouched for, on a human
 // reached on another medium, is not a verdict about mail. Reading it as one
 // would let a single direct message from a stranger settle their address as
 // known correspondence — auto-creating every later bulk mail from it and
 // switching off the noise sweep for it for good. It still identifies the
-// person; it just does not speak here.
+// contact; it just does not speak here.
 func (s *Sink) priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) (string, error) {
 	normalized := normalizeEmail(email)
 	if normalized == "" {
@@ -383,7 +383,7 @@ func (s *Sink) priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) 
 	err := tx.QueryRow(ctx, `
 		SELECT CASE
 		         WHEN EXISTS (
-		           SELECT 1 FROM person_email pe JOIN person p ON p.id = pe.person_id
+		           SELECT 1 FROM contact_email pe JOIN contact p ON p.id = pe.contact_id
 		            WHERE pe.email = $1 AND p.archived_at IS NULL
 		              AND pe.from_correspondence) THEN 'real'
 		         ELSE coalesce((
@@ -395,8 +395,8 @@ func (s *Sink) priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) 
 		           -- create the very contact the verdict declined to create,
 		           -- on the sender's second message.
 		           SELECT CASE
-		                    WHEN status = 'real' AND kind IS NOT NULL AND kind <> 'person'
-		                      THEN 'known_nonperson'
+		                    WHEN status = 'real' AND kind IS NOT NULL AND kind <> 'contact'
+		                      THEN 'known_noncontact'
 		                    ELSE status
 		                  END
 		             FROM capture_pending_counterparty

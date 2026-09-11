@@ -38,9 +38,9 @@ Declaring three of four would be an exception the engine applies while checking
 less than the statute asks. That is worse than declaring none, because it looks
 lawful.
 
-**Similarity is checked per message, not once per person.** A customer who
+**Similarity is checked per message, not once per contact.** A customer who
 bought one product has not opened the door to everything the seller sells, and
-an exception evaluated once per person is the shape that turns one purchase into
+an exception evaluated once per contact is the shape that turns one purchase into
 a permanent mailing list.
 
 ### What a first message discloses (Art. 13)

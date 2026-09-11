@@ -7,10 +7,10 @@ type CaptureConnection = components["schemas"]["CaptureConnection"];
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 
 /**
- * Mail being taken in RIGHT NOW, across every mailbox this person connected.
+ * Mail being taken in RIGHT NOW, across every mailbox this contact connected.
  *
  * A connect-time import is the one long run the capture pipeline makes on a
- * person's behalf, and it is the run the AI-activity feed cannot carry: the
+ * contact's behalf, and it is the run the AI-activity feed cannot carry: the
  * feed's capture kinds are per-message classifications the router announces
  * once each call is over, so a two-hour import of a mailbox reaches the feed as
  * a trickle of settled lines and never as work in flight. What does say the
@@ -27,7 +27,7 @@ export type CaptureProgress = Readonly<{
   /** Messages the import has scanned, summed over every live run. */
   scanned: number;
   /**
-   * The count the person consented to, summed over the runs that previewed one;
+   * The count the contact consented to, summed over the runs that previewed one;
    * null when no live run carries an estimate, and then there is no fraction
    * to draw.
    */

@@ -58,7 +58,7 @@ var seatUsageOnlyPerms = principal.Permissions{
 // grant is precisely what it is not.
 var noSeatGrantPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
-	Objects:  map[string]principal.ObjectGrant{"person": {Create: true, Read: true, Update: true}},
+	Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true, Update: true}},
 	RowScope: principal.RowScopeTeam,
 }
 

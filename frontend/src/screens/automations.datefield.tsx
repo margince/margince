@@ -28,7 +28,7 @@ import { throwProblem } from "./common";
 // picker degrades to its disabled, hinted state rather than issuing a query
 // the endpoint would refuse.
 const CUSTOM_FIELD_QUERY_OBJECTS = new Set([
-  "person",
+  "contact",
   "company",
   "deal",
   "lead",
@@ -36,7 +36,7 @@ const CUSTOM_FIELD_QUERY_OBJECTS = new Set([
 ]);
 
 type CustomFieldQueryObject =
-  | "person"
+  | "contact"
   | "company"
   | "deal"
   | "lead"

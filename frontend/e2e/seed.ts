@@ -8,7 +8,7 @@ import {
 } from "../src/screens/meetingbrief/fixtures";
 import { type MockProject, projectMock } from "./projectmock";
 
-// The booked meeting the person record offers a brief for. Its id is the one
+// The booked meeting the contact record offers a brief for. Its id is the one
 // the brief fixtures were written against, so the drawer's request and the
 // answer describe the same room.
 const MEETING_ACTIVITY = "3f7c1a90-0000-4000-8000-00000000a001";
@@ -54,14 +54,14 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // settings edit a reader can still be holding while they navigate away.
   installation_settings: ["read", "update"],
   // The consent registry's own gate: the server reads purposes under
-  // `person:read` (consent/store.go), not under a role. Read alone, because no
-  // spec exercises a person write from here and a grant this fixture does not
+  // `contact:read` (consent/store.go), not under a role. Read alone, because no
+  // spec exercises a contact write from here and a grant this fixture does not
   // need is a grant it should not claim.
   //
   // It no longer opens the Privacy & retention ENTRY — every seeded role holds this
   // read, so the page moved to `privacy_request`, which this fixture holds
-  // below. The card still needs `person`, which is why it stays.
-  person: ["read"],
+  // below. The card still needs `contact`, which is why it stays.
+  contact: ["read"],
   // Filters & views reads the vocabulary and previews a tree under `list:read`
   // (collections/handlers.go), and saving a filter as a dynamic list is a
   // `list:create`. Without them the sweep would measure a screen whose picker
@@ -118,14 +118,14 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // role's grant on every object — and its toggles write through the update.
   role_admin: ["read", "update"],
   // The subject queue: read to open it, update to move a request through its
-  // statuses. Creating one asks `person:update`, which is why the person grant
+  // statuses. Creating one asks `contact:update`, which is why the contact grant
   // above stays read-only and no spec opens a request.
   privacy_request: ["read", "update"],
   job_health: ["read"],
   extension_access: ["read"],
   // AI usage, model calls and the health card, all three.
   ai_diagnostics: ["read"],
-  // The purposes card's own verb. The READ stays on `person` above, which is
+  // The purposes card's own verb. The READ stays on `contact` above, which is
   // the gate the endpoint actually applies, and nothing here updates or deletes
   // a purpose.
   consent_config: ["create"],
@@ -610,7 +610,7 @@ export const auditEntries = [
     occurred_at: "2026-07-05T07:00:00Z",
   },
   {
-    // An agent under ANOTHER human's authority, so the row reads as that person
+    // An agent under ANOTHER human's authority, so the row reads as that contact
     // rather than as the viewer — which is what lets the actor-filter assertion
     // below distinguish "Du" from a named teammate.
     id: "al-2",
@@ -633,7 +633,7 @@ export const auditEntries = [
     actor_type: "connector",
     actor_id: "connector:gmail",
     action: "create",
-    entity_type: "person",
+    entity_type: "contact",
     entity_id: "p-anna",
     occurred_at: "2026-07-05T05:00:00Z",
   },
@@ -904,7 +904,7 @@ export const overlayConnection = {
 export const overlaySyncStatus = {
   objects: [
     {
-      object: "person",
+      object: "contact",
       lastSyncedAt: "2026-07-25T08:00:00Z",
       state: "fresh",
       backfillComplete: true,
@@ -1279,7 +1279,7 @@ export async function mockApi(
   }[] = [
     {
       address: "jana@commercetools.com",
-      kind: "person",
+      kind: "contact",
       status: "real",
       overruled: false,
       record_exists: true,
@@ -1543,13 +1543,13 @@ export async function mockApi(
       // so the response carries no body to report as "finished".
       return route.fulfill({ status: 202 });
     }
-    if (sorMode === "overlay" && path === "/people" && method === "POST") {
+    if (sorMode === "overlay" && path === "/contacts" && method === "POST") {
       // Create is unsupported for every mirrored type (the write mapping
       // leaves owner_id unset, so a created incumbent record would be
       // unowned and invisible — overlay/provider_writes.go's SupportsWrite).
       return json(
         unsupportedBySor(
-          "Creating a person isn't supported while reading from HubSpot.",
+          "Creating a contact isn't supported while reading from HubSpot.",
         ),
         422,
       );
@@ -1657,10 +1657,10 @@ export async function mockApi(
         website: "brandt.example",
       });
     }
-    if (path === "/people" && method === "GET") {
+    if (path === "/contacts" && method === "GET") {
       return json(page([anna]));
     }
-    if (path === "/people" && method === "POST") {
+    if (path === "/contacts" && method === "POST") {
       const body = route.request().postDataJSON();
       return json(
         {
@@ -1675,7 +1675,7 @@ export async function mockApi(
         201,
       );
     }
-    if (path === "/people/p-new") {
+    if (path === "/contacts/p-new") {
       return json({ ...anna, id: "p-new", full_name: "Peter Neu" });
     }
     if (path === "/companies" && method === "POST") {
@@ -1749,10 +1749,10 @@ export async function mockApi(
         201,
       );
     }
-    if (path === "/people/p-anna") {
+    if (path === "/contacts/p-anna") {
       return json(anna);
     }
-    // The person record page's ONE composite read (PO-EXT-3). Its `person` is
+    // The contact record page's ONE composite read (PO-EXT-3). Its `contact` is
     // required by the contract, so a body without one is not a thin response —
     // it is a response the page cannot render, which is what the page did here
     // until this handler existed.
@@ -1760,10 +1760,10 @@ export async function mockApi(
     // In overlay mode the mirror holds none of the sections folded from natively
     // captured interactions, so they are NAMED as withheld rather than answered
     // empty: "you cannot see this here" and "there is none" are different facts.
-    if (method === "GET" && /^\/people\/[^/]+\/360$/.test(path)) {
+    if (method === "GET" && /^\/contacts\/[^/]+\/360$/.test(path)) {
       return json({
         as_of: "2026-06-20T09:00:00Z",
-        person: anna,
+        contact: anna,
         // A booked meeting, so the meetings tab has a "Brief me" to press. The
         // overlay mirror holds no natively captured interaction, so it holds no
         // meeting either.
@@ -1775,7 +1775,7 @@ export async function mockApi(
                 starts_at: "2026-06-24T13:00:00Z",
                 subject: "Retrofit-Abstimmung",
                 participants: [
-                  { person_id: "p-anna", full_name: "Anna Weber" },
+                  { contact_id: "p-anna", full_name: "Anna Weber" },
                 ],
               },
         last_inbound_at:
@@ -1826,18 +1826,18 @@ export async function mockApi(
           return json(briefOmitted);
       }
     }
-    if (method === "GET" && /^\/people\/[^/]+\/brief$/.test(path)) {
+    if (method === "GET" && /^\/contacts\/[^/]+\/brief$/.test(path)) {
       return json({
-        person_id: "p-anna",
+        contact_id: "p-anna",
         generated_at: "2026-06-20T09:00:00Z",
         generated_by: { kind: "agent", agent: "brief" },
         sentences: [],
       });
     }
-    if (method === "GET" && /^\/people\/[^/]+\/consent\/guard$/.test(path)) {
+    if (method === "GET" && /^\/contacts\/[^/]+\/consent\/guard$/.test(path)) {
       return json({ entries: [] });
     }
-    if (path === "/people/p-anna/consent" && method === "GET") {
+    if (path === "/contacts/p-anna/consent" && method === "GET") {
       return json({ state: [], events: [] });
     }
     if (path === "/companies" && method === "GET") {
@@ -1912,7 +1912,7 @@ export async function mockApi(
     }
     if (path === "/leads/l-1/promote" && method === "POST") {
       return json({
-        person: {
+        contact: {
           ...anna,
           id: "p-new",
           full_name: "Jonas Petersen",
@@ -1980,7 +1980,7 @@ export async function mockApi(
       // offered an operator the engine refuses would let a spec build a tree
       // the product cannot, and the screen would look correct while doing
       // something the server would 422.
-      const resource = url.searchParams.get("resource") ?? "person";
+      const resource = url.searchParams.get("resource") ?? "contact";
       const owner = {
         name: "owner_id",
         type: "id",
@@ -1998,7 +1998,7 @@ export async function mockApi(
         references: "tag",
       };
       const byResource: Record<string, unknown[]> = {
-        person: [owner, tag],
+        contact: [owner, tag],
         company: [
           owner,
           {
@@ -2536,7 +2536,7 @@ export async function mockApi(
     }
     if (path === "/search") {
       // Cross-object: the relink picker searches projects by name alongside
-      // the seeded person, so a spec can file an activity under one.
+      // the seeded contact, so a spec can file an activity under one.
       //
       // A hit of every OTHER kind rides along because the results screen groups
       // by type and offers a filter over those groups — swept for axe and at
@@ -2552,7 +2552,7 @@ export async function mockApi(
           score: 0.8,
         }));
       const hits = [
-        { type: "person", id: "p-anna", title: "Anna Weber", score: 0.9 },
+        { type: "contact", id: "p-anna", title: "Anna Weber", score: 0.9 },
         ...projectHits,
         {
           type: "company",
@@ -2737,7 +2737,7 @@ export async function mockApi(
     // answered with this shape rather than its own: give it a branch of its own
     // above, as `/analytics/context` has.
     if (path.includes("/context")) {
-      return json({ anchor: { type: "person", id: "x" }, sections: [] });
+      return json({ anchor: { type: "contact", id: "x" }, sections: [] });
     }
     // The Brief digest card (CAP-WIRE-6): a MorningDigest, not the list
     // envelope — the generic fallthrough below would 200 a page shape the
@@ -2749,7 +2749,7 @@ export async function mockApi(
         capture: {
           messages_synced: 24,
           activities_created: 18,
-          people_created: 3,
+          contacts_created: 3,
           companies_created: 1,
         },
         review: {

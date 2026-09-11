@@ -61,7 +61,7 @@ func ClassifiedTargetTypes() []string {
 // readObjectFor is the RBAC object the read floor asks about for one staged
 // target type.
 //
-// For a core type the two are the same word: `person` is both the table a
+// For a core type the two are the same word: `contact` is both the table a
 // staging points at and the object a role document grants. A unit's are not
 // necessarily — the table its rows live in and the object its operation gates
 // on are two declarations, and nothing requires a unit to spell them alike. The

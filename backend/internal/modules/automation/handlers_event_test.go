@@ -367,7 +367,7 @@ func TestPostMeetingRecapApplyComposesTheDraftDurably(t *testing.T) {
 		t.Fatalf("Plan err = %v, want nil", err)
 	}
 	// An OWNED firing: draft_email refuses one with no owner, because a held
-	// draft is released by the person it goes out as.
+	// draft is released by the contact it goes out as.
 	result, err := w.Apply(ownedFiring(), workflow.Event{Entity: meeting}, eff, nil)
 	// The recap composes and then holds its send for a human, so the firing
 	// suspends. The draft it produced still has to reach run history.

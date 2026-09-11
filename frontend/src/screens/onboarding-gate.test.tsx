@@ -102,7 +102,7 @@ function siteRead(over: Partial<CompanySiteRead> = {}): CompanySiteRead {
     profile_fields: [],
     facts: [fact({ value_key: "service:platform" })],
     comparisons: [],
-    people: [],
+    contacts: [],
     warnings: [],
     draft_version: 1,
     proposal_hash: "h1",

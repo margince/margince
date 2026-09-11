@@ -32,7 +32,7 @@ import (
 // be worse than no trail at all.
 //
 // It does NOT return the request to the queue. The message was landed and then
-// deliberately taken off the timeline by a person; draining it again would put
+// deliberately taken off the timeline by a contact; draining it again would put
 // it straight back, which is the one outcome archiving must not have.
 func withdrawCaptured(ctx context.Context, rt extension.Runtime, d extension.Delivery) error {
 	if d.Entity.Type != "activity" || !extension.IsCanonicalUUID(d.Entity.ID) {

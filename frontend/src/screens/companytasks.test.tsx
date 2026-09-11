@@ -70,7 +70,7 @@ const openTask = {
   overdue: false,
   assignee_id: null,
   linked_deal_id: null,
-  linked_person_id: null,
+  linked_contact_id: null,
   // The version the row's tick writes with. The 360 sends one for every task it
   // lists, and a fixture without it describes a payload the read cannot produce
   // — the write under test would refuse rather than run.

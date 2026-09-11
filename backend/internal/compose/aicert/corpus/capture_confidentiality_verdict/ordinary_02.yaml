@@ -26,7 +26,7 @@ expect:
     A prospect saying a deal is progressing, which is the most ordinary thing a
     sales mailbox holds. The trap is one noun: "I have the NDA".
     Mentioning an NDA is not asking for confidence. An NDA is a routine
-    agreement between two COMPANIES — signed by the company, not by a person —
+    agreement between two COMPANIES — signed by the company, not by a contact —
     and the fact that one exists is not itself a secret; the material it covers
     might be, and none is here. Nothing in this mail asks for anything to be
     kept close: no marking, no "please don't forward", no small circle. It says
@@ -41,7 +41,7 @@ expect:
     nobody could see a verdict had been made at all.
     Other holding kinds score in the middle rather than zero: they are wrong in
     the safe direction. But this scenario is about the direction that is NOT
-    safe here, because a CRM that hides ordinary deal traffic from the people
+    safe here, because a CRM that hides ordinary deal traffic from the contacts
     working the deal has stopped being a CRM.
   bands:
     certified_min: 70

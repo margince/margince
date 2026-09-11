@@ -55,23 +55,23 @@ type capEnv struct {
 	decisionDelivery ids.UUID
 }
 
-// seedMarketingSubject gives the address a person with a live marketing grant,
+// seedMarketingSubject gives the address a contact with a live marketing grant,
 // so the engine reaches an allow and the cap is what refuses. Without the grant
 // every message would be denied for want of consent and the ceiling would never
 // be the reason.
 func (e *capEnv) seedMarketingSubject(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
-	personID := ids.New[ids.PersonKind]()
+	contactID := ids.New[ids.ContactKind]()
 	purposeID := ids.New[ids.PurposeKind]()
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO person (id, full_name, source, captured_by)
-		VALUES ($1, 'Cap Subject', 'manual', 'human:x')`, personID); err != nil {
+		INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Cap Subject', 'manual', 'human:x')`, contactID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		VALUES ($1, $2, true, 'manual', 'human:x')`, personID, e.address); err != nil {
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'manual', 'human:x')`, contactID, e.address); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
@@ -81,8 +81,8 @@ func (e *capEnv) seedMarketingSubject(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO person_consent (person_id, purpose_id, state, lawful_basis, captured_at, source)
-		VALUES ($1, $2, 'granted', 'consent', now(), 'test')`, personID, purposeID); err != nil {
+		INSERT INTO contact_consent (contact_id, purpose_id, state, lawful_basis, captured_at, source)
+		VALUES ($1, $2, 'granted', 'consent', now(), 'test')`, contactID, purposeID); err != nil {
 		t.Fatal(err)
 	}
 	// The delivery each authorization under test attaches its decision to. It
@@ -157,7 +157,7 @@ func setupCap(t *testing.T) *capEnv {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Create: true, Read: true, Update: true, Delete: true},
+				"contact": {Create: true, Read: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

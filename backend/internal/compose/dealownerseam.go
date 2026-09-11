@@ -3,7 +3,7 @@
 
 package compose
 
-// Reading a deal's world as the person the deal belongs to.
+// Reading a deal's world as the contact the deal belongs to.
 //
 // A nightly sweep runs as a system principal, which auth.Require passes
 // unconditionally and which no row scope bounds. That is right for the sweep's

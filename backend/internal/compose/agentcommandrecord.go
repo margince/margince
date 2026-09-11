@@ -5,7 +5,7 @@ package compose
 
 // The REST door's half of the two commands one tool serves through TWO
 // contract operations (margince/margince#928 task 7): merge_records is
-// mergePerson and mergeCompany, and enrich is scrapeCompany and
+// mergeContact and mergeCompany, and enrich is scrapeCompany and
 // deepReadCompany.
 //
 // Both are where this door was previously answering the WRONG question, and in
@@ -24,12 +24,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// mergeCommand decodes POST /v1/people/{id}/merge and
+// mergeCommand decodes POST /v1/contacts/{id}/merge and
 // POST /v1/companies/{id}/merge.
 //
 // The routed {id} is the SOURCE and the body's `target_id` is the survivor:
-// crm.yaml says so ("The surviving person (B). This row (A) is archived") and
-// the handler does the same (people.Handlers.MergePerson passes the path id as
+// crm.yaml says so ("The surviving contact (B). This row (A) is archived") and
+// the handler does the same (contacts.Handlers.MergeContact passes the path id as
 // the source). So this is where the two doors stop disagreeing: the tool door
 // has always pinned the survivor, and this door pinned whichever row the route
 // happened to name.

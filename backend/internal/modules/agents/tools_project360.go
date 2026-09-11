@@ -85,7 +85,7 @@ const project360TruncatedMessage = "At least one section of this page was cut at
 	"page, not the whole collection — list_records and search_records page the rest."
 
 // chargeProject360 charges every record the page names: the project, the
-// company, each deal, each seated person, each open task and each timeline
+// company, each deal, each seated contact, each open task and each timeline
 // row. Naming a record to an agent is handing that record over.
 func chargeProject360(ctx context.Context, r Project360Result) {
 	noteEvidence(ctx, datasource.EntityProject, r.Project.ProjectID)
@@ -99,7 +99,7 @@ func chargeProject360(ctx context.Context, r Project360Result) {
 	}
 	if r.Stakeholders != nil {
 		for _, s := range r.Stakeholders.Items {
-			noteEvidence(ctx, datasource.EntityPerson, s.PersonID)
+			noteEvidence(ctx, datasource.EntityContact, s.ContactID)
 		}
 	}
 	if r.Commitments != nil {

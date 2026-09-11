@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package aiactivity owns the projection behind the UI's AI-activity display:
-// what the AI is doing for one person right now, and what it finished.
+// what the AI is doing for one contact right now, and what it finished.
 //
 // Every FACT in it comes from the bus. Every AI-backed writer publishes
 // ai_task.state_changed and this package's handler projects those events into

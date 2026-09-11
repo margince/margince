@@ -9,6 +9,7 @@ import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
 import { ProfileArticle } from "./profile-digest-article";
 import {
+  type Contact,
   citationOf,
   citationsOf,
   type Fact,
@@ -16,7 +17,6 @@ import {
   hostOf,
   type LegalEntity,
   type Page,
-  type Person,
 } from "./profile-digest-data";
 import { DigestLine } from "./profile-digest-lines";
 import { ProfileSidebar } from "./profile-digest-sidebar";
@@ -36,13 +36,13 @@ import "./profile-digest.css";
  * record grouped into sections down the left, and a sidebar of the facts a
  * reader scans without opening a section on the right. `read` carries the
  * crawl's own findings beyond the fields the deck ever asks about — the
- * facts, the people, the legal entities — which is what the sections beyond
+ * facts, the contacts, the legal entities — which is what the sections beyond
  * the record's own four groups draw from.
  *
  * EVERY LINE CARRIES ITS SOURCE, numbered the way an encyclopedia numbers
  * them: the same page cited twice gets the same number, and the pages
  * themselves are listed once at the foot. A line with no source says so
- * instead of borrowing one — something typed by a person, or carried over
+ * instead of borrowing one — something typed by a contact, or carried over
  * from a profile that already existed, has no page to cite.
  *
  * AN UNANSWERED LINE IN THE DOCUMENT IS AN ACTION: `onSettle` takes the
@@ -61,7 +61,7 @@ export type ProfileDigestRead = Readonly<{
   root_url: string;
   pages: readonly Page[];
   facts: readonly Fact[];
-  people: readonly Person[];
+  contacts: readonly Contact[];
   legal_entities?: readonly LegalEntity[];
 }>;
 
@@ -218,19 +218,19 @@ function DigestDocument({
   const { locale } = useLocale();
   const factGroups = factsByCategory(read.facts);
   const legalEntities = read.legal_entities ?? [];
-  const people = read.people;
+  const contacts = read.contacts;
   // Rendering order, so a URL first seen backing a legal entity — the
   // article's Identity section folds those in right after the record's own
-  // legal-identity lines — never gets bumped behind a fact or a person cited
+  // legal-identity lines — never gets bumped behind a fact or a contact cited
   // further down the page.
   const extra = [
     ...legalEntities.map((entity) => entity.source_url),
     ...factGroups.flatMap((group) => group.facts.map((f) => f.evidence_url)),
-    ...people.map((p) => p.evidence_url),
+    ...contacts.map((p) => p.evidence_url),
   ];
   const cites = citationsOf(rows, extra);
   const number = new Map(cites.map((cite) => [cite.url, cite.n]));
-  // Cited, not merely written: a row a person typed or carried in from an
+  // Cited, not merely written: a row a human typed or carried in from an
   // existing profile has a value and no page behind it, and counting it here
   // would claim a citation the line itself does not print.
   const citedCount = rows.filter(
@@ -293,7 +293,7 @@ function DigestDocument({
           pages={read.pages}
           legalEntities={legalEntities}
           factGroups={factGroups}
-          people={people}
+          contacts={contacts}
           cites={cites}
           onSettle={onSettle}
           onField={onField}

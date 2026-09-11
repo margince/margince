@@ -12,9 +12,9 @@ package search
 // by construction rather than by omission: there was no member to read it off.
 //
 // What makes one rule enough for both join tables in this schema is that they
-// are the same shape physically. `activity_link` carries `person_id`,
+// are the same shape physically. `activity_link` carries `contact_id`,
 // `company_id`, `deal_id` and `lead_id`; `relationship` carries
-// `person_id`, `company_id`, `deal_id` and `project_id`. The contract's
+// `contact_id`, `company_id`, `deal_id` and `project_id`. The contract's
 // `ActivityLink{entity_id, entity_type}` is the WIRE shape of a link and not
 // its storage — the columns are typed, and a CHECK constraint says which one
 // each row fills. So the rule reads columns, exactly as the field vocabulary
@@ -41,18 +41,18 @@ import (
 // this file exists to avoid; a two-entry list of tables that a test holds
 // against the schema is not that.
 var joinTables = []joinTable{
-	// Every kind this hub reaches pairs a person with one arm: employment is
-	// person+company, deal_stakeholder is person+deal,
-	// project_stakeholder is person+project (core 0007, 0131).
+	// Every kind this hub reaches pairs a contact with one arm: employment is
+	// contact+company, deal_stakeholder is contact+deal,
+	// project_stakeholder is contact+project (core 0007, 0131).
 	//
 	// It does NOT reach every legal row. The partner kinds (partner_of,
 	// referred_by, co_sell_with) pair company_id with counterparty_company_id
-	// and require person_id IS NULL, so they are a company↔company
-	// edge with no person in it — a shape one hub cannot express, on a column
+	// and require contact_id IS NULL, so they are a company↔company
+	// edge with no contact in it — a shape one hub cannot express, on a column
 	// arms cannot read. Those rows stay untraversable, which is stated here and
 	// gated by TestAReferenceNamedForItsRoleYieldsNoHop rather than left to be
 	// rediscovered.
-	{table: "relationship", hub: personRef, object: objectRelationship},
+	{table: "relationship", hub: contactRef, object: objectRelationship},
 	// activity_id is NOT NULL and exactly one arm is set, which the table's
 	// own activity_link_shape CHECK enforces arm by arm (core 0008, 0038).
 	// No object of its own: a link is not a record, and reading one discloses
@@ -60,10 +60,10 @@ var joinTables = []joinTable{
 	{table: "activity_link", hub: "activity_id"},
 }
 
-// personRef is the reference column two of the derivations name, spelled once.
+// contactRef is the reference column two of the derivations name, spelled once.
 // The linter asks for the constant; what makes it worth having is that a
 // misspelling in the hub declaration would silently derive no hops at all.
-const personRef = entityPerson + relationSuffix
+const contactRef = entityContact + relationSuffix
 
 // objectRelationship is the RBAC object governing the employment and
 // stakeholder edges. Named here rather than imported: a module never imports a
@@ -101,7 +101,7 @@ type joinTable struct {
 	//
 	// It is not the same question as the two endpoints' own grants, which is
 	// why gating those is not enough: `relationship` is a first-class object
-	// precisely because an edge discloses its endpoints as a PAIR. The people
+	// precisely because an edge discloses its endpoints as a PAIR. The contacts
 	// module says so where it gates the same read — "reading an edge discloses
 	// its endpoints, which is what `relationship` read governs" — and a
 	// traversal that skipped it would answer "who works at Acme" for a role
@@ -114,7 +114,7 @@ type joinTable struct {
 //
 // Carrying two references is what makes a table a candidate, not what makes it
 // an edge, and the census in queryjoins_test.go cannot tell the two apart —
-// `activity_participant` and `person_consent` look identical to it. So every
+// `activity_participant` and `contact_consent` look identical to it. So every
 // candidate gets a verdict in one of these two lists and a new table gets
 // neither, which is what fails the gate. The reason is the point: a bare
 // exclusion list would read as "handled" and this reads as "decided".
@@ -122,15 +122,15 @@ var notAnEdge = map[string]string{
 	"activity_participant": "who capture MATCHED from an address, where activity_link is what it " +
 		"ASSERTED about the record — graphactivity.go ranks the assertion above the match for the " +
 		"same reason a hop should traverse it and not this",
-	"person_consent": "person_id and lead_id are alternative OWNERS of one consent record, never both, " +
+	"contact_consent": "contact_id and lead_id are alternative OWNERS of one consent record, never both, " +
 		"so the pair is a polymorphic parent rather than an edge between the two",
-	"consent_event": "the append-only log behind person_consent, and polymorphic in the same way",
-	"communication_basis": "person_id and lead_id are alternative SUBJECTS of one basis, never both, so " +
-		"the pair is polymorphic exactly as person_consent is — and a basis says why a message to that " +
-		"subject was lawful, which relates a person to a DECISION and not to another record",
+	"consent_event": "the append-only log behind contact_consent, and polymorphic in the same way",
+	"communication_basis": "contact_id and lead_id are alternative SUBJECTS of one basis, never both, so " +
+		"the pair is polymorphic exactly as contact_consent is — and a basis says why a message to that " +
+		"subject was lawful, which relates a contact to a DECISION and not to another record",
 	"communication_suppression": "polymorphic in the same way, and for the same reason: an objection is " +
 		"something one subject said, not a path from them to anybody else",
-	"withdrawal_credential": "polymorphic exactly as the two above: person_id and lead_id are " +
+	"withdrawal_credential": "polymorphic exactly as the two above: contact_id and lead_id are " +
 		"alternative HOLDERS of one credential, never both, and most rows name neither — the " +
 		"credential is keyed by the address the mail went to, which is what an opt-out acts on. " +
 		"It relates a subject to a CAPABILITY over their own mail, not to another record",
@@ -142,13 +142,13 @@ var notAnEdge = map[string]string{
 		"shipped, so the create is still here and still owes a verdict. It was never an edge even while " +
 		"live: until a human confirmed one nothing connected the two records, and once they did the " +
 		"activity_link row was the edge a hop traverses",
-	"person_signature_enrich_state": "enrichment bookkeeping keyed by the activity a signature was read " +
+	"contact_signature_enrich_state": "enrichment bookkeeping keyed by the activity a signature was read " +
 		"from — a cursor over work, not a statement about the two records",
 	"attachment": "a file, which is a record in its own right. Its extra references are the " +
 		"ROLL-UP READ PATH core 0195 declares them to be — the primary parent still owns the " +
 		"file's visibility — so they denormalize one record's parentage rather than relating two",
 	"sdr_handoff": "a decision ABOUT a prospect, not a path from one record to another. Its four " +
-		"references are the subject that was handed on (a lead or a person, never both), the company " +
+		"references are the subject that was handed on (a lead or a contact, never both), the company " +
 		"it belongs to, and the deal an acceptance produced — a hop through it would answer \"which " +
 		"deals came from leads\" by way of somebody's routing decision, when deal.company_id " +
 		"already answers that about the records themselves. The same ground activity_retention_evidence " +
@@ -170,7 +170,7 @@ var notAnEdge = map[string]string{
 // Archived is DELETED: the edge was recorded in error, or the row was swept.
 // Ended is LEFT: the edge was true and stopped being true, which is the
 // ordinary end of a job and leaves the row in place. Filtering only the first
-// is what makes a company a person left go on reading as where they work —
+// is what makes a company a contact left go on reading as where they work —
 // the same conflation #1789 fixed on the write side of this column.
 type JoinEdge struct {
 	Table      string
@@ -298,7 +298,7 @@ func joinVia(table, from, to string) string {
 //
 // Both derivations that produce one use it: the inverse of a scalar reference
 // (`company` → `deals`) and either direction of a join edge
-// (`person` → `companies`). A second pluralization rule beside this one is
+// (`contact` → `companies`). A second pluralization rule beside this one is
 // how a vocabulary comes to answer to two names for one hop.
 func pluralRelationName(entity string) string {
 	if plural, irregular := irregularPlurals[entity]; irregular {
@@ -367,13 +367,13 @@ func joinEdgeCondition(edge JoinEdge) string {
 	if edge.Ends {
 		// A hop is CURRENT membership, which is what every other reader of this
 		// column in the tree means by it (compose/introseams.go,
-		// compose/network/persongraphaccount.go). "People at this company"
+		// compose/network/contactgraphaccount.go). "Contacts at this company"
 		// answering with the ones who left would be wrong in the direction that
 		// costs something: a stale contact is acted on, a missing one is asked
 		// about.
 		//
 		// A FUTURE ended_at is a notice period, and it is still current — the
-		// person works there until the date arrives. Compared against the
+		// contact works there until the date arrives. Compared against the
 		// DATABASE's clock, because the row is dated by it and a comparison
 		// against any other would disagree with it near midnight.
 		where = append(where, fmt.Sprintf("(j.%s IS NULL OR j.%s > current_date)", columnEndedAt, columnEndedAt))

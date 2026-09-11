@@ -284,7 +284,7 @@ Documented honestly, not apologetically:
 | The registry (the closed catalog + its closure test) | `internal/modules/automation/catalog_triggers.go`, `catalog_actions.go`, `catalog_closure_test.go` |
 | The instantiable catalog (seeded + authorable-only) + store | `internal/modules/automation/automations_catalog.go`, `automations.go` |
 | The engine + per-firing lifecycle | `internal/modules/automation/engine.go`, `engine_run.go`, `engine_blocked.go` |
-| The shipped handlers (event / clock) | `internal/modules/automation/handlers_event.go`, `handlers_clock.go` (+ `people`'s `assign_lead_owner`, `lead_score_recompute`) |
+| The shipped handlers (event / clock) | `internal/modules/automation/handlers_event.go`, `handlers_clock.go` (+ `contacts`'s `assign_lead_owner`, `lead_score_recompute`) |
 | The action executors | `internal/modules/automation/handlers_actions.go` |
 | The clock entry point | `internal/modules/automation/timescan.go` |
 | The two permission gates | `internal/modules/automation/ceiling.go`, `gate.go` |
@@ -293,9 +293,9 @@ Documented honestly, not apologetically:
 | Cross-module wiring (executors, resolver, River job) | `internal/compose/workflows.go`, `timescan.go`, `jobs.go` |
 
 The single source of truth for **which workflows exist and where they're registered** is
-`compose/workflows.go` — it lists `StarterWorkflows(...)`, `people.LeadRoutingWorkflow(...)`, and the
-system handlers in one place. Two handlers live in `people` (not `automation`) on purpose: their engine
-is people's own lead SQL, and a module never imports a sibling, so compose registers them as the
+`compose/workflows.go` — it lists `StarterWorkflows(...)`, `contacts.LeadRoutingWorkflow(...)`, and the
+system handlers in one place. Two handlers live in `contacts` (not `automation`) on purpose: their engine
+is contacts's own lead SQL, and a module never imports a sibling, so compose registers them as the
 cross-module edge.
 
 ## Where to go next

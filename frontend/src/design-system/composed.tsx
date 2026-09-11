@@ -707,7 +707,7 @@ export function PipelineBoard<Record extends BoardRecord>(
 
 /**
  * TimelineGroup is a run of entries the reader sees as ONE event: a
- * conversation, or one message sent to several people. It lives here with the
+ * conversation, or one message sent to several contacts. It lives here with the
  * component that renders it — the rules that BUILD one are a screen concern,
  * but the shape is the list's own vocabulary.
  */
@@ -731,7 +731,7 @@ export type TimelineEntry = {
   //
   // `change` is not an activity: it is a field edit projected from the audit
   // spine. It rides the same list because what was said to an account and what
-  // was changed about it are one chronology to the person reading them — kept
+  // was changed about it are one chronology to the reader reading them — kept
   // apart, a rep comparing "we told them X" against "someone set stage to Y"
   // had to hold two orderings in their head.
   kind: "email" | "meeting" | "note" | "call" | "task" | "message" | "change";
@@ -763,9 +763,9 @@ export type TimelineEntry = {
    */
   counterparts?: string;
   /**
-   * The same people, one name each, before they were joined into the phrase
+   * The same contacts, one name each, before they were joined into the phrase
    * above. A thread lists everyone it was with and draws each sender's face,
-   * and both need a person, not a phrase: a set of phrases lists "Ida Keller"
+   * and both need a contact, not a phrase: a set of phrases lists "Ida Keller"
    * and "Ida Keller, Marc Dubois" as two entries, and a monogram of a phrase
    * is nobody's. Absent where nothing resolved a name, exactly as the phrase.
    */
@@ -942,7 +942,7 @@ function RecordHead({
   actions?: ReactNode;
   actionsAt: "none" | "inline" | "controls" | "below";
   wide: boolean;
-  markShape: "person" | "company";
+  markShape: "contact" | "company";
 }>) {
   const nameTip = useTruncationTooltip<HTMLHeadingElement>(name);
   return (
@@ -1015,7 +1015,7 @@ export function RecordView({
   pulse,
   actions,
   controls,
-  markShape = "person",
+  markShape = "contact",
   actionsInline,
   band,
   rail,
@@ -1059,9 +1059,9 @@ export function RecordView({
   // action row under the header.
   controls?: ReactNode;
   // What KIND of record this is, which decides whether its mark is drawn round
-  // like a face or as a rounded square like a logo. Defaults to `person`,
+  // like a face or as a rounded square like a logo. Defaults to `contact`,
   // which is what every record but a company is.
-  markShape?: "person" | "company";
+  markShape?: "contact" | "company";
   // Puts `actions` on the SAME row as the identity block, right-aligned,
   // instead of the default full-width row underneath the header (or the
   // stacked column `controls` produces). An explicit opt-in: every other
@@ -1094,7 +1094,7 @@ export function RecordView({
   timeline?: TimelineEntry[];
   /**
    * When set, the timeline renders CONVERSATIONS rather than messages. The
-   * flat list stays the default: a person's timeline is a handful of rows and
+   * flat list stays the default: a contact's timeline is a handful of rows and
    * grouping it would collapse events that were never one.
    */
   timelineGroups?: readonly TimelineGroup[];
@@ -1492,7 +1492,7 @@ function TimelineList({
  *
  * A thread is one card, open: what it IS — "3 messages", who with, whose
  * move — over its subject, then the messages themselves. A bulk send is
- * folded, stating "sent to 3 people" before what it says, because the reader
+ * folded, stating "sent to 3 contacts" before what it says, because the reader
  * is scanning for an event rather than for a sentence; expanding it shows the
  * same rows the flat list would have shown, from the same component, so the
  * two can never drift.
@@ -1577,7 +1577,7 @@ function otherSideOf(entry: TimelineEntry): string | undefined {
   return entry.emailSummary?.counterparty?.trim() || entry.counterparts;
 }
 
-// The same people one at a time, for a set and for a face. The resolved
+// The same contacts one at a time, for a set and for a face. The resolved
 // names when the adapter had any; otherwise the one phrase the row shows,
 // which is then the best name there is. Nothing on a withheld row, as above.
 function otherSideNames(entry: TimelineEntry): readonly string[] {
@@ -1593,7 +1593,7 @@ function otherSideNames(entry: TimelineEntry): readonly string[] {
 
 // Who a thread was with, as one phrase: the other side's names, each once,
 // joined ONCE at the end — joining per message and then collecting the
-// phrases listed one person under two spellings. Our own seats are not
+// phrases listed one contact under two spellings. Our own seats are not
 // listed: every thread on this record is with us, and a name that appears
 // on all of them tells a reader nothing.
 function threadParticipants(
@@ -1685,7 +1685,7 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
       </span>
     );
   }
-  // The face is ONE person's — the first named on the other side — never
+  // The face is ONE contact's — the first named on the other side — never
   // the phrase the lead line shows, whose monogram would be nobody's.
   const [face] = otherSideNames(entry);
   if (entry.direction === "inbound" && face) {
@@ -1900,7 +1900,7 @@ function ThreadRow({
 // groupCountLabel counts the group's members in words that read. A group of
 // one is reachable both ways — a thread whose other messages are on another
 // page, and a single message the sender attested as a bulk send — and the
-// plural forms rendered "1 messages" and "sent to 1 people" for it.
+// plural forms rendered "1 messages" and "sent to 1 contacts" for it.
 function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   const count = group.entries.length;
   const base =
@@ -1910,7 +1910,7 @@ function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   });
 }
 
-// BulkGroupRow is one send to several people, folded: the newest copy stands
+// BulkGroupRow is one send to several contacts, folded: the newest copy stands
 // for the send while it is closed, and opening it lists every copy through
 // the ordinary row. A THREAD is not drawn here — it is a conversation, and
 // ThreadRow draws it open, as one card of messages.
@@ -2030,7 +2030,7 @@ function directionPhrase(
   if (entry.direction === "inbound") {
     return t("timeline.receivedFrom", { who });
   }
-  // A meeting or a note has no side. It still has people in it, and naming
+  // A meeting or a note has no side. It still has contacts in it, and naming
   // them is the whole reason this line exists.
   return t("timeline.withWhom", { who });
 }

@@ -175,7 +175,7 @@ func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 	// (stagingsubject.go): without it two colleagues staging a byte-identical
 	// payload produce ONE row, owned by whoever staged first — so the second
 	// member's proposal is invisible to them and undecidable by them, for a
-	// kind whose own gate says a row belongs to one person.
+	// kind whose own gate says a row belongs to one contact.
 	joinArgs := []any{in.Kind, nullUUID(in.TargetID), in.DiffHash}
 	err := tx.QueryRow(ctx, `SELECT id FROM approval
 			WHERE kind = $1 AND target_entity_id IS NOT DISTINCT FROM $2 AND diff_hash = $3

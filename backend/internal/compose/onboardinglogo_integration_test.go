@@ -32,7 +32,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -53,7 +53,7 @@ const (
 // object store — the worker as the onboarding read runs it, minus the crawl.
 func onboardingLogoWorker(e *integration.Env, site *assetSite, blob blobstore.Store) *siteDeepReadWorker {
 	return &siteDeepReadWorker{
-		pool: e.Pool, people: e.People, fetch: site, blob: blob,
+		pool: e.Pool, contacts: e.Contacts, fetch: site, blob: blob,
 		log: slog.New(slog.DiscardHandler),
 	}
 }
@@ -88,7 +88,7 @@ func readTheOnboardingSite(t *testing.T, e *integration.Env, w *siteDeepReadWork
 // case describes.
 func readTheOnboardingSiteDeclaring(t *testing.T, e *integration.Env, w *siteDeepReadWorker, crawl siteCrawl) SiteDeepReadArgs {
 	t.Helper()
-	read, joined, err := e.People.StartOnboardingSiteRead(
+	read, joined, err := e.Contacts.StartOnboardingSiteRead(
 		e.As(e.Rep1, nil, integration.AdminPerms), seedURL, "human:"+e.Rep1.String(), nil)
 	if err != nil {
 		t.Fatalf("start the onboarding read: %v", err)
@@ -98,7 +98,7 @@ func readTheOnboardingSiteDeclaring(t *testing.T, e *integration.Env, w *siteDee
 	}
 	args := SiteDeepReadArgs{Workspace: e.WS, SiteReadID: read.ID, RequestedBy: read.RequestedBy}
 	workerCtx := deepReadWorkerCtx(context.Background(), args)
-	claim, err := e.People.BeginSiteRead(workerCtx, read.ID, 10*time.Minute)
+	claim, err := e.Contacts.BeginSiteRead(workerCtx, read.ID, 10*time.Minute)
 	if err != nil {
 		t.Fatalf("claim the onboarding read: %v", err)
 	}
@@ -108,21 +108,21 @@ func readTheOnboardingSiteDeclaring(t *testing.T, e *integration.Env, w *siteDee
 
 // readyDossier closes the claimed read and hands back the draft a human is
 // shown before confirming it.
-func readyDossier(t *testing.T, e *integration.Env, args SiteDeepReadArgs) people.SiteRead {
+func readyDossier(t *testing.T, e *integration.Env, args SiteDeepReadArgs) contacts.SiteRead {
 	t.Helper()
 	hash, err := siteReadProposalHash(nil, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("hashing the empty draft: %v", err)
 	}
-	if err := e.People.FinishSiteRead(deepReadWorkerCtx(context.Background(), args), args.SiteReadID,
-		people.FinishSiteReadInput{
+	if err := e.Contacts.FinishSiteRead(deepReadWorkerCtx(context.Background(), args), args.SiteReadID,
+		contacts.FinishSiteReadInput{
 			Status:       "done",
-			Pages:        []people.SiteReadPage{{URL: seedURL, Kind: "home"}},
+			Pages:        []contacts.SiteReadPage{{URL: seedURL, Kind: "home"}},
 			ProposalHash: hash,
 		}); err != nil {
 		t.Fatalf("finish the onboarding read: %v", err)
 	}
-	ready, err := e.People.GetOnboardingSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), args.SiteReadID)
+	ready, err := e.Contacts.GetOnboardingSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), args.SiteReadID)
 	if err != nil {
 		t.Fatalf("read the finished draft: %v", err)
 	}
@@ -131,12 +131,12 @@ func readyDossier(t *testing.T, e *integration.Env, args SiteDeepReadArgs) peopl
 
 // confirmTheAnchor finishes the claimed dossier and confirms it — the step that
 // creates the company the installation is.
-func confirmTheAnchor(t *testing.T, e *integration.Env, args SiteDeepReadArgs) people.Company {
+func confirmTheAnchor(t *testing.T, e *integration.Env, args SiteDeepReadArgs) contacts.Company {
 	t.Helper()
 	ready := readyDossier(t, e, args)
 	website := seedURL
-	company, _, err := e.People.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms),
-		people.ConfirmCompanySiteReadInput{
+	company, _, err := e.Contacts.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms),
+		contacts.ConfirmCompanySiteReadInput{
 			ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 			DisplayName: "Acme", Website: &website,
 		}, nil)
@@ -178,15 +178,15 @@ func confirmTheAnchorAsTheAPIDoes(t *testing.T, e *integration.Env, engine *deep
 // wide slot.
 func parkedLogo(t *testing.T, e *integration.Env, readID ids.UUID) (key, origin *string) {
 	t.Helper()
-	return parkedMark(t, e, readID, people.LogoWide)
+	return parkedMark(t, e, readID, contacts.LogoWide)
 }
 
 // parkedMark answers what the dossier is holding for the confirmation in one
 // slot.
-func parkedMark(t *testing.T, e *integration.Env, readID ids.UUID, slot people.LogoSlot) (key, origin *string) {
+func parkedMark(t *testing.T, e *integration.Env, readID ids.UUID, slot contacts.LogoSlot) (key, origin *string) {
 	t.Helper()
 	columns := "logo_object_key, logo_origin"
-	if slot == people.LogoIcon {
+	if slot == contacts.LogoIcon {
 		columns = "logo_icon_object_key, logo_icon_origin"
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -221,18 +221,18 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 
 	company := confirmTheAnchor(t, e, args)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	boundKey, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
+	boundKey, err := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("the confirmed anchor has no logo: %v", err)
 	}
 	if boundKey != *key {
 		t.Fatalf("the anchor names %q, want the object the read stored at %q", boundKey, *key)
 	}
-	record, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
+	record, err := e.Contacts.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read the anchor: %v", err)
 	}
-	wantURL := *people.LogoURL(company.CompanyID.UUID, &boundKey, people.LogoWide)
+	wantURL := *contacts.LogoURL(company.CompanyID.UUID, &boundKey, contacts.LogoWide)
 	if record.LogoUrl == nil || *record.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q — the face the SPA renders", record.LogoUrl, wantURL)
 	}
@@ -240,8 +240,8 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 	// The same face on the profile the app shell reads. The record screens draw
 	// the mark from the company and the chrome draws it from the company
 	// profile, so a company that wore the mark on one and not the other would be
-	// two companies to the person looking at it.
-	profile, err := e.People.GetAnchorCompany(ctx)
+	// two companies to the contact looking at it.
+	profile, err := e.Contacts.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("read the company profile: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 	}
 
 	// The mark is the site read's, never the confirming human's: provenance is
-	// written once, and a machine mark filed under a person would make the
+	// written once, and a machine mark filed under a contact would make the
 	// human-precedence guard refuse every later resolve.
 	var capturedBy string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -310,7 +310,7 @@ func TestAdoptingTheParkedMarkLeavesTheCompanyItsOnlyReference(t *testing.T) {
 		t.Fatalf("the confirmed dossier still names the asset URL %q it handed over", *leftOrigin)
 	}
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	boundKey, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
+	boundKey, err := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("the confirmed anchor has no logo: %v", err)
 	}
@@ -323,7 +323,7 @@ func TestAdoptingTheParkedMarkLeavesTheCompanyItsOnlyReference(t *testing.T) {
 	// bytes by the time the lane deletes them.
 	next := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), "company_logo",
 		company.CompanyID.String()+"/"+ids.NewV7().String())
-	written, superseded, err := e.People.SetCompanyLogo(ctx, company.CompanyID, next, seedURL+"/newer.png")
+	written, superseded, err := e.Contacts.SetCompanyLogo(ctx, company.CompanyID, next, seedURL+"/newer.png")
 	if err != nil {
 		t.Fatalf("re-resolve the anchor's logo: %v", err)
 	}
@@ -391,17 +391,17 @@ func TestConfirmingAnOnboardingReadSurvivesALogoThatNeverResolved(t *testing.T) 
 	}
 	company := confirmTheAnchor(t, e, args)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	if _, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, contacts.LogoWide); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an anchor with no resolved logo answers %v, want not-found so the monogram renders", err)
 	}
-	record, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
+	record, err := e.Contacts.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read the anchor: %v", err)
 	}
 	if record.LogoUrl != nil {
 		t.Fatalf("logo_url = %q, want none", *record.LogoUrl)
 	}
-	profile, err := e.People.GetAnchorCompany(ctx)
+	profile, err := e.Contacts.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("read the company profile: %v", err)
 	}
@@ -456,11 +456,11 @@ func TestAFailedReadKeepsTheBytesACompanyIsAlreadyWearing(t *testing.T) {
 		t.Fatal("the read parked no mark; this case has nothing to protect")
 	}
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
-	saved, err := e.People.SaveCompany(human, people.SaveCompanyInput{DisplayName: "Acme"})
+	saved, err := e.Contacts.SaveCompany(human, contacts.SaveCompanyInput{DisplayName: "Acme"})
 	if err != nil {
 		t.Fatalf("describe the company: %v", err)
 	}
-	if _, _, err := e.People.SetCompanyLogo(human, saved.CompanyID, *key, touchIconURL); err != nil {
+	if _, _, err := e.Contacts.SetCompanyLogo(human, saved.CompanyID, *key, touchIconURL); err != nil {
 		t.Fatalf("give the company the resolved mark: %v", err)
 	}
 
@@ -539,15 +539,15 @@ func (b *recordingBlobstore) account() (stored, outstanding []string) {
 // claimedOnboardingRead starts an unbound dossier and claims it the way the
 // worker does, answering both what the job carries and the lease the claim
 // stamped.
-func claimedOnboardingRead(t *testing.T, e *integration.Env) (SiteDeepReadArgs, people.SiteReadClaim) {
+func claimedOnboardingRead(t *testing.T, e *integration.Env) (SiteDeepReadArgs, contacts.SiteReadClaim) {
 	t.Helper()
-	read, _, err := e.People.StartOnboardingSiteRead(
+	read, _, err := e.Contacts.StartOnboardingSiteRead(
 		e.As(e.Rep1, nil, integration.AdminPerms), seedURL, "human:"+e.Rep1.String(), nil)
 	if err != nil {
 		t.Fatalf("start the onboarding read: %v", err)
 	}
 	args := SiteDeepReadArgs{Workspace: e.WS, SiteReadID: read.ID, RequestedBy: read.RequestedBy}
-	claim, err := e.People.BeginSiteRead(deepReadWorkerCtx(context.Background(), args), read.ID, 10*time.Minute)
+	claim, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), args), read.ID, 10*time.Minute)
 	if err != nil {
 		t.Fatalf("claim the onboarding read: %v", err)
 	}
@@ -557,17 +557,17 @@ func claimedOnboardingRead(t *testing.T, e *integration.Env) (SiteDeepReadArgs, 
 // endedOnboardingRead starts an unbound dossier, claims it the way the worker
 // does, and closes it — the row a resolve still in flight comes back to when the
 // reclaim window (BeginSiteRead) has handed the read to another attempt.
-func endedOnboardingRead(t *testing.T, e *integration.Env, status string) (SiteDeepReadArgs, people.SiteReadClaim) {
+func endedOnboardingRead(t *testing.T, e *integration.Env, status string) (SiteDeepReadArgs, contacts.SiteReadClaim) {
 	t.Helper()
 	args, claim := claimedOnboardingRead(t, e)
-	outcome := people.FinishSiteReadInput{Status: status}
+	outcome := contacts.FinishSiteReadInput{Status: status}
 	if status == "failed" {
 		// A failure names its cause; the store refuses one that does not. What
 		// this test is about is the parked mark, so any honest diagnosis does.
 		outcome.StatusCode = "unreadable"
 		outcome.StatusDetail = "The site could not be read."
 	}
-	if err := e.People.FinishSiteRead(deepReadWorkerCtx(context.Background(), args),
+	if err := e.Contacts.FinishSiteRead(deepReadWorkerCtx(context.Background(), args),
 		args.SiteReadID, outcome); err != nil {
 		t.Fatalf("end the onboarding read as %s: %v", status, err)
 	}
@@ -587,7 +587,7 @@ func TestADossierThatEndedRefusesALateParkedMark(t *testing.T) {
 			args, claim := endedOnboardingRead(t, e, status)
 			workerCtx := deepReadWorkerCtx(context.Background(), args)
 			late := siteReadLogoKey(ids.From[ids.WorkspaceKind](e.WS), args.SiteReadID)
-			recorded, superseded, err := e.People.RecordSiteReadLogo(workerCtx, args.SiteReadID, claim.ClaimedAt, people.LogoWide, late, touchIconURL)
+			recorded, superseded, err := e.Contacts.RecordSiteReadLogo(workerCtx, args.SiteReadID, claim.ClaimedAt, contacts.LogoWide, late, touchIconURL)
 			if err != nil {
 				t.Fatalf("parking a mark on a %s read: %v", status, err)
 			}
@@ -635,9 +635,9 @@ func TestAResolveThatLandsAfterTheReadEndedCollectsItsOwnBytes(t *testing.T) {
 // worker does. The lease it presents has lapsed by the time the statement
 // reaches the database — the reclaim the worker performs once its own,
 // minutes-long grace has run out, with none of the waiting.
-func reclaimTheRead(t *testing.T, e *integration.Env, args SiteDeepReadArgs) people.SiteReadClaim {
+func reclaimTheRead(t *testing.T, e *integration.Env, args SiteDeepReadArgs) contacts.SiteReadClaim {
 	t.Helper()
-	claim, err := e.People.BeginSiteRead(deepReadWorkerCtx(context.Background(), args),
+	claim, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), args),
 		args.SiteReadID, time.Microsecond)
 	if err != nil {
 		t.Fatalf("reclaim the stalled read: %v", err)
@@ -657,7 +657,7 @@ func TestOnlyTheAttemptHoldingTheReadParksItsMark(t *testing.T) {
 	current := reclaimTheRead(t, e, args)
 
 	held := siteReadLogoKey(ids.From[ids.WorkspaceKind](e.WS), args.SiteReadID)
-	recorded, superseded, err := e.People.RecordSiteReadLogo(workerCtx, args.SiteReadID, current.ClaimedAt, people.LogoWide, held, touchIconURL)
+	recorded, superseded, err := e.Contacts.RecordSiteReadLogo(workerCtx, args.SiteReadID, current.ClaimedAt, contacts.LogoWide, held, touchIconURL)
 	if err != nil {
 		t.Fatalf("the holding attempt parking its mark: %v", err)
 	}
@@ -666,7 +666,7 @@ func TestOnlyTheAttemptHoldingTheReadParksItsMark(t *testing.T) {
 	}
 
 	late := siteReadLogoKey(ids.From[ids.WorkspaceKind](e.WS), args.SiteReadID)
-	recorded, superseded, err = e.People.RecordSiteReadLogo(workerCtx, args.SiteReadID, stalled.ClaimedAt, people.LogoWide, late, seedURL+"/stale.png")
+	recorded, superseded, err = e.Contacts.RecordSiteReadLogo(workerCtx, args.SiteReadID, stalled.ClaimedAt, contacts.LogoWide, late, seedURL+"/stale.png")
 	if err != nil {
 		t.Fatalf("the stalled attempt parking its mark: %v", err)
 	}
@@ -721,13 +721,13 @@ func TestAResolveThatLandsAfterAnotherAttemptTookTheReadKeepsThatAttemptsBytes(t
 	}
 }
 
-// anchorWearingAPersonsMark describes the company by hand and gives it a logo a
-// person chose, bytes and all — the field a confirmation must not touch, and
+// anchorWearingAContactsMark describes the company by hand and gives it a logo a
+// contact chose, bytes and all — the field a confirmation must not touch, and
 // the object a collection must not take.
-func anchorWearingAPersonsMark(t *testing.T, e *integration.Env, blob blobstore.Store) string {
+func anchorWearingAContactsMark(t *testing.T, e *integration.Env, blob blobstore.Store) string {
 	t.Helper()
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
-	saved, err := e.People.SaveCompany(human, people.SaveCompanyInput{DisplayName: "Acme"})
+	saved, err := e.Contacts.SaveCompany(human, contacts.SaveCompanyInput{DisplayName: "Acme"})
 	if err != nil {
 		t.Fatalf("describe the company by hand: %v", err)
 	}
@@ -736,11 +736,11 @@ func anchorWearingAPersonsMark(t *testing.T, e *integration.Env, blob blobstore.
 	chosen := logoFixture(t, 64, 64)
 	if err := blob.Put(context.Background(), uploaded, bytes.NewReader(chosen),
 		int64(len(chosen)), imagenorm.ContentType); err != nil {
-		t.Fatalf("store the person's own mark: %v", err)
+		t.Fatalf("store the contact's own mark: %v", err)
 	}
-	if _, _, err := e.People.SetCompanyLogo(human, saved.CompanyID, uploaded,
-		seedURL+"/chosen-by-a-person.png"); err != nil {
-		t.Fatalf("record the person's own logo: %v", err)
+	if _, _, err := e.Contacts.SetCompanyLogo(human, saved.CompanyID, uploaded,
+		seedURL+"/chosen-by-a-contact.png"); err != nil {
+		t.Fatalf("record the contact's own logo: %v", err)
 	}
 	return uploaded
 }
@@ -769,31 +769,31 @@ func readTheAnchorsSiteFor(t *testing.T, e *integration.Env, blob blobstore.Stor
 	return args, *parked
 }
 
-func TestConfirmingAnOnboardingReadKeepsTheLogoAPersonGaveTheAnchor(t *testing.T) {
-	// A person's own mark holds the field, so the read's mark is adopted by
+func TestConfirmingAnOnboardingReadKeepsTheLogoAContactGaveTheAnchor(t *testing.T) {
+	// A contact's own mark holds the field, so the read's mark is adopted by
 	// nobody — and the confirmed dossier would be the last thing naming it,
 	// forever. The confirmation reports that key instead and the transport
-	// collects the bytes, while the logo the person chose is left alone: the
+	// collects the bytes, while the logo the contact chose is left alone: the
 	// object a company wears is never what a collection takes.
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	blob := newRecordingBlobstore()
-	uploaded := anchorWearingAPersonsMark(t, e, blob)
+	uploaded := anchorWearingAContactsMark(t, e, blob)
 	args, parked := readTheAnchorsSiteFor(t, e, blob)
 
-	engine := &deepReadEngine{people: e.People, blob: blob, log: slog.New(slog.DiscardHandler)}
+	engine := &deepReadEngine{contacts: e.Contacts, blob: blob, log: slog.New(slog.DiscardHandler)}
 	companyID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundKey, err := e.People.CompanyLogoKey(human, companyID, people.LogoWide)
+	boundKey, err := e.Contacts.CompanyLogoKey(human, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("the anchor lost its logo: %v", err)
 	}
 	if boundKey != uploaded {
-		t.Fatalf("the anchor now names %q, want the logo the person set at %q", boundKey, uploaded)
+		t.Fatalf("the anchor now names %q, want the logo the contact set at %q", boundKey, uploaded)
 	}
 	stored, _, err := blob.Get(context.Background(), uploaded)
 	if err != nil {
-		t.Fatalf("the mark the person chose answers %v, want it kept", err)
+		t.Fatalf("the mark the contact chose answers %v, want it kept", err)
 	}
 	if err := stored.Close(); err != nil {
 		t.Fatalf("closing the stored object: %v", err)
@@ -814,10 +814,10 @@ func TestConfirmingAnOnboardingReadCollectsNothingWhenTheAnchorAdoptsTheMark(t *
 	blob := newRecordingBlobstore()
 	args, parked := readTheAnchorsSiteFor(t, e, blob)
 
-	engine := &deepReadEngine{people: e.People, blob: blob, log: slog.New(slog.DiscardHandler)}
+	engine := &deepReadEngine{contacts: e.Contacts, blob: blob, log: slog.New(slog.DiscardHandler)}
 	companyID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundKey, err := e.People.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), companyID, people.LogoWide)
+	boundKey, err := e.Contacts.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("the confirmed anchor has no logo: %v", err)
 	}
@@ -839,21 +839,21 @@ func TestAConfirmationSurvivesAnObjectStoreThatWillNotCollect(t *testing.T) {
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	blob := newRecordingBlobstore()
 	blob.refuseDelete = errors.New("object store unavailable")
-	uploaded := anchorWearingAPersonsMark(t, e, blob)
+	uploaded := anchorWearingAContactsMark(t, e, blob)
 	args, parked := readTheAnchorsSiteFor(t, e, blob)
 
 	var logs bytes.Buffer
 	engine := &deepReadEngine{
-		people: e.People, blob: blob, log: slog.New(slog.NewTextHandler(&logs, nil)),
+		contacts: e.Contacts, blob: blob, log: slog.New(slog.NewTextHandler(&logs, nil)),
 	}
 	companyID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundKey, err := e.People.CompanyLogoKey(human, companyID, people.LogoWide)
+	boundKey, err := e.Contacts.CompanyLogoKey(human, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("the anchor lost its logo: %v", err)
 	}
 	if boundKey != uploaded {
-		t.Fatalf("the anchor now names %q, want the logo the person set at %q", boundKey, uploaded)
+		t.Fatalf("the anchor now names %q, want the logo the contact set at %q", boundKey, uploaded)
 	}
 	if n := rowsNaming(t, e, parked); n != 0 {
 		t.Fatalf("%d row(s) still name %q — the confirmation's transaction released it", n, parked)
@@ -870,10 +870,10 @@ func TestAConfirmationWithNoObjectStoreKeepsTheUnadoptedReference(t *testing.T) 
 	// findable orphan into an unfindable one.
 	e := integration.Setup(t)
 	blob := newRecordingBlobstore()
-	anchorWearingAPersonsMark(t, e, blob)
+	anchorWearingAContactsMark(t, e, blob)
 	args, parked := readTheAnchorsSiteFor(t, e, blob)
 
-	engine := &deepReadEngine{people: e.People, log: slog.New(slog.DiscardHandler)}
+	engine := &deepReadEngine{contacts: e.Contacts, log: slog.New(slog.DiscardHandler)}
 	confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
 	left, origin := parkedLogo(t, e, args.SiteReadID)

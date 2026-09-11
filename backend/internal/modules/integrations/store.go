@@ -93,7 +93,7 @@ type DeleteClaimsFunc func(ctx context.Context, tx pgx.Tx, provider string) (int
 // filled, one contact at a time. It answers which contacts are affected, and
 // then reverts each — two calls rather than one, because the second runs in its
 // own transaction per subject and this module must not hold an unbounded set of
-// people's rows while the eraser wants them.
+// contacts's rows while the eraser wants them.
 type RevertFillsFunc struct {
 	// Subjects names whose records this provider's purchases wrote to.
 	Subjects func(ctx context.Context, tx pgx.Tx, provider string) ([]ids.UUID, error)

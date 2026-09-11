@@ -45,7 +45,7 @@ type seatAction struct {
 // seatFixtures are the records the matrix acts on, all created once by
 // the bootstrap admin on a full seat before any role is swapped in.
 type seatFixtures struct {
-	personID   string
+	contactID  string
 	dealID     string
 	pipelineID string
 	birthStage string
@@ -56,17 +56,17 @@ type seatFixtures struct {
 func seatActions() []seatAction {
 	return []seatAction{
 		{
-			class: "mutate (create)", object: "person", verb: "create",
+			class: "mutate (create)", object: "contact", verb: "create",
 			call: func(t *testing.T, e *apptest.AppEnv, _ seatFixtures) (int, string) {
-				return callForCode(t, e, "POST", "/v1/people", AnyMap{
+				return callForCode(t, e, "POST", "/v1/contacts", AnyMap{
 					"full_name": "Matrix Probe", "source": "manual",
 				})
 			},
 		},
 		{
-			class: "mutate (update)", object: "person", verb: "update",
+			class: "mutate (update)", object: "contact", verb: "update",
 			call: func(t *testing.T, e *apptest.AppEnv, f seatFixtures) (int, string) {
-				return callForCode(t, e, "PATCH", "/v1/people/"+f.personID, AnyMap{"title": "Probed"})
+				return callForCode(t, e, "PATCH", "/v1/contacts/"+f.contactID, AnyMap{"title": "Probed"})
 			},
 		},
 		{
@@ -77,22 +77,22 @@ func seatActions() []seatAction {
 			},
 		},
 		{
-			class: "export", object: "person", verb: "read",
+			class: "export", object: "contact", verb: "read",
 			call: func(t *testing.T, e *apptest.AppEnv, _ seatFixtures) (int, string) {
-				// owner_id is the person vocabulary's one filterable leaf,
+				// owner_id is the contact vocabulary's one filterable leaf,
 				// and a filterless export is refused for its own reasons
 				// before it ever reaches the gate this cell is about.
 				return exportForCode(t, e, AnyMap{
-					"object": "person", "format": "csv",
+					"object": "contact", "format": "csv",
 					"filter": AnyMap{"field": "owner_id", "op": "eq", "value": ids.NewV7().String()},
 				})
 			},
 		},
 		{
-			class: "share (write record_grant)", object: "person", verb: "update",
+			class: "share (write record_grant)", object: "contact", verb: "update",
 			call: func(t *testing.T, e *apptest.AppEnv, f seatFixtures) (int, string) {
 				return callForCode(t, e, "POST", "/v1/record-grants", AnyMap{
-					"record_type": "person", "record_id": f.personID,
+					"record_type": "contact", "record_id": f.contactID,
 					"subject_type": "user", "subject_id": f.colleague, "access": "write",
 				})
 			},
@@ -179,7 +179,7 @@ func TestAWriteGrantIsRefusedToAReadSeat(t *testing.T) {
 
 	share := func(access string) (int, string) {
 		return callForCode(t, e, "POST", "/v1/record-grants", AnyMap{
-			"record_type": "person", "record_id": fixtures.personID,
+			"record_type": "contact", "record_id": fixtures.contactID,
 			"subject_type": "user", "subject_id": fixtures.colleague, "access": access,
 		})
 	}
@@ -196,7 +196,7 @@ func TestAWriteGrantIsRefusedToAReadSeat(t *testing.T) {
 	// a fixture here, not the writer under test.
 	team := teamFixture(t, e)
 	if status, code := callForCode(t, e, "POST", "/v1/record-grants", AnyMap{
-		"record_type": "person", "record_id": fixtures.personID,
+		"record_type": "contact", "record_id": fixtures.contactID,
 		"subject_type": "team", "subject_id": team, "access": "write",
 	}); status != http.StatusCreated {
 		t.Fatalf("write grant to a team → %d %q, want 201 — a team carries no seat to refuse", status, code)
@@ -236,7 +236,7 @@ func TestAReAssertCannotWalkAWriteGrantPastTheSeatCeiling(t *testing.T) {
 
 	share := func(access string) (int, string) {
 		return callForCode(t, e, "POST", "/v1/record-grants", AnyMap{
-			"record_type": "person", "record_id": fixtures.personID,
+			"record_type": "contact", "record_id": fixtures.contactID,
 			"subject_type": "user", "subject_id": fixtures.colleague, "access": access,
 		})
 	}
@@ -250,7 +250,7 @@ func TestAReAssertCannotWalkAWriteGrantPastTheSeatCeiling(t *testing.T) {
 	var access string
 	if err := e.Owner.QueryRow(t.Context(),
 		`SELECT access FROM record_grant WHERE record_id = $1::uuid AND subject_id = $2::uuid`,
-		fixtures.personID, fixtures.colleague).Scan(&access); err != nil {
+		fixtures.contactID, fixtures.colleague).Scan(&access); err != nil {
 		t.Fatal(err)
 	}
 	if access != "read" {
@@ -269,7 +269,7 @@ func resetSeatFixtures(t *testing.T, e *apptest.AppEnv, f seatFixtures) {
 	t.Helper()
 	if _, err := e.Owner.Exec(t.Context(),
 		`DELETE FROM record_grant WHERE record_id = $1::uuid AND subject_id = $2::uuid`,
-		f.personID, f.colleague); err != nil {
+		f.contactID, f.colleague); err != nil {
 		t.Fatalf("reset grants: %v", err)
 	}
 	if _, err := e.Owner.Exec(t.Context(),
@@ -418,13 +418,13 @@ func callForCode(t *testing.T, e *apptest.AppEnv, method, path string, body AnyM
 func seedSeatFixtures(t *testing.T, e *apptest.AppEnv) seatFixtures {
 	t.Helper()
 	seeded := apptest.DiscoverSeededPipeline(t, e)
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Matrix Subject", "source": "manual",
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("seed person → %d", status)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("seed contact → %d", status)
 	}
 	var stages struct {
 		Data []struct {
@@ -447,7 +447,7 @@ func seedSeatFixtures(t *testing.T, e *apptest.AppEnv) seatFixtures {
 		t.Fatal("the seeded pipeline has no second open stage to advance to")
 	}
 	return seatFixtures{
-		personID:   person.ID,
+		contactID:  contact.ID,
 		dealID:     apptest.CreateOpenDeal(t, e, seeded),
 		pipelineID: seeded.PipelineID,
 		birthStage: seeded.Open,

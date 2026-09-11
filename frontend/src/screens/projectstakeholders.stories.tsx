@@ -18,9 +18,9 @@ export default meta;
 
 type Story = StoryObj;
 
-function stubPeople() {
+function stubContacts() {
   installFetchStub({
-    "GET /people": () =>
+    "GET /contacts": () =>
       jsonResponse({
         data: [
           { id: "p-1", full_name: "Mai Trần" },
@@ -33,7 +33,7 @@ function stubPeople() {
 
 export const Add: Story = {
   render: () => {
-    stubPeople();
+    stubContacts();
     return (
       <StoryProviders>
         <AddProjectStakeholder projectId="pr-1" />
@@ -44,31 +44,31 @@ export const Add: Story = {
 
 export const Remove: Story = {
   render: () => {
-    stubPeople();
+    stubContacts();
     return (
       <StoryProviders>
         <RemoveProjectStakeholder
           projectId="pr-1"
-          personId="p-1"
-          personName="Mai Trần"
+          contactId="p-1"
+          contactName="Mai Trần"
         />
       </StoryProviders>
     );
   },
 };
 
-// A seat whose person the reader may not read. The seat still counts, and is
+// A seat whose contact the reader may not read. The seat still counts, and is
 // still removable, so the dialog names it as withheld rather than borrowing a
 // name it was never given.
-export const RemoveWithheldPerson: Story = {
+export const RemoveWithheldContact: Story = {
   render: () => {
-    stubPeople();
+    stubContacts();
     return (
       <StoryProviders>
         <RemoveProjectStakeholder
           projectId="pr-1"
-          personId="p-9"
-          personName={null}
+          contactId="p-9"
+          contactName={null}
         />
       </StoryProviders>
     );

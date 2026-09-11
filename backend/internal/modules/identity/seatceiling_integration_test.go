@@ -213,11 +213,11 @@ func TestSeatCeilingDoesNotHoldAReadSeatToTheFullSeatGrant(t *testing.T) {
 // An agent identity is not a Seat, so it is neither metered nor allowed to spend
 // somebody's licensed seat.
 //
-// LICENSE is the authority: a Seat is "a single, identified natural person", and
+// LICENSE is the authority: a Seat is "a single, identified natural contact", and
 // an automated agent acting under the authority of a counted Seat explicitly is
 // not one. A meter that counted them would cap an installation for something its
 // licence gives away — and the way a customer meets that is not the number on
-// the entitlement screen, it is being refused the last person they are entitled
+// the entitlement screen, it is being refused the last contact they are entitled
 // to, which is what the second half asserts.
 func TestSeatCeilingDoesNotMeterAnAgentAgainstTheLicence(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-ceiling-agent")
@@ -237,9 +237,9 @@ func TestSeatCeilingDoesNotMeterAnAgentAgainstTheLicence(t *testing.T) {
 	}
 
 	// And the seat it does not take is still there to give away. This is the
-	// harm: an installation licensed for its people gets refused one of them.
+	// harm: an installation licensed for its contacts gets refused one of them.
 	licenseFor(t, e, licensedSeats(before+1))
-	if err := inviteOneMore(t, e, "the-person-the-agent-displaced"); err != nil {
+	if err := inviteOneMore(t, e, "the-contact-the-agent-displaced"); err != nil {
 		t.Errorf("inviting into a licensed seat alongside an agent: %v — the agent spent a seat the licence did not sell", err)
 	}
 }

@@ -15,9 +15,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -31,7 +31,7 @@ import (
 // sections_omitted vocabulary and the keys the assembly reasons about, so
 // a rename cannot leave the two halves disagreeing.
 const (
-	sectionPeople         = crmcontracts.Company360SectionsOmitted("people")
+	sectionContacts       = crmcontracts.Company360SectionsOmitted("contacts")
 	sectionDeals          = crmcontracts.Company360SectionsOmitted("deals")
 	sectionProjects       = crmcontracts.Company360SectionsOmitted("projects")
 	sectionStrength       = crmcontracts.Company360SectionsOmitted("strength")
@@ -50,7 +50,7 @@ const (
 // Service assembles the 360 and maintains the visit baseline.
 type Service struct {
 	pool      *pgxpool.Pool
-	people    *people.Store
+	contacts  *contacts.Store
 	deals     *deals.Store
 	projects  *projects.Store
 	approvals *approvals.Service
@@ -66,14 +66,14 @@ type Service struct {
 // seeding and reading).
 func NewService(
 	pool *pgxpool.Pool,
-	peopleStore *people.Store,
+	contactsStore *contacts.Store,
 	dealsStore *deals.Store,
 	projectStore *projects.Store,
 	approvalsSvc *approvals.Service,
 	now func() time.Time,
 ) *Service {
 	return &Service{
-		pool: pool, people: peopleStore, deals: dealsStore, projects: projectStore,
+		pool: pool, contacts: contactsStore, deals: dealsStore, projects: projectStore,
 		approvals: approvalsSvc, now: now,
 	}
 }
@@ -113,12 +113,12 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 	// The custom-field catalog is read above the transaction, not inside it:
 	// it opens one of its own, and this page holds the only connection its
 	// sections have for as long as it runs.
-	active, err := s.people.ActiveCompanyColumns(ctx)
+	active, err := s.contacts.ActiveCompanyColumns(ctx)
 	if err != nil {
 		return crmcontracts.Company360{}, err
 	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		company, err := s.people.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
+		company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
 		if err != nil {
 			return err
 		}
@@ -146,7 +146,7 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.Company
 		name crmcontracts.Company360SectionsOmitted
 		read func() error
 	}{
-		{sectionPeople, a.readContacts},
+		{sectionContacts, a.readContacts},
 		{sectionStrength, a.readStrength},
 		{sectionDeals, a.readDeals},
 		{sectionProjects, a.readProjects},
@@ -203,7 +203,7 @@ type assembly struct {
 	baseCurrency     string
 	baseCurrencyRead bool
 
-	contacts      []people.ContactStrength
+	contacts      []contacts.ContactStrength
 	contactsRead  bool
 	advice        suggestionInputs
 	adviceRead    bool
@@ -217,7 +217,7 @@ type assembly struct {
 }
 
 // contactStrengths reads every visible contact's §4 score once per request.
-func (a *assembly) contactStrengths() ([]people.ContactStrength, error) {
+func (a *assembly) contactStrengths() ([]contacts.ContactStrength, error) {
 	if a.contactsRead {
 		return a.contacts, nil
 	}
@@ -225,7 +225,7 @@ func (a *assembly) contactStrengths() ([]people.ContactStrength, error) {
 	// active-contact count, its reply balance and its single-threaded flag off
 	// these strengths, so an unscoped read put a number computed across every
 	// project under a timeline showing one.
-	contacts, err := people.StrengthForCompanyContacts(a.ctx, a.tx, a.companyID, a.now, a.opts.ProjectID)
+	contacts, err := contacts.StrengthForCompanyContacts(a.ctx, a.tx, a.companyID, a.now, a.opts.ProjectID)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func (a *assembly) pendingApprovals() ([]crmcontracts.Approval, bool, error) {
 }
 
 func (a *assembly) readContacts() error {
-	if err := auth.Require(a.ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(a.ctx, "contact", principal.ActionRead); err != nil {
 		return err
 	}
 	strengths, err := a.contactStrengths()
@@ -265,26 +265,26 @@ func (a *assembly) readContacts() error {
 	if err != nil {
 		return err
 	}
-	a.out.People = &struct {
+	a.out.Contacts = &struct {
 		Data []crmcontracts.Company360Contact `json:"data"`
 		Page crmcontracts.PageInfo            `json:"page"`
 	}{Data: data, Page: page}
 	return nil
 }
 
-// readStrength rides the PERSON grant, not the company one: the
+// readStrength rides the CONTACT grant, not the company one: the
 // roll-up is computed over the account's contacts, and reading an account
-// does not entitle the caller to a number derived from people they may
+// does not entitle the caller to a number derived from contacts they may
 // not see.
 func (a *assembly) readStrength() error {
-	if err := auth.Require(a.ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(a.ctx, "contact", principal.ActionRead); err != nil {
 		return err
 	}
 	strengths, err := a.contactStrengths()
 	if err != nil {
 		return err
 	}
-	a.out.Strength = accountStrengthToWire(people.FoldAccountStrength(strengths), a.now)
+	a.out.Strength = accountStrengthToWire(contacts.FoldAccountStrength(strengths), a.now)
 	return nil
 }
 
@@ -458,9 +458,9 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 // shape: whose relationship carries the score, and how many contacts it
 // was chosen from. The shared half comes from compose.StrengthToWire, so
 // a bucket rename is made once for both the account roll-up and the
-// per-person routes.
-func accountStrengthToWire(account people.AccountStrength, now time.Time) *crmcontracts.CompanyStrength {
-	base := people.StrengthToWire(account.RelationshipStrength, now)
+// per-contact routes.
+func accountStrengthToWire(account contacts.AccountStrength, now time.Time) *crmcontracts.CompanyStrength {
+	base := contacts.StrengthToWire(account.RelationshipStrength, now)
 	out := crmcontracts.CompanyStrength{
 		Score:                   base.Score,
 		Bucket:                  crmcontracts.CompanyStrengthBucket(base.Bucket),
@@ -472,9 +472,9 @@ func accountStrengthToWire(account people.AccountStrength, now time.Time) *crmco
 		ContributingActivityIds: base.ContributingActivityIds,
 		ContactCount:            account.ContactCount,
 	}
-	if account.ContributorPersonID != nil {
-		v := openapi_types.UUID(account.ContributorPersonID.UUID)
-		out.ContributorPersonId = &v
+	if account.ContributorContactID != nil {
+		v := openapi_types.UUID(account.ContributorContactID.UUID)
+		out.ContributorContactId = &v
 	}
 	return &out
 }

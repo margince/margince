@@ -28,7 +28,7 @@ import (
 // The prose language is resolved HERE rather than in identity, because it is a
 // composition of two settings that belong to different owners: the member's
 // own choice and the installation's base language. identity keeps answering
-// the honest empty for a person who never chose, and this seam turns that into
+// the honest empty for a contact who never chose, and this seam turns that into
 // the answer the agent can act on.
 func actingIdentity(pool *pgxpool.Pool) agents.IdentityReader {
 	service := identity.NewService(pool)

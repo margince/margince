@@ -40,8 +40,8 @@ func TestAnAgentPrincipalCarriesExactlyItsGrantingHumansAuthority(t *testing.T) 
 	perms := principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"person": {Read: true, Update: true},
-			"deal":   {Read: true},
+			"contact": {Read: true, Update: true},
+			"deal":    {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 		FieldMasks: []principal.FieldMask{

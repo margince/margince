@@ -43,7 +43,7 @@ func TestValidateRenewalReminderParamsAcceptsEveryKnownObject(t *testing.T) {
 // must be non-empty — an instance with an empty field name has nothing to
 // watch and would never surface a candidate.
 func TestValidateRenewalReminderParamsRejectsEmptyDateField(t *testing.T) {
-	err := validateRenewalReminderParams(map[string]any{"object": "person", "date_field": ""})
+	err := validateRenewalReminderParams(map[string]any{"object": "contact", "date_field": ""})
 	var paramErr *ParamError
 	if err == nil || !errors.As(err, &paramErr) {
 		t.Fatalf("validateRenewalReminderParams(empty date_field) = %v, want a *ParamError", err)
@@ -58,7 +58,7 @@ func TestValidateRenewalReminderParamsRejectsEmptyDateField(t *testing.T) {
 // timescan.go's renewalDateFieldScanParams) — and rejected when present
 // but not a boolean.
 func TestValidateRenewalReminderParamsRecursYearly(t *testing.T) {
-	base := map[string]any{"object": "person", "date_field": "renewal_date"}
+	base := map[string]any{"object": "contact", "date_field": "renewal_date"}
 
 	for _, recurs := range []any{true, false, nil} {
 		params := map[string]any{"object": base["object"], "date_field": base["date_field"]}

@@ -19,8 +19,8 @@ func TestTheSchemaCheckerReportsTheWayAResultMissesItsSchema(t *testing.T) {
 	for _, tc := range []struct {
 		name, value, want string
 	}{
-		{"a required member missing", `{"archived":true,"record_type":"person"}`, `required member "id" is missing`},
-		{"a string where a boolean was declared", `{"archived":"yes","record_type":"person","id":"x"}`, "declared a boolean"},
+		{"a required member missing", `{"archived":true,"record_type":"contact"}`, `required member "id" is missing`},
+		{"a string where a boolean was declared", `{"archived":"yes","record_type":"contact","id":"x"}`, "declared a boolean"},
 		{"a number where a string was declared", `{"archived":true,"record_type":7,"id":"x"}`, "declared a string"},
 		{"an array where the object was declared", `[]`, "declared an object"},
 	} {
@@ -31,13 +31,13 @@ func TestTheSchemaCheckerReportsTheWayAResultMissesItsSchema(t *testing.T) {
 			}
 		})
 	}
-	kept := `{"archived":true,"record_type":"person","id":"0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e11"}`
+	kept := `{"archived":true,"record_type":"contact","id":"0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e11"}`
 	if defect := ResultDefect(schema, json.RawMessage(kept)); defect != "" {
 		t.Errorf("a conforming result was reported as %q", defect)
 	}
 	// Open by design: a member the schema never named is not a violation, so a
 	// result that grows a field does not break every client at once.
-	extra := `{"archived":true,"record_type":"person","id":"x","reason":"duplicate"}`
+	extra := `{"archived":true,"record_type":"contact","id":"x","reason":"duplicate"}`
 	if defect := ResultDefect(schema, json.RawMessage(extra)); defect != "" {
 		t.Errorf("an extra member was reported as %q; every schema here claims \"at least these\"", defect)
 	}
@@ -140,7 +140,7 @@ func TestASchemaWithNoTypeAcceptsAnything(t *testing.T) {
 
 // A declared array that arrives as something else, and the summary a reader
 // sees: a long document is cut short, because a defect line goes to a log a
-// person reads and a result can carry captured text.
+// contact reads and a result can carry captured text.
 func TestTheCheckerNamesWhatItFoundWithoutQuotingItWhole(t *testing.T) {
 	defect := ResultDefect(json.RawMessage(`{"type":"array","items":{"type":"string"}}`), json.RawMessage(`{"not":"an array"}`))
 	if !strings.Contains(defect, "declared an array") {
@@ -159,7 +159,7 @@ func TestTheCheckerNamesWhatItFoundWithoutQuotingItWhole(t *testing.T) {
 // these schemas exist to catch through.
 func TestNullInARequiredMemberIsADefect(t *testing.T) {
 	schema := schemaFor[ArchiveResult]()
-	defect := ResultDefect(schema, json.RawMessage(`{"archived":null,"record_type":"person","id":"x"}`))
+	defect := ResultDefect(schema, json.RawMessage(`{"archived":null,"record_type":"contact","id":"x"}`))
 	if defect == "" {
 		t.Error("a null in a required member was reported as satisfying the schema")
 	}

@@ -98,7 +98,7 @@ describe("PageTitle", () => {
 
   // Whose state the page changes, beside its heading. Only a settings entry
   // carries a scope, and every settings page declares one in the catalog — the
-  // field had no reader at all until this, so a person could not tell a toggle
+  // field had no reader at all until this, so a contact could not tell a toggle
   // that changes their own signature from one that changes everybody's mail
   // routing.
   it("names whose state a settings page changes, beside its heading", () => {
@@ -265,7 +265,7 @@ describe("PageTitle", () => {
   // says where it may not appear.
   it("renders nothing at all on a record route", () => {
     const client = newClient();
-    client.setQueryData(["person", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
     const { container } = renderWith(
       client,
       <PageTitle route={{ screen: "contacts", id: "p-anna" }} />,
@@ -494,7 +494,7 @@ describe("Shell", () => {
   it("claims the page exactly once on a record, with the sidebar's row yielding", () => {
     window.location.hash = "#/contacts/p-anna";
     const client = newClient();
-    client.setQueryData(["person", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
     const { container } = renderWith(
       client,
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,

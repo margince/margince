@@ -29,8 +29,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -61,8 +61,8 @@ func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row
 	switch w.object {
 	case migration.ObjectCompany:
 		return w.companyCollides(ctx, row)
-	case migration.ObjectPerson:
-		return w.personCollides(ctx, row)
+	case migration.ObjectContact:
+		return w.contactCollides(ctx, row)
 	default:
 		return false, nil
 	}
@@ -70,7 +70,7 @@ func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row
 
 func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bool, error) {
 	fields := textFields(row.Fields)
-	candidate := people.CompanyCandidate{
+	candidate := contacts.CompanyCandidate{
 		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
 		LegalName:   strings.TrimSpace(fields["legal_name"]),
 	}
@@ -79,8 +79,8 @@ func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bo
 	}
 	var visible bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		match, err := people.DedupeCompany(ctx, tx, candidate)
-		if err != nil || match.Decision == people.DecisionNoMatch {
+		match, err := contacts.DedupeCompany(ctx, tx, candidate)
+		if err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err
 		}
 		// EVERY candidate at or above the ladder's threshold, not just its
@@ -136,7 +136,7 @@ func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bo
 // visibility question must be asked of. It is empty for an exact (domain)
 // collision, which carries its answer in CompanyID instead — so that one is
 // added when Ranked has nothing, and never twice.
-func candidatesOf(match people.CompanyMatch) []ids.CompanyID {
+func candidatesOf(match contacts.CompanyMatch) []ids.CompanyID {
 	if len(match.Ranked) == 0 {
 		return []ids.CompanyID{match.CompanyID}
 	}

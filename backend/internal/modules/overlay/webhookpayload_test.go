@@ -111,7 +111,7 @@ func TestMirrorBudgetDegradedPayload(t *testing.T) {
 
 func TestMirrorDeletedPayload(t *testing.T) {
 	deletedAt := time.Date(2026, 7, 22, 11, 0, 0, 0, time.UTC)
-	payload := mirrorDeletedPayload("person", "ext-99", deletedAt)
+	payload := mirrorDeletedPayload("contact", "ext-99", deletedAt)
 
 	if !reflect.DeepEqual(payload.EventType(), "mirror.deleted") {
 		t.Errorf("got %v, want %v", payload.EventType(), "mirror.deleted")
@@ -119,8 +119,8 @@ func TestMirrorDeletedPayload(t *testing.T) {
 	if !reflect.DeepEqual(payload.EntityType(), "dynamic") {
 		t.Errorf("mirror.deleted is a dynamic-entity type — its static EntityType() is unused; the real subject comes from EmitEventForEntity's caller-supplied entityType: got %v, want %v", payload.EntityType(), "dynamic")
 	}
-	if !reflect.DeepEqual(payload.ObjectClass, "person") {
-		t.Errorf("got %v, want %v", payload.ObjectClass, "person")
+	if !reflect.DeepEqual(payload.ObjectClass, "contact") {
+		t.Errorf("got %v, want %v", payload.ObjectClass, "contact")
 	}
 	if !reflect.DeepEqual(payload.ExternalId, "ext-99") {
 		t.Errorf("got %v, want %v", payload.ExternalId, "ext-99")
@@ -303,7 +303,7 @@ func TestMirrorEventsEmitUseRuntimeEntityType(t *testing.T) {
 		payload    events.Payload
 	}{
 		{name: "mirror.conflict/deal", entityType: "deal", payload: mirrorConflictPayload("deal", "ext-1", now, now)},
-		{name: "mirror.conflict/person", entityType: "person", payload: mirrorConflictPayload("person", "ext-2", now, now)},
+		{name: "mirror.conflict/contact", entityType: "contact", payload: mirrorConflictPayload("contact", "ext-2", now, now)},
 		{name: "mirror.budget_degraded/company", entityType: "company", payload: mirrorBudgetDegradedPayload(overlaybudget.BandShed)},
 		{name: "mirror.deleted/lead", entityType: "lead", payload: mirrorDeletedPayload("lead", "ext-3", now)},
 	} {

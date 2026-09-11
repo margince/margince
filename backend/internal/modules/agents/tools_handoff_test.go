@@ -40,7 +40,7 @@ func wholeHandoff() HandoffFacts {
 		Deals: []HandoffDeal{{
 			DealID: ids.NewV7(), Name: "Acme ERP licence", Status: "won", AmountMinor: &amount,
 		}},
-		Stakeholders: []HandoffStakeholder{{PersonID: ids.NewV7(), Role: "Sponsor"}},
+		Stakeholders: []HandoffStakeholder{{ContactID: ids.NewV7(), Role: "Sponsor"}},
 		OpenCommitments: []OpenCommitment{{
 			TaskID: newTaskID(), Subject: "Book the kickoff", DueAt: at(48 * time.Hour),
 		}},
@@ -222,7 +222,7 @@ func TestAnEmptyHandoverAnswersEmptyListsNotNulls(t *testing.T) {
 			OwnerID: &owner, TargetEndDate: &target,
 		},
 		Deals:        []HandoffDeal{{DealID: ids.NewV7(), Status: "won", AmountMinor: &amount}},
-		Stakeholders: []HandoffStakeholder{{PersonID: ids.NewV7(), Role: "Sponsor"}},
+		Stakeholders: []HandoffStakeholder{{ContactID: ids.NewV7(), Role: "Sponsor"}},
 	}, nil))
 	if err != nil {
 		t.Fatal(err)

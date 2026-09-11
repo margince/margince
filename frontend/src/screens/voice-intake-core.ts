@@ -52,7 +52,7 @@ function clamp(value: string, max: number): string {
 }
 
 // FNV-1a over the content: short, stable, and dependency-free. This is an
-// identity for rows the same person is adding to their own corpus, never a
+// identity for rows the same contact is adding to their own corpus, never a
 // security boundary — a collision costs one overwritten sample, and the
 // server's own uniqueness rules still apply on top.
 function contentKey(content: string): string {

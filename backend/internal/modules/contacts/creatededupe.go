@@ -1,0 +1,337 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+// Manual creates meeting the PO-F chokepoint (dedupe.go) under the
+// manual policy, which is stated per LANE because the exact tier does
+// not give one answer (telegram-oa design §7.3 asks every caller for
+// exactly this):
+//
+//   - A claimed EMAIL refuses. ensureContactEmailsUnclaimed answers that
+//     tier with the 409 contract before the chokepoint even runs, and
+//     the unique index is the structural backstop under a race — so by
+//     the time the ladder reads, the email lane has nothing left to say.
+//   - A shared PHONE does not refuse. A household line or a switchboard
+//     belongs to several real, different contacts, and the create contract
+//     promises a 409 on an address alone (data-model §3.2). It creates
+//     AND records: an exact hit routes PAST the fuzzy tier (routeExact
+//     returns before scoring), so without a recording arm of its own a
+//     create sharing a number with an existing record would leave LESS
+//     trail than one that merely looked similar.
+//   - A FUZZY near-match creates AND records — a probability never
+//     blocks a human, but the pair must not vanish either.
+//
+// A manual create never sees routeExact's lane CONFLICT: two exact lanes
+// must hit for that, a create carries no channel identity, and a claimed
+// address has already been refused — so the phone is the only lane left
+// to speak, and one voice cannot disagree.
+//
+// A recording is the DH-DDL-1 review queue itself (an open
+// dedupe_candidate row the human dispositions); the fuzzy arm adds the
+// append-only system_log ledger line for the score it acted on. Both sit
+// inside the create's own transaction, so the record and its review
+// trail commit or roll back together.
+
+import (
+	"context"
+	"fmt"
+	"slices"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
+
+// manualDedupeContact runs PO-F-1 for a manual contact create. It must run
+// BEFORE the insert — afterwards the new row would match itself. Both
+// exact-key kinds the request carries are offered, and every value of
+// each counts rather than just the primary: the addresses, whose lane is
+// already silent because the claimed case was refused above, and the
+// numbers, whose lane is the one exact signal this path can act on.
+func manualDedupeContact(ctx context.Context, tx pgx.Tx, in CreateContactInput) (ContactResolution, error) {
+	emails := make([]string, 0, len(in.Emails))
+	for _, e := range in.Emails {
+		emails = append(emails, e.Email)
+	}
+	phones, err := phoneLaneKeys(in.Phones)
+	if err != nil {
+		return ContactResolution{}, err
+	}
+	if err := lockPhoneLane(ctx, tx, phones); err != nil {
+		return ContactResolution{}, err
+	}
+	if err := lockNameLane(ctx, tx, in.FullName); err != nil {
+		return ContactResolution{}, err
+	}
+	// QueueNameCollisions, because this caller creates rather than routes. A
+	// pair it names goes on the review queue and nowhere else — no message is
+	// delivered on the strength of it, so the worst case is a row a human
+	// dismisses. See ContactCandidate for why the routing callers must not ask.
+	return DedupeContact(ctx, tx, ContactCandidate{
+		FullName: in.FullName, Emails: emails, Phones: phones, QueueNameCollisions: true,
+	})
+}
+
+// lockNameLane makes the name lane's probe and the contact row the create goes
+// on to write one indivisible step, for exactly the reason lockPhoneLane exists
+// and with exactly the same hole underneath.
+//
+// The name lane has no unique index and must not have one: two contacts really
+// can share a name, so the collision is a question and never a key. Nothing
+// structural is left. At READ COMMITTED two creates carrying the same name would
+// both read no committed incumbent, both fall to no-match, and both commit — two
+// live records with no dedupe_candidate row between them, and nothing writes one
+// afterwards, because every row on that queue comes from the path that detected
+// the collision. The lane exists to stop a silent duplicate, so a duplicate it
+// silently misses under contention is the lane not working.
+//
+// The key is NormalizeContactName, which is what the lane compares — the same
+// call fuzzyContact makes, because a lock keyed differently from the comparison
+// it guards is decorative. Locking the raw string would let "Lucy Vo" and
+// "LUCY VO" take different locks and race each other, which is the pair most
+// likely to be typed twice.
+//
+// Taken AFTER the phone lane and never interleaved with it: two lanes locked in
+// one fixed global order cannot deadlock, and phone-then-name is that order.
+// An empty name takes no lock — it can match nobody, since fuzzyContact refuses a
+// nameless candidate before it scores.
+func lockNameLane(ctx context.Context, tx pgx.Tx, fullName string) error {
+	key := NormalizeContactName(fullName)
+	if key == "" {
+		return nil
+	}
+	return storekit.LockWriteIdentity(ctx, tx, "contact_full_name", key)
+}
+
+// phoneLaneKeys is the request's numbers in the form the phone lane
+// actually compares: exactContactByPhone normalizes its candidates to
+// E.164 before it queries, so a key derived any other way would name
+// something no probe reads and the lock below would be decorative.
+// Deriving it here from that same function is what keeps the two from
+// drifting apart. Sorted and deduplicated, which is what gives
+// lockPhoneLane its fixed order.
+//
+// A number that will not parse cannot reach here — parseContactContacts
+// refuses the whole create before the transaction opens — so a parse
+// failure is reported rather than dropped: a key the probe reads but no
+// lock covers is exactly the hole below.
+func phoneLaneKeys(phones []ContactPhoneInput) ([]string, error) {
+	keys := make([]string, 0, len(phones))
+	for _, p := range phones {
+		parsed, err := values.ParsePhone(p.Phone)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, parsed.String())
+	}
+	slices.Sort(keys)
+	return slices.Compact(keys), nil
+}
+
+// lockPhoneLane makes the phone tier's probe and the contact_phone row the
+// create goes on to write one indivisible step per number.
+//
+// The other two lanes are backstopped by a unique index — an address by
+// uq_contact_email_dedupe, a channel account by
+// uq_contact_channel_identity — so a create that reads a lane too early is
+// still refused by the key itself. The phone lane has no such index and
+// must not have one: a household line and a switchboard belong to several
+// real contacts. Nothing structural is left, and at READ COMMITTED two
+// creates carrying the same number would both read an empty lane, both
+// fall to no-match, and both commit — two live records on one number
+// with no dedupe_candidate row, and nothing writes one afterwards: every
+// row on that queue comes from the path that detected the collision.
+//
+// The keys are taken in a FIXED order (phoneLaneKeys sorts them): two
+// creates naming the same two numbers in opposite orders would deadlock,
+// and Postgres would resolve that by killing one of them — a create lost
+// to an ordering nobody chose.
+func lockPhoneLane(ctx context.Context, tx pgx.Tx, keys []string) error {
+	for _, key := range keys {
+		if err := storekit.LockWriteIdentity(ctx, tx, "contact_phone", key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// manualDedupeCompany runs PO-F-2 for a manual company create,
+// before the insert for the same self-match reason. The domains are the
+// company's own claimed domains, not derived email hosts, so the free-mail
+// filtering PO-F-2 delegates to callers does not apply here — a manual
+// claim of gmail.com should still collide. The exact tier cannot fire:
+// ensureCompanyDomainsUnclaimed already refused every claimed domain.
+func manualDedupeCompany(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) (CompanyMatch, error) {
+	domains := make([]string, 0, len(in.Domains))
+	for _, d := range in.Domains {
+		domains = append(domains, d.Domain)
+	}
+	return DedupeCompanyForCreate(ctx, tx, CompanyCandidate{
+		DisplayName: in.DisplayName,
+		LegalName:   deref(in.LegalName),
+		Domains:     domains,
+	})
+}
+
+// recordIfReview leaves the review trail a manual contact create owes —
+// the fuzzy pair, and the shared phone the exact tier routed on. A
+// no-match writes nothing, because there is no second record to compare.
+func (m ContactResolution) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.ContactID, createdName, source, by string) error {
+	switch m.Decision {
+	case DecisionFuzzyReview:
+		var incumbent string
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, m.ContactID).Scan(&incumbent); err != nil {
+			return fmt.Errorf("reading contact near-match incumbent: %w", err)
+		}
+		return recordNearMatch(ctx, tx, entityContact, createdID.UUID, m.ContactID.UUID, m.Confidence,
+			nearMatchEvidence(fieldFullName, createdName, incumbent, m.Confidence), source, by)
+	case DecisionNameCollisionReview:
+		// One contact, a second business card, a different address: the case a
+		// rep actually hits, and the one the fuzzy tier cannot reach because a
+		// create carries no employer for its company term to agree with.
+		//
+		// The incumbent's name is read back rather than reused from the request
+		// so the evidence shows the two SPELLINGS a human will compare. They are
+		// equal after folding — that is what the lane matched on — but not
+		// necessarily equal on screen, and "Lucy Vo" beside "LUCY VO" is a
+		// reviewer's first clue about where the second record came from.
+		var incumbent string
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, m.ContactID).Scan(&incumbent); err != nil {
+			return fmt.Errorf("reading the contact this name collides with: %w", err)
+		}
+		// The queue row only. No dedupe_near_match ledger line, because that
+		// ledger records the fuzzy tier's own scoring and this lane did not
+		// score: it compared two normalized strings. A line carrying a
+		// confidence would invite a reader to tune a threshold that had no part
+		// in the decision.
+		if _, err := recordDedupeCandidate(ctx, tx, entityContact, createdID.UUID, m.ContactID.UUID,
+			m.Confidence, nameCollisionEvidence(createdName, incumbent, m.Confidence), source, by); err != nil {
+			return fmt.Errorf("record contact name-collision candidate: %w", err)
+		}
+		return nil
+	case DecisionExactCollision:
+		return m.recordSharedPhone(ctx, tx, createdID, source, by)
+	default:
+		return nil
+	}
+}
+
+// nameCollisionEvidence names the axis this pair actually met on. The signal is
+// "collide" at its exact end — the two names are the same string once folded —
+// and the score carried is the fuzzy score the pair WOULD have had, which is
+// what sorts it in a queue beside genuinely fuzzy rows. It is evidence of how
+// little else agreed, not the reason the pair is here.
+func nameCollisionEvidence(created, incumbent string, confidence float64) []map[string]any {
+	return []map[string]any{{
+		evidenceFieldKey:  fieldFullName,
+		evidenceLeftKey:   created,
+		evidenceRightKey:  incumbent,
+		evidenceSignalKey: evidenceSignalCollide,
+		evidenceScoreKey:  confidence,
+	}}
+}
+
+// recordSharedPhone puts the pair behind an exact phone collision on the
+// review queue: this create and the record that already holds the number.
+// It is a proposal, never a merge — no key moves between the two records,
+// and the disposition stays the human's.
+//
+// The number is read back from the two records rather than picked out of
+// the request, so the evidence names the value the lane actually matched
+// on in its stored E.164 form. That read cannot come up empty: the lane
+// matched on numbers this create has just inserted, so an empty answer
+// would mean the ladder and the child-row write disagree about what was
+// stored, and a review pair with no evidence is worse than a loud failure.
+func (m ContactResolution) recordSharedPhone(ctx context.Context, tx pgx.Tx, createdID ids.ContactID, source, by string) error {
+	if m.MatchedLane != lanePhone {
+		// The package comment above is the argument that this cannot
+		// happen; if a lane ever does reach here it has no create-path
+		// policy, and inventing one silently is how a 409 contract or a
+		// merge rule gets bypassed unnoticed.
+		return fmt.Errorf("contacts: manual contact create routed on the %q exact lane, which has no create-path policy", m.MatchedLane)
+	}
+	var shared string
+	if err := tx.QueryRow(ctx, `
+		SELECT created.phone
+		  FROM contact_phone created
+		  JOIN contact_phone incumbent ON incumbent.phone = created.phone
+		 WHERE created.contact_id = $1 AND incumbent.contact_id = $2
+		   AND created.archived_at IS NULL AND incumbent.archived_at IS NULL
+		 ORDER BY created.phone
+		 LIMIT 1`, createdID, m.ContactID).Scan(&shared); err != nil {
+		return fmt.Errorf("reading the phone number both records hold: %w", err)
+	}
+	// "collide" at its limit: the fuzzy tier uses it for two values that
+	// resemble each other, and an exact key hit is the same statement with
+	// the two sides equal. The confidence is the exact-key ceiling
+	// identityconflict.go argues for — an established key on both records
+	// outranks any similarity score, and sorts ahead of one in the queue.
+	evidence := []map[string]any{{
+		evidenceFieldKey:  fieldPhone,
+		evidenceLeftKey:   shared,
+		evidenceRightKey:  shared,
+		evidenceSignalKey: evidenceSignalCollide,
+		evidenceScoreKey:  identityConflictConfidence,
+	}}
+	if _, err := recordDedupeCandidate(ctx, tx, entityContact, createdID.UUID, m.ContactID.UUID,
+		identityConflictConfidence, evidence, source, by); err != nil {
+		return fmt.Errorf("record contact shared-phone candidate: %w", err)
+	}
+	return nil
+}
+
+// The evidence names the axis the score actually came from. Two records can
+// collide on their registered names while their display names differ, and
+// rendering that as a display-name collision would show a reviewer a
+// comparison nobody made.
+func (m CompanyMatch) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.CompanyID, source, by string) error {
+	if m.Decision != DecisionFuzzyReview {
+		return nil
+	}
+	// fuzzyCompany only returns this decision with a non-empty Ranked, so
+	// the winner is always there to read.
+	best := m.Ranked[0]
+	return recordNearMatch(ctx, tx, entityCompany, createdID.UUID, m.CompanyID.UUID, m.Confidence,
+		nearMatchEvidence(best.MatchedField, best.CandidateValue, best.IncumbentValue, m.Confidence), source, by)
+}
+
+// nearMatchEvidence is the detection-time snapshot the review queue
+// renders (DH-N-8) — the same shape ensure.go captures for connector
+// creates: the colliding name pair and the PO-F score behind it.
+func nearMatchEvidence(field, created, incumbent string, confidence float64) []map[string]any {
+	return []map[string]any{
+		{evidenceFieldKey: field, evidenceLeftKey: created, evidenceRightKey: incumbent, evidenceSignalKey: evidenceSignalCollide, evidenceScoreKey: confidence},
+	}
+}
+
+// recordNearMatch leaves the fuzzy pair for review: one open
+// dedupe_candidate row (DH-DDL-1 — the queue the human actually works)
+// plus the append-only dedupe_near_match ledger line, both inside the
+// create's own transaction so the record and its review trail commit or
+// roll back together.
+// A pair the queue already holds is a no-op in BOTH stores: the candidate row
+// is refused by the pair-unique index, and the ledger line is skipped with it.
+// Appending a line per re-detection would grow the ledger without recording
+// anything new — the rename re-check runs on every rename, so a pair a human
+// left open would otherwise gain a line forever.
+func recordNearMatch(ctx context.Context, tx pgx.Tx, entityType string, createdID, matchedID ids.UUID, confidence float64, evidence []map[string]any, source, by string) error {
+	recorded, err := recordDedupeCandidate(ctx, tx, entityType, createdID, matchedID, confidence, evidence, source, by)
+	if err != nil {
+		return fmt.Errorf("record %s near-match candidate: %w", entityType, err)
+	}
+	if !recorded {
+		return nil
+	}
+	if _, err := storekit.LogSystem(ctx, tx, "dedupe_near_match", map[string]any{
+		"entity_type": entityType,
+		"created_id":  createdID.String(),
+		"matched_id":  matchedID.String(),
+		"confidence":  confidence,
+	}); err != nil {
+		return fmt.Errorf("record %s near-match: %w", entityType, err)
+	}
+	return nil
+}

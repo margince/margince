@@ -3,7 +3,7 @@ import { de } from "./de";
 import { en } from "./en";
 import { vi } from "./vi";
 
-// The person record is NAMED a contact, and this holds that name across the
+// The contact record is NAMED a contact, and this holds that name across the
 // whole catalog in both directions.
 //
 // One way: every key that offers the record TYPE as a thing to pick, count,
@@ -13,9 +13,9 @@ import { vi } from "./vi";
 // string each to a sweep. A label that names this type and is missing from the
 // list is free to drift to a second word, so add it.
 //
-// The other way: no value in any catalog says person / Person / người, unless
-// its key is listed below as one where the word means a HUMAN BEING rather than
-// the record. Those keys are grouped by the reason the word stays. The lists
+// The other way: no value in any catalog says people / person / Person /
+// người, unless its key is listed below as one where the word means a HUMAN
+// BEING rather than the record. Those keys are grouped by the reason the word stays. The lists
 // are exhaustive per locale and are held from both sides — an entry whose value
 // no longer carries the word is stale and must go, so the exceptions cannot
 // quietly outlive the sentences that earned them.
@@ -26,16 +26,16 @@ type Catalog = Record<string, string>;
 
 const RECORD_TYPE_NAME_KEYS = [
   "nav.contacts",
-  "search.group.person",
+  "search.group.contact",
   "search.kind.contact",
   "filters.tab.contacts",
   "filters.matchContacts",
   "tab.contacts",
   "context.relatedContacts",
   "tagResult.contacts",
-  "import.object.person",
+  "import.object.contact",
   "company.contactCount",
-  "users.access.object.person",
+  "users.access.object.contact",
   "backfill.statContacts",
   "ob.digest.contacts",
   "ob.conv.triage.contactsLabel",
@@ -45,15 +45,15 @@ const RECORD_TYPE_NAME_KEYS = [
   "create.contact",
   "merge.contact",
   "privacy.contact",
-  "cf.obj.person",
-  "co.brief.cite.person",
-  "co.brief.cite.person.many",
+  "cf.obj.contact",
+  "co.brief.cite.contact",
+  "co.brief.cite.contact.many",
   "senders.colRecord",
   "acctCoverage.contact",
   "lead.qualify.contact",
-  "approval.field.person_name",
-  "today.source.people",
-  "deal.strip.people",
+  "approval.field.contact_name",
+  "today.source.contacts",
+  "deal.strip.contacts",
   "provider.backlogRemaining_one",
   "provider.backlogRemaining_other",
   // The one sentence that names the type rather than labelling it: it tells a
@@ -78,7 +78,8 @@ const RETIRED_NOUN: Record<string, RegExp> = {
 // catalog is judged against the retired noun.
 const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
-    // Names this rename leaves alone: Settings → People, and the tab it heads.
+    // Names this rename leaves alone: Settings → People, which heads the SEATS
+    // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "stageAutomation.noRules",
@@ -147,15 +148,16 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "pipeline.reason.judged_real",
     "pipeline.reason.role_mailbox",
     "pipeline.reason.transactional_prefix",
-    "senders.kind.person",
+    "senders.kind.contact",
     "trust.typedByHuman",
-    // A human being in a sentence about people rather than about the record.
+    // A human being in a sentence about contacts rather than about the record.
     "deals.winReasonVerbal",
     "privacy.inboxAdminOnly",
     "provider.automaticLookupJurisdiction",
   ],
   de: [
-    // Names this rename leaves alone: Settings → People, and the tab it heads.
+    // Names this rename leaves alone: Settings → People, which heads the SEATS
+    // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "stageAutomation.noRules",
@@ -181,8 +183,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "overlay.userMap.unmapTitle",
     "overlay.userMap.unmappedCount_one",
     "overlay.userMap.unmappedCount_other",
-    "person.intro.answerSuggestHelp",
-    "person.notYoursToChange",
+    "contact.intro.answerSuggestHelp",
+    "contact.notYoursToChange",
     "project.notYoursToChange",
     "record.notYoursToChange",
     "release.skewBody",
@@ -228,9 +230,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "pipeline.reason.judged_real",
     "pipeline.reason.role_mailbox",
     "pipeline.reason.transactional_prefix",
-    "senders.kind.person",
+    "senders.kind.contact",
     "trust.typedByHuman",
-    // A human being in a sentence about people rather than about the record.
+    // A human being in a sentence about contacts rather than about the record.
     "privacy.inboxAdminOnly",
     "sendPermission.reason.askedUsToStop",
     "sendPermission.reason.objected",
@@ -240,7 +242,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.withdrawn",
   ],
   vi: [
-    // Names this rename leaves alone: Settings → People, and the tab it heads.
+    // Names this rename leaves alone: Settings → People, which heads the SEATS
+    // group beside Company and Sales, not this record type.
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "acctCoverage.columnCap",
@@ -256,7 +259,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "brief.readings.urgentBasis",
     "captureExclusions.sub",
     "cf.col.addedBy",
-    "co.people.board.suggestNothing",
+    "co.contacts.board.suggestNothing",
     "co.pulse.owner",
     "common.permissionDenied",
     "confirm.done.body",
@@ -309,10 +312,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "overlay.userMap.unmappedCount_other",
     "overlay.userMap.viewByOwner",
     "overlay.userMap.viewByUser",
-    "person.intro.lanePeers",
-    "person.intro.laneTarget",
-    "person.intro.stepRoutePick",
-    "personAccess.company",
+    "contact.intro.lanePeers",
+    "contact.intro.laneTarget",
+    "contact.intro.stepRoutePick",
+    "contactAccess.company",
     "release.skewBody",
     "retention.lawfulBasisHint",
     "retention.withheld",
@@ -459,12 +462,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "pipeline.reason.sender_undecided",
     "pipeline.reason.transactional_infra",
     "pipeline.reason.transactional_prefix",
-    "senders.kind.person",
+    "senders.kind.contact",
     "trust.typedByBuyer",
     "trust.typedByHuman",
     "verdictPass.subject.senders",
     "voice.insights.disclosure",
-    // A human being in a sentence about people rather than about the record.
+    // A human being in a sentence about contacts rather than about the record.
     "agents.connectorOffDetail",
     "aiHealth.withheld",
     "aicalls.withheld",
@@ -473,8 +476,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "blockedDomains.none",
     "client.sender",
     "client.unknownDetail",
-    "co.people.band.someHidden",
-    "co.people.map.scopePartial",
+    "co.contacts.band.someHidden",
+    "co.contacts.map.scopePartial",
     "co.role.blocker",
     "co.role.champion",
     "co.role.economic_buyer",
@@ -487,8 +490,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "deal.committee.legendGap",
     "deal.committee.threads",
     "deal.ownerKeep",
-    "deal.strip.people.champion",
-    "deal.strip.people.noChampion",
+    "deal.strip.contacts.champion",
+    "deal.strip.contacts.noChampion",
     "deal360.buyer",
     "deals.bulkOwner",
     "deals.bulkOwnerPick",
@@ -515,13 +518,13 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "overlay.connectConfirmBody",
     "overlay.emptyOwnerHint",
     "overlay.partialWriteBack",
-    "person.intro.answerSuggest",
-    "person.intro.stateSuggestOther",
-    "person.meeting.attendees",
-    "person.page.owner",
-    "personProjects.empty",
-    "personRole.sponsor",
-    "personRole.user",
+    "contact.intro.answerSuggest",
+    "contact.intro.stateSuggestOther",
+    "contact.meeting.attendees",
+    "contact.page.owner",
+    "contactProjects.empty",
+    "contactRole.sponsor",
+    "contactRole.user",
     "pipeline.payloadsOff",
     "pipeline.stage.verdict",
     "pipeline.subject.domain",

@@ -15,7 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -33,7 +33,7 @@ func TestCompanyContextBindsPromptCacheAndAICallTrace(t *testing.T) {
 	ctx := e.Admin()
 	offer := "Industrial heat pumps"
 	icp := "European food manufacturers"
-	if _, err := e.People.SaveCompany(ctx, people.SaveCompanyInput{
+	if _, err := e.Contacts.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme Heat",
 		Fields: map[string]*string{
 			"offer_summary": &offer,
@@ -59,7 +59,7 @@ func TestCompanyContextBindsPromptCacheAndAICallTrace(t *testing.T) {
 	}
 
 	changedOffer := "Industrial heat pumps with managed installation"
-	if _, err := e.People.SaveCompany(ctx, people.SaveCompanyInput{
+	if _, err := e.Contacts.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme Heat",
 		Fields: map[string]*string{
 			"offer_summary": &changedOffer,
@@ -155,7 +155,7 @@ func TestPolicyNoneTraceCarriesEmptyCompanyContext(t *testing.T) {
 func TestDraftReplyCarriesItsBoundedCompanyContextPolicy(t *testing.T) {
 	e := Setup(t)
 	offer := "Industrial heat pumps"
-	if _, err := e.People.SaveCompany(e.Admin(), people.SaveCompanyInput{
+	if _, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{
 		DisplayName: "Acme Heat",
 		Fields:      map[string]*string{"offer_summary": &offer},
 	}); err != nil {

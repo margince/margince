@@ -15,7 +15,7 @@ var draftEmailCopy = toolCopy{
 	Instead: "draft_follow_ups_for drafts across a set of slipping deals at once; send_email " +
 		"sends a reply, send_account_email a first message.",
 	Retain: "Keep what comes back — subject, body, and the activity_id or links echoed with it; " +
-		"the send takes them. Re-writing the text in between means a person approves one " +
+		"the send takes them. Re-writing the text in between means a human approves one " +
 		"message and another goes out.",
 }
 
@@ -28,7 +28,7 @@ var draftFollowUpsForCopy = toolCopy{
 	Instead: "Use draft_email for one specific conversation; this tool answers \"chase everything " +
 		"that is slipping\", not \"reply to this\".",
 	Retain: "Each draft comes back with its deal_id and draft_activity_id — those are how a " +
-		"person finds the drafts to review.",
+		"contact finds the drafts to review.",
 }
 
 var sendEmailCopy = toolCopy{
@@ -79,7 +79,7 @@ var checkAvailabilityCopy = toolCopy{
 		"host — the acting user unless another is named — not for the invitees. `calendar_backing` says " +
 		"what the window rests on: with no calendar connected the slots are only what meetings " +
 		"recorded in this CRM leave open, and for a host who is NOT the acting seat it is `unknown`, " +
-		"because another person's connector state is theirs. Unless it says `calendar`, a free window " +
+		"because another contact's connector state is theirs. Unless it says `calendar`, a free window " +
 		"is no evidence the host is free, and none at all that a meeting they told you about is " +
 		"missing from their diary.",
 	Instead: "Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already " +
@@ -104,7 +104,7 @@ var bookMeetingCopy = toolCopy{
 
 var enrichCopy = toolCopy{
 	Purpose: "Learn about a company by reading its public website, and propose what was " +
-		"found for a person to accept onto the record.",
+		"found for a contact to accept onto the record.",
 	Limits: "It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing " +
 		"lands on the record until someone accepts it, which is the review that guards this, not " +
 		"an approval on the call. " +

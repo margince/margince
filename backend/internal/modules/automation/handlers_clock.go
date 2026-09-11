@@ -154,7 +154,7 @@ func activityStaleMatch(ev workflow.Event, days clockDaysExtractor) (bool, error
 //
 // The entity is part of the key because the claim is UNIQUE on
 // (handler, idempotency_key) alone. Two records can share
-// one anchor instant — one captured mail linked to a person and to their
+// one anchor instant — one captured mail linked to a contact and to their
 // employer gives both the identical last touch — and an anchor-only key
 // would let the first of them claim the row while the second silently
 // never gets its reminder.

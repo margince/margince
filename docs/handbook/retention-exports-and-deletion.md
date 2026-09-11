@@ -31,7 +31,7 @@ policy yet — nothing in this installation ages out."
 
 ### What each window counts from
 
-This matters more than people expect.
+This matters more than contacts expect.
 
 - **Leads** and **contacts** count from when the record was created.
 - **Captured activity** and **call transcripts** count from the message's own
@@ -146,7 +146,7 @@ is anonymise or erase, and a fulfilled erasure request.
 ## The privacy inbox
 
 **Settings → Privacy inbox** holds data-subject requests with their statutory
-deadlines. Only an admin can see it, because the queue names the people who
+deadlines. Only an admin can see it, because the queue names the contacts who
 asked.
 
 A request has a kind, a subject, an assignee, a due date, and a resolution. It
@@ -156,7 +156,7 @@ answer."
 
 **A closed request never reopens.** A new concern is a new request.
 
-If two people open the same request, the second is told "This request moved on —
+If two colleagues open the same request, the second is told "This request moved on —
 someone else decided it first" rather than being allowed to decide it twice.
 
 ### Access requests are done by hand
@@ -189,7 +189,7 @@ audit trail.
 
 ## When erasure does not win: the retention floor
 
-Sometimes the law requires keeping something that a person has asked you to
+Sometimes the law requires keeping something that a contact has asked you to
 delete. Margince handles this as a visible, named state rather than a silent
 partial success.
 

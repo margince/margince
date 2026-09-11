@@ -30,8 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/project360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,7 +39,7 @@ import (
 )
 
 // project360RepPerms is a rep who may read every section: the project and
-// its company, deals, people, seats, contracts and activities. Its own
+// its company, deals, contacts, seats, contracts and activities. Its own
 // fixture rather than AccountRepPerms plus a delta, for the reason that file
 // gives: a widened shared fixture makes other suites pass while proving
 // nothing.
@@ -48,7 +48,7 @@ var project360RepPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"project":               {Read: true},
 		"company":               {Read: true},
-		"person":                {Read: true},
+		"contact":               {Read: true},
 		"deal":                  {Read: true},
 		"activity":              {Read: true},
 		"relationship":          {Read: true},
@@ -61,7 +61,7 @@ var project360RepPerms = principal.Permissions{
 type project360Fixture struct {
 	project ids.ProjectID
 	deal    ids.UUID
-	person  ids.UUID
+	contact ids.UUID
 }
 
 // seedProject360 builds a project with one pursuit, one seat, 26 notes and
@@ -89,9 +89,9 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	if err != nil {
 		t.Fatalf("create the project's deal: %v", err)
 	}
-	person := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
-	if _, err := e.People.SetProjectStakeholder(admin, people.SetProjectStakeholderInput{
-		ProjectID: project, PersonID: PersonIDOf(person), Role: "champion",
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	if _, err := e.Contacts.SetProjectStakeholder(admin, contacts.SetProjectStakeholderInput{
+		ProjectID: project, ContactID: ContactIDOf(contact), Role: "champion",
 	}); err != nil {
 		t.Fatalf("seat the stakeholder: %v", err)
 	}
@@ -111,26 +111,26 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	yesterday := time.Now().UTC().Add(-24 * time.Hour)
 	log("task", "Send the revised SOW", &yesterday, onProject)
 	log("note", "Pricing call", nil, activities.ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(deal.Id)})
-	log("email", "Invoice question", nil, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
+	log("email", "Invoice question", nil, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact})
 	log("email", "Rack decommissioning", nil,
-		activities.ActivityLinkInput{EntityType: "person", EntityID: person},
+		activities.ActivityLinkInput{EntityType: "contact", EntityID: contact},
 		activities.ActivityLinkInput{EntityType: "project", EntityID: other.UUID})
 	// A second seat on a capture-private contact of another rep: its
 	// correspondence circles the project too, but only for a caller who may
 	// read that contact.
-	private := e.SeedPerson(t, "Quiet Contact", &e.Rep3)
-	if _, err := e.People.SetProjectStakeholder(admin, people.SetProjectStakeholderInput{
-		ProjectID: project, PersonID: PersonIDOf(private), Role: "user",
+	private := e.SeedContact(t, "Quiet Contact", &e.Rep3)
+	if _, err := e.Contacts.SetProjectStakeholder(admin, contacts.SetProjectStakeholderInput{
+		ProjectID: project, ContactID: ContactIDOf(private), Role: "user",
 	}); err != nil {
 		t.Fatalf("seat the private stakeholder: %v", err)
 	}
-	log("email", "Side channel", nil, activities.ActivityLinkInput{EntityType: "person", EntityID: private})
-	e.MakeCapturePrivate(t, "person", private, e.Rep3)
-	return project360Fixture{project: project, deal: ids.UUID(deal.Id), person: person}
+	log("email", "Side channel", nil, activities.ActivityLinkInput{EntityType: "contact", EntityID: private})
+	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
+	return project360Fixture{project: project, deal: ids.UUID(deal.Id), contact: contact}
 }
 
 func project360Service(e *Env, now time.Time) *project360.Service {
-	return project360.NewService(e.Pool, e.Deals, e.Projects, e.People, e.Contracts, e.Activities, func() time.Time { return now })
+	return project360.NewService(e.Pool, e.Deals, e.Projects, e.Contacts, e.Contracts, e.Activities, func() time.Time { return now })
 }
 
 func TestProject360AssemblesEverySectionFromTheRealWriters(t *testing.T) {
@@ -191,7 +191,7 @@ func assertProject360Collections(t *testing.T, page crmcontracts.Project360, f p
 		t.Fatalf("stakeholders = %+v, want the one seat the caller may read", page.Stakeholders)
 	}
 	seat := page.Stakeholders.Data[0]
-	if ids.UUID(seat.PersonId) != f.person || seat.PersonName == nil || *seat.PersonName != "Dana Buyer" ||
+	if ids.UUID(seat.ContactId) != f.contact || seat.ContactName == nil || *seat.ContactName != "Dana Buyer" ||
 		seat.Role == nil || *seat.Role != "champion" {
 		t.Errorf("seat = %+v, want Dana Buyer as champion", seat)
 	}

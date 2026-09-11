@@ -11,7 +11,7 @@
  * string. Encoding that per screen is how one list would start selecting a
  * different slice than another from the same address.
  *
- * Commas, not repetition: an address a person can read and edit, and the ids
+ * Commas, not repetition: an address a contact can read and edit, and the ids
  * are UUIDs so no value can contain the separator.
  */
 
@@ -21,7 +21,7 @@ export type TagMode = "any" | "all" | "none";
 /**
  * parseTagMode narrows a mode off the address.
  *
- * An address is text a person can edit, so anything at all can arrive here.
+ * An address is text a contact can edit, so anything at all can arrive here.
  * An unknown mode is DROPPED rather than defaulted, and the caller then sends
  * no mode at all — which is what the endpoint reads as `any`. Mapping a typo
  * onto `any` here would be this tier quietly widening a filter the reader

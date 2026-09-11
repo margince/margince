@@ -188,7 +188,7 @@ function readyRead(comparisons: Comparison[]): CompanySiteRead {
     ],
     facts: [],
     comparisons,
-    people: [],
+    contacts: [],
     legal_entities: [],
     warnings: [],
     draft_version: 2,

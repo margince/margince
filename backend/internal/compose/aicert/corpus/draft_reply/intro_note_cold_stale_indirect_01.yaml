@@ -13,7 +13,7 @@ fixture:
   requester: "Mira Haas"
   through: "Tobias Reinhardt"
   # The route bucket, not the company page's "cold": this endpoint reads
-  # PersonGraphRouteCandidate.strength_bucket, whose weakest recorded value is
+  # ContactGraphRouteCandidate.strength_bucket, whose weakest recorded value is
   # "weak".
   relationship: "weak"
   last_spoke: "2025-09-14"

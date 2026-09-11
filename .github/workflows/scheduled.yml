@@ -223,7 +223,7 @@ jobs:
   #
   # It records NOTHING. MARGINCE_BENCH_RECORD stays unset, so the suite gates and
   # prints; `make bench-perf` is the only thing that writes into
-  # docs/reference/perfbench/, and it is run by a person. A machine writing its
+  # docs/reference/perfbench/, and it is run by a contact. A machine writing its
   # own numbers into the tree is the failure that switch exists to prevent.
   perf-budgets:
     name: perf budgets (PERF-3/PERF-7, SMB tier)

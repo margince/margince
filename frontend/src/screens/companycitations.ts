@@ -16,12 +16,12 @@ import type { CitedRecord } from "./companyevidence";
 // prepared answers and the suggestions all cite the same records, so they
 // share one route — a second copy would drift and send one card's reader to
 // the wrong screen.
-// A citation goes to one of two places. A deal or a person has a screen of its
+// A citation goes to one of two places. A deal or a contact has a screen of its
 // own; a fact or a profile field has no screen, but it does have a receipt —
 // where the value came from and what could not be recorded about it — which is
 // what the reader wanted when they clicked the chip.
 export function citationOpensRecord(entityType: string): boolean {
-  return entityType === "deal" || entityType === "person";
+  return entityType === "deal" || entityType === "contact";
 }
 
 // An activity opens the MESSAGE, in the account page's own email drawer.
@@ -39,7 +39,7 @@ export function openCitation(entityType: string, entityId: string) {
   if (entityType === "deal") {
     navigate({ screen: "deals", id: entityId });
   }
-  if (entityType === "person") {
+  if (entityType === "contact") {
     navigate({ screen: "contacts", id: entityId });
   }
 }

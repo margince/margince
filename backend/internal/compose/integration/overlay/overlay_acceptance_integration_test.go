@@ -57,16 +57,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// seedMirroredPersonFixture stands up the overlay-mode half of AC-OV-2's
+// seedMirroredContactFixture stands up the overlay-mode half of AC-OV-2's
 // two-mode comparison: a second, overlay-mode workspace whose acting user is
-// mapped to the fake incumbent's owner-1, one ingested mirror person, and the
+// mapped to the fake incumbent's owner-1, one ingested mirror contact, and the
 // overlay Provider serving it.
 //
 // The ref it returns is the overlay Provider's OWN ref for the ingested
 // fixture (the numeric-external-id<->UUID bridge is internal to package
 // overlay) — resolved once via Search, then reused by every read verb the
 // caller exercises.
-func seedMirroredPersonFixture(t *testing.T, e *integration.Env) (context.Context, *overlaymod.Provider, datasource.EntityRef) {
+func seedMirroredContactFixture(t *testing.T, e *integration.Env) (context.Context, *overlaymod.Provider, datasource.EntityRef) {
 	t.Helper()
 	overlayWS, actorID := seedOverlayModeWorkspace(t)
 	ctx := overlayActorCtx(overlayWS, actorID)
@@ -75,32 +75,32 @@ func seedMirroredPersonFixture(t *testing.T, e *integration.Env) (context.Contex
 		t.Fatalf("mapping the acting user to owner-1: %v", err)
 	}
 	if err := mirror.Ingest(ctx, overlaymod.Record{
-		ObjectClass: "person", ExternalID: "100214862055",
+		ObjectClass: "contact", ExternalID: "100214862055",
 		Fields: map[string]any{"firstname": "Ada Overlay"}, ModifiedAt: time.Now().UTC(), OwnerExternalID: "owner-1",
 	}); err != nil {
 		t.Fatalf("ingesting the overlay fixture: %v", err)
 	}
 	provider := overlaymod.NewProvider(mirror, nil)
-	found, err := provider.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityPerson}, Limit: 10})
+	found, err := provider.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityContact}, Limit: 10})
 	if err != nil || len(found.Records) != 1 {
 		t.Fatalf("resolving the overlay fixture's own ref: err=%v records=%d", err, len(found.Records))
 	}
 	return ctx, provider, found.Records[0].Ref
 }
 
-// assertNonEmptyPersonPayload asserts rec carries a decodable, non-empty
-// person field payload for wantRef — the structural half of
+// assertNonEmptyContactPayload asserts rec carries a decodable, non-empty
+// contact field payload for wantRef — the structural half of
 // bounded-equivalence (both modes return a real record of the same
 // shape for the same requested ref), as distinct from the trust half
 // AC-OV-2's subtests assert separately.
-func assertNonEmptyPersonPayload(t *testing.T, mode string, rec datasource.Record, wantRef datasource.EntityRef) {
+func assertNonEmptyContactPayload(t *testing.T, mode string, rec datasource.Record, wantRef datasource.EntityRef) {
 	t.Helper()
 	if rec.Ref != wantRef {
 		t.Errorf("%s Read Ref = %v, want the requested %v", mode, rec.Ref, wantRef)
 	}
 	var fields map[string]any
 	if err := json.Unmarshal(rec.Fields, &fields); err != nil || len(fields) == 0 {
-		t.Fatalf("%s Read fields = %s (err %v), want a non-empty person payload", mode, rec.Fields, err)
+		t.Fatalf("%s Read fields = %s (err %v), want a non-empty contact payload", mode, rec.Fields, err)
 	}
 }
 
@@ -152,14 +152,14 @@ func assertEverySeamVerbIsClassifiedExactlyOnce(t *testing.T) {
 // than silently passing unclassified.
 func TestAcceptance_AC_OV_2_BoundedEquivalence_ReadSubset(t *testing.T) {
 	e := integration.Setup(t)
-	personID := e.SeedPerson(t, "Ada Native", nil)
+	contactID := e.SeedContact(t, "Ada Native", nil)
 	native := compose.NewProviderFor(e.DB())
-	personRef := datasource.EntityRef{Type: datasource.EntityPerson, ID: personID}
+	contactRef := datasource.EntityRef{Type: datasource.EntityContact, ID: contactID}
 
-	ctx, overlayProvider, overlayRef := seedMirroredPersonFixture(t, e)
+	ctx, overlayProvider, overlayRef := seedMirroredContactFixture(t, e)
 
 	t.Run("Read is bounded-equivalent: same record shape, differing only in the trust dimension", func(t *testing.T) {
-		nativeRec, err := native.Read(e.Admin(), personRef)
+		nativeRec, err := native.Read(e.Admin(), contactRef)
 		if err != nil {
 			t.Fatalf("native Read: %v", err)
 		}
@@ -167,8 +167,8 @@ func TestAcceptance_AC_OV_2_BoundedEquivalence_ReadSubset(t *testing.T) {
 		if err != nil {
 			t.Fatalf("overlay Read: %v", err)
 		}
-		assertNonEmptyPersonPayload(t, "native", nativeRec, personRef)
-		assertNonEmptyPersonPayload(t, "overlay", overlayRec, overlayRef)
+		assertNonEmptyContactPayload(t, "native", nativeRec, contactRef)
+		assertNonEmptyContactPayload(t, "overlay", overlayRec, overlayRef)
 		// The one dimension bounded-equivalence PERMITS to differ: a native
 		// read is authoritative; an overlay read is mirror-backed and must
 		// declare Authoritative=false (03e §2.3 / AC-OV-5). Everything else
@@ -181,8 +181,8 @@ func TestAcceptance_AC_OV_2_BoundedEquivalence_ReadSubset(t *testing.T) {
 		}
 	})
 
-	t.Run("Search is bounded-equivalent: both return person records, native authoritative, overlay not", func(t *testing.T) {
-		query := datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityPerson}, Limit: 10}
+	t.Run("Search is bounded-equivalent: both return contact records, native authoritative, overlay not", func(t *testing.T) {
+		query := datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityContact}, Limit: 10}
 		nativeSearch, err := native.Search(e.Admin(), query)
 		if err != nil || len(nativeSearch.Records) == 0 {
 			t.Fatalf("native Search: err=%v records=%d", err, len(nativeSearch.Records))
@@ -207,17 +207,17 @@ func TestAcceptance_AC_OV_2_BoundedEquivalence_ReadSubset(t *testing.T) {
 		if _, err := native.ListObjects(e.Admin()); err != nil {
 			t.Fatalf("native ListObjects: %v", err)
 		}
-		if _, err := native.ListFields(e.Admin(), datasource.EntityPerson); err != nil {
+		if _, err := native.ListFields(e.Admin(), datasource.EntityContact); err != nil {
 			t.Fatalf("native ListFields: %v", err)
 		}
-		nativeFresh, err := native.Freshness(e.Admin(), personRef)
+		nativeFresh, err := native.Freshness(e.Admin(), contactRef)
 		if err != nil {
 			t.Fatalf("native Freshness: %v", err)
 		}
 		if _, err := overlayProvider.ListObjects(ctx); err != nil {
 			t.Fatalf("overlay ListObjects: %v", err)
 		}
-		if _, err := overlayProvider.ListFields(ctx, datasource.EntityPerson); err != nil {
+		if _, err := overlayProvider.ListFields(ctx, datasource.EntityContact); err != nil {
 			t.Fatalf("overlay ListFields: %v", err)
 		}
 		overlayFresh, err := overlayProvider.Freshness(ctx, overlayRef)
@@ -238,7 +238,7 @@ func TestAcceptance_AC_OV_2_BoundedEquivalence_ReadSubset(t *testing.T) {
 		if _, err := overlayProvider.AdvanceDeal(ctx, datasource.AdvanceDealInput{}); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 			t.Errorf("AdvanceDeal = %v, want ErrUnsupportedBySoR", err)
 		}
-		if _, err := overlayProvider.Merge(ctx, datasource.MergeInput{Type: datasource.EntityPerson}); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+		if _, err := overlayProvider.Merge(ctx, datasource.MergeInput{Type: datasource.EntityContact}); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 			t.Errorf("Merge = %v, want ErrUnsupportedBySoR", err)
 		}
 		if _, merged, err := overlayProvider.PromoteLead(ctx, ids.NewV7(), "manual", nil); !errors.Is(err, apperrors.ErrUnsupportedBySoR) || merged {
@@ -260,10 +260,10 @@ func TestAcceptance_AC_OV_2_BoundedEquivalence_ReadSubset(t *testing.T) {
 		// This overlayProvider is built without a write incumbent resolver, so
 		// a verb it DOES serve surfaces a clear configuration error instead —
 		// anything but ErrUnsupportedBySoR proves it is a recognized verb.
-		if _, err := overlayProvider.Update(ctx, datasource.UpdateInput{Ref: datasource.EntityRef{Type: datasource.EntityPerson}}); errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+		if _, err := overlayProvider.Update(ctx, datasource.UpdateInput{Ref: datasource.EntityRef{Type: datasource.EntityContact}}); errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 			t.Errorf("Update must be a supported write-back verb, got ErrUnsupportedBySoR")
 		}
-		if _, err := overlayProvider.Archive(ctx, datasource.EntityRef{Type: datasource.EntityPerson}); errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+		if _, err := overlayProvider.Archive(ctx, datasource.EntityRef{Type: datasource.EntityContact}); errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 			t.Errorf("Archive must be a supported write-back verb, got ErrUnsupportedBySoR")
 		}
 		// Create is declared unsupported for every type (SupportsWrite): the
@@ -272,7 +272,7 @@ func TestAcceptance_AC_OV_2_BoundedEquivalence_ReadSubset(t *testing.T) {
 		// everyone including its author. The DECLARED refusal is the correct
 		// bounded-equivalence answer, and it must hold at the provider — not
 		// only at the REST guard, which the agent and automation seams bypass.
-		if _, err := overlayProvider.Create(ctx, datasource.CreateInput{EntityType: datasource.EntityPerson}); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+		if _, err := overlayProvider.Create(ctx, datasource.CreateInput{EntityType: datasource.EntityContact}); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 			t.Errorf("Create = %v, want the declared ErrUnsupportedBySoR", err)
 		}
 	})
@@ -433,7 +433,7 @@ func TestAcceptance_AC_OV_11_FailClosedVisibility_ReadSubset(t *testing.T) {
 		t.Fatalf("mapping the acting user to owner-1: %v", err)
 	}
 
-	const objectClass = "person"
+	const objectClass = "contact"
 	const hiddenOwnerExternalID = "100214862088" // owned by owner-2, whom nobody in this workspace is mapped to
 	const nullOwnerExternalID = "100214862099"   // no owner at all
 	const ownedExternalID = "100214862100"       // owned by owner-1 — proves a real, visible row exists so the hidden cases aren't vacuous
@@ -486,7 +486,7 @@ func TestAcceptance_AC_OV_11_FailClosedVisibility_ReadSubset(t *testing.T) {
 		// asserts not-found — it would pass without ever reaching the rows whose
 		// hiding it exists to prove.
 		d := compose.NewDispatcher(compose.NewProvider(e.Pool), compose.NewOverlayProviderFor(e.DBFor(ws), overlaybudget.New(nil, nil), nil), e.Pool)
-		if _, err := d.Search(unmappedCtx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityPerson}, Limit: 10}); !errors.Is(err, apperrors.ErrNotFound) {
+		if _, err := d.Search(unmappedCtx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityContact}, Limit: 10}); !errors.Is(err, apperrors.ErrNotFound) {
 			t.Fatalf("dispatched Search for an unmapped user = %v, want apperrors.ErrNotFound (existence-hiding, zero rows)", err)
 		}
 	})

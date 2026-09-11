@@ -91,7 +91,7 @@ func derivedWaitingHorizonDays(spread waitingHorizonSpread) int {
 const (
 	// medianPercentile is what the metrics window asks firstResponseSQL for:
 	// the middle answer, which is what "how fast do we answer" means to a
-	// person reading a number.
+	// contact reading a number.
 	medianPercentile = "0.5"
 	// slowPercentile is what the horizon asks it for. Not the median — half of
 	// all answers arrive after that, so a horizon set there would drop
@@ -123,7 +123,7 @@ const (
 // who is looking, twice over and invisibly.
 //
 // What that costs is a duration and a count over the installation, and no
-// content: nothing here names a conversation, a person or a record.
+// content: nothing here names a conversation, a contact or a record.
 func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
 	args := []any{asOf.AddDate(0, 0, -waitingHorizonWindowDays), asOf}
 	arg := func(v any) int { args = append(args, v); return len(args) }

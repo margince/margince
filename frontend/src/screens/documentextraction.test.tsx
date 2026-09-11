@@ -260,7 +260,7 @@ describe("what a grounded reading offers", () => {
     });
     await userEvent.click(editAmount);
     const input = screen.getByRole("textbox", { name: /edit amount/i });
-    // It opens on the figure a person says, not the integer we store.
+    // It opens on the figure a contact says, not the integer we store.
     expect((input as HTMLInputElement).value).toBe("148500.00");
     await userEvent.clear(input);
     await userEvent.type(input, "200000");

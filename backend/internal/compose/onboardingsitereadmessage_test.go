@@ -16,7 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -91,16 +91,16 @@ func TestCompanyReadAnswerBuildsABoundedGroundedModelRequest(t *testing.T) {
 
 func TestCompanyReadEvidenceIsBoundedNumberedAndWebsiteGrounded(t *testing.T) {
 	longValue := strings.Repeat("ü", companyReadSourceMaxRunes+20)
-	read := people.SiteRead{
-		LegalEntities: []people.SiteReadLegalEntity{{
+	read := contacts.SiteRead{
+		LegalEntities: []contacts.SiteReadLegalEntity{{
 			Name: "Acme GmbH", RegisteredAddress: "Werkstr. 1", RegisterNumber: "HRB 12345",
 			EvidenceSnippet: "Acme GmbH, Werkstr. 1, HRB 12345", SourceURL: "https://acme.example/imprint",
 		}},
-		ProfileFields: []people.DeepReadField{
+		ProfileFields: []contacts.DeepReadField{
 			{Field: "offer_summary", Value: longValue, EvidenceSnippet: "Onboarding software", SourceURL: "https://acme.example/product"},
 			{Field: "icp", Value: "ignored", SourceURL: ""},
 		},
-		Facts: []people.DeepReadFact{{
+		Facts: []contacts.DeepReadFact{{
 			Field: "service", Value: "Implementation", EvidenceSnippet: "Guided implementation", SourceURL: "https://acme.example/services",
 		}},
 	}
@@ -296,8 +296,8 @@ func TestCompanyConversationRejectsSuggestionsWithoutChangeIntent(t *testing.T) 
 
 func TestCompanyConversationAllowsCitedSynthesisOnlyForInterpretiveFields(t *testing.T) {
 	known := map[string]companyReadEvidence{
-		"S1": {ID: "S1", Field: people.FactNamedCustomer, Value: "Shopware"},
-		"S2": {ID: "S2", Field: people.FactServedIndustry, Value: "industrial automation"},
+		"S1": {ID: "S1", Field: contacts.FactNamedCustomer, Value: "Shopware"},
+		"S2": {ID: "S2", Field: contacts.FactServedIndustry, Value: "industrial automation"},
 	}
 	icp := companyReadModelReply{
 		Kind: "recommendation", Message: "I suggest a focused ICP.", SourceIDs: []string{"S1", "S2"},

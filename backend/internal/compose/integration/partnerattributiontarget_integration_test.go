@@ -17,8 +17,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -33,7 +33,7 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 	partnerCompany := companyIDOf(e.SeedCompany(t, "Northgate Partners", nil))
 	plainCompany := companyIDOf(e.SeedCompany(t, "Just A Customer", nil))
 	tier := "tier2_20"
-	if _, err := e.People.UpsertPartner(admin, people.UpsertPartnerInput{
+	if _, err := e.Contacts.UpsertPartner(admin, contacts.UpsertPartnerInput{
 		CompanyID:   partnerCompany,
 		PartnerRole: "consulting",
 		MarginTier:  &tier,
@@ -46,7 +46,7 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 			Name: "Misattributed", PipelineID: pipeline, StageID: open, Source: "ui",
 			PartnerCompanyID: &plainCompany,
 		})
-		var notPartner *people.NotAPartnerError
+		var notPartner *contacts.NotAPartnerError
 		if !errors.As(err, &notPartner) {
 			t.Fatalf("CreateDeal naming a non-partner → %v, want NotAPartnerError", err)
 		}
@@ -64,7 +64,7 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 		_, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
 			PartnerCompanyID: &plainCompany,
 		})
-		var notPartner *people.NotAPartnerError
+		var notPartner *contacts.NotAPartnerError
 		if !errors.As(err, &notPartner) {
 			t.Fatalf("UpdateDeal naming a non-partner → %v, want NotAPartnerError", err)
 		}
@@ -121,7 +121,7 @@ func TestMergingAPartnerLeavesItsDealsNamingAPartner(t *testing.T) {
 		t.Fatalf("attributing the deal to the source partner: %v", err)
 	}
 
-	if _, err := e.People.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target)); err != nil {
+	if _, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target)); err != nil {
 		t.Fatalf("merging the partner into the plain company: %v", err)
 	}
 

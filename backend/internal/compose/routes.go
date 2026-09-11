@@ -387,7 +387,7 @@ func WithUploadLimits(limits deployconfig.UploadLimits) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.uploadLimits = limits
 		s.activitiesHandlers = s.activitiesHandlers.WithUploadLimit(limits.Attachment)
-		s.peopleHandlers = s.peopleHandlers.WithUploadLimit(limits.LinkedInImport)
+		s.contactsHandlers = s.contactsHandlers.WithUploadLimit(limits.LinkedInImport)
 		s.knowledgeHandlers = knowledgeWithUploadLimit(s.knowledgeHandlers, limits.KnowledgeDocument)
 		s.uploadLimit = limits.CSVImport
 		s.maxUploadBytes = limits.Attachment

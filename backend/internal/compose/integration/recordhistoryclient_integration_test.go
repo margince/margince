@@ -30,15 +30,15 @@ import (
 
 func TestRecordHistoryNamesTheClientADelegatedChangeCameThrough(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "History Subject", nil)
+	contact := e.SeedContact(t, "History Subject", nil)
 	human := seedWorkspaceUser(t, e, "Ada Authority")
 
 	passport := seedGrantedPassport(t, e, human, "Claude")
-	seedDelegatedAuditRow(t, e, person, human, passport, // Dated FORWARD: SeedPerson's own create row is stamped at real now, and
+	seedDelegatedAuditRow(t, e, contact, human, passport, // Dated FORWARD: SeedContact's own create row is stamped at real now, and
 		// the read is newest first, so a forward-dated row is served FIRST.
 		time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond))
 
-	page := readRecordHistory(t, e, person)
+	page := readRecordHistory(t, e, contact)
 	if len(page.Entries) == 0 {
 		t.Fatal("the history is empty; the seeded row should be in it")
 	}
@@ -56,16 +56,16 @@ func TestRecordHistoryNamesTheClientADelegatedChangeCameThrough(t *testing.T) {
 // registered client to name and the generic qualifier is the honest answer.
 func TestAHandMintedPassportKeepsTheGenericQualifier(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "History Subject", nil)
+	contact := e.SeedContact(t, "History Subject", nil)
 	human := seedWorkspaceUser(t, e, "Ada Authority")
 
 	passport := seedUngrantedPassport(t, e, human)
-	// Dated FORWARD: SeedPerson's own create row is stamped at real now, and the
+	// Dated FORWARD: SeedContact's own create row is stamped at real now, and the
 	// read is newest first, so a forward-dated row is served FIRST.
-	seedDelegatedAuditRow(t, e, person, human, passport,
+	seedDelegatedAuditRow(t, e, contact, human, passport,
 		time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond))
 
-	page := readRecordHistory(t, e, person)
+	page := readRecordHistory(t, e, contact)
 	newest := page.Entries[0]
 	if newest.Summary != "Ada Authority, via an agent, updated the record" {
 		t.Errorf("the line reads %q, want the generic qualifier", newest.Summary)
@@ -127,14 +127,14 @@ func seedUngrantedPassport(t *testing.T, e *Env, human ids.UUID) ids.UUID {
 
 // seedDelegatedAuditRow writes the audit row the join reads: an agent actor,
 // the human it acted for, and the passport it presented.
-func seedDelegatedAuditRow(t *testing.T, e *Env, person, human, passport ids.UUID, at time.Time) {
+func seedDelegatedAuditRow(t *testing.T, e *Env, contact, human, passport ids.UUID, at time.Time) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, on_behalf_of, passport_id,
 			                        action, entity_type, entity_id, occurred_at)
-			 VALUES ($1, 'agent', $2, $3, $4, 'update', 'person', $5, $6)`, ids.NewV7(), "agent:"+passport.String(), human, passport, person, at)
+			 VALUES ($1, 'agent', $2, $3, $4, 'update', 'contact', $5, $6)`, ids.NewV7(), "agent:"+passport.String(), human, passport, contact, at)
 		return err
 	})
 	if err != nil {
@@ -144,10 +144,10 @@ func seedDelegatedAuditRow(t *testing.T, e *Env, person, human, passport ids.UUI
 
 // readRecordHistory reads the whole page through the same call the transport
 // makes.
-func readRecordHistory(t *testing.T, e *Env, person ids.UUID) privacy.RecordHistoryPage {
+func readRecordHistory(t *testing.T, e *Env, contact ids.UUID) privacy.RecordHistoryPage {
 	t.Helper()
 	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: person,
+		EntityType: "contact", EntityID: contact,
 	})
 	if err != nil {
 		t.Fatalf("reading the record history: %v", err)

@@ -70,7 +70,7 @@ func TestAnAmountRestoreIsRefusedWhenTheCurrencyMovedUnderIt(t *testing.T) {
 		t.Errorf("reason = %q, want %q", refusal.Reason, ReasonSuperseded)
 	}
 	// Named as the field the caller asked to put back, not as the sibling that
-	// moved: the person pressed Undo on an amount change.
+	// moved: the contact pressed Undo on an amount change.
 	if refusal.Detail != "amount_minor" {
 		t.Errorf("detail = %q, want the field the caller asked about", refusal.Detail)
 	}

@@ -207,7 +207,7 @@ export function OvernightPanel() {
                 has no list surface at all and keeps no door. */}
             <DigestCount
               label={t("brief.digestContacts")}
-              value={capture.people_created ?? 0}
+              value={capture.contacts_created ?? 0}
               onOpen={() =>
                 navigate(
                   { screen: "contacts" },

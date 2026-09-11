@@ -351,7 +351,7 @@ func TestEverySeatThatGrantedGetsItsOwnNightlyOccurrence(t *testing.T) {
 // night carries.
 //
 // A fan-out that seeded the right number of rows against one shared passport
-// would satisfy the count above while acting for every rep as one person —
+// would satisfy the count above while acting for every rep as one contact —
 // which is the exact thing the standing grant exists to prevent.
 func TestASeatIsSeededWithItsOwnCredentialAndNobodyElses(t *testing.T) {
 	re := setupRunner(t)

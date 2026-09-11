@@ -77,7 +77,7 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 	// concurrent reject/fulfil could interleave and leave a subject erased on a
 	// request the queue still shows open. FulfilErasure owns that serialization
 	// — it locks the request FOR UPDATE and holds the lock across the erase,
-	// refuses a subject_ref that names no person, and only then finalizes.
+	// refuses a subject_ref that names no contact, and only then finalizes.
 	if in.Status != nil && *in.Status == "fulfilled" {
 		current, err := h.store.GetDSR(r.Context(), ids.UUID(id))
 		if err != nil {
@@ -92,7 +92,7 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 				writeConsentErr(w, r, errors.New("consent: erasure fulfillment has no erase path wired"))
 				return
 			}
-			updated, err := h.store.FulfilErasure(r.Context(), ids.UUID(id), in, h.eraser.ErasePerson)
+			updated, err := h.store.FulfilErasure(r.Context(), ids.UUID(id), in, h.eraser.EraseContact)
 			if err != nil {
 				writeConsentErr(w, r, err)
 				return
@@ -118,23 +118,23 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 // hands it back, as the file an officer forwards.
 //
 // It does NOT change the request's status. Producing the export and deciding the
-// request is answered are two acts by the same person, and collapsing them would
+// request is answered are two acts by the same contact, and collapsing them would
 // close a request on a download that might have failed to reach anybody — the
 // officer marks it fulfilled through the existing PATCH once they have sent it.
 func (h Handlers) DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if h.assembler == nil {
 		// Fail closed rather than answer an empty package: a role composed
 		// without the assembler cannot produce an Art. 15 export, and an empty
-		// one would read as "we hold nothing about this person".
+		// one would read as "we hold nothing about this contact".
 		httperr.ServiceUnavailable(w, r,
 			"this installation cannot assemble a subject-access package here")
 		return
 	}
-	// GetDSR takes the queue's own gate — admin, human, person.read — so
+	// GetDSR takes the queue's own gate — admin, human, contact.read — so
 	// reaching the request is already what reaching any request takes.
 	//
 	// That gate is the narrow one and it has to stay in front. AssembleSAR
-	// admits any unbounded human holding person.delete, which the seeded
+	// admits any unbounded human holding contact.delete, which the seeded
 	// defaults give to ops and management as well as admin, so calling it
 	// without reading the request first would make the export reachable by
 	// roles the queue that owns this workflow refuses.
@@ -154,17 +154,17 @@ func (h Handlers) DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	// The same refusal the erasure path gives, for the same reason: subject_ref
-	// is free text until somebody resolves it to a person, and a request naming
+	// is free text until somebody resolves it to a contact, and a request naming
 	// nobody has nothing to assemble.
-	personID, parseErr := ids.Parse(request.SubjectRef)
+	contactID, parseErr := ids.Parse(request.SubjectRef)
 	if parseErr != nil {
 		writeConsentErr(w, r, &ValidationError{
 			Field:  fieldSubjectRef,
-			Reason: "an access request must name a person id before its package can be assembled",
+			Reason: "an access request must name a contact id before its package can be assembled",
 		})
 		return
 	}
-	body, err := h.assembler.AssemblePackage(r.Context(), personID)
+	body, err := h.assembler.AssemblePackage(r.Context(), contactID)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

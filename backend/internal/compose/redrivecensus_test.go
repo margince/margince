@@ -23,7 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/automation"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -53,7 +53,7 @@ var judged = map[string]struct {
 	"stage_change_notify": {false, "plans notify; applyNotify calls the transport unconditionally, so a repeat tells somebody twice"},
 	"post_meeting_recap":  {false, "plans draft_email; a repeat composes a second draft and stages a second send behind it"},
 
-	// The people and activities handlers bypass ApplyActions entirely and write
+	// The contacts and activities handlers bypass ApplyActions entirely and write
 	// through their own stores, so the engine's effect claim does not reach
 	// them. Each needs its own answer, and only one has been established.
 	"recompute_lead_score":           {true, "recomputes a score FROM the records it reads; a second pass over unchanged records lands on the same number"},
@@ -123,9 +123,9 @@ func TestEveryJudgementSaysWhy(t *testing.T) {
 // asks only what each handler DECLARES.
 func everyRegisteredHandler() []workflow.Handler {
 	handlers := automation.StarterWorkflows(automation.Executors{})
-	handlers = append(handlers, people.LeadRoutingWorkflow(nil))
-	handlers = append(handlers, people.LeadScoreWorkflows(nil)...)
-	handlers = append(handlers, people.LeadSLAWorkflows(nil)...)
+	handlers = append(handlers, contacts.LeadRoutingWorkflow(nil))
+	handlers = append(handlers, contacts.LeadScoreWorkflows(nil)...)
+	handlers = append(handlers, contacts.LeadSLAWorkflows(nil)...)
 	handlers = append(handlers, activities.FollowUpWorkflows(nil)...)
 	return append(handlers, activities.OwnershipWorkflows(nil)...)
 }

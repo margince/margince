@@ -68,7 +68,7 @@ mark can see which kind of claim they are looking at.
 ### What is never stored
 
 A certificate log publishes every hostname a company ever held a certificate for, and those include
-people — `lars.example.de` is a normal thing to find. The subdomain classifier is an **allowlist**:
+contacts — `lars.example.de` is a normal thing to find. The subdomain classifier is an **allowlist**:
 only first labels that name a *service* survive it, and it runs **before the cache write and before
 the fact write**. A personal name in a certificate matches nothing and reaches no table. That is a
 property of the classifier, not something a caller has to remember.

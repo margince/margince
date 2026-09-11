@@ -73,7 +73,7 @@ func TestALongUnknownKeyDoesNotEatTheAcceptedFieldList(t *testing.T) {
 	// list mid-word — deleting the only part of the message that says what to do
 	// next, precisely when the caller has proved it does not know.
 	long := strings.Repeat("wrongkey", 60)
-	err := rejectUnknownFields(createWriteShapes, "person", json.RawMessage(`{"`+long+`":"x"}`))
+	err := rejectUnknownFields(createWriteShapes, "contact", json.RawMessage(`{"`+long+`":"x"}`))
 
 	var bad *BadArgsError
 	if !errors.As(err, &bad) {
@@ -92,7 +92,7 @@ func TestALongUnknownKeyDoesNotEatTheAcceptedFieldList(t *testing.T) {
 	// Our half arrives whole. Checking the LAST accepted name, not merely that
 	// the word "accepts" appears: truncation kept the opening and dropped the
 	// end, so a prefix check would have passed on the defect.
-	accepted := contractFieldNames(createShapes[datasource.EntityPerson])
+	accepted := contractFieldNames(createShapes[datasource.EntityContact])
 	last := accepted[len(accepted)-1]
 	if !strings.Contains(message, last) {
 		t.Errorf("the accepted-field list is cut short — %q is missing from %q", last, message)

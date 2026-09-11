@@ -203,7 +203,7 @@ derived from one build argument (`MARGINCE_RELEASE_VERSION`, set from
 |---|---|---|
 | OCI label `company.opencontainers.image.version` | `docker inspect` / `crane config` — no pull needed | an operator diffing a set |
 | `/etc/margince/release-version` | `docker run --rm <image> cat /etc/margince/release-version`, or `kubectl exec` into a running one | an operator inspecting a role that is running or crash-looping. It is the only place the **web** image's release can be read from the outside, because nginx runs none of our code — but it is not what the web tier itself compares against |
-| the Go binary's link-time stamp, and the SPA bundle's compiled-in copy | the guard below. This is the value each role actually compares; the label and the file are for people | the software itself |
+| the Go binary's link-time stamp, and the SPA bundle's compiled-in copy | the guard below. This is the value each role actually compares; the label and the file are for contacts | the software itself |
 
 **Why any of this exists.** You pull each role image by tag, and two tag pulls
 are two requests. A publish landing between them hands you a set whose roles come

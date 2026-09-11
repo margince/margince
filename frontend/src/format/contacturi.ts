@@ -5,7 +5,7 @@
 // may become a `tel:` link.
 //
 // Both values are untrusted record data: a connector wrote them, a crawl wrote
-// them, or a person pasted them. An address handed on by concatenation is an
+// them, or a contact pasted them. An address handed on by concatenation is an
 // injection surface — `?subject=`, `&cc=` and a `%0a` in it all reach whatever
 // consumes it as header fields — and a `tel:` built the same way dials whatever
 // the string held. So each is admitted only in the shape it can honestly have,
@@ -21,7 +21,7 @@
 const MAILBOX =
   /^[^\s@?#&%<>"'/\\,;:]+@[^\s@?#&%<>"'/\\,;:]+\.[^\s@?#&%<>"'/\\,;:.]+$/;
 
-// The characters people put between digits when they write a number down.
+// The characters contacts put between digits when they write a number down.
 const NUMBER_PUNCTUATION = /[\s().\-/]/g;
 
 /** mailbox is the address itself, trimmed, or null when it is not one. */
@@ -32,7 +32,7 @@ export function mailbox(address: string): string | null {
 
 /**
  * telUri is the `tel:` for a phone number, or null when the value does not
- * reduce to one. The punctuation a person writes between digits is dropped;
+ * reduce to one. The punctuation a contact writes between digits is dropped;
  * an optional leading `+` and at least three digits are what remain.
  */
 export function telUri(number: string): string | null {

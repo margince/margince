@@ -25,7 +25,7 @@ const DSRS = {
     {
       id: "d1",
       kind: "erasure",
-      subject_ref: "8f3a-person-uuid",
+      subject_ref: "8f3a-contact-uuid",
       status: "open",
       due_at: "2026-08-01T00:00:00Z",
       created_at: "2026-07-01T00:00:00Z",
@@ -52,13 +52,13 @@ const DSRS = {
 //   privacy_request:read   — the queue itself (consent/dsr.go), and the query
 //                            is disabled without it, so no row ever arrives
 //   privacy_request:update — the transition verbs and the erasure fulfil
-//   person:update          — OPENING a request, which writes the person named
+//   contact:update          — OPENING a request, which writes the contact named
 //
 // Every story here is an officer working the queue, so every one holds all
 // three; the refusals each grant governs are privacy.test.tsx's subject.
 const WORKS_SUBJECT_REQUESTS: GrantSpec = {
   privacy_request: ["read", "update"],
-  person: ["update"],
+  contact: ["update"],
 };
 
 function inbox(routes: RouteMap) {
@@ -113,7 +113,7 @@ export const Inbox: Story = {
 export const RowExpanded: Story = {
   render: inbox({ "GET /data-subject-requests": () => jsonResponse(DSRS) }),
   play: async ({ canvasElement }) => {
-    await expandRow(canvasElement, "8f3a-person-uuid");
+    await expandRow(canvasElement, "8f3a-contact-uuid");
   },
 };
 
@@ -129,7 +129,7 @@ export const RowExpandedPhone: Story = {
   tags: ["uat-phone"],
   render: inbox({ "GET /data-subject-requests": () => jsonResponse(DSRS) }),
   play: async ({ canvasElement }) => {
-    await expandRow(canvasElement, "8f3a-person-uuid");
+    await expandRow(canvasElement, "8f3a-contact-uuid");
   },
 };
 
@@ -154,10 +154,10 @@ export const NewRequestForm: Story = {
 // nobody had confirmed. webhooks.stories.tsx carries the same note over its own
 // clickTestIds for the same reason.
 async function armErasureConfirm(canvasElement: HTMLElement) {
-  await expandRow(canvasElement, "8f3a-person-uuid");
+  await expandRow(canvasElement, "8f3a-contact-uuid");
   const canvas = within(canvasElement);
   await userEvent.type(await canvas.findByLabelText(/resolution/i), "verified");
-  const row = await findRow(canvasElement, "8f3a-person-uuid");
+  const row = await findRow(canvasElement, "8f3a-contact-uuid");
   await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
   await userEvent.type(await screen.findByLabelText(/type erase/i), "ERASE");
 }
@@ -183,7 +183,7 @@ const legalHoldRoutes: RouteMap = {
         title: "Conflict",
         status: 409,
         code: "conflict",
-        detail: "erasing a person under legal hold: conflict",
+        detail: "erasing a contact under legal hold: conflict",
       },
       409,
     ),

@@ -81,7 +81,7 @@ func sendMarketing(t *testing.T, e *apptest.AppEnv, activityID, purpose, host, x
 
 // transmittedBody returns the body of the newest staged delivery — what the
 // recipient actually receives. The live preference token lives THERE and
-// nowhere else: it is a bearer credential over that person's consent record,
+// nowhere else: it is a bearer credential over that contact's consent record,
 // so the durable activity row (and every authenticated read of it) keeps the
 // footer with its token segment redacted. A test that needs the recipient's
 // credential reads their mail, exactly as the recipient would.
@@ -161,7 +161,7 @@ func tokenFromLink(t *testing.T, link string) string {
 
 func grantPurpose(t *testing.T, c *consentEnv, purposeID string) {
 	t.Helper()
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent", AnyMap{
 		"purpose_id": purposeID, "new_state": "granted", "lawful_basis": "consent",
 		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
@@ -392,7 +392,7 @@ func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 }
 
 // The minted credential reaches the recipient's mail and NOTHING the
-// workspace stores or serves. The token is authority over that person's
+// workspace stores or serves. The token is authority over that contact's
 // consent record on a session-less edge — read, withdraw and GRANT, under a
 // system principal that short-circuits every RBAC gate — so a durable copy in
 // activity.body would hand it to every seat holding activity:read (the
@@ -475,7 +475,7 @@ func TestPreferenceCenterTokenGuards(t *testing.T) {
 }
 
 // A REVOKED token reads identically to an unknown one (404), so revoking
-// a recipient's link cannot be turned into a "this person exists" oracle.
+// a recipient's link cannot be turned into a "this contact exists" oracle.
 func TestPreferenceCenterRevokedTokenReadsAsAbsent(t *testing.T) {
 	c := setupConsent(t)
 

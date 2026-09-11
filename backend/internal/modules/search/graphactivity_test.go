@@ -42,14 +42,14 @@ func link(t *testing.T, entity, digit string) activitySubject {
 
 func attendee(t *testing.T, role, digit string) activitySubject {
 	t.Helper()
-	person := string(datasource.EntityPerson)
+	contact := string(datasource.EntityContact)
 	rank, ok := participantRoleRank[role]
 	if !ok {
 		rank = unrankedRole
 	}
 	return activitySubject{
-		entityType: person, id: idOf(t, digit), title: role + digit,
-		tier: subjectTier[person], named: namedByParticipant, role: rank,
+		entityType: contact, id: idOf(t, digit), title: role + digit,
+		tier: subjectTier[contact], named: namedByParticipant, role: rank,
 	}
 }
 
@@ -93,25 +93,25 @@ func assertOrder(t *testing.T, got []activitySubject, want ...string) {
 // meeting that names all three is prepared against the deal.
 func TestTheWorkOutranksTheAccountOutranksTheContact(t *testing.T) {
 	got := foldSubjects([]activitySubject{
-		link(t, string(datasource.EntityPerson), "1"),
+		link(t, string(datasource.EntityContact), "1"),
 		link(t, string(datasource.EntityCompany), "2"),
 		link(t, string(datasource.EntityProject), "3"),
 		link(t, string(datasource.EntityDeal), "4"),
 	})
-	assertOrder(t, got, "deal4", "project3", "company2", "person1")
+	assertOrder(t, got, "deal4", "project3", "company2", "contact1")
 }
 
 // A link is something capture ASSERTED about the record; a participant is
 // something it matched from an address. Within one tier the assertion wins.
-func TestALinkedPersonOutranksAMatchedAttendee(t *testing.T) {
+func TestALinkedContactOutranksAMatchedAttendee(t *testing.T) {
 	got := foldSubjects([]activitySubject{
 		attendee(t, "organizer", "1"),
-		link(t, string(datasource.EntityPerson), "2"),
+		link(t, string(datasource.EntityContact), "2"),
 	})
-	assertOrder(t, got, "person2", "organizer1")
+	assertOrder(t, got, "contact2", "organizer1")
 }
 
-// Among the people the event merely matched, the party who convened it comes
+// Among the contacts the event merely matched, the party who convened it comes
 // first — a prep built around whoever happens to sort first by id is a prep
 // built around nobody in particular.
 func TestTheOrganizerComesBeforeTheAttendees(t *testing.T) {
@@ -144,10 +144,10 @@ func TestARoleNobodyRankedSortsAfterEveryRankedOne(t *testing.T) {
 // One record reached twice is ONE subject, at its best rank. A prep that lists
 // the same account beside itself reads as two accounts.
 func TestOneRecordNamedTwiceIsOneSubjectAtItsBestRank(t *testing.T) {
-	person := string(datasource.EntityPerson)
-	linked := link(t, person, "1")
+	contact := string(datasource.EntityContact)
+	linked := link(t, contact, "1")
 	matched := attendee(t, "attendee", "1")
-	matched.title = "same-person-as-attendee"
+	matched.title = "same-contact-as-attendee"
 
 	for name, candidates := range map[string][]activitySubject{
 		"link first":  {linked, matched},
@@ -204,12 +204,12 @@ func TestALinkedCompanyOutranksAnInferredEmployer(t *testing.T) {
 }
 
 // Among the inferred companies, the party who convened the meeting decides
-// which comes first — the same rule the people themselves are ordered by, since
-// the company is only as relevant as the person it was reached through.
+// which comes first — the same rule the contacts themselves are ordered by, since
+// the company is only as relevant as the contact it was reached through.
 //
 // Which company a meeting is WITH follows from who was in the room, so the role
 // outranks anything the SQL knows about the job itself: is_current_primary is a
-// fact about a person, and it decides only between two jobs of the same party.
+// fact about a contact, and it decides only between two jobs of the same party.
 func TestTheOrganizersEmployerComesBeforeAnAttendees(t *testing.T) {
 	got := foldSubjects([]activitySubject{
 		employer(t, "attendee", "1"),

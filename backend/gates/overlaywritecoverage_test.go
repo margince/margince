@@ -17,7 +17,7 @@ package gates
 // column changes failing to notice one obligation is one missing rule, not
 // three mistakes — which is why this is a rule and not three entries. Measured
 // while writing it, the gap was wider than the report: ten of company's
-// twelve writable fields were unanswered for, and person and lead had never
+// twelve writable fields were unanswered for, and contact and lead had never
 // been asked at all.
 //
 // THE CORPUS IS THE CONTRACT, not the schema. `company` carries 65 columns
@@ -55,7 +55,7 @@ import (
 // declarations in mapwrite.go that must together answer for it.
 //
 // A table rather than three tests, because the three fail the same way — and a
-// class missing from it is the shape that let company drift while person
+// class missing from it is the shape that let company drift while contact
 // and lead were never asked.
 var writeProjections = []struct {
 	canonical, projects, deferred string
@@ -64,7 +64,7 @@ var writeProjections = []struct {
 	request any
 }{
 	{"company", "companyWriteFields", "deferredCompanyWrites", crmcontracts.UpdateCompanyRequest{}},
-	{"person", "personWriteFields", "deferredPersonWrites", crmcontracts.UpdatePersonRequest{}},
+	{"contact", "contactWriteFields", "deferredContactWrites", crmcontracts.UpdateContactRequest{}},
 	{"lead", "leadWriteFields", "deferredLeadWrites", crmcontracts.UpdateLeadRequest{}},
 }
 

@@ -12,7 +12,7 @@ package connector
 // mail record identifies them by Email (authoritative); a channel record
 // identifies them by ChannelIdentity. A record carrying BOTH is named by the
 // channel identity and CORROBORATED by the address: the identity outranks it,
-// being the key a reply is routed on and the one a person is bound by, while
+// being the key a reply is routed on and the one a contact is bound by, while
 // the address is evidence the resolution ladder may match against. Which is
 // which is settled once, by capture's counterpartyShapeOf. DisplayName is the
 // header's human name (may be empty or hostile — untrusted text); Domain is

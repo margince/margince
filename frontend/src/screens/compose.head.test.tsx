@@ -34,7 +34,7 @@ type Sent = { key: string; body: unknown };
 
 const CONTACT = {
   as_of: "2026-08-15T09:00:00Z",
-  person: {
+  contact: {
     id: "p-1",
     full_name: "Dana Brandt",
     emails: [
@@ -52,14 +52,14 @@ const FILES = {
   data: [
     {
       id: "att-1",
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "p-1",
       filename: "Offer_Nordwand_v3.pdf",
       byte_size: 412_000,
     },
     {
       id: "att-2",
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "p-1",
       filename: "Site_survey.jpg",
       byte_size: 2_100_000,
@@ -113,7 +113,7 @@ function stubRoutes(
       sent.push({ key, body });
       const override = overrides[key];
       if (override) return override();
-      if (key === "GET /people/p-1/360") return jsonResponse(CONTACT);
+      if (key === "GET /contacts/p-1/360") return jsonResponse(CONTACT);
       if (key === "GET /attachments") return jsonResponse(FILES);
       if (key === "POST /emails") return jsonResponse(SENT_ACTIVITY, 202);
       if (isPreviewDoor(url.pathname)) {
@@ -139,9 +139,9 @@ function render(ui: ReactNode) {
 function drawer() {
   return (
     <ComposeModal
-      entityType="person"
+      entityType="contact"
       entityId="p-1"
-      personId="p-1"
+      contactId="p-1"
       recordAddress="dana@brandt.example"
       open
       onClose={vi.fn()}
@@ -181,7 +181,7 @@ describe("the recipient lines", () => {
   // A reader remembers a colleague's name and not their address. The offer is
   // read off the 360 the drawer already holds, so it costs no request and
   // cannot disagree with the page behind it.
-  it("offers the record's own people by name", async () => {
+  it("offers the record's own contacts by name", async () => {
     const user = userEvent.setup();
     stubRoutes();
     render(drawer());
@@ -343,10 +343,10 @@ const PROJECT = {
 
 const COMPANY_360 = {
   company: { id: "company-1", name: "Nordwand GmbH" },
-  people: {
+  contacts: {
     data: [
       {
-        person_id: "per-2",
+        contact_id: "per-2",
         full_name: "Milo Fenn",
         primary_email: "milo@nordwand.example",
       },
@@ -374,7 +374,7 @@ describe("the project a message files under", () => {
   // contact and nowhere else.
   it("offers the contact's own projects on a contact", async () => {
     stubRoutes({
-      "GET /people/p-1/360": () =>
+      "GET /contacts/p-1/360": () =>
         jsonResponse({ ...CONTACT, projects: [PROJECT] }),
     });
     render(drawer());
@@ -435,9 +435,9 @@ describe("the project a message files under", () => {
     ]);
   });
 
-  // The account behind the project is where its people come from: a project is
-  // not a person and has no roster of its own.
-  it("offers the account's people on a project", async () => {
+  // The account behind the project is where its contacts come from: a project is
+  // not a contact and has no roster of its own.
+  it("offers the account's contacts on a project", async () => {
     const user = userEvent.setup();
     fileStubs();
     render(

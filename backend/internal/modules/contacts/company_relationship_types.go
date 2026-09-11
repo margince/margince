@@ -1,0 +1,349 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+// What a company IS to us (PO-DDL-4b, ADR-0079/A124) — the multi-valued half
+// of the split that retired company.classification.
+//
+// It is multi-valued because a company is legitimately several things at once:
+// the partner program (A38/ADR-0030) is built on companies that are
+// simultaneously partners and customers, and an agency is often a reseller and
+// a client. The single enum could hold one of those and silently erased the
+// rest.
+//
+// The rows are an owned child of the company, written only through the
+// company's own gated paths — the patch below and the partner upsert —
+// which is the visibility decision the schema fitness gate records.
+
+import (
+	"context"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// relationshipTypePartner is the one type bound to another row's existence.
+const relationshipTypePartner = string(crmcontracts.CompanyRelationshipTypesPartner)
+
+// validRelationshipTypes is the closed vocabulary, checked before the database
+// sees it so a bad value is a 422 naming the field rather than a CHECK
+// violation surfacing as a 500.
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
+var validRelationshipTypes = map[string]bool{
+	string(crmcontracts.CompanyRelationshipTypesCustomer):         true,
+	string(crmcontracts.CompanyRelationshipTypesPartner):          true,
+	string(crmcontracts.CompanyRelationshipTypesSupplier):         true,
+	string(crmcontracts.CompanyRelationshipTypesInvestor):         true,
+	string(crmcontracts.CompanyRelationshipTypesPortfolioCompany): true,
+	string(crmcontracts.CompanyRelationshipTypesCompetitor):       true,
+	string(crmcontracts.CompanyRelationshipTypesOther):            true,
+}
+
+// dedupeRelationshipTypes collapses repeats and rejects anything outside the
+// vocabulary, so the reconcile and the audit-after both see one row per type.
+// The order is normalized too: a caller sending the same set in a different
+// order must produce the same audit image, or every re-save reads as a change.
+func dedupeRelationshipTypes(desired []string) ([]string, error) {
+	seen := make(map[string]bool, len(desired))
+	out := make([]string, 0, len(desired))
+	for _, t := range desired {
+		if !validRelationshipTypes[t] {
+			return nil, httperr.Validation("relationship_types", "invalid_enum",
+				fmt.Sprintf("%q is not a relationship type; %s", t, vocabularyOf(validRelationshipTypes)))
+		}
+		if seen[t] {
+			continue
+		}
+		seen[t] = true
+		out = append(out, t)
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// attachCompanyRelationshipTypes fills the wire field for a page of companies
+// in one query, the same batch shape attachCompanyDomains uses.
+//
+// A company with no types gets an EMPTY slice rather than a nil one: the
+// reader asked what this company is to us and the answer is "nothing recorded",
+// which is a fact, not a missing field.
+func attachCompanyRelationshipTypes(ctx context.Context, tx pgx.Tx, companies []crmcontracts.Company) error {
+	if len(companies) == 0 {
+		return nil
+	}
+	idx := make(map[openapi_types.UUID]*crmcontracts.Company, len(companies))
+	companyIDs := make([]ids.UUID, len(companies))
+	for i := range companies {
+		idx[companies[i].Id] = &companies[i]
+		companyIDs[i] = ids.UUID(companies[i].Id)
+		empty := []crmcontracts.CompanyRelationshipTypes{}
+		companies[i].RelationshipTypes = &empty
+	}
+
+	rows, err := tx.Query(ctx,
+		`SELECT company_id, relationship_type
+		 FROM company_relationship_type
+		 WHERE company_id = ANY($1) AND archived_at IS NULL
+		 ORDER BY relationship_type`, companyIDs)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var companyID ids.UUID
+		var relType string
+		if err := rows.Scan(&companyID, &relType); err != nil {
+			return err
+		}
+		o, ok := idx[openapi_types.UUID(companyID)]
+		if !ok {
+			continue
+		}
+		*o.RelationshipTypes = append(*o.RelationshipTypes, crmcontracts.CompanyRelationshipTypes(relType))
+	}
+	return rows.Err()
+}
+
+// readLiveRelationshipTypes is the current set, for the reconcile's before
+// image and for the partner-invariant guard.
+func readLiveRelationshipTypes(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT relationship_type FROM company_relationship_type
+		 WHERE company_id = $1 AND archived_at IS NULL
+		 ORDER BY relationship_type`, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	// Non-nil, so an account with no types has the same canonical shape in the
+	// audit before-image as one whose types were just cleared. Left nil, a
+	// no-op replace on a typeless account records a null → [] transition that
+	// never happened.
+	live := []string{}
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, err
+		}
+		live = append(live, t)
+	}
+	return live, rows.Err()
+}
+
+// hasPartnerRow reports whether the company carries the partner program
+// extension — the other half of the invariant this file guards.
+func hasPartnerRow(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (bool, error) {
+	var exists bool
+	// LIVE rows only, matching what the partner API itself calls a partner
+	// (partner.go:298). Counting archived ones would force a company to
+	// keep a `partner` type its own partner endpoint says it does not have —
+	// the invariant would be true of the table and false of the product.
+	err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM partner
+		                 WHERE company_id = $1 AND archived_at IS NULL)`, companyID).Scan(&exists)
+	return exists, err
+}
+
+// reconcileCompanyRelationshipTypes applies the replace-set: insert what is new,
+// archive what is gone, leave the rest alone so an untouched type keeps its
+// original provenance and created_at. Returns the before image for the audit.
+//
+// It refuses to drop `partner` while the partner extension row lives. ADR-0032
+// bound partnerhood to a classification value and nothing enforced it; ADR-0079
+// moves the invariant here and this is where it is kept. Refusing is the honest
+// answer: the caller is asking for a state the partner APIs would contradict,
+// and silently keeping the row would make the request a lie in the other
+// direction.
+func reconcileCompanyRelationshipTypes(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string, desired []string,
+) ([]string, error) {
+	live, err := readLiveRelationshipTypes(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
+	desiredSet := make(map[string]bool, len(desired))
+	for _, t := range desired {
+		desiredSet[t] = true
+	}
+	// The invariant binds BOTH ways, so it is checked both ways. Guarding only
+	// the removal left the other half open: a patch could name this company a
+	// partner with no programme behind it, and every partner API — which reads
+	// the extension table — would go on saying it is not one.
+	isPartner, err := hasPartnerRow(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case isPartner && !desiredSet[relationshipTypePartner]:
+		return nil, httperr.Validation("relationship_types", "partner_row_exists",
+			"this company has a partner programme, so it stays a partner — remove the programme first")
+	case !isPartner && desiredSet[relationshipTypePartner]:
+		return nil, httperr.Validation("relationship_types", "partner_row_missing",
+			"a partner is a company with a partner programme — set one up first")
+	}
+
+	liveSet := make(map[string]bool, len(live))
+	for _, t := range live {
+		liveSet[t] = true
+	}
+	for _, t := range desired {
+		if liveSet[t] {
+			continue
+		}
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO company_relationship_type (company_id, relationship_type, source, captured_by)
+			 VALUES ($1, $2, $3, $4)`,
+			companyID, t, source, by); err != nil {
+			return nil, fmt.Errorf("insert relationship type %q: %w", t, err)
+		}
+	}
+	for _, t := range live {
+		if desiredSet[t] {
+			continue
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE company_relationship_type SET archived_at = now()
+			 WHERE company_id = $1 AND relationship_type = $2 AND archived_at IS NULL`,
+			companyID, t); err != nil {
+			return nil, fmt.Errorf("archive relationship type %q: %w", t, err)
+		}
+	}
+	return live, nil
+}
+
+// ensureCompanyRelationshipType asserts one type without disturbing the others.
+// The partner upsert calls it to keep its half of the invariant, inside the
+// same transaction that writes the partner row — the classification flip it
+// replaces did exactly this, for exactly this reason.
+func ensureCompanyRelationshipType(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, relType, source, by string,
+) error {
+	_, err := tx.Exec(ctx,
+		`INSERT INTO company_relationship_type
+		   (company_id, relationship_type, source, captured_by)
+		 SELECT $1, $2, $3, $4
+		 WHERE NOT EXISTS (
+		   SELECT 1 FROM company_relationship_type
+		   WHERE company_id = $1 AND relationship_type = $2 AND archived_at IS NULL)`,
+		companyID, relType, source, by)
+	if err != nil {
+		return fmt.Errorf("ensure relationship type %q: %w", relType, err)
+	}
+	return nil
+}
+
+// moveCompanyRelationshipTypes re-homes the loser's types onto the survivor in a
+// merge, so the survivor ends up with the UNION of both. Types the survivor
+// already carries are archived on the loser rather than moved, because the
+// unique index admits one live row per (company, type) and the survivor's
+// own row is the one with the older provenance worth keeping.
+func moveCompanyRelationshipTypes(ctx context.Context, tx pgx.Tx, from, to ids.CompanyID) error {
+	if _, err := tx.Exec(ctx,
+		`UPDATE company_relationship_type l SET archived_at = now()
+		 WHERE l.company_id = $1 AND l.archived_at IS NULL
+		   AND EXISTS (SELECT 1 FROM company_relationship_type s
+		               WHERE s.company_id = $2 AND s.relationship_type = l.relationship_type
+		                 AND s.archived_at IS NULL)`, from, to); err != nil {
+		return fmt.Errorf("archive duplicate relationship types on merge: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE company_relationship_type SET company_id = $2
+		 WHERE company_id = $1 AND archived_at IS NULL`, from, to); err != nil {
+		return fmt.Errorf("re-home relationship types on merge: %w", err)
+	}
+	return nil
+}
+
+// lifecycleValue reads the wire's optional lifecycle as the string the patch
+// compares against. The column is NOT NULL, so a read always carries one; the
+// pointer is the contract's shape, not a real absence, and an empty before
+// image would make every first edit look like a change from nothing.
+func lifecycleValue(l *crmcontracts.CompanyLifecycle) string {
+	if l == nil {
+		return string(crmcontracts.CompanyLifecycleUnknown)
+	}
+	return string(*l)
+}
+
+// validLifecycles is the closed vocabulary, checked before the database sees
+// it so a bad value is a 422 naming the field rather than a CHECK violation.
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
+var validLifecycles = map[string]bool{
+	string(crmcontracts.CompanyLifecycleUnknown):        true,
+	string(crmcontracts.CompanyLifecycleTarget):         true,
+	string(crmcontracts.CompanyLifecycleProspect):       true,
+	string(crmcontracts.CompanyLifecycleOpportunity):    true,
+	string(crmcontracts.CompanyLifecycleCustomer):       true,
+	string(crmcontracts.CompanyLifecycleFormerCustomer): true,
+	string(crmcontracts.CompanyLifecycleDisqualified):   true,
+}
+
+// checkLifecycle refuses a value outside the vocabulary.
+func checkLifecycle(value string) error {
+	if validLifecycles[value] {
+		return nil
+	}
+	return httperr.Validation("lifecycle", "invalid_enum",
+		fmt.Sprintf("%q is not a lifecycle; %s", value, vocabularyOf(validLifecycles)))
+}
+
+// checkSizeBand refuses a value outside the vocabulary, before the database
+// sees it.
+//
+// It exists because the sibling checks did and this one did not: `size_band` is
+// a closed vocabulary enforced only by a CHECK, so `"banana"` reached Postgres
+// and came back as an untranslated 500 telling the caller to retry a call that
+// can never succeed. The transport now nets that (httperr.constraintFault), but
+// a net answers "some value is wrong" — this answers WHICH, and with what.
+func checkSizeBand(value string) error {
+	if validSizeBands[value] {
+		return nil
+	}
+	return httperr.Validation("size_band", "invalid_enum",
+		fmt.Sprintf("%q is not a size band; %s", value, vocabularyOf(validSizeBands)))
+}
+
+// validSizeBands is the closed vocabulary, read off the generated contract so a
+// renamed band cannot drift from crm.yaml the way a hand-copied list would.
+//
+// Spelling the contract's constants carries the VALUES and not the SET: a band
+// crm.yaml gains reaches the generated Valid() and would not reach here, and
+// checkSizeBand would then refuse a band the contract publishes.
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
+var validSizeBands = map[string]bool{
+	string(crmcontracts.CompanySizeBandN110):      true,
+	string(crmcontracts.CompanySizeBandN1150):     true,
+	string(crmcontracts.CompanySizeBandN51200):    true,
+	string(crmcontracts.CompanySizeBandN201500):   true,
+	string(crmcontracts.CompanySizeBandN5011000):  true,
+	string(crmcontracts.CompanySizeBandN10015000): true,
+	string(crmcontracts.CompanySizeBandN5000):     true,
+}
+
+// vocabularyOf renders a closed vocabulary for a refusal to carry.
+//
+// A refusal that names the field and withholds the values is the one a caller
+// can least act on: they already know which field they got wrong — that is why
+// they are reading — and cannot tell a casing slip from a wrong word entirely. A
+// UAT agent recovered from `"Customer"` only because an earlier read happened to
+// show the lowercase form in its payload, which is not a recovery path that
+// generalises.
+//
+// Sorted, because map iteration is not, and a refusal that reorders itself
+// between two identical requests reads as a changed rule.
+func vocabularyOf(valid map[string]bool) string {
+	values := make([]string, 0, len(valid))
+	for value := range valid {
+		values = append(values, value)
+	}
+	sort.Strings(values)
+	return "expected one of: " + strings.Join(values, ", ")
+}

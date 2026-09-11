@@ -53,9 +53,9 @@ func TestCounterpartyAcceptCreatesTheRecordsAndClosesTheDisposition(t *testing.T
 	}
 
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'dana@acceptco.example'`); n != 1 {
-		t.Fatalf("%d persons after accept, want 1 — accepting must create what capture withheld", n)
+		t.Fatalf("%d contacts after accept, want 1 — accepting must create what capture withheld", n)
 	}
 	if got := dispositionStatus(t, e, dispositionID); got != capture.PendingStatusReal {
 		t.Fatalf("disposition status after accept = %q, want real", got)
@@ -68,7 +68,7 @@ func TestCounterpartyAcceptCreatesTheRecordsAndClosesTheDisposition(t *testing.T
 
 // The proposal is FILED under the message that carried the unrecognized sender,
 // because that message is the evidence a human judges it on — but the effect
-// creates a person and a company and closes the disposition, and never
+// creates a contact and a company and closes the disposition, and never
 // writes the activity. So the ordinary inbox work done to the message while the
 // question waits (a relink, a participant correction, a subject fix) must not be
 // able to cancel the answer.
@@ -101,9 +101,9 @@ func TestEditingTheCapturedMessageDoesNotCancelItsWaitingReview(t *testing.T) {
 			"cancel the question it raised", err)
 	}
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'dana@editco.example'`); n != 1 {
-		t.Errorf("%d persons after accept, want 1 — the approval was released but its effect did "+
+		t.Errorf("%d contacts after accept, want 1 — the approval was released but its effect did "+
 			"not run", n)
 	}
 }
@@ -194,7 +194,7 @@ func TestAnExhaustedDispositionIsRetiredRatherThanStranded(t *testing.T) {
 
 // A human's decline closes the question. The approvals engine has no reject
 // hook, so the ledger reconciles against the approval row — without which the
-// row stays `unsure`, gets re-staged on the next tick, and asks the same person
+// row stays `unsure`, gets re-staged on the next tick, and asks the same contact
 // the same question every hour forever while holding a cap slot.
 func TestADeclinedReviewClosesTheDispositionInsteadOfReasking(t *testing.T) {
 	e := integration.Setup(t)
@@ -298,9 +298,9 @@ func TestAnUnansweredReviewAgesOutAndTakesItsOfferWithIt(t *testing.T) {
 	// Nothing was created and no mail was touched: ageing out is the same
 	// non-destructive close a human's decline is.
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'ignored@maybe.example'`); n != 0 {
-		t.Fatal("ageing out a question created the person it stopped asking about")
+		t.Fatal("ageing out a question created the contact it stopped asking about")
 	}
 	if n := countIn(t, e, `
 		SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NULL`, activityID); n != 1 {

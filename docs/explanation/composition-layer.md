@@ -24,7 +24,7 @@ generated `stubs`. Go promotes the shallower method, so a module handler shadows
 ```go
 type Server struct {
     authHandlers        // = identity.Handlers
-    peopleHandlers      // = people.Handlers
+    contactsHandlers      // = contacts.Handlers
     dealsHandlers       // = deals.Handlers
     …                   // one embedded handler set per module
     // + injected infra: busReady, blob, vault, log
@@ -90,19 +90,19 @@ backed by the provider module's store — so neither module names the other. The
 | Consumer | ← needs | Wired as |
 |---|---|---|
 | the installation bootstrap | deals + consent + automation + activities defaults | `compose.EnsureInstallation` (one tx, at boot — `installation.go`) |
-| migration (the importer engine) | overlay's frozen mirror estate as its `Source`; people + deals + activities stores as its `Writers` | `mirrorFlipSource` (`flipsource.go`) + `flipWriters` (`flipwriters.go`, `flipdeals.go`, `flipowners.go`) |
-| activities | consent's outbound suppression gate; people (public booking); consent (unsubscribe link) | `.WithConsent(...)`, `.WithPublicBooking(...)`, `.WithUnsubscribe(...)` |
+| migration (the importer engine) | overlay's frozen mirror estate as its `Source`; contacts + deals + activities stores as its `Writers` | `mirrorFlipSource` (`flipsource.go`) + `flipWriters` (`flipwriters.go`, `flipdeals.go`, `flipowners.go`) |
+| activities | consent's outbound suppression gate; contacts (public booking); consent (unsubscribe link) | `.WithConsent(...)`, `.WithPublicBooking(...)`, `.WithUnsubscribe(...)` |
 | consent (DSR erase) | privacy's `Eraser` (blob-aware under `WithBlobstore`) | `consent.NewHandlers(pool).WithEraser(privacy.NewEraser(pool))` |
 | agents (MCP surface) | approvals' staging + redemption (the 🟡 confirm-first effects) | `approvalsHandlersWithEffects(pool)` (`.WithEffects(...)`) |
 | automation (workflow engine) | collections' add-to-list write; activities' draft-email compute + consent's suppression gate; approvals' staging (its own adapter — `automation.StageRequest` is not the agents surface's request type); activities' no-activity/check-in candidate scan; identity's live RBAC (the match-time owner gate, via `authz.Resolver`) | `compose.NewWorkflowEngine(pool)` (`compose/workflows.go`) |
-| signals | people's relationship-strength | `signalStrength{people: people.NewStore(pool)}` adapter |
+| signals | contacts's relationship-strength | `signalStrength{contacts: contacts.NewStore(pool)}` adapter |
 | imap connect | capture's connector registry (vault under `WithKeyvault`) | `imapConnectHandlers{registry: NewCaptureRegistry(pool, vault)}` |
 | filtered export | collections' saved-view/list source | `filteredExportHandlers{collections: collections.NewStore(pool)}` |
 | every model consumer | ai's tiered router (routing, budget, metering, secret-stripping) | the `Brain` seam (`brain.go`) — Surface-B, retrieval embed, cold-start all ride one router |
-| AI task prompts | people's company context (scope-filtered, fingerprinted) | `companycontextprompt.go` (+ the `company_context.rollout` kill switch, `WithCompanyContextRollout`) |
+| AI task prompts | contacts's company context (scope-filtered, fingerprinted) | `companycontextprompt.go` (+ the `company_context.rollout` kill switch, `WithCompanyContextRollout`) |
 | reply drafting | activities' evidence + ai's model path + the voice profile | `replydraft.go` (`WithReplyDraft`) |
-| deep read | people's site reads + ai's budget deferral (River re-schedule) | `deepreadtransport.go`, `deepreadbudget.go` (`WithDeepRead`) |
-| onboarding wizard | identity's wizard state + people's company/site-read surface | `onboardingstate.go`, `onboardingsitereadtransport.go` |
+| deep read | contacts's site reads + ai's budget deferral (River re-schedule) | `deepreadtransport.go`, `deepreadbudget.go` (`WithDeepRead`) |
+| onboarding wizard | identity's wizard state + contacts's company/site-read surface | `onboardingstate.go`, `onboardingsitereadtransport.go` |
 
 The shape to copy: *a small consumer-side interface + a compose adapter struct that satisfies it from
 the provider's store.*
@@ -130,7 +130,7 @@ Each binary composes only what its role needs, all through this one layer:
 | Entry point | Builds | Used by |
 |---|---|---|
 | `New(pool, log, opts…)` | the api HTTP handler | `cmd/api` |
-| `NewProvider(pool)` | the `datasource.SystemOfRecordProvider` (people/deals/activities/reports) | the agent gate + MCP registry |
+| `NewProvider(pool)` | the `datasource.SystemOfRecordProvider` (contacts/deals/activities/reports) | the agent gate + MCP registry |
 | `NewRegistry(pool)` | the MCP tool registry | the `/mcp` transport + the REST agent gate |
 | `NewJobRunner(pool, log, …)` | the River periodic jobs (close-date sweep, reconcile) | `cmd/worker` |
 | `NewRunnerService(pool, brain, retriever, log)` | the Surface-B reasoning runner | `cmd/worker` |

@@ -12,7 +12,7 @@ import { ConfirmDetailsScreen } from "./confirm";
 // The public confirm page answers TWO bodies from one endpoint, and until the
 // contract carried a discriminator it published only one of them.
 //
-// A record link returns the person's own record card. A consent link returns a
+// A record link returns the contact's own record card. A consent link returns a
 // single subscription question and deliberately no record fields at all — the
 // mail said "confirm this subscription", and serving the card would disclose
 // the name, employer, address, phone and provenance trail to whoever holds the

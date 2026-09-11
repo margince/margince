@@ -82,7 +82,7 @@ fixture:
         Quick one: can we move this to Thursday? I want the numbers in front of us
         before we decide.
 
-        Here is where I am. The forecast you sent has us adding two people in Q3. I
+        Here is where I am. The forecast you sent has us adding two contacts in Q3. I
         do not think we need two. I think we need one and a better process, and I
         would like to test that before we hire.
 
@@ -94,12 +94,12 @@ fixture:
         hours. I would rather read a boring table than a nice chart.
 
         On the budget question you asked. Yes, the money is there. That is not the
-        constraint. The constraint is that every person we add is a person somebody
-        has to train, and right now the only person who can train them is you.
+        constraint. The constraint is that every contact we add is a contact somebody
+        has to train, and right now the only contact who can train them is you.
 
         I am not saying no. I am saying Thursday, with the data.
 
-        One last thing. Whatever we decide, we tell the team the reasoning. People
+        One last thing. Whatever we decide, we tell the team the reasoning. Contacts
         take a headcount decision much better when they know what it was weighed
         against.
     - id: S4

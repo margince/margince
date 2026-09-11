@@ -5,7 +5,7 @@ package privacy
 
 // The time-based sweep's reach into the relationship graph (ADR-0078). It runs
 // inside the retention engine's per-record transaction and is reached only from
-// the person/anonymize action — a separate file, not a separate obligation.
+// the contact/anonymize action — a separate file, not a separate obligation.
 //
 // retentionSweepFiles in the PII-coverage gate lists this file alongside
 // retention.go, so a table swept only here still counts as swept — and it stays
@@ -37,7 +37,7 @@ var sweptParticipantsDelete = `
 
 var sweptParticipantsBlank = `
 		UPDATE activity_participant ap
-		   SET person_id = NULL, address = NULL, display_name = NULL, channel_user_id = NULL
+		   SET contact_id = NULL, address = NULL, display_name = NULL, channel_user_id = NULL
 		 WHERE ap.user_id IS NOT NULL` + subjectNamedOnAParticipantRow() +
 	notTransitivelyHeld("ap.activity_id")
 
@@ -45,7 +45,7 @@ var sweptParticipantsBlank = `
 // by, and it is called before the anonymization destroys either.
 //
 // The graph structures exist precisely to hold a party who never became a
-// record, so a sweep matching person_id alone leaves the subject named,
+// record, so a sweep matching contact_id alone leaves the subject named,
 // readable and re-matchable. There are two such identifiers and they arrive
 // from different tables: the raw ADDRESS a message carried — what the address
 // arm of a participant row IS — and the ACCOUNT a chat roster named them with,
@@ -53,27 +53,27 @@ var sweptParticipantsBlank = `
 // are. Both source tables are deleted further down the same act.
 //
 // LIVE bindings only, which is where this path parts from the eraser's
-// personChannelIdentities — and the difference is a precondition rather than a
+// contactChannelIdentities — and the difference is a precondition rather than a
 // preference. The eraser reads archived bindings too, because it is DELETING
 // them and because refuseRivalIdentifierHolders has already refused the whole
-// request if another live person holds one of the same identifiers. This sweep
+// request if another live contact holds one of the same identifiers. This sweep
 // has no such refusal: nobody asked for it, so there is nobody to refuse to.
 //
-// Archiving a Person archives their bindings, so an account that was theirs can
+// Archiving a Contact archives their bindings, so an account that was theirs can
 // be a LIVE binding of somebody else by the time a clock reaches the archived
-// record — the same customer writing in again and resolving to a second person.
+// record — the same customer writing in again and resolving to a second contact.
 // Matching it here would delete that live third party's rows on a request that
-// never named them. uq_person_channel_identity is unique among live rows, so a
-// live binding names exactly one person and the case cannot arise.
+// never named them. uq_contact_channel_identity is unique among live rows, so a
+// live binding names exactly one contact and the case cannot arise.
 func subjectGraphIdentifiers(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]string, []channelIdentity, error) {
 	emails, err := collectStrings(ctx, tx,
-		`SELECT lower(email) FROM person_email WHERE person_id = $1`, id)
+		`SELECT lower(email) FROM contact_email WHERE contact_id = $1`, id)
 	if err != nil {
 		return nil, nil, err
 	}
 	rows, err := tx.Query(ctx,
-		`SELECT provider, channel_user_id FROM person_channel_identity
-		  WHERE person_id = $1 AND archived_at IS NULL`, id)
+		`SELECT provider, channel_user_id FROM contact_channel_identity
+		  WHERE contact_id = $1 AND archived_at IS NULL`, id)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -84,17 +84,17 @@ func subjectGraphIdentifiers(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]str
 	return emails, accounts, nil
 }
 
-// scrubPersonGraphTraces removes the anonymized subject from the relationship
-// graph. Those structures hold the subject as surely as the person columns do,
+// scrubContactGraphTraces removes the anonymized subject from the relationship
+// graph. Those structures hold the subject as surely as the contact columns do,
 // and the time-based sweep reaches them for the same reason the request-driven
-// eraser does: an anonymized person who is still named on a participant row,
+// eraser does: an anonymized contact who is still named on a participant row,
 // still counted in an interaction edge, or still listed in an imported address
 // book is not anonymized. This sweep is the path nobody asks for, which is
 // exactly why it must not be the thinner one.
 //
 // subjectEmails, subjectAccounts and subjectName are the caller's, read before
 // the anonymization overwrote them.
-func scrubPersonGraphTraces(
+func scrubContactGraphTraces(
 	ctx context.Context, tx pgx.Tx, id ids.UUID,
 	subjectEmails []string, subjectAccounts []channelIdentity,
 	subjectName string, linkedInHandles []string,
@@ -103,7 +103,7 @@ func scrubPersonGraphTraces(
 	// lesson the LinkedIn arm below already records, applied before this copy
 	// could drift too. It is what carries the third identity here: a chat
 	// roster names a party by account alone, and a sweep matching only
-	// person_id and address would leave that account standing.
+	// contact_id and address would leave that account standing.
 	//
 	// Delete then null, in that order and for the reason the eraser documents:
 	// a participant row must name somebody, so a row whose only identity is the
@@ -116,14 +116,14 @@ func scrubPersonGraphTraces(
 	}
 	if err == nil {
 		_, err = tx.Exec(ctx,
-			`DELETE FROM graph_interaction_edge WHERE person_id = $1`, id)
+			`DELETE FROM graph_interaction_edge WHERE contact_id = $1`, id)
 	}
 	if err == nil {
 		// Both endpoint columns: the swept party can stand on either end of a
 		// contact↔contact edge, and the row re-identifies them from the graph
 		// alone whichever side they are on.
 		_, err = tx.Exec(ctx,
-			`DELETE FROM graph_contact_edge WHERE person_a = $1 OR person_b = $1`, id)
+			`DELETE FROM graph_contact_edge WHERE contact_a = $1 OR contact_b = $1`, id)
 	}
 	if err == nil {
 		// The SAME reach the request-driven eraser uses, by calling it rather
@@ -136,7 +136,7 @@ func scrubPersonGraphTraces(
 		//
 		// This is the path nobody asks for, which is exactly why it must not be
 		// the thinner one.
-		err = deleteSubjectLinkedInGhosts(ctx, tx, ids.From[ids.PersonKind](id), subjectEmails, subjectName, linkedInHandles)
+		err = deleteSubjectLinkedInGhosts(ctx, tx, ids.From[ids.ContactKind](id), subjectEmails, subjectName, linkedInHandles)
 	}
 	return err
 }

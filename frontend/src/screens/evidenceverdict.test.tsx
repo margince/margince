@@ -110,7 +110,7 @@ describe("a human's verdict on a machine's claim", () => {
       "/v1/companies/o-1/profile-fields/industry/confirm",
     );
     expect(calls[0].body).toBeUndefined();
-    // A confirmation is a person agreeing with a value they READ. Unpinned, it
+    // A confirmation is a contact agreeing with a value they READ. Unpinned, it
     // stamps their name on whatever the row says by the time it lands — which
     // may be a correction they never saw.
     expect(calls[0].ifMatch).toBe("3");
@@ -182,7 +182,7 @@ describe("a human's verdict on a machine's claim", () => {
         canEdit
       />,
     );
-    // A value a person already stood behind is not a claim awaiting a verdict.
+    // A value a contact already stood behind is not a claim awaiting a verdict.
     expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
     expect(screen.getByText(/Confirmed by a person/)).toBeTruthy();
   });

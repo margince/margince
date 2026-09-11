@@ -32,7 +32,7 @@ import (
 var activityLifecyclePerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":   {Create: true, Read: true, Update: true},
+		"contact":  {Create: true, Read: true, Update: true},
 		"activity": {Create: true, Read: true, Update: true, Delete: true},
 	},
 	RowScope: principal.RowScopeTeam,
@@ -45,15 +45,15 @@ func TestActivityLifecycleMutatorsHonorRowScope(t *testing.T) {
 	// Team2's activity: linked only to a capture-private contact Rep3 owns,
 	// so the link-walk hides it from Rep1 (a plain contact would be readable
 	// by every seat and would carry the activity with it).
-	theirPerson := e.SeedPerson(t, "Their Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirPerson, e.Rep3)
+	theirContact := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirContact, e.Rep3)
 	theirActivity := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'Q3 renewal terms', 'confidential body', now(), 'manual', 'human:x')`)
-	LinkActivity(t, owner, theirActivity, "person", theirPerson)
+	LinkActivity(t, owner, theirActivity, "contact", theirContact)
 	theirID := ids.From[ids.ActivityKind](theirActivity)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	myPerson := e.SeedPerson(t, "My Contact", &e.Rep1)
+	myContact := e.SeedContact(t, "My Contact", &e.Rep1)
 
 	// The control: the plain read already refuses.
 	if _, err := e.Activities.GetActivity(rep, theirID, storekit.LiveOnly); !errors.Is(err, apperrors.ErrNotFound) {
@@ -68,7 +68,7 @@ func TestActivityLifecycleMutatorsHonorRowScope(t *testing.T) {
 	// email onto a record the caller owns, and with ReplaceExistingOfType
 	// delete the victim's own link on the way.
 	if _, err := e.Activities.RelinkActivity(rep, theirID, activities.RelinkActivityInput{
-		EntityType: "person", EntityID: myPerson, ReplaceExistingOfType: true,
+		EntityType: "contact", EntityID: myContact, ReplaceExistingOfType: true,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("RelinkActivity out of row scope → %v, want ErrNotFound", err)
 	}
@@ -77,12 +77,12 @@ func TestActivityLifecycleMutatorsHonorRowScope(t *testing.T) {
 	}
 
 	// The victim's link survived every refusal.
-	if links := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND person_id = $2`,
-		theirActivity, theirPerson); links != 1 {
+	if links := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND contact_id = $2`,
+		theirActivity, theirContact); links != 1 {
 		t.Errorf("victim link rows = %d, want 1 — a refused relink must not delete it", links)
 	}
 
-	assertOwnTeamActivityStillMutable(rep, t, e, myPerson)
+	assertOwnTeamActivityStillMutable(rep, t, e, myContact)
 }
 
 // A readable activity is not thereby an editable one. Customer identity is
@@ -95,14 +95,14 @@ func TestAReadableActivityOfAnotherTeamIsNotEditable(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 
-	theirPerson := e.SeedPerson(t, "Their Contact", &e.Rep3)
+	theirContact := e.SeedContact(t, "Their Contact", &e.Rep3)
 	theirActivity := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'Q3 renewal terms', 'body', now(), 'manual', 'human:x')`)
-	LinkActivity(t, owner, theirActivity, "person", theirPerson)
+	LinkActivity(t, owner, theirActivity, "contact", theirContact)
 	theirID := ids.From[ids.ActivityKind](theirActivity)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	myPerson := e.SeedPerson(t, "My Contact", &e.Rep1)
+	myContact := e.SeedContact(t, "My Contact", &e.Rep1)
 
 	if _, err := e.Activities.GetActivity(rep, theirID, storekit.LiveOnly); err != nil {
 		t.Fatalf("GetActivity of another team's mail on a plain contact → %v, want it readable", err)
@@ -112,7 +112,7 @@ func TestAReadableActivityOfAnotherTeamIsNotEditable(t *testing.T) {
 		t.Errorf("UpdateActivity on a readable but foreign activity → %v, want ErrPermissionDenied", err)
 	}
 	if _, err := e.Activities.RelinkActivity(rep, theirID, activities.RelinkActivityInput{
-		EntityType: "person", EntityID: myPerson, ReplaceExistingOfType: true,
+		EntityType: "contact", EntityID: myContact, ReplaceExistingOfType: true,
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("RelinkActivity on a readable but foreign activity → %v, want ErrPermissionDenied", err)
 	}
@@ -129,12 +129,12 @@ func TestAReadableActivityOfAnotherTeamIsNotEditable(t *testing.T) {
 
 	// A write grant on the linked contact is the licence the scope withheld.
 	e.WsExec(t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
-		VALUES ('person', $1, 'user', $2, 'write', $3)`, theirPerson, e.Rep1, e.Rep3)
+		VALUES ('contact', $1, 'user', $2, 'write', $3)`, theirContact, e.Rep1, e.Rep3)
 	if _, err := e.Activities.UpdateActivity(rep, theirID, activities.UpdateActivityInput{Subject: &subject}); err != nil {
 		t.Errorf("UpdateActivity with a write grant on the linked contact → %v, want allowed", err)
 	}
 
-	assertOwnTeamActivityStillMutable(rep, t, e, myPerson)
+	assertOwnTeamActivityStillMutable(rep, t, e, myContact)
 }
 
 // TestRelinkActivityBumpsVersion pins the invariant: a relink that actually
@@ -147,12 +147,12 @@ func TestAReadableActivityOfAnotherTeamIsNotEditable(t *testing.T) {
 func TestRelinkActivityBumpsVersion(t *testing.T) {
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	first := e.SeedPerson(t, "First Contact", &e.Rep1)
-	second := e.SeedPerson(t, "Second Contact", &e.Rep1)
+	first := e.SeedContact(t, "First Contact", &e.Rep1)
+	second := e.SeedContact(t, "Second Contact", &e.Rep1)
 
 	logged, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
 		Kind: "note", Subject: strPtr("Conversation"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: first}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: first}},
 	})
 	if err != nil {
 		t.Fatalf("seeding the activity: %v", err)
@@ -164,7 +164,7 @@ func TestRelinkActivityBumpsVersion(t *testing.T) {
 	id := ids.From[ids.ActivityKind](ids.UUID(logged.Id))
 
 	relinked, err := e.Activities.RelinkActivity(rep, id, activities.RelinkActivityInput{
-		EntityType: "person", EntityID: second, ReplaceExistingOfType: true,
+		EntityType: "contact", EntityID: second, ReplaceExistingOfType: true,
 	})
 	if err != nil {
 		t.Fatalf("relink: %v", err)
@@ -178,7 +178,7 @@ func TestRelinkActivityBumpsVersion(t *testing.T) {
 	// A no-op relink (same entity, no replace) touches nothing and must not
 	// burn a version for a caller who changed nothing.
 	noop, err := e.Activities.RelinkActivity(rep, id, activities.RelinkActivityInput{
-		EntityType: "person", EntityID: second,
+		EntityType: "contact", EntityID: second,
 	})
 	if err != nil {
 		t.Fatalf("no-op relink: %v", err)
@@ -191,11 +191,11 @@ func TestRelinkActivityBumpsVersion(t *testing.T) {
 // assertOwnTeamActivityStillMutable is the positive control: the same
 // three mutators keep working on an activity the caller's row scope does
 // reach.
-func assertOwnTeamActivityStillMutable(rep context.Context, t *testing.T, e *Env, myPerson ids.UUID) {
+func assertOwnTeamActivityStillMutable(rep context.Context, t *testing.T, e *Env, myContact ids.UUID) {
 	t.Helper()
 	mine, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
 		Kind: "note", Subject: strPtr("Mine"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: myPerson}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: myContact}},
 	})
 	if err != nil {
 		t.Fatalf("seeding an in-scope activity: %v", err)
@@ -206,7 +206,7 @@ func assertOwnTeamActivityStillMutable(rep context.Context, t *testing.T, e *Env
 		t.Errorf("UpdateActivity in row scope → %v, want ok", err)
 	}
 	if _, err := e.Activities.RelinkActivity(rep, mineID, activities.RelinkActivityInput{
-		EntityType: "person", EntityID: myPerson,
+		EntityType: "contact", EntityID: myContact,
 	}); err != nil {
 		t.Errorf("RelinkActivity in row scope → %v, want ok", err)
 	}

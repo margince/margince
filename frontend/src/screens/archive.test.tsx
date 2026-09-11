@@ -43,8 +43,8 @@ describe("ArchiveAction", () => {
         archive={() =>
           throwProblem({ detail: "the record is under retention" })
         }
-        invalidate="people"
-        recordKey="person"
+        invalidate="contacts"
+        recordKey="contact"
         archivedMessage="Contact archived."
         onArchived={() => {
           throw new Error("a refused archive must not report success");
@@ -75,8 +75,8 @@ describe("ArchiveAction", () => {
         label="Archive contact"
         confirmText="There is no undo control."
         archive={() => Promise.resolve({ id: "p-1" })}
-        invalidate="people"
-        recordKey="person"
+        invalidate="contacts"
+        recordKey="contact"
         archivedMessage="“Jana Brandt” archived"
         onArchived={() => {}}
       />,

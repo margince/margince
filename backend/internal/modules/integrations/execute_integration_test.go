@@ -52,10 +52,10 @@ func sealCredential(t *testing.T, e *runsEnv) {
 	}
 }
 
-func queueFor(t *testing.T, e *runsEnv, personID string) provider.Run {
+func queueFor(t *testing.T, e *runsEnv, contactID string) provider.Run {
 	t.Helper()
 	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: personID, Provider: e.provider, Trigger: provider.TriggerManual,
+		ContactID: contactID, Provider: e.provider, Trigger: provider.TriggerManual,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -135,8 +135,8 @@ func TestAmbiguousSubmissionParksUnknownAndHoldsTheReservation(t *testing.T) {
 			return FenceVerdict{Allowed: true}, nil
 		},
 		nil,
-		func(context.Context, pgx.Tx, string) (provider.PersonIdentifiers, error) {
-			return provider.PersonIdentifiers{FirstName: "Anna", LastName: "Ambiguous", CompanyName: "Example"}, nil
+		func(context.Context, pgx.Tx, string) (provider.ContactIdentifiers, error) {
+			return provider.ContactIdentifiers{FirstName: "Anna", LastName: "Ambiguous", CompanyName: "Example"}, nil
 		},
 	)
 	run := queueFor(t, e, e.mine.String())
@@ -294,7 +294,7 @@ func TestAmbiguousPollHoldsTheReservationAndParksUnknown(t *testing.T) {
 	}
 	// The run is in flight; the provider's poll comes back indeterminate.
 	if err := e.store.settlePoll(e.ctx, e.fake.Descriptor(), "surfe", run.ID,
-		pollLease{epoch: currentEpoch(t, e), jobID: "offline-x", person: e.mine.String()},
+		pollLease{epoch: currentEpoch(t, e), jobID: "offline-x", contact: e.mine.String()},
 		provider.PollStatus{Outcome: provider.OutcomeAmbiguous, SafeStatusCode: "poll_timeout"}); err != nil {
 		t.Fatal(err)
 	}
@@ -474,8 +474,8 @@ func TestARefusalAuditsTheConnectionStatusItChangedFrom(t *testing.T) {
 			return FenceVerdict{Allowed: true}, nil
 		},
 		nil,
-		func(context.Context, pgx.Tx, string) (provider.PersonIdentifiers, error) {
-			return provider.PersonIdentifiers{FirstName: "Anna", LastName: "RateLimited", CompanyName: "Example"}, nil
+		func(context.Context, pgx.Tx, string) (provider.ContactIdentifiers, error) {
+			return provider.ContactIdentifiers{FirstName: "Anna", LastName: "RateLimited", CompanyName: "Example"}, nil
 		},
 	)
 	run := queueFor(t, e, e.mine.String())
@@ -520,7 +520,7 @@ func TestARefusalAuditsTheConnectionStatusItChangedFrom(t *testing.T) {
 // The workers that execute a run hold a run id — the poll sweep drains many at
 // once — so a principal bound out there can only name a vendor it guessed. It
 // guessed the one provider that could exist while a CHECK constraint pinned
-// provider_connection, provider_run and person_provider_claim to a single name.
+// provider_connection, provider_run and contact_provider_claim to a single name.
 // Those checks are gone, and the claim rows already derive their provenance
 // from the run's own provider: a guessed audit actor and a derived claim row
 // name different vendors for one purchase, and the entry that reads as
@@ -573,7 +573,7 @@ func TestARunAuditsTheProviderItIsFor(t *testing.T) {
 	}
 }
 
-// A vendor that finds the person but has no number for them charges for what it
+// A vendor that finds the contact but has no number for them charges for what it
 // found and nothing for what it did not — through the REAL pipeline, not a
 // direct call to the settlement.
 //
@@ -640,8 +640,8 @@ func TestASubjectThatLosesItsIdentifiersIsNeverSubmitted(t *testing.T) {
 			return FenceVerdict{Allowed: true}, nil
 		},
 		nil,
-		func(context.Context, pgx.Tx, string) (provider.PersonIdentifiers, error) {
-			return provider.PersonIdentifiers{FirstName: "Anna", LastName: "Muster"}, nil
+		func(context.Context, pgx.Tx, string) (provider.ContactIdentifiers, error) {
+			return provider.ContactIdentifiers{FirstName: "Anna", LastName: "Muster"}, nil
 		},
 	)
 

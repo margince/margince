@@ -48,7 +48,7 @@ type RestoreSeam struct {
 	// whatever the gate happens to allow in a given fixture.
 	visible func(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error
 	// edges performs a LINK's inverse. It is a port because `relationship` is the
-	// people module's table, and the rules an edge write obeys are that module's.
+	// contacts module's table, and the rules an edge write obeys are that module's.
 	edges EdgeReverser
 	// corrections answers whether an audit row is a machine correction with its
 	// own reversal, and performs that reversal — the SAME store magicUndoJudge
@@ -119,7 +119,7 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 //
 // The lookup asks the SAME question magicUndoJudge.judgeCorrection asks of
 // the SAME store: a deal-scoped row with a live deal_correction naming it.
-// Anything else — a person, a company, a deal edit a human made — is
+// Anything else — a contact, a company, a deal edit a human made — is
 // answered false here and decided by the generic evaluator below, same as
 // before this branch existed.
 func (s RestoreSeam) reverseCorrection(
@@ -267,7 +267,7 @@ func (s RestoreSeam) write(ctx context.Context, row AuditRow, patch map[string]j
 // readRestoreEntry returns the restore's own history line, looked up by the
 // evidence link rather than by "the newest restore on this record": a record
 // with several reversals has several, and taking the newest would hand the
-// caller somebody else's line whenever two people press Undo in the same
+// caller somebody else's line whenever two contacts press Undo in the same
 // moment.
 func (s RestoreSeam) readRestoreEntry(ctx context.Context, entityType string, id, auditID ids.UUID) (privacy.RecordHistoryEntry, error) {
 	entry, err := privacy.ReadRestoreOf(ctx, InstallationDB(s.pool), entityType, id, auditID)
@@ -275,7 +275,7 @@ func (s RestoreSeam) readRestoreEntry(ctx context.Context, entityType string, id
 		// The write committed and left no reversal row, which the update path
 		// does when the patch changes nothing. Answering 404 here would say the
 		// entry does not exist, when what happened is that the record already
-		// held these values — so the person is told that instead.
+		// held these values — so the contact is told that instead.
 		return privacy.RecordHistoryEntry{}, RefusedRestore{
 			Reason: ReasonNotRestorableByThisPath,
 			Detail: "the record already holds these values, so there was nothing to put back",
@@ -286,7 +286,7 @@ func (s RestoreSeam) readRestoreEntry(ctx context.Context, entityType string, id
 
 // RefusedRestore is a refusal the surface can render. It carries the reason
 // WORD rather than prose, because the disabled button and the 409 must say the
-// same thing — a person who reads one sentence before pressing and a different
+// same thing — a contact who reads one sentence before pressing and a different
 // one after has been told the product changed its mind.
 type RefusedRestore struct {
 	Reason Reason

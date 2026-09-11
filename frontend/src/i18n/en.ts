@@ -220,7 +220,7 @@ export const en = {
   // The agent panel's one promise, as opposed to its readings: what the agent
   // can REACH. Row scope bounds it on the server, and a guarantee nobody is
   // told about is one nobody can rely on — "what can this thing see" is the
-  // question a person most reasonably has about an agent working over their
+  // question a contact most reasonably has about an agent working over their
   // data. Held by AC-shell-8.
   "shell.agent.scope": "Your agent reads only what you can see.",
   "shell.capture.importing": "Importing mail history",
@@ -262,7 +262,7 @@ export const en = {
     "Search contacts, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Type what you are looking for.",
   "search.empty": "No matches for “{q}”.",
-  "search.group.person": "Contacts",
+  "search.group.contact": "Contacts",
   "search.group.company": "Companies",
   "search.group.deal": "Deals",
   "search.group.project": "Projects",
@@ -569,7 +569,7 @@ export const en = {
   // one name: a role that does not admit the action on this kind of record, and
   // a record the reader holds read-only through a share. Nothing on the wire
   // tells them apart, so the copy names neither and offers both ways out — an
-  // admin widens a role, the person who shared a record widens the share. It
+  // admin widens a role, the contact who shared a record widens the share. It
   // does not say the record may be missing: a row the reader may not see at all
   // comes back 404, so by the time this is read the record is one they may know
   // about. Two sentences, no dash (VOICE-RULE-5).
@@ -842,8 +842,8 @@ export const en = {
   "overlay.userMap.partialView":
     "This grouping and count cover the users loaded so far. Load more to see the rest.",
 
-  "people.name": "Name",
-  "people.email": "Email",
+  "contacts.name": "Name",
+  "contacts.email": "Email",
   "list.owner": "Owner",
   "list.unowned": "Unassigned",
   "list.created": "Created",
@@ -865,7 +865,7 @@ export const en = {
   "company.filterLifecycleAll": "Any stage",
   "company.filterRelTypeAll": "Any type",
   "company.filterSizeBandAll": "Any size",
-  "person.consent": "Consent",
+  "contact.consent": "Consent",
   "consent.grant": "Grant",
   // Submitted as the proof row's wording when an operator records a grant
   // here. It does NOT quote a screen the subject read — this door has none —
@@ -976,7 +976,7 @@ export const en = {
   "co.strip.unpriced": "No convertible amount on these deals",
   "co.strip.pricedPartly": "{priced} of {total} deals priced",
   // "Conversation", not "Relationship": the health receipt beside this tile
-  // rates a DIMENSION called Relationship (how many people are in contact),
+  // rates a DIMENSION called Relationship (how many contacts are in contact),
   // and one word carrying two readings let the tile say "One-sided" while the
   // receipt said "Strong" about what read as the same thing. This tile is
   // about the correspondence.
@@ -1121,7 +1121,7 @@ export const en = {
   "room.readOnly": "You can read this room but not change it.",
   "room.finished": "This room is finished, so what it shared is now a record.",
   "room.card.title": "Deal Room",
-  "room.card.people": "{invited} invited · {active} signed in",
+  "room.card.contacts": "{invited} invited · {active} signed in",
   "room.card.lastSeen": "Last seen by a buyer: {when}",
   "room.card.open": "Open the Deal Room",
   "room.create.sub":
@@ -1165,7 +1165,7 @@ export const en = {
   // Deliberately does NOT say "only the owner". The preview also opens for a
   // manager, an admin and anybody holding a write grant on the deal, so naming
   // the owner would send a reader who already has the right access to ask the
-  // wrong person for it.
+  // wrong contact for it.
   "roompage.previewNotYours":
     "Your access to this deal does not include the buyer preview.",
   "access.title": "Access",
@@ -1216,14 +1216,14 @@ export const en = {
   "access.revokeBody":
     "Their session ends now and their link stops working. Their comments stay visible and attributed. Access cannot be restored by them asking for a link.",
   "access.changeCapabilityTitle": "What may {name} do?",
-  "persondealrooms.title": "Deal Rooms",
-  "persondealrooms.sub": "Rooms this contact can still enter.",
-  "persondealrooms.open": "Open",
-  "persondealrooms.seatGone":
+  "contactdealrooms.title": "Deal Rooms",
+  "contactdealrooms.sub": "Rooms this contact can still enter.",
+  "contactdealrooms.open": "Open",
+  "contactdealrooms.seatGone":
     "This address no longer holds a seat in that room.",
-  "persondealrooms.cut":
+  "contactdealrooms.cut":
     "Only the first rooms are shown; this contact sits in more.",
-  "persondealrooms.revokeTitle": "Revoke access to {room}?",
+  "contactdealrooms.revokeTitle": "Revoke access to {room}?",
   "room.state.draft": "Draft",
   "room.state.building": "Building",
   "room.state.ready": "Ready",
@@ -1486,7 +1486,7 @@ export const en = {
   "co.evidence.kind.rule": "Derived",
   "co.brief.cite.deal": "deal",
   "co.brief.cite.activity": "activity",
-  "co.brief.cite.person": "contact",
+  "co.brief.cite.contact": "contact",
   "co.brief.cite.company": "account",
   "co.brief.cite.fact": "fact",
   "co.brief.cite.profile_field": "profile field",
@@ -1494,7 +1494,7 @@ export const en = {
   // counted chip, rather than a run of identical labels.
   "co.brief.cite.deal.many": "{count} deals",
   "co.brief.cite.activity.many": "{count} activities",
-  "co.brief.cite.person.many": "{count} contacts",
+  "co.brief.cite.contact.many": "{count} contacts",
   "co.brief.cite.company.many": "{count} accounts",
   "co.brief.cite.fact.many": "{count} facts",
   "co.brief.cite.profile_field.many": "{count} profile fields",
@@ -1568,7 +1568,7 @@ export const en = {
   "approval.field.published_email": "Email on the page",
   "approval.field.connection_name": "On LinkedIn",
   "approval.field.connection_company": "Works at",
-  "approval.field.person_name": "Contact here",
+  "approval.field.contact_name": "Contact here",
   "approval.field.owner": "Owner",
   "approval.field.to": "To",
   "approval.field.currency": "Currency",
@@ -1633,10 +1633,10 @@ export const en = {
   "co.rail.deals.noCloseDate": "no close date",
   "co.rail.deals.attentionOverdue": "Overdue",
   "co.rail.deals.attentionCommitment": "They owe us",
-  "co.rail.people.title": "Their key contacts",
-  "co.rail.people.empty": "No contacts yet. Nobody to write to.",
-  "co.rail.people.add": "Add a contact",
-  "co.rail.people.inTouch": "Already in touch with them",
+  "co.rail.contacts.title": "Their key contacts",
+  "co.rail.contacts.empty": "No contacts yet. Nobody to write to.",
+  "co.rail.contacts.add": "Add a contact",
+  "co.rail.contacts.inTouch": "Already in touch with them",
   "co.rail.details.all": "All fields",
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
@@ -1793,7 +1793,7 @@ export const en = {
     "Some recipients were blind-copied and are not shown to you",
   "compose.audienceWorkspace": "Everyone in the company",
   "compose.audienceWorkspaceHint":
-    "Anyone who may see the contact reads this message too.",
+    "Anyone who may see the reader reads this message too.",
   "compose.audienceParticipants": "Participants only",
   "compose.audienceParticipantsHint":
     "Only the people on this message read its subject and body. Others see that a message was exchanged that day, nothing more.",
@@ -1832,65 +1832,65 @@ export const en = {
   "co.narrative.sub":
     "The account's own story, as its website tells it. Correct anything wrong - a correction sticks, and the next read will not overwrite it.",
   "co.narrative.add": "Add",
-  "co.people.engagement": "Engagement",
-  "co.people.lastInteraction": "Last exchange",
-  "co.people.strength": "Relationship",
-  "co.people.neverInTouch": "No exchange yet",
-  "co.people.theyWrote": "They wrote",
-  "co.people.weWrote": "We wrote",
-  "co.people.filter.status": "Engagement",
-  "co.people.filter.statusAll": "Any engagement",
-  "co.people.band.wayIn": "Best way in",
-  "co.people.band.noWayIn": "Nobody has answered",
-  "co.people.band.noWayInWhy":
+  "co.contacts.engagement": "Engagement",
+  "co.contacts.lastInteraction": "Last exchange",
+  "co.contacts.strength": "Relationship",
+  "co.contacts.neverInTouch": "No exchange yet",
+  "co.contacts.theyWrote": "They wrote",
+  "co.contacts.weWrote": "We wrote",
+  "co.contacts.filter.status": "Engagement",
+  "co.contacts.filter.statusAll": "Any engagement",
+  "co.contacts.band.wayIn": "Best way in",
+  "co.contacts.band.noWayIn": "Nobody has answered",
+  "co.contacts.band.noWayInWhy":
     "Everyone here was written to and nobody replied",
-  "co.people.band.committee": "Buying team",
-  "co.people.band.missing": "No {role}",
-  "co.people.band.committeeComplete": "Champion and economic buyer named",
-  "co.people.band.committeeUnread": "Hidden from you",
-  "co.people.band.committeeUnreadWhy":
+  "co.contacts.band.committee": "Buying team",
+  "co.contacts.band.missing": "No {role}",
+  "co.contacts.band.committeeComplete": "Champion and economic buyer named",
+  "co.contacts.band.committeeUnread": "Hidden from you",
+  "co.contacts.band.committeeUnreadWhy":
     "Your role cannot read this account's deals",
-  "co.people.band.seatsHeld": "{count} on the team",
-  "co.people.band.someHidden": "{count} more you cannot see",
-  "co.people.band.coverage": "Coverage",
-  "co.people.band.reachable": "{count} answering",
-  "co.people.band.untried": "{count} never approached",
-  "co.people.board.nobodyHolds": "Nobody holds this role",
-  "co.people.band.noOpenDeal": "No open deal",
-  "co.people.band.noOpenDealWhy": "Buying roles are recorded on a deal",
-  "co.people.band.committeePartial": "Cannot be judged",
-  "co.people.board.otherRoles": "Other roles",
-  "co.people.band.unavailable": "Could not be read",
-  "co.people.band.unavailableWhy":
+  "co.contacts.band.seatsHeld": "{count} on the team",
+  "co.contacts.band.someHidden": "{count} more you cannot see",
+  "co.contacts.band.coverage": "Coverage",
+  "co.contacts.band.reachable": "{count} answering",
+  "co.contacts.band.untried": "{count} never approached",
+  "co.contacts.board.nobodyHolds": "Nobody holds this role",
+  "co.contacts.band.noOpenDeal": "No open deal",
+  "co.contacts.band.noOpenDealWhy": "Buying roles are recorded on a deal",
+  "co.contacts.band.committeePartial": "Cannot be judged",
+  "co.contacts.board.otherRoles": "Other roles",
+  "co.contacts.band.unavailable": "Could not be read",
+  "co.contacts.band.unavailableWhy":
     "The coverage reading failed; the list below is unaffected",
-  "co.people.view": "Committee view",
-  "co.people.view.board": "Board",
-  "co.people.view.map": "Map",
-  "co.people.map.region": "Who can reach whom at this account",
-  "co.people.map.bestRoute": "Best route",
-  "co.people.map.alternatives": "Alternatives",
-  "co.people.map.noRoute": "No route recorded",
-  "co.people.map.more": "Show {count} more",
-  "co.people.map.clear": "Clear selection",
-  "co.people.map.emptyTitle": "No route recorded yet",
-  "co.people.map.emptyBody":
+  "co.contacts.view": "Committee view",
+  "co.contacts.view.board": "Board",
+  "co.contacts.view.map": "Map",
+  "co.contacts.map.region": "Who can reach whom at this account",
+  "co.contacts.map.bestRoute": "Best route",
+  "co.contacts.map.alternatives": "Alternatives",
+  "co.contacts.map.noRoute": "No route recorded",
+  "co.contacts.map.more": "Show {count} more",
+  "co.contacts.map.clear": "Clear selection",
+  "co.contacts.map.emptyTitle": "No route recorded yet",
+  "co.contacts.map.emptyBody":
     "Assign the buying roles, or import the interactions this account already has.",
-  "co.people.map.nothingSelected":
+  "co.contacts.map.nothingSelected":
     "Select a contact to see the best route into them.",
-  "co.people.map.ourSide": "Our side",
-  "co.people.map.account": "Account",
-  "co.people.map.missing": "{role} missing",
-  "co.people.map.awaiting": "awaiting reply",
-  "co.people.map.owed": "reply owed",
-  "co.people.map.replied": "they replied",
-  "co.people.map.never": "never written to",
-  "co.people.map.onDeal": "on the deal",
-  "co.people.map.routesWithheld": "Who can reach them is hidden from you",
-  "co.people.map.assignHint": "Nobody is carrying this deal",
-  "co.people.map.scope": "{count} on the buying team · selected deal only.",
-  "co.people.map.scopePartial":
+  "co.contacts.map.ourSide": "Our side",
+  "co.contacts.map.account": "Account",
+  "co.contacts.map.missing": "{role} missing",
+  "co.contacts.map.awaiting": "awaiting reply",
+  "co.contacts.map.owed": "reply owed",
+  "co.contacts.map.replied": "they replied",
+  "co.contacts.map.never": "never written to",
+  "co.contacts.map.onDeal": "on the deal",
+  "co.contacts.map.routesWithheld": "Who can reach them is hidden from you",
+  "co.contacts.map.assignHint": "Nobody is carrying this deal",
+  "co.contacts.map.scope": "{count} on the buying team · selected deal only.",
+  "co.contacts.map.scopePartial":
     "{count} on the buying team · {hidden} more you cannot see.",
-  "co.people.board.readFromMessages": "Read from their messages",
+  "co.contacts.board.readFromMessages": "Read from their messages",
   "co.intro.title": "Ask for an introduction",
   "co.intro.who": "Asking {colleague} to introduce you to {contact}.",
   "co.intro.write": "Write the message",
@@ -1906,19 +1906,20 @@ export const en = {
   "co.intro.copied": "Copied",
   "co.intro.openMail": "Open in your mail app",
   "co.map.askIntro": "Ask for an intro",
-  "co.people.board.suggest": "Suggest roles",
-  "co.people.board.suggesting": "Reading their messages",
-  "co.people.board.suggestNoDeal":
+  "co.contacts.board.suggest": "Suggest roles",
+  "co.contacts.board.suggesting": "Reading their messages",
+  "co.contacts.board.suggestNoDeal":
     "Roles are recorded on a deal, and this account has no open one.",
-  "co.people.board.suggestWrote": "Seated {count} from what they wrote.",
-  "co.people.board.suggestUnavailable":
+  "co.contacts.board.suggestWrote": "Seated {count} from what they wrote.",
+  "co.contacts.board.suggestUnavailable":
     "Reading roles needs a model, and this installation has none configured.",
-  "co.people.board.suggestNothing": "Nothing in their messages says who buys.",
-  "co.people.board.suggestRefused":
+  "co.contacts.board.suggestNothing":
+    "Nothing in their messages says who buys.",
+  "co.contacts.board.suggestRefused":
     "Nothing was clear enough to record. {count} reading(s) were dropped for weak evidence.",
-  "co.people.board.confirm": "Confirm",
-  "co.people.board.confirming": "Confirming",
-  "co.people.board.change": "Change role",
+  "co.contacts.board.confirm": "Confirm",
+  "co.contacts.board.confirming": "Confirming",
+  "co.contacts.board.change": "Change role",
   "co.reach.waiting": "Needs reply",
   "co.reach.answered": "Answered",
   "co.reach.silent": "No reply",
@@ -2275,7 +2276,7 @@ export const en = {
     "These leads could not be read. The count above still stands.",
   "lead.boardTerminalOnly":
     "None of these leads are still open \u2014 they are counted under Qualified and Disqualified.",
-  "person.fromLead": "From lead",
+  "contact.fromLead": "From lead",
   "lead.mergedTitle": "Merged into another lead",
   "lead.mergedBody":
     "This lead turned out to be the same prospect as another one. Its timeline, its consent and its score moved there; this record stays as the trail.",
@@ -2533,12 +2534,12 @@ export const en = {
   "deal.strip.close.overdue": "{days} days past the date",
   "deal.strip.close.provisional": "provisional, not confirmed by a human",
   "deal.strip.close.waiting": "they asked us to wait until {date}",
-  "deal.strip.people": "The contacts",
-  "deal.strip.people.count": "{engaged} of {total} engaged",
-  "deal.strip.people.champion": "a champion is named",
-  "deal.strip.people.noChampion": "no champion named",
-  "deal.strip.people.none": "Nobody",
-  "deal.strip.people.noneDetail": "No stakeholder is recorded on this deal",
+  "deal.strip.contacts": "The contacts",
+  "deal.strip.contacts.count": "{engaged} of {total} engaged",
+  "deal.strip.contacts.champion": "a champion is named",
+  "deal.strip.contacts.noChampion": "no champion named",
+  "deal.strip.contacts.none": "Nobody",
+  "deal.strip.contacts.noneDetail": "No stakeholder is recorded on this deal",
   "deal.strip.momentum": "The momentum",
   "deal.strip.momentum.detail": "since the last contact",
   "deal.strip.withheld": "Hidden",
@@ -2663,7 +2664,7 @@ export const en = {
   "offer.viewPdf": "View PDF",
   "offer.pdfUnavailable": "PDF rendering not available on this deployment.",
 
-  // The queue of staged actions a person has to decide. It is a DECISION here
+  // The queue of staged actions a contact has to decide. It is a DECISION here
   // and an `approval` on the wire, and those two are the only names it has: it
   // was also being called an inbox, a drafts queue and a staged list, and a
   // reader told four names for one surface has been told none. Copy that has to
@@ -2705,7 +2706,7 @@ export const en = {
   // a run nobody annotated and a night with nothing in it read identically as
   // silence, so the screen says which one this is.
   // The week just gone. No nav entry of its own: Today is the single door to
-  // the work that waits on a person, and this is a view of that same work.
+  // the work that waits on a contact, and this is a view of that same work.
   "brief.panel.weekly": "Last week",
   "brief.weekly.weekOf": "Week of {day}",
   // What the week TAUGHT, as against what it was. Every learning shows what it
@@ -3186,7 +3187,7 @@ export const en = {
   "create.fullName": "Full name",
   "create.firstName": "First name",
   "create.lastName": "Last name",
-  "create.personTitle": "Title",
+  "create.contactTitle": "Title",
   "create.email": "Email",
   "create.phone": "Phone",
   "create.linkedin": "LinkedIn",
@@ -3287,7 +3288,7 @@ export const en = {
   "today.source.nextMeeting": "the calendar",
   "today.source.deals": "deals",
   "today.meeting.prepare": "Prepare meeting",
-  "today.source.people": "the contacts",
+  "today.source.contacts": "the contacts",
   "today.source.standing": "whose move it is and the signals",
   "today.source.activities": "what was said",
   "today.silence.days": "no answer in {count} days",
@@ -3467,14 +3468,14 @@ export const en = {
   "log.save": "Log",
   "log.saving": "Logging…",
 
-  "personAccess.title": "Who can see this contact",
-  "personAccess.privateToYou":
+  "contactAccess.title": "Who can see this contact",
+  "contactAccess.privateToYou":
     "Private to its owner. Nobody else in the company can see this contact — not the team, and not an admin.",
-  "personAccess.company": "Everyone in the company can see this contact.",
-  "personAccess.share": "Share with the company",
-  "personAccess.published": "The company can see this contact now.",
-  "personAccess.makePrivate": "Make private",
-  "personAccess.madePrivate":
+  "contactAccess.company": "Everyone in the company can see this contact.",
+  "contactAccess.share": "Share with the company",
+  "contactAccess.published": "The company can see this contact now.",
+  "contactAccess.makePrivate": "Make private",
+  "contactAccess.madePrivate":
     "This contact is the owner's again. Anyone the record was explicitly shared with keeps their access.",
   "compose.reply": "Reply",
   "compose.writeEmail": "Write email",
@@ -4014,7 +4015,7 @@ export const en = {
   "settings.passportScopesRequired":
     "Pick at least one thing this agent may do.",
   // What the scheduled agent is doing for this reader, one line per (kind,
-  // state). First person for what Margince did, result first, and never a word
+  // state). First contact for what Margince did, result first, and never a word
   // that reads as finished on a run that stopped part-way.
   "agent.activity.weeklyReview.queued": "Your week is queued for a summary.",
   "agent.activity.weeklyReview.running": "Summarising your week…",
@@ -4116,8 +4117,8 @@ export const en = {
   "agent.activity.siteReadNamed.degraded":
     "I stopped before finishing the {name} website.",
   "agent.activity.siteReadNamed.failed": "I couldn't read the {name} website.",
-  // The AI work a person ASKS for and then waits on. Same rules as the
-  // scheduled lines above — first person, result first, and never a word that
+  // The AI work a contact ASKS for and then waits on. Same rules as the
+  // scheduled lines above — first contact, result first, and never a word that
   // reads as finished on a run that stopped part-way.
   //
   // These four were deliberately not narrated until the router could say
@@ -4144,7 +4145,7 @@ export const en = {
     "I read {name} as far as the records let me and stopped.",
   "agent.activity.accountScanNamed.failed": "I couldn't finish reading {name}.",
   //
-  // summarize is five sites over three kinds of record — a company, a person,
+  // summarize is five sites over three kinds of record — a company, a contact,
   // a meeting — so the unnamed lines name none of them: "this company" was a
   // guess that was wrong two times in five, and a guess at a name is worse
   // than no name. The NAMED pair below is the line a reader should see; these
@@ -4157,7 +4158,7 @@ export const en = {
   "agent.activity.summarize.failed": "I couldn't finish the summary.",
   "agent.activity.summarize.stalled":
     "The summary has taken unusually long. It may have stopped.",
-  // The same six with the record NAMED — the company, the person or the
+  // The same six with the record NAMED — the company, the contact or the
   // meeting the summary is about, in the name the product shows for it
   // elsewhere. Whenever the rail names what it is working on, it names the
   // actual record: "what I know about Acme", never "about this company".
@@ -4245,12 +4246,12 @@ export const en = {
   "import.objectLabel": "What the rows are",
   "import.object.lead": "Prospects",
   "import.object.company": "Companies",
-  "import.object.person": "Contacts",
+  "import.object.contact": "Contacts",
   "import.objectHint.lead":
     "An unworked list lands as leads for a human to qualify before anyone treats them as contacts.",
   "import.objectHint.company":
     "Companies are matched by the name you map, so a re-upload corrects rather than duplicates.",
-  "import.objectHint.person":
+  "import.objectHint.contact":
     "For contacts you already deal with. Matched by email, so a re-upload corrects rather than duplicates, and an address already held is left alone.",
   "import.fileLabel": "The CSV to import",
   "import.choose": "Choose a file",
@@ -4545,7 +4546,7 @@ export const en = {
   "retention.scopeLeadUnconverted": "Leads that never converted",
   "retention.scopeActivity": "All captured activity",
   "retention.scopeActivityTranscript": "Call transcripts",
-  "retention.scopePersonNoConsentNoDeal":
+  "retention.scopeContactNoConsentNoDeal":
     "Contacts with no consent and no deal",
   "retention.scopeDealLost": "Lost deals",
   "retention.scopeDealWon": "Won deals",
@@ -5084,7 +5085,7 @@ export const en = {
   "senders.keepOutBody":
     "No contact is created, and the mail this sender already brought into your mailbox is destroyed. Mail a colleague also imported stays theirs.",
   "senders.keepOutConfirm": "Keep out and destroy",
-  "senders.kind.person": "A person",
+  "senders.kind.contact": "A person",
   "senders.kind.roleMailbox": "A role mailbox",
   "senders.kind.companySender": "A company",
   "senders.kind.newsletter": "A newsletter",
@@ -5570,7 +5571,7 @@ export const en = {
   "ob.conv.triage.companyWebsite": "Website",
   "ob.conv.triage.sourceCount": "{count} src",
   "ob.conv.triage.contactsLabel": "Contacts",
-  "ob.conv.triage.peopleCount": "{count} found",
+  "ob.conv.triage.contactsCount": "{count} found",
   "ob.conv.triage.contactsEmpty": "No contacts found on your site.",
   "ob.conv.triage.factsLabel": "Facts",
   "ob.conv.triage.factsCount": "{count} found",
@@ -5746,7 +5747,7 @@ export const en = {
   "ob.rail.connect": "Connect",
 
   // The invite: asked once the company is confirmed, before the two steps
-  // that are only about the person answering. An administrator who sets the
+  // that are only about the contact answering. An administrator who sets the
   // installation up for a team and never works in it finishes here.
   "ob.conv.invite.title": "Will you be working in Margince yourself?",
   "ob.conv.invite.body":
@@ -5763,8 +5764,8 @@ export const en = {
   "ob.conv.invite.accepted": "Yes, I'll be working in it.",
   "ob.conv.invite.declined": "No, I'm only setting it up.",
 
-  // The team act: the first person who will work here, invited with the
-  // same form Settings → People uses.
+  // The team act: the first contact who will work here, invited with the
+  // same form Settings → Contacts uses.
   "ob.conv.team.title": "Invite the first user.",
   "ob.conv.team.body":
     "Somebody has to be the first person working in Margince. Add them now, or later from Settings → People.",
@@ -5778,7 +5779,7 @@ export const en = {
     "I couldn't record that setup is complete. Try again, or leave it and finish from Settings later.",
   // The basis act: the installation's reporting basis and the agent's
   // autonomy, asked once the company is confirmed and before any step about
-  // the person answering.
+  // the contact answering.
   "ob.conv.basis.title": "First, the basis.",
   "ob.conv.basis.body":
     "Base currency and reporting timezone are the installation's: every deal, report and brief is priced and dated on them. What it may change without asking is yours to decide. All of it is prefilled and can be changed later in Settings, until a deal has frozen the currency.",
@@ -6299,7 +6300,7 @@ export const en = {
     "Too many attempts from here just now. Wait a minute and reload.",
   "prefs.subscribed": "On — you asked for these",
   "prefs.alwaysOn": "always on",
-  // The public confirm-your-details page. Margince speaks in first person here,
+  // The public confirm-your-details page. Margince speaks in first contact here,
   // as it does in onboarding: short flat sentences, says what it will and will
   // not do, no em dashes.
   "confirm.title": "Your details",
@@ -6476,7 +6477,7 @@ export const en = {
   "cf.object": "Object",
   "cf.obj.deal": "Deal",
   "cf.obj.company": "Company",
-  "cf.obj.person": "Contact",
+  "cf.obj.contact": "Contact",
   "cf.obj.lead": "Lead",
   "cf.listLabel": "Fields on {object}",
   "cf.col.field": "Field",
@@ -6488,7 +6489,7 @@ export const en = {
     "No custom fields on Deal yet. Add one if you track something we didn't ship.",
   "cf.empty.company":
     "No custom fields on Company yet. Add one if you track something we didn't ship.",
-  "cf.empty.person":
+  "cf.empty.contact":
     "No custom fields on Contact yet. Core fields cover the contact record; add one if you track more.",
   "cf.empty.lead":
     "No custom fields on Lead yet. A field you add here also appears once a lead is promoted to a contact.",
@@ -6547,7 +6548,7 @@ export const en = {
   // The same reason keeps the possessive off "Agents" — the group is "You".
   //
   // "Connections" and "Integrations" are the same distinction the two groups
-  // are: the mailbox and the network a PERSON connected, against the outside
+  // are: the mailbox and the network a CONTACT connected, against the outside
   // systems the INSTALLATION is wired to. One row carried both before, which
   // is why it had to be ungated to keep a rep's own mailbox reachable.
   "settings.home": "Overview",
@@ -6835,7 +6836,7 @@ export const en = {
   "pipeline.stage.internal_drop": "Internal-only check",
   "pipeline.stage.activity_write": "Saved to the timeline",
   "pipeline.stage.tier_ladder": "Contact decision",
-  "pipeline.stage.person_create": "Contact created",
+  "pipeline.stage.contact_create": "Contact created",
   "pipeline.stage.verdict": "Sender verdict",
   "pipeline.stage.company_triage": "Company check",
   "pipeline.stage.attention_label": "Attention label",
@@ -7205,7 +7206,7 @@ export const en = {
   "users.access.read": "read",
   "users.access.write": "write",
   "users.access.delete": "delete",
-  "users.access.object.person": "Contacts",
+  "users.access.object.contact": "Contacts",
   "users.access.object.company": "Companies",
   "users.access.object.lead": "Leads",
   "users.access.object.deal": "Deals",
@@ -7230,7 +7231,7 @@ export const en = {
   "users.deactivateConfirmBody":
     "They'll be signed out everywhere and their agent passports revoked immediately. You can reactivate them later, but they'll need to sign in again.",
   "users.deactivateAgentConfirmBody":
-    "This is the company's agent identity. It signs in nowhere and no person loses access. Scheduled extension jobs keep running: each one acts as the job it is, and captures under the authority of the member whose connection produced the record.",
+    "This is the company's agent identity. It signs in nowhere and no contact loses access. Scheduled extension jobs keep running: each one acts as the job it is, and captures under the authority of the member whose connection produced the record.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Acts under a passport, not a role",
   "users.roleLabel": "Role for the new user",
@@ -7559,7 +7560,7 @@ export const en = {
     "This deployment has no external provider configured, so there is nothing to offer besides a password.",
   "oauthApp.google.title": "Google app",
   "oauthApp.google.sub":
-    "Mailboxes are connected, and people sign in with Google, through a Google OAuth app you own. Your company’s own credentials are used rather than ours.",
+    "Mailboxes are connected, and contacts sign in with Google, through a Google OAuth app you own. Your company’s own credentials are used rather than ours.",
   "oauthApp.google.absent":
     "No app is available from any source. Gmail and Calendar cannot be connected, and Google sign-in cannot be offered.",
   "oauthApp.google.redirectSub":
@@ -7571,7 +7572,7 @@ export const en = {
     "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
   "oauthApp.microsoft.title": "Microsoft app",
   "oauthApp.microsoft.sub":
-    "Outlook mailboxes and calendars are connected, and people sign in with Microsoft, through an Entra app registration you own. Your company’s own credentials are used rather than ours.",
+    "Outlook mailboxes and calendars are connected, and contacts sign in with Microsoft, through an Entra app registration you own. Your company’s own credentials are used rather than ours.",
   "oauthApp.microsoft.absent":
     "No app is available from any source. Outlook mail and calendar cannot be connected, and Microsoft sign-in cannot be offered.",
   "oauthApp.microsoft.redirectSub":
@@ -7774,7 +7775,7 @@ export const en = {
     "When on, each new company created from captured mail gets an automatic web dossier — its site is read and its profile filled in. Runs under a daily limit.",
   "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "When on, Margince reads what a person states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the company's default; a mailbox that set its own switch keeps it.",
+    "When on, Margince reads what a contact states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the company's default; a mailbox that set its own switch keeps it.",
   "captureSettings.removeFailed": "That exclusion could not be removed",
   "captureSettings.addFailed": "That exclusion could not be added",
   "captureSettings.adminOnly": "Only an admin or ops can change this.",
@@ -7973,542 +7974,545 @@ export const en = {
   "consent.invalidTitle": "This connection request could not be completed",
   "consent.invalidBody":
     "This installation will not authorize the request as it stands — the app may no longer be registered here. Go back to the app you were connecting and start again.",
-  "person.thin.title": "What we know so far",
-  "person.thin.known":
+  "contact.thin.title": "What we know so far",
+  "contact.thin.known":
     "We have {what} for {name}, but nobody here has a recorded exchange with them yet.",
-  "person.thin.remediation.capture":
+  "contact.thin.remediation.capture":
     "Connect the mailbox that writes to them, and this page fills itself in — every field with the source it came from.",
-  "person.thin.remediation.employer":
+  "contact.thin.remediation.employer":
     "Add their employer and Margince can read that company's site for their role.",
-  "person.thin.logFirst": "Log the first interaction",
-  "person.enriched.title": "What Margince read",
-  "person.enriched.sub":
+  "contact.thin.logFirst": "Log the first interaction",
+  "contact.enriched.title": "What Margince read",
+  "contact.enriched.sub":
     "Each value with the text it was read from. Correct one and the correction stands.",
-  "person.enriched.field.title": "Title",
-  "person.enriched.field.phone": "Phone",
-  "person.enriched.field.role": "Role",
-  "person.enriched.field.linkedin": "LinkedIn",
-  "person.enriched.field.company_name": "Company",
-  "person.enriched.field.address": "Address",
-  "person.enriched.field.website": "Website",
-  "person.enriched.readFrom": "Read from {source} on {when}",
-  "person.enriched.undo": "Undo",
-  "person.enriched.replaced": "Replaced “{was}”, which was older.",
-  "person.enriched.correctedByYou": "Corrected by you",
-  "person.enriched.confirmed": "Confirmed",
-  "person.enriched.correct": "Correct",
-  "person.enriched.confirm": "That is right",
-  "person.enriched.save": "Save the correction",
-  "person.enriched.cancel": "Cancel",
-  "person.graph.loading": "Reading the network around this contact…",
-  "person.graph.routeDirect": "{name} already corresponds with them.",
-  "person.graph.routeVia":
+  "contact.enriched.field.title": "Title",
+  "contact.enriched.field.phone": "Phone",
+  "contact.enriched.field.role": "Role",
+  "contact.enriched.field.linkedin": "LinkedIn",
+  "contact.enriched.field.company_name": "Company",
+  "contact.enriched.field.address": "Address",
+  "contact.enriched.field.website": "Website",
+  "contact.enriched.readFrom": "Read from {source} on {when}",
+  "contact.enriched.undo": "Undo",
+  "contact.enriched.replaced": "Replaced “{was}”, which was older.",
+  "contact.enriched.correctedByYou": "Corrected by you",
+  "contact.enriched.confirmed": "Confirmed",
+  "contact.enriched.correct": "Correct",
+  "contact.enriched.confirm": "That is right",
+  "contact.enriched.save": "Save the correction",
+  "contact.enriched.cancel": "Cancel",
+  "contact.graph.loading": "Reading the network around this contact…",
+  "contact.graph.routeDirect": "{name} already corresponds with them.",
+  "contact.graph.routeVia":
     "{name} corresponds with {through} at the same company.",
   // The same two sentences when the colleague is the reader. A route to the
-  // person reading it is the strongest one this page can find, and printing
+  // contact reading it is the strongest one this page can find, and printing
   // their own name back at them read as a third party they would have to go
   // and ask.
-  "person.graph.routeDirectYou": "You already correspond with them.",
-  "person.graph.routeViaYou":
+  "contact.graph.routeDirectYou": "You already correspond with them.",
+  "contact.graph.routeViaYou":
     "You correspond with {through} at the same company.",
-  "person.graph.noRoute":
+  "contact.graph.noRoute":
     "Nobody here corresponds with them or with anyone at their company yet.",
-  "person.graph.noDirect": "Nobody here has corresponded with them.",
+  "contact.graph.noDirect": "Nobody here has corresponded with them.",
   // Names the column beside the graph, for a reader who lands in it from the
   // landmark list rather than by scrolling to it.
-  "person.graph.sideColumn": "Introductions and moments",
-  "person.graph.recordWorksWith": "Record: works with {name}",
-  "person.graph.noEdge": "No recorded correspondence with {name}.",
-  "person.graph.withColleague": "with {name}",
-  "person.graph.withContact": "with this contact",
-  "person.graph.counts":
+  "contact.graph.sideColumn": "Introductions and moments",
+  "contact.graph.recordWorksWith": "Record: works with {name}",
+  "contact.graph.noEdge": "No recorded correspondence with {name}.",
+  "contact.graph.withColleague": "with {name}",
+  "contact.graph.withContact": "with this contact",
+  "contact.graph.counts":
     "{total} interactions in 90 days · {inbound} in, {outbound} out",
-  "person.graph.untitledMessage": "Untitled",
-  "person.graph.countsOnly":
+  "contact.graph.untitledMessage": "Untitled",
+  "contact.graph.countsOnly":
     "Counts only — the messages themselves stay on the timeline.",
-  "person.intro.routesTitle": "Ways in",
-  "person.graph.droppedNote": "{count} more not shown.",
-  "person.graph.withheldDirect": "Some colleagues are not shown.",
-  "person.graph.withheldAccount":
+  "contact.intro.routesTitle": "Ways in",
+  "contact.graph.droppedNote": "{count} more not shown.",
+  "contact.graph.withheldDirect": "Some colleagues are not shown.",
+  "contact.graph.withheldAccount":
     "Some contacts at this company are not shown.",
-  "person.intro.askFirstName": "Ask {name} for an intro",
-  "person.intro.leadEyebrow": "Recommended route",
-  "person.intro.leadRouteBadge": "Strong route",
-  "person.intro.heroDirect": "knows them directly",
-  "person.intro.heroIndirect": "reaches them through {through}",
-  "person.intro.heroYou": "You",
-  "person.intro.heroDirectYou": "know them directly",
-  "person.intro.heroIndirectYou": "reach them through {through}",
-  "person.intro.factReciprocal": "Reciprocal",
-  "person.intro.factOneSided": "One-sided",
-  "person.intro.factDirect": "Direct relationship",
-  "person.intro.factIndirect": "Through a colleague",
-  "person.intro.factReceipts": "{count} visible receipts",
-  "person.intro.verdictDirect":
+  "contact.intro.askFirstName": "Ask {name} for an intro",
+  "contact.intro.leadEyebrow": "Recommended route",
+  "contact.intro.leadRouteBadge": "Strong route",
+  "contact.intro.heroDirect": "knows them directly",
+  "contact.intro.heroIndirect": "reaches them through {through}",
+  "contact.intro.heroYou": "You",
+  "contact.intro.heroDirectYou": "know them directly",
+  "contact.intro.heroIndirectYou": "reach them through {through}",
+  "contact.intro.factReciprocal": "Reciprocal",
+  "contact.intro.factOneSided": "One-sided",
+  "contact.intro.factDirect": "Direct relationship",
+  "contact.intro.factIndirect": "Through a colleague",
+  "contact.intro.factReceipts": "{count} visible receipts",
+  "contact.intro.verdictDirect":
     "Ask {name} — they already write to each other.",
-  "person.intro.verdictOneSided":
+  "contact.intro.verdictOneSided":
     "Ask {name} — they have written, with no reply yet.",
-  "person.intro.verdictVia": "Ask {name} — they reach them through {through}.",
-  "person.intro.verdictDirectYou": "You already write to each other.",
-  "person.intro.verdictOneSidedYou":
+  "contact.intro.verdictVia": "Ask {name} — they reach them through {through}.",
+  "contact.intro.verdictDirectYou": "You already write to each other.",
+  "contact.intro.verdictOneSidedYou":
     "You have written to them, with no reply yet.",
-  "person.intro.verdictViaYou": "You reach them through {through}.",
+  "contact.intro.verdictViaYou": "You reach them through {through}.",
   // What stands where the ask would be on the reader's own route. The panel
   // is the page's one recommendation, so it says what to do rather than
   // leaving the strongest way in with no move under it.
-  "person.intro.ownRouteNoAsk": "Nobody to ask — write to them yourself.",
-  "person.intro.evidenceEyebrow": "The evidence behind it",
-  "person.intro.evidenceExchanges": "Exchanges",
-  "person.intro.evidenceWindow": "in 90 days",
-  "person.intro.evidenceFrom": "{count} from {name}",
-  "person.intro.evidenceFromYou": "{count} from you",
-  "person.intro.evidenceLastContact": "Last contact",
-  "person.intro.lastToday": "Today",
-  "person.intro.lastYesterday": "Yesterday",
-  "person.intro.lastDays": "{days} days ago",
-  "person.intro.lastNever": "None in 90 days",
-  "person.intro.stripWho": "Who reaches them",
-  "person.intro.stripWhoCount_one": "Only {name}",
-  "person.intro.stripWhoCount_other": "{count} colleagues",
-  "person.intro.stripWhoMix": "{direct} direct · {indirect} through a contact",
-  "person.intro.stripWhoOnlyYou": "Only you",
-  "person.intro.stripWhoWithYou_one": "You and {count} colleague",
-  "person.intro.stripWhoWithYou_other": "You and {count} colleagues",
-  "person.intro.otherRoutesTitle": "Other ways in",
-  "person.intro.otherRoutesSub":
+  "contact.intro.ownRouteNoAsk": "Nobody to ask — write to them yourself.",
+  "contact.intro.evidenceEyebrow": "The evidence behind it",
+  "contact.intro.evidenceExchanges": "Exchanges",
+  "contact.intro.evidenceWindow": "in 90 days",
+  "contact.intro.evidenceFrom": "{count} from {name}",
+  "contact.intro.evidenceFromYou": "{count} from you",
+  "contact.intro.evidenceLastContact": "Last contact",
+  "contact.intro.lastToday": "Today",
+  "contact.intro.lastYesterday": "Yesterday",
+  "contact.intro.lastDays": "{days} days ago",
+  "contact.intro.lastNever": "None in 90 days",
+  "contact.intro.stripWho": "Who reaches them",
+  "contact.intro.stripWhoCount_one": "Only {name}",
+  "contact.intro.stripWhoCount_other": "{count} colleagues",
+  "contact.intro.stripWhoMix": "{direct} direct · {indirect} through a contact",
+  "contact.intro.stripWhoOnlyYou": "Only you",
+  "contact.intro.stripWhoWithYou_one": "You and {count} colleague",
+  "contact.intro.stripWhoWithYou_other": "You and {count} colleagues",
+  "contact.intro.otherRoutesTitle": "Other ways in",
+  "contact.intro.otherRoutesSub":
     "Ranked by how much two-way correspondence backs each one.",
-  "person.intro.relayDue": "due {date}",
-  "person.intro.stripDirect": "Direct relationship",
-  "person.intro.stripNoPath": "Nobody here reaches them yet",
-  "person.intro.stripWhyNow": "Why now",
-  "person.intro.stripWhyNowSub": "The most recent change on this relationship",
-  "person.intro.stripNoMoment": "Nothing new",
-  "person.intro.stripNoMomentSub": "No recent change on this relationship",
-  "person.intro.stripHandoff": "Request status",
-  "person.intro.handoffNotStarted": "Not started",
-  "person.intro.handoffNotStartedSub": "No introduction has been asked for",
-  "person.intro.handoffOwner": "{name} owns the next move",
-  "person.intro.ownerColleague": "your colleague",
-  "person.intro.ownerYou": "you",
-  "person.intro.ownerNobody": "nobody",
-  "person.intro.relayTitle": "Introduction status",
-  "person.intro.relaySubOpen": "Where the handoff has got to.",
-  "person.intro.relaySubNone": "No request is open.",
-  "person.intro.stepRoute": "Choose route",
-  "person.intro.stepRoutePick": "pick who to ask",
-  "person.intro.stepRequest": "Request",
-  "person.intro.stepNotSent": "not sent",
-  "person.intro.stepAwaitingAnswer": "waiting on your colleague",
-  "person.intro.stepIntroduction": "Introduction",
-  "person.intro.stepNameDrop": "Name used",
-  "person.intro.stepWaiting": "waiting",
-  "person.intro.stepRecorded": "recorded",
-  "person.intro.stepReply": "Reply",
-  "person.intro.stepObserved": "observed from activity",
-  "person.intro.stepDone": "Done",
-  "person.intro.stepCurrent": "Now",
-  "person.intro.stepPending": "Later",
-  "person.intro.laneOurs": "Our team",
-  "person.intro.laneTheirs": "Their company",
-  "person.intro.lanePeers": "Who they talk to",
-  "person.intro.laneTarget": "Target",
-  "person.intro.useThisRoute": "Use this route",
-  "person.intro.mapRegion": "Who can reach this contact, and through whom",
-  "person.intro.edgeDirect": "{name} corresponds with them directly",
-  "person.intro.edgeAccount": "works with {name}",
-  "person.intro.routesSub":
+  "contact.intro.relayDue": "due {date}",
+  "contact.intro.stripDirect": "Direct relationship",
+  "contact.intro.stripNoPath": "Nobody here reaches them yet",
+  "contact.intro.stripWhyNow": "Why now",
+  "contact.intro.stripWhyNowSub": "The most recent change on this relationship",
+  "contact.intro.stripNoMoment": "Nothing new",
+  "contact.intro.stripNoMomentSub": "No recent change on this relationship",
+  "contact.intro.stripHandoff": "Request status",
+  "contact.intro.handoffNotStarted": "Not started",
+  "contact.intro.handoffNotStartedSub": "No introduction has been asked for",
+  "contact.intro.handoffOwner": "{name} owns the next move",
+  "contact.intro.ownerColleague": "your colleague",
+  "contact.intro.ownerYou": "you",
+  "contact.intro.ownerNobody": "nobody",
+  "contact.intro.relayTitle": "Introduction status",
+  "contact.intro.relaySubOpen": "Where the handoff has got to.",
+  "contact.intro.relaySubNone": "No request is open.",
+  "contact.intro.stepRoute": "Choose route",
+  "contact.intro.stepRoutePick": "pick who to ask",
+  "contact.intro.stepRequest": "Request",
+  "contact.intro.stepNotSent": "not sent",
+  "contact.intro.stepAwaitingAnswer": "waiting on your colleague",
+  "contact.intro.stepIntroduction": "Introduction",
+  "contact.intro.stepNameDrop": "Name used",
+  "contact.intro.stepWaiting": "waiting",
+  "contact.intro.stepRecorded": "recorded",
+  "contact.intro.stepReply": "Reply",
+  "contact.intro.stepObserved": "observed from activity",
+  "contact.intro.stepDone": "Done",
+  "contact.intro.stepCurrent": "Now",
+  "contact.intro.stepPending": "Later",
+  "contact.intro.laneOurs": "Our team",
+  "contact.intro.laneTheirs": "Their company",
+  "contact.intro.lanePeers": "Who they talk to",
+  "contact.intro.laneTarget": "Target",
+  "contact.intro.useThisRoute": "Use this route",
+  "contact.intro.mapRegion": "Who can reach this contact, and through whom",
+  "contact.intro.edgeDirect": "{name} corresponds with them directly",
+  "contact.intro.edgeAccount": "works with {name}",
+  "contact.intro.routesSub":
     "Best first. Pick the one you can actually use — the second is here because the first is not always available.",
-  "person.intro.best": "Best",
-  "person.intro.evidenceTwoWay_one":
+  "contact.intro.best": "Best",
+  "contact.intro.evidenceTwoWay_one":
     "{total} two-way exchange in 90 days · {when}",
-  "person.intro.evidenceTwoWay_other":
+  "contact.intro.evidenceTwoWay_other":
     "{total} two-way exchanges in 90 days · {when}",
-  "person.intro.evidenceOneSided_one":
+  "contact.intro.evidenceOneSided_one":
     "{total} interaction in 90 days, one-sided · {when}",
-  "person.intro.evidenceOneSided_other":
+  "contact.intro.evidenceOneSided_other":
     "{total} interactions in 90 days, one-sided · {when}",
-  "person.intro.whenToday": "last contact today",
-  "person.intro.whenYesterday": "last contact yesterday",
-  "person.intro.whenDays": "last contact {days} days ago",
-  "person.intro.whenNever": "no recent contact",
-  "person.intro.askTitle": "Ask for an introduction to {name}",
-  "person.intro.cancel": "Cancel",
-  "person.intro.askAction": "Request introduction",
-  "person.intro.askFailed": "The ask could not be recorded.",
-  "person.intro.reasonLabel": "Why you are asking",
-  "person.intro.reasonHint":
+  "contact.intro.whenToday": "last contact today",
+  "contact.intro.whenYesterday": "last contact yesterday",
+  "contact.intro.whenDays": "last contact {days} days ago",
+  "contact.intro.whenNever": "no recent contact",
+  "contact.intro.askTitle": "Ask for an introduction to {name}",
+  "contact.intro.cancel": "Cancel",
+  "contact.intro.askAction": "Request introduction",
+  "contact.intro.askFailed": "The ask could not be recorded.",
+  "contact.intro.reasonLabel": "Why you are asking",
+  "contact.intro.reasonHint":
     "Your colleague reads this, not the contact. Say what makes the introduction worth making.",
-  "person.intro.valueLabel": "What is in it for them",
-  "person.intro.valueHint":
+  "contact.intro.valueLabel": "What is in it for them",
+  "contact.intro.valueHint":
     "The reason the contact would want this conversation.",
-  "person.intro.noteLabel": "Note your colleague can forward",
-  "person.intro.noteHint":
-    "The only part the contact reads. Write it so it can be pasted as it stands.",
-  "person.intro.nameDropAsk": "Ask permission to mention their name",
-  "person.intro.fallbackLegend": "If they say no",
-  "person.intro.fallbackNone": "Nothing further",
-  "person.intro.fallbackNoneHelp":
+  "contact.intro.noteLabel": "Note your colleague can forward",
+  "contact.intro.noteHint":
+    "The only part the reader reads. Write it so it can be pasted as it stands.",
+  "contact.intro.nameDropAsk": "Ask permission to mention their name",
+  "contact.intro.fallbackLegend": "If they say no",
+  "contact.intro.fallbackNone": "Nothing further",
+  "contact.intro.fallbackNoneHelp":
     "The ask closes and you decide what to do next.",
-  "person.intro.fallbackNameDrop": "Ask to use their name instead",
-  "person.intro.fallbackNameDropHelp":
+  "contact.intro.fallbackNameDrop": "Ask to use their name instead",
+  "contact.intro.fallbackNameDropHelp":
     "You would reach out yourself, mentioning them.",
-  "person.intro.fallbackNextRoute": "Try the next route",
-  "person.intro.fallbackNextRouteHelp":
+  "contact.intro.fallbackNextRoute": "Try the next route",
+  "contact.intro.fallbackNextRouteHelp":
     "Move on to the next colleague on the list.",
-  "person.intro.decideTitle": "An introduction to {name}",
-  "person.intro.decideLegend": "Your answer",
-  "person.intro.decideAction": "Record answer",
-  "person.intro.decideFailed": "The answer could not be recorded.",
-  "person.intro.decideReasonLabel": "Anything to add",
-  "person.intro.decideReasonHint": "Your colleague sees this as you write it.",
-  "person.intro.noteByModel": "Drafted by Margince",
-  "person.intro.nameDropRequested":
+  "contact.intro.decideTitle": "An introduction to {name}",
+  "contact.intro.decideLegend": "Your answer",
+  "contact.intro.decideAction": "Record answer",
+  "contact.intro.decideFailed": "The answer could not be recorded.",
+  "contact.intro.decideReasonLabel": "Anything to add",
+  "contact.intro.decideReasonHint": "Your colleague sees this as you write it.",
+  "contact.intro.noteByModel": "Drafted by Margince",
+  "contact.intro.nameDropRequested":
     "They also asked whether they may mention your name.",
-  "person.intro.answerAccept": "I will introduce you",
-  "person.intro.answerAcceptHelp": "You make the introduction yourself.",
-  "person.intro.answerNameDrop": "You may use my name",
-  "person.intro.answerNameDropHelp":
+  "contact.intro.answerAccept": "I will introduce you",
+  "contact.intro.answerAcceptHelp": "You make the introduction yourself.",
+  "contact.intro.answerNameDrop": "You may use my name",
+  "contact.intro.answerNameDropHelp":
     "They reach out themselves and mention you. This is not an introduction, and nothing records it as one.",
-  "person.intro.answerSuggest": "Ask someone else",
-  "person.intro.answerSuggestHelp": "Name the colleague better placed to help.",
-  "person.intro.answerDecline": "Not this time",
-  "person.intro.answerDeclineHelp": "The ask closes. Say why if it helps.",
-  "person.intro.asksTitle": "Introductions",
-  "person.intro.asksSub": "The asks you are part of, newest first.",
-  "person.intro.answerAction": "Answer",
-  "person.intro.completeIntroducedAction": "Mark introduced",
-  "person.intro.completeNameDroppedAction": "Mark name used",
-  "person.intro.completeFailed": "The outcome could not be recorded.",
-  "person.intro.withdrawAction": "Withdraw",
-  "person.intro.withdrawFailed": "The ask could not be withdrawn.",
-  "person.intro.stateRequested": "Waiting on your colleague",
-  "person.intro.stateAccepted": "They will introduce you",
-  "person.intro.stateNameDropApproved": "You may use their name",
-  "person.intro.stateSuggestOther": "They suggested someone else",
-  "person.intro.stateDeclined": "Declined",
-  "person.intro.stateIntroduced": "Introduced",
-  "person.intro.stateNameDropped": "Name used",
-  "person.intro.stateReplied": "They replied",
-  "person.intro.stateExpired": "No answer in time",
-  "person.intro.stateCancelled": "Withdrawn",
-  "person.intro.alreadyRequested": "Already asked",
-  "person.intro.declined": "Declined before",
-  "person.intro.unavailable": "Not available",
-  "person.network.momentsTitle": "What changed lately",
-  "person.network.momentsSub":
+  "contact.intro.answerSuggest": "Ask someone else",
+  "contact.intro.answerSuggestHelp":
+    "Name the colleague better placed to help.",
+  "contact.intro.answerDecline": "Not this time",
+  "contact.intro.answerDeclineHelp": "The ask closes. Say why if it helps.",
+  "contact.intro.asksTitle": "Introductions",
+  "contact.intro.asksSub": "The asks you are part of, newest first.",
+  "contact.intro.answerAction": "Answer",
+  "contact.intro.completeIntroducedAction": "Mark introduced",
+  "contact.intro.completeNameDroppedAction": "Mark name used",
+  "contact.intro.completeFailed": "The outcome could not be recorded.",
+  "contact.intro.withdrawAction": "Withdraw",
+  "contact.intro.withdrawFailed": "The ask could not be withdrawn.",
+  "contact.intro.stateRequested": "Waiting on your colleague",
+  "contact.intro.stateAccepted": "They will introduce you",
+  "contact.intro.stateNameDropApproved": "You may use their name",
+  "contact.intro.stateSuggestOther": "They suggested someone else",
+  "contact.intro.stateDeclined": "Declined",
+  "contact.intro.stateIntroduced": "Introduced",
+  "contact.intro.stateNameDropped": "Name used",
+  "contact.intro.stateReplied": "They replied",
+  "contact.intro.stateExpired": "No answer in time",
+  "contact.intro.stateCancelled": "Withdrawn",
+  "contact.intro.alreadyRequested": "Already asked",
+  "contact.intro.declined": "Declined before",
+  "contact.intro.unavailable": "Not available",
+  "contact.network.momentsTitle": "What changed lately",
+  "contact.network.momentsSub":
     "Movements in this relationship, from the messages themselves.",
-  "person.network.noMoments": "Nothing has moved in this relationship lately.",
-  "person.change.repliedAfterGap": "They replied after {days} quiet days.",
-  "person.change.wentQuiet": "Nothing has happened for {days} days.",
-  "person.change.warmed": "The relationship moved from {from} to {to}.",
-  "person.change.cooled": "The relationship fell from {from} to {to}.",
-  "person.band.none": "no contact",
-  "person.band.weak": "weak",
-  "person.band.moderate": "moderate",
-  "person.band.strong": "strong",
-  "person.pulse.title": "Relationship",
-  "person.pulse.warmestIs": "{name} has the warmest relationship here.",
-  "person.pulse.nobodyYet":
+  "contact.network.noMoments": "Nothing has moved in this relationship lately.",
+  "contact.change.repliedAfterGap": "They replied after {days} quiet days.",
+  "contact.change.wentQuiet": "Nothing has happened for {days} days.",
+  "contact.change.warmed": "The relationship moved from {from} to {to}.",
+  "contact.change.cooled": "The relationship fell from {from} to {to}.",
+  "contact.band.none": "no contact",
+  "contact.band.weak": "weak",
+  "contact.band.moderate": "moderate",
+  "contact.band.strong": "strong",
+  "contact.pulse.title": "Relationship",
+  "contact.pulse.warmestIs": "{name} has the warmest relationship here.",
+  "contact.pulse.nobodyYet":
     "Nobody here has a recorded exchange with them yet.",
-  "person.pulse.lastInbound": "They last wrote",
-  "person.pulse.lastOutbound": "We last wrote",
-  "person.pulse.neverInbound": "never",
-  "person.pulse.neverOutbound": "never",
-  "person.pulse.why": "How this is computed",
-  "person.pulse.arithmetic":
+  "contact.pulse.lastInbound": "They last wrote",
+  "contact.pulse.lastOutbound": "We last wrote",
+  "contact.pulse.neverInbound": "never",
+  "contact.pulse.neverOutbound": "never",
+  "contact.pulse.why": "How this is computed",
+  "contact.pulse.arithmetic":
     "Score {score}/100 = 100 x recency {recency} x frequency {frequency} x reciprocity {reciprocity}. Computed at read from captured cadence, never stored.",
-  "person.identity.title": "Identity",
-  "person.identity.emailDead": "Bounces — mail to this address is not arriving",
-  "person.identity.email": "Email",
-  "person.identity.phone": "Phone",
-  "person.identity.currentRole": "Current role",
-  "person.identity.buyingRole": "Buying role",
-  "person.career.title": "Former roles",
-  "person.consent.title": "Outbound guard",
-  "person.consent.allowed": "Allowed: {purposes}",
-  "person.consent.noneGranted":
+  "contact.identity.title": "Identity",
+  "contact.identity.emailDead":
+    "Bounces — mail to this address is not arriving",
+  "contact.identity.email": "Email",
+  "contact.identity.phone": "Phone",
+  "contact.identity.currentRole": "Current role",
+  "contact.identity.buyingRole": "Buying role",
+  "contact.career.title": "Former roles",
+  "contact.consent.title": "Outbound guard",
+  "contact.consent.allowed": "Allowed: {purposes}",
+  "contact.consent.noneGranted":
     "No purpose is granted, so outbound stays blocked.",
-  "person.consent.blocked": "Blocked: {purposes}",
-  "person.network.title": "Who here knows them",
-  "person.network.twoWay": "{count} two-way exchanges in 90 days",
-  "person.network.oneSided": "{count} interactions in 90 days, one-sided",
-  "person.network.replied": "replied {when}",
+  "contact.consent.blocked": "Blocked: {purposes}",
+  "contact.network.title": "Who here knows them",
+  "contact.network.twoWay": "{count} two-way exchanges in 90 days",
+  "contact.network.oneSided": "{count} interactions in 90 days, one-sided",
+  "contact.network.replied": "replied {when}",
 
-  // The person record page V2 (ADR-0096). The strip, rail and card words are
+  // The contact record page V2 (ADR-0096). The strip, rail and card words are
   // split by SLOT rather than by sentence, because the same word means
   // different things in different slots: "Never" under a direction is an
   // absence of correspondence, "None" under a meeting is an absence of a
   // booking, and German renders them differently.
-  "person.page.loading": "Loading…",
-  "person.page.notOpened": "This contact could not be opened.",
-  "person.page.buyingRole": "Buying role",
-  "person.page.owner": "Owner",
-  "person.page.ownerUnassigned": "Unassigned",
-  "person.page.linkedin": "LinkedIn",
+  "contact.page.loading": "Loading…",
+  "contact.page.notOpened": "This contact could not be opened.",
+  "contact.page.buyingRole": "Buying role",
+  "contact.page.owner": "Owner",
+  "contact.page.ownerUnassigned": "Unassigned",
+  "contact.page.linkedin": "LinkedIn",
   // Beside the editable address, not instead of it: the row holds a value to
   // correct AND a place to go, and the verb names the second so neither reads
   // as the other.
-  "person.page.openProfile": "Open profile",
-  // The rail's own details grid: the person's own fields, at a glance above
+  "contact.page.openProfile": "Open profile",
+  // The rail's own details grid: the contact's own fields, at a glance above
   // the six relationship sections below it.
-  "person.rail.detailsTitle": "Details",
-  "person.rail.archivedReadOnly":
+  "contact.rail.detailsTitle": "Details",
+  "contact.rail.archivedReadOnly":
     "This contact is archived. Restore them to change anything here.",
-  "person.notYoursToChange":
+  "contact.notYoursToChange":
     "You cannot change this contact. Ask their owner to share them with you, or your administrator for the right to edit them.",
   // Fired when an employment row's version could not be read back before a
   // write — the row is not saved unpinned, so the reader is told to reload
   // rather than left to think the edit landed.
-  "person.rail.employmentVersionUnresolved":
+  "contact.rail.employmentVersionUnresolved":
     "This row's current version could not be read back to save against. Reload and try again.",
-  // The employers section: every employment edge this person holds, current
-  // one first — a person can work at more than one company at once.
-  "person.rail.employmentTitle": "Companies",
-  "person.rail.noEmployment": "No employment on record.",
-  "person.rail.addEmployment": "Add company",
-  "person.rail.employer": "Employer",
-  "person.rail.allCompaniesConnected":
+  // The employers section: every employment edge this contact holds, current
+  // one first — a contact can work at more than one company at once.
+  "contact.rail.employmentTitle": "Companies",
+  "contact.rail.noEmployment": "No employment on record.",
+  "contact.rail.addEmployment": "Add company",
+  "contact.rail.employer": "Employer",
+  "contact.rail.allCompaniesConnected":
     "Every match is already connected to this contact.",
-  "person.rail.isCurrentEmployer": "This is their current employer",
-  "person.rail.markEnded": "Mark as ended",
-  "person.rail.removeEmploymentTitle": "Remove this company connection?",
-  "person.rail.removeEmploymentBody":
+  "contact.rail.isCurrentEmployer": "This is their current employer",
+  "contact.rail.markEnded": "Mark as ended",
+  "contact.rail.removeEmploymentTitle": "Remove this company connection?",
+  "contact.rail.removeEmploymentBody":
     "The link to {company} and the history hanging off it disappear, and this cannot be undone. {company} itself stays. If they simply left, mark it ended instead.",
-  "person.timeline.empty": "Nothing has been logged with them yet.",
-  "person.deals.empty": "They are not recorded on any deal.",
-  "person.deals.untitled": "Untitled deal",
-  "person.deals.noStage": "No stage yet",
-  "person.meetings.next": "Next meeting",
-  "person.meetings.past": "Meetings so far",
-  "person.meetings.noneBooked": "Nothing is booked with them.",
-  "person.meetings.noneLogged": "No meeting with them has been logged.",
-  "person.meetings.untitled": "Untitled meeting",
-  "person.meetings.participants": "In the room",
-  "person.documents.empty": "No file has been filed against this contact.",
-  "person.research.empty": "Nothing has been researched about them yet.",
-  "person.research.fields": "Enrichment evidence",
-  "person.research.fieldsEmpty": "No enriched field carries evidence yet.",
-  "person.research.capturedBy": "Captured by",
-  "person.action.email": "Email",
+  "contact.timeline.empty": "Nothing has been logged with them yet.",
+  "contact.deals.empty": "They are not recorded on any deal.",
+  "contact.deals.untitled": "Untitled deal",
+  "contact.deals.noStage": "No stage yet",
+  "contact.meetings.next": "Next meeting",
+  "contact.meetings.past": "Meetings so far",
+  "contact.meetings.noneBooked": "Nothing is booked with them.",
+  "contact.meetings.noneLogged": "No meeting with them has been logged.",
+  "contact.meetings.untitled": "Untitled meeting",
+  "contact.meetings.participants": "In the room",
+  "contact.documents.empty": "No file has been filed against this contact.",
+  "contact.research.empty": "Nothing has been researched about them yet.",
+  "contact.research.fields": "Enrichment evidence",
+  "contact.research.fieldsEmpty": "No enriched field carries evidence yet.",
+  "contact.research.capturedBy": "Captured by",
+  "contact.action.email": "Email",
   // The lead verb when the record leaves the transport open: either the
   // composer will ask which way to send, or there is no way to send at all.
-  "person.action.write": "Write",
+  "contact.action.write": "Write",
   // The lead verb when a chat channel is the ONLY way to reach them. The
   // provider is named by the transport directory, so an extension unit this
   // build has never heard of still reads as itself.
-  "person.action.messageOn": "Message on {transport}",
+  "contact.action.messageOn": "Message on {transport}",
   // Why the lead verb is refused, in two sentences that are never merged: no
   // way to reach them, and consent that says not to.
-  "person.action.noTransport": "No address, and no conversation to reply to.",
-  "person.action.call": "Call",
-  "person.action.meetings": "See meetings",
-  "person.action.addTask": "Add task",
-  "person.action.research": "Research",
+  "contact.action.noTransport": "No address, and no conversation to reply to.",
+  "contact.action.call": "Call",
+  "contact.action.meetings": "See meetings",
+  "contact.action.addTask": "Add task",
+  "contact.action.research": "Research",
 
-  "person.strip.lastInbound": "Last inbound",
-  "person.strip.lastOutbound": "Last outbound",
-  "person.strip.reciprocity": "Reciprocity",
-  "person.strip.inOut": "{inbound} in · {outbound} out",
-  "person.strip.nextMeeting": "Next meeting",
-  "person.strip.never": "Never",
-  "person.strip.today": "Today",
-  "person.strip.yesterday": "Yesterday",
-  "person.strip.days": "{count} days",
-  "person.strip.noOpenDeal": "No open deal",
-  "person.strip.noMeeting": "None",
-  "person.consent.allowedWord": "Allowed",
-  "person.consent.blockedWord": "Blocked",
-  "person.consent.unknownWord": "Unknown",
+  "contact.strip.lastInbound": "Last inbound",
+  "contact.strip.lastOutbound": "Last outbound",
+  "contact.strip.reciprocity": "Reciprocity",
+  "contact.strip.inOut": "{inbound} in · {outbound} out",
+  "contact.strip.nextMeeting": "Next meeting",
+  "contact.strip.never": "Never",
+  "contact.strip.today": "Today",
+  "contact.strip.yesterday": "Yesterday",
+  "contact.strip.days": "{count} days",
+  "contact.strip.noOpenDeal": "No open deal",
+  "contact.strip.noMeeting": "None",
+  "contact.consent.allowedWord": "Allowed",
+  "contact.consent.blockedWord": "Blocked",
+  "contact.consent.unknownWord": "Unknown",
 
-  "person.moment.rule.meeting_prep": "Meeting soon",
-  "person.moment.rule.re_engaged": "They came back",
-  "person.moment.rule.job_change": "They moved on",
-  "person.moment.rule.overdue_promise": "Promise overdue",
-  "person.moment.rule.gone_quiet": "Gone quiet",
-  "person.moment.rule.open_promise": "You owe them",
-  "person.moment.rule.role_change": "Role changed",
-  "person.moment.rule.public_signal": "Said in public",
-  "person.moment.rule.missing_next_step": "Nothing scheduled",
-  "person.moment.rule.thin_relationship": "One thread only",
-  "person.moment.rule.nothing_needed": "Nothing needed",
-  "person.moment.evidence.activity": "From an exchange",
-  "person.moment.evidence.task": "From a task",
-  "person.moment.evidence.relationship_change": "From a change on the record",
-  "person.today.source_one": "{count} source",
-  "person.today.source_other": "{count} sources",
-  "person.today.updated": "Updated {when}",
-  "person.today.freshToday": "today",
-  "person.today.freshYesterday": "yesterday",
-  "person.today.freshDaysAgo": "{count} days ago",
+  "contact.moment.rule.meeting_prep": "Meeting soon",
+  "contact.moment.rule.re_engaged": "They came back",
+  "contact.moment.rule.job_change": "They moved on",
+  "contact.moment.rule.overdue_promise": "Promise overdue",
+  "contact.moment.rule.gone_quiet": "Gone quiet",
+  "contact.moment.rule.open_promise": "You owe them",
+  "contact.moment.rule.role_change": "Role changed",
+  "contact.moment.rule.public_signal": "Said in public",
+  "contact.moment.rule.missing_next_step": "Nothing scheduled",
+  "contact.moment.rule.thin_relationship": "One thread only",
+  "contact.moment.rule.nothing_needed": "Nothing needed",
+  "contact.moment.evidence.activity": "From an exchange",
+  "contact.moment.evidence.task": "From a task",
+  "contact.moment.evidence.relationship_change": "From a change on the record",
+  "contact.today.source_one": "{count} source",
+  "contact.today.source_other": "{count} sources",
+  "contact.today.updated": "Updated {when}",
+  "contact.today.freshToday": "today",
+  "contact.today.freshYesterday": "yesterday",
+  "contact.today.freshDaysAgo": "{count} days ago",
 
-  "person.brief.title": "Relationship brief",
-  "person.brief.reading": "Reading the relationship…",
-  "person.brief.empty":
+  "contact.brief.title": "Relationship brief",
+  "contact.brief.reading": "Reading the relationship…",
+  "contact.brief.empty":
     "Nothing has been captured yet that this brief could be written from.",
-  "person.brief.sourceActivity": "Conversation",
-  "person.brief.sourceDeal": "Deal notes",
+  "contact.brief.sourceActivity": "Conversation",
+  "contact.brief.sourceDeal": "Deal notes",
 
-  "person.matters.title": "What matters to {name}",
-  "person.matters.priorities": "Priorities",
-  "person.matters.objections": "Objections",
-  "person.matters.successCriteria": "Success criteria",
-  "person.matters.absent": "Nothing captured yet",
+  "contact.matters.title": "What matters to {name}",
+  "contact.matters.priorities": "Priorities",
+  "contact.matters.objections": "Objections",
+  "contact.matters.successCriteria": "Success criteria",
+  "contact.matters.absent": "Nothing captured yet",
 
-  "person.commercial.title": "Open deal & buying role",
-  "person.commercial.withheld":
+  "contact.commercial.title": "Open deal & buying role",
+  "contact.commercial.withheld":
     "You do not have access to this contact's deals.",
-  "person.commercial.noDeal": "No open deal.",
-  "person.commercial.closes": "closes {date}",
-  "person.commercial.committee": "Buying committee",
-  "person.commercial.openDeal": "Open deal",
+  "contact.commercial.noDeal": "No open deal.",
+  "contact.commercial.closes": "closes {date}",
+  "contact.commercial.committee": "Buying committee",
+  "contact.commercial.openDeal": "Open deal",
 
-  "person.loops.title": "Commitments & open loops",
-  "person.loops.empty":
+  "contact.loops.title": "Commitments & open loops",
+  "contact.loops.empty":
     "Nothing has been promised or asked in the captured conversations.",
-  "person.loops.ours": "You",
-  "person.loops.question": "Open question",
-  "person.loops.overdue_one": "overdue {count} day",
-  "person.loops.overdue_other": "overdue {count} days",
-  "person.loops.overdueUnderDay": "overdue by less than a day",
-  "person.loops.due": "due {when}",
-  "person.loops.dueToday": "today",
-  "person.loops.dueTomorrow": "tomorrow",
-  "person.loops.dueInDays": "in {count} days",
-  "person.loops.waiting": "waiting",
-  "person.loops.open": "open",
-  "person.loops.atLeast": "at least {count}",
+  "contact.loops.ours": "You",
+  "contact.loops.question": "Open question",
+  "contact.loops.overdue_one": "overdue {count} day",
+  "contact.loops.overdue_other": "overdue {count} days",
+  "contact.loops.overdueUnderDay": "overdue by less than a day",
+  "contact.loops.due": "due {when}",
+  "contact.loops.dueToday": "today",
+  "contact.loops.dueTomorrow": "tomorrow",
+  "contact.loops.dueInDays": "in {count} days",
+  "contact.loops.waiting": "waiting",
+  "contact.loops.open": "open",
+  "contact.loops.atLeast": "at least {count}",
 
-  "person.memory.title": "Conversation memory",
-  "person.memory.viewAll": "View all activity",
-  "person.memory.empty": "Nothing captured on this channel yet.",
-  "person.memory.all": "All",
-  "person.memory.email": "Email",
-  "person.memory.meetings": "Meetings",
-  "person.memory.calls": "Calls",
-  "person.memory.notes": "Notes",
-  "person.memory.channelEmail": "Email",
-  "person.memory.channelMeeting": "Meeting",
-  "person.memory.channelCall": "Call",
-  "person.memory.channelNote": "Note",
-  "person.memory.channelMessage": "Message",
-  "person.memory.channelTask": "Task",
-  "person.memory.replied": "Replied",
-  "person.memory.unanswered": "Unanswered",
+  "contact.memory.title": "Conversation memory",
+  "contact.memory.viewAll": "View all activity",
+  "contact.memory.empty": "Nothing captured on this channel yet.",
+  "contact.memory.all": "All",
+  "contact.memory.email": "Email",
+  "contact.memory.meetings": "Meetings",
+  "contact.memory.calls": "Calls",
+  "contact.memory.notes": "Notes",
+  "contact.memory.channelEmail": "Email",
+  "contact.memory.channelMeeting": "Meeting",
+  "contact.memory.channelCall": "Call",
+  "contact.memory.channelNote": "Note",
+  "contact.memory.channelMessage": "Message",
+  "contact.memory.channelTask": "Task",
+  "contact.memory.replied": "Replied",
+  "contact.memory.unanswered": "Unanswered",
 
-  "person.rail.reviewFirst": "Review first",
-  "person.rail.blocked": "Blocked",
-  "person.rail.pulseTitle": "Relationship pulse",
-  "person.rail.explain": "Explain",
-  "person.rail.direction": "Direction",
-  "person.rail.twoWay": "Two-way",
-  "person.rail.oneSided": "One-sided",
-  "person.rail.lastReply": "Last reply",
-  "person.rail.coverage": "Coverage",
-  "person.rail.colleagues_one": "{count} colleague",
-  "person.rail.colleagues_other": "{count} colleagues",
-  "person.rail.trend": "Trend",
-  "person.rail.noInbound": "No inbound",
-  "person.rail.cooling": "Cooling",
-  "person.rail.warming": "Warming",
-  "person.rail.overall": "Overall",
-  "person.rail.thin": "Thin",
-  "person.rail.atRisk": "At risk",
-  "person.rail.strong": "Strong",
-  "person.rail.whoKnows": "Who knows {name}",
-  "person.rail.nobodyYet": "Nobody here has corresponded with them yet.",
-  "person.rail.exchanges": "{count} exchanges",
-  "person.rail.signals": "Signals & risks",
-  "person.rail.noSignals": "Nothing stands out on this relationship.",
-  "person.rail.noReplyDays": "No reply for {count} days",
-  "person.rail.repliedDaysAgo_one": "Replied {count} day ago",
-  "person.rail.repliedDaysAgo_other": "Replied {count} days ago",
-  "person.rail.singleThreaded": "Single-threaded on this deal",
-  "person.rail.noMeetingBooked": "No next meeting booked",
-  "person.rail.consentTitle": "Consent & channels",
-  "person.rail.email": "Email",
-  "person.rail.phone": "Phone",
-  "person.rail.noEmailAddress": "No address on file",
-  "person.rail.noPhoneNumber": "No number on file",
-  "person.rail.channelNotDeliverable": "Not deliverable",
-  "person.rail.recentActivity": "Recent activity",
-  "person.rail.nothingCaptured": "Nothing captured yet.",
-  "person.rail.viewAllActivity": "View all activity",
-  "person.drawer.close": "Close",
+  "contact.rail.reviewFirst": "Review first",
+  "contact.rail.blocked": "Blocked",
+  "contact.rail.pulseTitle": "Relationship pulse",
+  "contact.rail.explain": "Explain",
+  "contact.rail.direction": "Direction",
+  "contact.rail.twoWay": "Two-way",
+  "contact.rail.oneSided": "One-sided",
+  "contact.rail.lastReply": "Last reply",
+  "contact.rail.coverage": "Coverage",
+  "contact.rail.colleagues_one": "{count} colleague",
+  "contact.rail.colleagues_other": "{count} colleagues",
+  "contact.rail.trend": "Trend",
+  "contact.rail.noInbound": "No inbound",
+  "contact.rail.cooling": "Cooling",
+  "contact.rail.warming": "Warming",
+  "contact.rail.overall": "Overall",
+  "contact.rail.thin": "Thin",
+  "contact.rail.atRisk": "At risk",
+  "contact.rail.strong": "Strong",
+  "contact.rail.whoKnows": "Who knows {name}",
+  "contact.rail.nobodyYet": "Nobody here has corresponded with them yet.",
+  "contact.rail.exchanges": "{count} exchanges",
+  "contact.rail.signals": "Signals & risks",
+  "contact.rail.noSignals": "Nothing stands out on this relationship.",
+  "contact.rail.noReplyDays": "No reply for {count} days",
+  "contact.rail.repliedDaysAgo_one": "Replied {count} day ago",
+  "contact.rail.repliedDaysAgo_other": "Replied {count} days ago",
+  "contact.rail.singleThreaded": "Single-threaded on this deal",
+  "contact.rail.noMeetingBooked": "No next meeting booked",
+  "contact.rail.consentTitle": "Consent & channels",
+  "contact.rail.email": "Email",
+  "contact.rail.phone": "Phone",
+  "contact.rail.noEmailAddress": "No address on file",
+  "contact.rail.noPhoneNumber": "No number on file",
+  "contact.rail.channelNotDeliverable": "Not deliverable",
+  "contact.rail.recentActivity": "Recent activity",
+  "contact.rail.nothingCaptured": "Nothing captured yet.",
+  "contact.rail.viewAllActivity": "View all activity",
+  "contact.drawer.close": "Close",
   "richtext.bold": "Bold",
   "richtext.italic": "Italic",
   "richtext.bulletList": "Bulleted list",
   "richtext.numberList": "Numbered list",
   "richtext.link": "Link",
   "richtext.linkPrompt": "Web address for this link (leave empty to remove it)",
-  "person.composer.intentAgenda": "propose an agenda for the upcoming meeting",
-  "person.composer.intentReply": "reply to their last message",
-  "person.composer.intentCommitment": "deliver what we promised them",
-  "person.composer.intentFollowUp": "follow up — it has gone quiet",
-  "person.research.title": "Deep research · {name}",
-  "person.research.publicOnly": "Public sources only",
-  "person.research.running": "Reading public sources…",
+  "contact.composer.intentAgenda": "propose an agenda for the upcoming meeting",
+  "contact.composer.intentReply": "reply to their last message",
+  "contact.composer.intentCommitment": "deliver what we promised them",
+  "contact.composer.intentFollowUp": "follow up — it has gone quiet",
+  "contact.research.title": "Deep research · {name}",
+  "contact.research.publicOnly": "Public sources only",
+  "contact.research.running": "Reading public sources…",
   // Deep research and bought contact data are two capabilities, and this
   // sentence sits directly under the bought data on the same drawer. It names
   // the RESEARCH provider for that reason: "data provider" is the licensed
   // contact-data vocabulary (provider.profile.*), and using it here told a
   // reader nothing was connected while eight purchased claims sat above it.
-  "person.research.notConnected":
+  "contact.research.notConnected":
     "No research provider is connected, so no public source has been read for them. That is separate from any bought contact data above — Margince never researches a contact on its own authority, and deep research needs a licensed provider that carries the lawful basis for it.",
-  "person.research.staged":
+  "contact.research.staged":
     "Research is staged. Nothing changes {name}'s record until you review and save.",
-  "person.research.stats": "{sources} sources read · {claims} cited claims",
-  "person.research.dismiss": "Dismiss",
-  "person.research.discard": "Discard",
-  "person.research.save": "Review & save {count} claims",
-  "person.research.evidenceOrOmit":
+  "contact.research.stats": "{sources} sources read · {claims} cited claims",
+  "contact.research.dismiss": "Dismiss",
+  "contact.research.discard": "Discard",
+  "contact.research.save": "Review & save {count} claims",
+  "contact.research.evidenceOrOmit":
     "AI-assisted · evidence-or-omit · public information only",
-  "person.meeting.title": "Meeting brief",
-  "person.meeting.brief": "Brief me",
-  "person.meeting.empty": "There is nothing recorded for this meeting yet.",
-  "person.meeting.loading": "Assembling the brief…",
-  "person.meeting.assembledNow": "Assembled just now, from the latest data",
-  "person.meeting.header": "At a glance",
-  "person.meeting.what_changed": "Since you last spoke",
-  "person.meeting.goal": "Goal for this meeting",
-  "person.meeting.attendees": "Attendees",
-  "person.meeting.commitments": "Open commitments",
-  "person.meeting.deal_state": "Where the deal stands",
-  "person.meeting.risks": "Risks and watch-outs",
-  "person.meeting.talking_points": "Suggested talking points",
-  "person.meeting.company_context": "When you last met",
-  "person.meeting.objective": "The outcome to earn",
-  "person.meeting.openWith": "Open with",
-  "person.meeting.arc": "The account arc",
-  "person.meeting.arcSub": "Only the moments that change today's conversation.",
-  "person.meeting.close": "Close the meeting",
-  "person.meeting.advance.minimum": "Minimum advance",
-  "person.meeting.advance.best": "Best advance",
-  "person.meeting.advance.fallback": "Fallback",
-  "person.meeting.unknowns": "What the record does not show",
-  "person.meeting.likelyAsks": "What they are likely to ask",
-  "person.meeting.beReady": "Be ready for this",
-  "person.meeting.say": "Say",
-  "person.meeting.show": "Show",
-  "person.meeting.avoid": "Avoid",
-  "person.meeting.scenarios": "If the meeting goes another way",
-  "person.meeting.relevance.high": "Likely",
-  "person.meeting.relevance.medium": "Possible",
-  "person.meeting.relevance.low": "Less likely",
-  "person.meeting.coach.title": "Coach the rep on one thing",
-  "person.meeting.coach.eyebrow": "Manager view",
-  "person.meeting.coach.listenFor": "Listen for",
-  "person.meeting.coach.watchFor": "Watch for",
-  "person.meeting.coach.interveneIf": "Step in only if",
-  "person.meeting.coach.paths": "How this meeting can go",
-  "person.meeting.background": "Background and sources",
-  "person.meeting.omittedSource": "Not in this brief",
-  "person.meeting.preparedFor": "Prepared for {name}",
-  "person.meeting.preparedForAt": "Prepared for {name} · {company}",
+  "contact.meeting.title": "Meeting brief",
+  "contact.meeting.brief": "Brief me",
+  "contact.meeting.empty": "There is nothing recorded for this meeting yet.",
+  "contact.meeting.loading": "Assembling the brief…",
+  "contact.meeting.assembledNow": "Assembled just now, from the latest data",
+  "contact.meeting.header": "At a glance",
+  "contact.meeting.what_changed": "Since you last spoke",
+  "contact.meeting.goal": "Goal for this meeting",
+  "contact.meeting.attendees": "Attendees",
+  "contact.meeting.commitments": "Open commitments",
+  "contact.meeting.deal_state": "Where the deal stands",
+  "contact.meeting.risks": "Risks and watch-outs",
+  "contact.meeting.talking_points": "Suggested talking points",
+  "contact.meeting.company_context": "When you last met",
+  "contact.meeting.objective": "The outcome to earn",
+  "contact.meeting.openWith": "Open with",
+  "contact.meeting.arc": "The account arc",
+  "contact.meeting.arcSub":
+    "Only the moments that change today's conversation.",
+  "contact.meeting.close": "Close the meeting",
+  "contact.meeting.advance.minimum": "Minimum advance",
+  "contact.meeting.advance.best": "Best advance",
+  "contact.meeting.advance.fallback": "Fallback",
+  "contact.meeting.unknowns": "What the record does not show",
+  "contact.meeting.likelyAsks": "What they are likely to ask",
+  "contact.meeting.beReady": "Be ready for this",
+  "contact.meeting.say": "Say",
+  "contact.meeting.show": "Show",
+  "contact.meeting.avoid": "Avoid",
+  "contact.meeting.scenarios": "If the meeting goes another way",
+  "contact.meeting.relevance.high": "Likely",
+  "contact.meeting.relevance.medium": "Possible",
+  "contact.meeting.relevance.low": "Less likely",
+  "contact.meeting.coach.title": "Coach the rep on one thing",
+  "contact.meeting.coach.eyebrow": "Manager view",
+  "contact.meeting.coach.listenFor": "Listen for",
+  "contact.meeting.coach.watchFor": "Watch for",
+  "contact.meeting.coach.interveneIf": "Step in only if",
+  "contact.meeting.coach.paths": "How this meeting can go",
+  "contact.meeting.background": "Background and sources",
+  "contact.meeting.omittedSource": "Not in this brief",
+  "contact.meeting.preparedFor": "Prepared for {name}",
+  "contact.meeting.preparedForAt": "Prepared for {name} · {company}",
 
   "today.source.suggestions": "the advice",
 
   // The licensed data provider (ADR-0101). Two surfaces share this
-  // vocabulary — the Settings card and the person page — so a state reads
+  // vocabulary — the Settings card and the contact page — so a state reads
   // the same wherever it appears.
   "today.scan.queued": "Margince will read this account in a moment.",
   "today.scan.reading":
@@ -8599,7 +8603,7 @@ export const en = {
   "provider.spend.runsHead": "Lookups",
   "provider.spend.none": "Nothing has been bought yet.",
 
-  // The person page's section. The three "nothing here" states are three
+  // The contact page's section. The three "nothing here" states are three
   // different sentences on purpose: only one of them is something the
   // reader can act on.
   "provider.profile.title": "Bought contact data",
@@ -8717,7 +8721,7 @@ export const en = {
   "filters.op.atMost": "is at most",
 
   // The Filters & views screen's own chrome. The match line is keyed per object
-  // because "3 people match" and "3 companies match" are different sentences in
+  // because "3 contacts match" and "3 companies match" are different sentences in
   // every language, and a shared "{count} match" would make the object a
   // placeholder that some grammars cannot place.
   "filters.title": "Filters & views",
@@ -8761,7 +8765,7 @@ export const en = {
 
   // The release gate (src/screens/releaseskew.tsx). It renders instead of the
   // app when this bundle and the api come from different releases, so the copy
-  // has two readers at once: the person who just wants in, and the operator who
+  // has two readers at once: the contact who just wants in, and the operator who
   // has to fix it. The first sentence is for the first, the last for the second.
   "release.skewTitle": "This installation is part-way through an update",
   "release.skewBody":
@@ -8770,7 +8774,7 @@ export const en = {
   "release.skewReload": "Reload",
 
   // The queue behind "send later". Every sentence here is addressed to ONE
-  // person: the list is the sender's own, so there is no "a teammate scheduled
+  // contact: the list is the sender's own, so there is no "a teammate scheduled
   // this" reading to write for.
   //
   // The verb is "withdraw", not "delete" or "cancel". Nothing was transmitted
@@ -8836,17 +8840,17 @@ export const en = {
   "projectCompanies.attach": "Attach company",
   "projectCompanies.detachTitle": "Take this company off?",
   "projectCompanies.searchLabel": "Search companies by name",
-  "personProjects.title": "Projects",
-  "personProjects.empty":
+  "contactProjects.title": "Projects",
+  "contactProjects.empty":
     "This contact appears here once they are on a delivery — as a sponsor, a point of contact, or whoever else is working it.",
   "projectRole.customer": "Customer",
   "projectRole.partner": "Partner",
   "projectRole.subcontractor": "Subcontractor",
-  "personRole.sponsor": "Sponsor",
-  "personRole.projectLead": "Project lead",
-  "personRole.deliveryLead": "Delivery lead",
-  "personRole.expert": "Subject-matter expert",
-  "personRole.user": "User",
+  "contactRole.sponsor": "Sponsor",
+  "contactRole.projectLead": "Project lead",
+  "contactRole.deliveryLead": "Delivery lead",
+  "contactRole.expert": "Subject-matter expert",
+  "contactRole.user": "User",
   "projectLinks.new": "New project",
   "projectLinks.attach": "Attach project",
   "projectLinks.move": "Move to another project",
@@ -9489,7 +9493,7 @@ export const en = {
   "firstRun.google.eyebrow": "It thinks. It cannot reach anyone yet",
   "firstRun.platform.title": "What does your company run on?",
   "firstRun.platform.sub":
-    "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",
+    "One answer decides how mail reaches Margince and how contacts sign in. You can change it later under Settings.",
   "firstRun.platform.legend": "The platform this company runs on",
   "firstRun.platform.google": "Google Workspace",
   "firstRun.platform.googleWhat":
@@ -9556,18 +9560,18 @@ export const en = {
   "firstRun.ignite.carryOn": "Carry on",
   "firstRun.ai.foot":
     "Nothing is sent to your vendor until you press Continue.",
-  "person.readings.title": "Where this contact stands",
-  "person.readings.move": "Whose move",
-  "person.readings.yourMove": "Yours",
-  "person.readings.theirMove": "Theirs",
-  "person.readings.quiet": "Gone quiet",
-  "person.readings.neverSpoke": "Never spoken",
-  "person.readings.lastFromThem": "last from them: {when}",
-  "person.readings.neverReplied": "nothing from them yet",
-  "person.readings.promises": "Open promises",
-  "person.readings.nothingOwed": "nothing owed",
-  "person.readings.onTime": "none late yet",
-  "person.readings.deal": "Deals they decide",
+  "contact.readings.title": "Where this contact stands",
+  "contact.readings.move": "Whose move",
+  "contact.readings.yourMove": "Yours",
+  "contact.readings.theirMove": "Theirs",
+  "contact.readings.quiet": "Gone quiet",
+  "contact.readings.neverSpoke": "Never spoken",
+  "contact.readings.lastFromThem": "last from them: {when}",
+  "contact.readings.neverReplied": "nothing from them yet",
+  "contact.readings.promises": "Open promises",
+  "contact.readings.nothingOwed": "nothing owed",
+  "contact.readings.onTime": "none late yet",
+  "contact.readings.deal": "Deals they decide",
   "deal360.brief": "What this deal is",
   "deal.strip.lastTouch": "Last touch",
   "lead.standing.qualified": "Qualified",

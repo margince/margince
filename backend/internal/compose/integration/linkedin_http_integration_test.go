@@ -5,7 +5,7 @@
 
 package integration
 
-// The LinkedIn upload over HTTP (ADR-0078 §2.1b) — the whole path a person
+// The LinkedIn upload over HTTP (ADR-0078 §2.1b) — the whole path a contact
 // actually takes: multipart upload, parse, store, match, and the summary they
 // read to decide whether to trust it.
 
@@ -98,7 +98,7 @@ func TestUploadingAnExportImportsItAndReportsWhatItDid(t *testing.T) {
 	}
 
 	// Re-uploading a refreshed export updates rather than duplicating —
-	// people re-export regularly, and a doubled network makes every reach
+	// contacts re-export regularly, and a doubled network makes every reach
 	// count a lie.
 	status, again := uploadExport(t, e, exportWithPreamble)
 	if status != http.StatusOK {
@@ -114,11 +114,11 @@ func TestAnExactAddressMatchConfirmsOverHTTP(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	// A contact carrying the address the export names.
-	var person AnyMap
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	var contact AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Dana Buyer",
 		"emails":    []AnyMap{{"email": "dana@acme.test", "is_primary": true}},
-	}, nil, &person); status != http.StatusCreated {
+	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating the contact: %d", status)
 	}
 

@@ -47,7 +47,7 @@ const KIND_LABELS: Record<ActivityKind, MessageKey> = {
  *
  * "They wrote" and "we sent" rather than "inbound" and "outbound": the row is
  * read to decide whether anybody owes anybody a reply, and that is a question
- * about people. A meeting has both sides by definition and says so; a note has
+ * about contacts. A meeting has both sides by definition and says so; a note has
  * no direction at all and says nothing rather than inventing one.
  */
 function directionLabel(activity: Activity): MessageKey | undefined {
@@ -86,7 +86,7 @@ function durationLabel(
  * CompanyRecentList is the exchanges, newest first.
  *
  * The mark carries the row rather than an icon per kind: a reader scanning the
- * list is looking for a person they know, and the KIND already has a word of
+ * list is looking for a contact they know, and the KIND already has a word of
  * its own beside it. Withheld rows still draw — a section that silently
  * dropped what this reader may not see would report a quieter account than the
  * one on file.

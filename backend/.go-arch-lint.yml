@@ -85,7 +85,7 @@ components:
   consent:     { in: internal/modules/consent }
   collections: { in: internal/modules/collections }
   signals:     { in: internal/modules/signals }
-  people:      { in: internal/modules/people }
+  contacts:      { in: internal/modules/contacts }
   privacy:     { in: internal/modules/privacy }
   deals:       { in: internal/modules/deals }
   projects:    { in: internal/modules/projects }
@@ -163,7 +163,7 @@ deps:
   signals:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
-  people:
+  contacts:
     mayDependOn: [contracts, platform]
     # xnet: publicsuffix registrable-label derivation for company display names (ADR-0072).
     canUse: [pgx, oapi, xtext, xnet]
@@ -256,7 +256,7 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   compose:
-    mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, platform, migrations, projects]
     # xtext: the evidence gate normalizes page text to NFC before matching
     # (evidencematch.go) — Unicode normal forms need golang.org/x/text.
     # yaml: aicert's corpus loader parses scenario files directly — the
@@ -311,11 +311,11 @@ deps:
     # halves" shape — forecasting must not gain a YAML dependency to check that
     # every window a client may ask for is one it can resolve. Without it an
     # unrecognised period answers as a QUARTER under the caller's own word.
-    # dedupeevidencefields_test.go reads people.DedupeEvidenceFields and holds it
+    # dedupeevidencefields_test.go reads contacts.DedupeEvidenceFields and holds it
     # to the contract's AttentionPairEvidence enum: once more the "only gates may
     # hold both halves" shape. The dedupe evidence snapshot is stored as free
     # JSON, so a field name the detector writes and the contract omits reaches a
-    # reader as a database column — people must not gain a dependency on the
+    # reader as a database column — contacts must not gain a dependency on the
     # contract document to know its own field names are sayable.
     # outboundfilesnapshot_test.go reads comms.OutboundFile and activities.Out-
     # boundFile together: comms writes what a message carried into a JSON column
@@ -324,8 +324,8 @@ deps:
     # an unmarshal, which reports no error for a key it does not recognise — and
     # neither module may import the other to notice. Only gates sees both.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, people, forecasting, comms]
+    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, forecasting, comms]
     canUse: [yaml, jsonschema]
   cmd:
-    mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

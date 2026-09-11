@@ -92,7 +92,7 @@ func TestRestSummaryLeadsWithTheActRatherThanTheRoute(t *testing.T) {
 	}
 	for _, unwanted := range []string{"updateDeal", "PATCH", "018f2a10"} {
 		if strings.Contains(got, unwanted) {
-			t.Errorf("summary %q still carries %q, which says nothing to the person deciding", got, unwanted)
+			t.Errorf("summary %q still carries %q, which says nothing to the contact deciding", got, unwanted)
 		}
 	}
 }
@@ -144,7 +144,7 @@ func TestRestSummaryBoundsAWidePatch(t *testing.T) {
 	}
 	b.WriteString("}")
 
-	got := restSummary(agentPolicy{Op: "updatePerson", Tool: "update_record", RecordType: recordTypePerson}, summaryRequest("PATCH", "/v1/people/x"), []byte(b.String()))
+	got := restSummary(agentPolicy{Op: "updateContact", Tool: "update_record", RecordType: recordTypeContact}, summaryRequest("PATCH", "/v1/contacts/x"), []byte(b.String()))
 	if !strings.Contains(got, "more") {
 		t.Errorf("a 30-field patch was not bounded: %q", got)
 	}
@@ -155,7 +155,7 @@ func TestRestSummaryBoundsAWidePatch(t *testing.T) {
 
 // A single long value cannot crowd out the fields after it.
 func TestRestSummaryBoundsOneLongValue(t *testing.T) {
-	got := restSummary(agentPolicy{Op: "updatePerson", Tool: "update_record", RecordType: recordTypePerson}, summaryRequest("PATCH", "/v1/people/x"),
+	got := restSummary(agentPolicy{Op: "updateContact", Tool: "update_record", RecordType: recordTypeContact}, summaryRequest("PATCH", "/v1/contacts/x"),
 		[]byte(`{"notes":"`+strings.Repeat("a", 500)+`","title":"CEO"}`))
 	if !strings.Contains(got, "title=CEO") {
 		t.Errorf("a long value crowded out the field after it: %q", got)

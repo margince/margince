@@ -461,7 +461,7 @@ func (e *assuranceJobEnv) runWithFindings(
 func (e *assuranceJobEnv) bundledTasks(t *testing.T) []bundledTask {
 	t.Helper()
 	// activity_link is polymorphic by COLUMN, not by a shared entity_id: a shape
-	// CHECK admits exactly one of person_id/company_id/deal_id/lead_id/
+	// CHECK admits exactly one of contact_id/company_id/deal_id/lead_id/
 	// project_id per row. A finding's subject is a deal, so deal_id is the one
 	// this reads — and reading the wrong column would return NULL for every row
 	// rather than failing, which is why it is named rather than coalesced.

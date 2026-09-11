@@ -17,11 +17,11 @@ import type { WizardPersistInput } from "./use-wizard-state";
 import { WayOnward } from "./way-onward";
 import { ConversationWorkbench } from "./workbench";
 
-// The team act: a creator who will not work in Margince names the first person
-// who will. The form is the one Settings → People uses, so an invite sent from
+// The team act: a creator who will not work in Margince names the first contact
+// who will. The form is the one Settings → Contacts uses, so an invite sent from
 // here is exactly an invite sent from there — role, teams and the set-password
 // link included. On an installation with no outbound email the link is the
-// only way the invited person ever gets in, so it is minted the moment the
+// only way the invited contact ever gets in, so it is minted the moment the
 // invite lands, the way the roster does it.
 //
 // Leaving, with or without an invite, closes the journey: the personal steps

@@ -108,7 +108,7 @@ async function openReplyAndAddress(address: string) {
   render(
     <ComposeModal
       activityId="act-1"
-      entityType="person"
+      entityType="contact"
       entityId="p-1"
       open
       onClose={vi.fn()}
@@ -226,7 +226,7 @@ describe("the composer asks before anybody presses Send", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -277,7 +277,7 @@ describe("the composer asks before anybody presses Send", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}

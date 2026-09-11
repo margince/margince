@@ -29,7 +29,7 @@ type piiHandling struct {
 	erasureWrite bool
 	// retentionErase: the nightly retention sweep is this table's ONLY
 	// eraser. True only where the row carries no linkage back to a subject
-	// for the Art. 17 cascade to walk — the cascade starts at a person, so a
+	// for the Art. 17 cascade to walk — the cascade starts at a contact, so a
 	// table it structurally cannot reach must still be erased by SOMETHING,
 	// and the sweep is that something. It is a separate field rather than a
 	// second way to satisfy erasureWrite because the two are different
@@ -60,7 +60,7 @@ type piiHandling struct {
 	// Predicates rather than a bare "the sweep deletes this table", because
 	// several actions delete from one table and a table-level claim is
 	// satisfied by whichever of them survives: field_provenance is purged by
-	// person/anonymize AND by activity/erase, so a table-level flag would go on
+	// contact/anonymize AND by activity/erase, so a table-level flag would go on
 	// passing after either was deleted. Each declared predicate must be carried
 	// by a delete of its own.
 	retentionPurge []string
@@ -102,33 +102,33 @@ type piiHandling struct {
 
 // piiTables is the registry of every table holding data about a subject.
 // "Holds a subject's PII" is a domain judgment, not a schema property —
-// attachment/raw_capture/embedding carry it with no person FK, while
-// person-referencing tables like relationship and the consent proof logs
+// attachment/raw_capture/embedding carry it with no contact FK, while
+// contact-referencing tables like relationship and the consent proof logs
 // deliberately do not qualify (kept under Art. 5 accountability). So, like
 // tableOwners in the ownership gate, this map IS the hand-maintained
 // artifact: a table is registered here as the one act that declares it
 // PII-bearing, and the test then proves erasure and SAR reach it. Keep it
 // in step with the subject data in data-model §3.
 var piiTables = map[string]piiHandling{
-	"person":        {erasureWrite: true, sarRead: true},
-	"person_email":  {erasureWrite: true, sarRead: true},
-	"person_social": {erasureWrite: true, sarRead: true},
-	"person_phone":  {erasureWrite: true, sarRead: true},
+	"contact":        {erasureWrite: true, sarRead: true},
+	"contact_email":  {erasureWrite: true, sarRead: true},
+	"contact_social": {erasureWrite: true, sarRead: true},
+	"contact_phone":  {erasureWrite: true, sarRead: true},
 	// The channel identity binds a human to their Telegram account: the
 	// provider's user id for them plus the @username they message under. Both
 	// identify the subject as directly as an address does, and the id is the
 	// key a re-capture would resurrect them by — so erasure purges it, the
 	// suppression list keeps holding it, and Art. 15 hands it back.
-	"person_channel_identity": {erasureWrite: true, sarRead: true},
-	"lead":                    {erasureWrite: true, sarRead: true},
+	"contact_channel_identity": {erasureWrite: true, sarRead: true},
+	"lead":                     {erasureWrite: true, sarRead: true},
 	// Who was IN each interaction (ACT-DDL-3). It names the subject twice —
-	// by person_id and by the raw address of a party who never became a
+	// by contact_id and by the raw address of a party who never became a
 	// record — so erasure nulls both and Art. 15 hands back the fact that
 	// they were a party to those conversations.
 	"activity_participant": {erasureWrite: true, sarRead: true},
 	// LinkedIn ghosts (CG-DDL-2) hold a third party's name, employer and
 	// sometimes address, imported from a colleague's export without that
-	// person being asked. Erasure deletes them; Art. 15 hands them back,
+	// contact being asked. Erasure deletes them; Art. 15 hands them back,
 	// because "you appear in someone's imported address book" is exactly the
 	// kind of holding a subject would not otherwise discover.
 	"linkedin_connection": {erasureWrite: true, sarRead: true},
@@ -218,7 +218,7 @@ var piiTables = map[string]piiHandling{
 	// fields from where — subject-linked metadata (B-E02.12).
 	//
 	// The sweep destroys these by the ROW, under two predicates that select
-	// different rows: person/anonymize takes the SUBJECT's field origins,
+	// different rows: contact/anonymize takes the SUBJECT's field origins,
 	// activity/erase takes one erased message's. Both are declared, so deleting
 	// either act fails rather than being covered by the other — provenance
 	// naming who captured a value and from where outlives the value itself
@@ -226,19 +226,19 @@ var piiTables = map[string]piiHandling{
 	"field_provenance": {
 		erasureWrite:   true,
 		sarRead:        true,
-		retentionPurge: []string{"object_type = 'person'", "object_type = 'activity'"},
+		retentionPurge: []string{"object_type = 'contact'", "object_type = 'activity'"},
 	},
 	// The enrichment sidecar holds the subject's title, phone, employer and
 	// public profile URL, each with the verbatim sentence it was read from —
 	// their data twice over, the value and the quote naming them. Nothing
-	// cascades to it, because anonymize-in-place leaves the person row
+	// cascades to it, because anonymize-in-place leaves the contact row
 	// standing, so erasure has to reach it by statement.
-	"person_profile_field": {erasureWrite: true, sarRead: true},
+	"contact_profile_field": {erasureWrite: true, sarRead: true},
 	// What a licensed data provider asserted about the subject and this
 	// installation retained (ADR-0101). Bought from a third party rather than
 	// given by them, which makes it disclosable twice over — the values and
 	// the fact that they were purchased.
-	"person_provider_claim": {erasureWrite: true, sarRead: true},
+	"contact_provider_claim": {erasureWrite: true, sarRead: true},
 	// What a purchase FILLED on the record. It keeps the value it wrote for a
 	// plain column — the title, the profile URL — because the revert has
 	// nothing else to recognise the value by, and a hash of an address or a
@@ -248,7 +248,7 @@ var piiTables = map[string]piiHandling{
 	// a purchase put something on their record, not only that we bought it.
 	"provider_applied_field": {erasureWrite: true, sarRead: true},
 	// The run that bought it. Erasure SCRUBS rather than deletes: the row
-	// stops naming anybody (person_id, fingerprint, job id, requester,
+	// stops naming anybody (contact_id, fingerprint, job id, requester,
 	// snapshot) while the spend it records survives, because what the
 	// installation paid is an accounting fact about the installation once it
 	// names no one (PI-AC-8). Art. 15 hands back the purpose and the
@@ -257,9 +257,9 @@ var piiTables = map[string]piiHandling{
 	"provider_run": {erasureWrite: true, sarRead: true},
 	// The correction ledger holds what a human typed OVER what the system
 	// inferred — a title, a phone number, a free-text note about the subject.
-	// The verdict is a decision a person made about them, so Art. 15 hands it
+	// The verdict is a decision a contact made about them, so Art. 15 hands it
 	// back, and Art. 17 deletes rather than nulls it: a verdict with no value
-	// is not a verdict, and suppressions about a person nobody may now assert
+	// is not a verdict, and suppressions about a contact nobody may now assert
 	// anything about have nothing left to suppress.
 	"ai_feedback": {erasureWrite: true, sarRead: true},
 	// How a reply verdict came to be what it is. Every row is a judgement about
@@ -275,7 +275,7 @@ var piiTables = map[string]piiHandling{
 	"activity_reply_verdict_history": {erasureWrite: true, sarRead: true},
 	// A handoff names the subject it was about, and its note is what one seat
 	// wrote about them to another. The judgement — accepted, or refused for this
-	// reason — is a decision people made about that person, the same holding
+	// reason — is a decision contacts made about that contact, the same holding
 	// ai_feedback carries. The foreign keys cascade on DELETE and erasure UPDATEs
 	// in place, so the cascade never fires for an Art. 17 request and the erasure
 	// has to reach these rows itself.
@@ -290,7 +290,7 @@ var piiTables = map[string]piiHandling{
 	"comms_outbound": {erasureWrite: true, sarRead: true},
 	// The voice learning signal keeps the model's drafted text
 	// (generated_original) in plaintext, which is correspondence about a
-	// subject. It names no person, activity or subject, deliberately: the row
+	// subject. It names no contact, activity or subject, deliberately: the row
 	// exists to say whether the owner sent the machine's words or reworded
 	// them, and linking it to the recipient would put a second copy of their
 	// mail behind a join Art. 17 would have to find. So the time-based sweep
@@ -332,7 +332,7 @@ var piiTables = map[string]piiHandling{
 	// The preference-center token (0048) is a live capability over the
 	// subject's consent record — held by whoever has the emailed
 	// List-Unsubscribe URL, honoured with no session at all. Registered so
-	// this gate proves erasure retires it: the person row survives
+	// this gate proves erasure retires it: the contact row survives
 	// anonymize-in-place, so the schema's ON DELETE CASCADE never fires.
 	// The export side is sarFORBIDDEN, not merely not-read, and for the
 	// opposite reason to embedding's: not "nothing human-readable to hand
@@ -340,9 +340,9 @@ var piiTables = map[string]piiHandling{
 	// an admin must not carry into an export file — the subject already holds
 	// their own copy, in the mail that delivered it. Declared so a future SAR
 	// section over this table fails the gate instead of shipping.
-	// Why each outbound message to this person was permitted, per recipient
+	// Why each outbound message to this contact was permitted, per recipient
 	// and per phase. It holds their address and the ids of the records the
-	// decision rested on, so erasure must reach it: the person row survives
+	// decision rested on, so erasure must reach it: the contact row survives
 	// anonymize-in-place and the schema's cascade fires off the DELIVERY, not
 	// off the subject.
 	//
@@ -350,21 +350,21 @@ var piiTables = map[string]piiHandling{
 	// say what it did with somebody's data and why; this table IS that answer
 	// for every message sent to them. Withholding it would mean holding the
 	// clearest record of the processing and declining to disclose it.
-	// Why a contact exists: what the person did, or what was done to obtain
+	// Why a contact exists: what the contact did, or what was done to obtain
 	// them. Subject data, and the part of their file that answers "why do you
 	// have me at all" — which is Art. 15(1)(g), the source. Erased with them,
 	// and disclosed, because a subject told their consent state and not how
 	// they were acquired has been answered halfway.
-	"person_acquisition_evidence": {erasureWrite: true, sarRead: true},
-	"privacy_notice_case":         {erasureWrite: true, sarRead: true},
-	"communication_decision":      {erasureWrite: true, sarRead: true},
+	"contact_acquisition_evidence": {erasureWrite: true, sarRead: true},
+	"privacy_notice_case":          {erasureWrite: true, sarRead: true},
+	"communication_decision":       {erasureWrite: true, sarRead: true},
 	// The non-consent basis a message stood on — the thing that happened, its
 	// scope and its window. Same reasoning: erased with the subject, and
 	// disclosed, because "we wrote to you because you wrote to us on 2 May" is
 	// exactly what a subject access request is asking for.
 	"communication_basis": {erasureWrite: true, sarRead: true},
 	// Objections, restrictions and dead addresses. Disclosed for the same
-	// reason: a person asking what is held about them is owed the record that
+	// reason: a contact asking what is held about them is owed the record that
 	// they said stop, and when.
 	"communication_suppression": {erasureWrite: true, sarRead: true},
 
@@ -372,7 +372,7 @@ var piiTables = map[string]piiHandling{
 
 	// The confirm-details link: a live bearer credential that opens the
 	// subject's own record. Erasure must retire it explicitly, because
-	// anonymize-in-place leaves the person row standing so the schema's
+	// anonymize-in-place leaves the contact row standing so the schema's
 	// ON DELETE CASCADE never fires.
 	//
 	// The export side is read WITH TWO COLUMNS WITHHELD, where it used to be
@@ -399,7 +399,7 @@ var piiTables = map[string]piiHandling{
 	// part of the package the subject authored — an export that handed back
 	// their archived addresses and their whole timeline while omitting the
 	// correction they themselves sent would be answering the wrong question.
-	"person_confirm_submission": {erasureWrite: true, sarRead: true},
+	"contact_confirm_submission": {erasureWrite: true, sarRead: true},
 }
 
 // sarAssemblyFiles are the files whose SQL literals make up the Art. 15
@@ -502,7 +502,7 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 		}
 		if h.erasureWrite && !writes[table] {
 			missing = append(missing, "erasure never writes PII table "+table+
-				" — Art. 17 leaves it intact; redact/purge it in ErasePerson")
+				" — Art. 17 leaves it intact; redact/purge it in EraseContact")
 		}
 		if h.retentionErase && sweeps[table] == "" {
 			missing = append(missing, "the retention sweep never writes PII table "+table+

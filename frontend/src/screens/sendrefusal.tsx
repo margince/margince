@@ -19,11 +19,11 @@ import { ReviewReference, SendReviewActions } from "./sendreviewaction";
 // consent credential, so it may only ever have one addressee.
 export function SendRefusal({
   refusal,
-  personId,
+  contactId,
   review,
 }: Readonly<{
   refusal: Refusal;
-  personId?: string;
+  contactId?: string;
   review?: SendReview | null;
 }>) {
   const t = useT();
@@ -56,8 +56,8 @@ export function SendRefusal({
         {review && review.actions.length === 0 && (
           <ReviewReference review={review} />
         )}
-        {personId && (
-          <a href={`#/contacts/${personId}`} className="link-button">
+        {contactId && (
+          <a href={`#/contacts/${contactId}`} className="link-button">
             {t("compose.consentGoto")}
           </a>
         )}

@@ -31,7 +31,7 @@ const (
 	mintedIdentity  = "019fad38-minted@margince.test"
 	stampedIdentity = "CAFAR1txEuKW@mail.gmail.com"
 	// counterparty is who this message was with. Both the send and the
-	// provider's echo of it name the same person, which is one of the things
+	// provider's echo of it name the same contact, which is one of the things
 	// the absorb insists on before it takes a row off the timeline.
 	counterparty = "buyer@example.test"
 )

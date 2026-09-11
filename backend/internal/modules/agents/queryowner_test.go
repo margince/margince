@@ -123,7 +123,7 @@ func TestAPageOfRowsIsNamedInOneLookup(t *testing.T) {
 		t.Errorf("four rows cost %d seat lookups; a page must cost one", calls)
 	}
 	if asked != 2 {
-		t.Errorf("asked for %d seats across rows owned by 2 people — the ids are not deduplicated", asked)
+		t.Errorf("asked for %d seats across rows owned by 2 contacts — the ids are not deduplicated", asked)
 	}
 }
 
@@ -282,7 +282,7 @@ func TestEveryOwnedRecordTypeIsNamed(t *testing.T) {
 	owner := ids.NewV7()
 	for _, entity := range []datasource.EntityType{
 		datasource.EntityCompany, datasource.EntityDeal,
-		datasource.EntityPerson, datasource.EntityLead,
+		datasource.EntityContact, datasource.EntityLead,
 	} {
 		rows := rowsFor(ownedRecord(entity, owner))
 		named, _ := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {

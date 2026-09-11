@@ -29,7 +29,7 @@ describe("the relationship map renders what it was given", () => {
 
   it("renders the empty state when nobody here has spoken to the contact", () => {
     const el = root();
-    render(el, { person_id: "p-1", colleagues: [] }, []);
+    render(el, { contact_id: "p-1", colleagues: [] }, []);
     expect(el.querySelector(".empty")).not.toBeNull();
     expect(el.querySelectorAll(".row")).toHaveLength(0);
   });
@@ -66,7 +66,7 @@ describe("the relationship map renders what it was given", () => {
     render(
       el,
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         colleagues: [{ display_name: "Sam", strength_bucket: "scorching" }],
       },
       [],
@@ -82,7 +82,7 @@ describe("the relationship map renders what it was given", () => {
     render(
       el,
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         colleagues: [{ display_name: "Sam", strength_bucket: "constructor" }],
       },
       [],
@@ -95,7 +95,7 @@ describe("the relationship map renders what it was given", () => {
     render(
       el,
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         colleagues: [{ user_id: "u-77", strength_bucket: "low" }],
       },
       [],
@@ -108,7 +108,7 @@ describe("the relationship map renders what it was given", () => {
     render(
       el,
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         colleagues: [{ display_name: "Sam", strength_bucket: "low" }],
       },
       [],

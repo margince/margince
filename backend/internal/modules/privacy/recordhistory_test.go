@@ -37,7 +37,7 @@ func TestComposeRecordSummary(t *testing.T) {
 		{
 			// PD-002: the granting human is the SUBJECT and the agent is a
 			// qualifier on them. The old phrasing made the machine the subject
-			// and the person a prepositional phrase, which is the inversion
+			// and the contact a prepositional phrase, which is the inversion
 			// this decision exists to forbid: "an agent did it" names nobody
 			// who can be asked about the change.
 			name:             "agent acting with authority names the human first",
@@ -95,7 +95,7 @@ func TestComposeRecordSummary(t *testing.T) {
 		},
 		{
 			// A connector's human authority resolves the same way an agent's
-			// does: an inbound sync a person authorized reads as that person.
+			// does: an inbound sync a contact authorized reads as that contact.
 			name:             "connector acting with authority names the human first",
 			actorType:        "connector",
 			actorDisplayName: "gmail",
@@ -282,7 +282,7 @@ func TestRecordHistoryEntryMasksBothPayloadSidesByOmission(t *testing.T) {
 	}
 
 	// The default mask is empty: the payload passes through whole.
-	entry = recordHistoryEntry(row, defaultFieldMasks["person"])
+	entry = recordHistoryEntry(row, defaultFieldMasks["contact"])
 	if entry.Before["iban"] != "DE01" || entry.After["iban"] != "DE02" {
 		t.Errorf("empty default mask must pass the payload through: before %v after %v", entry.Before, entry.After)
 	}
@@ -290,8 +290,8 @@ func TestRecordHistoryEntryMasksBothPayloadSidesByOmission(t *testing.T) {
 
 // A LINK's own columns are not the RECORD's before/after. The edge query selects
 // both images because the SUMMARY is phrased from them, and a consumer handed
-// them on a person's entry reads `role` and `started_at` as changes to the
-// person. Both halves are asserted: the line still names the other end, and the
+// them on a contact's entry reads `role` and `started_at` as changes to the
+// contact. Both halves are asserted: the line still names the other end, and the
 // entry carries no field diff for a record that never held those fields.
 func TestAnEdgeEntryCarriesNoRecordFieldImages(t *testing.T) {
 	row := recordAuditRow{
@@ -303,7 +303,7 @@ func TestAnEdgeEntryCarriesNoRecordFieldImages(t *testing.T) {
 		},
 	}
 
-	entry := recordHistoryEntry(row, defaultFieldMasks["person"])
+	entry := recordHistoryEntry(row, defaultFieldMasks["contact"])
 	if entry.Before != nil || entry.After != nil {
 		t.Errorf("an edge entry carries before=%v after=%v; those are the LINK's columns, and on the "+
 			"record's own entry they read as fields the record never had", entry.Before, entry.After)

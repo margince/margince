@@ -50,9 +50,9 @@ type replayTarget struct {
 	//
 	// The primary record is what the replay is FOR; a companion is a record
 	// the body points at, and pointing at one discloses that it exists and
-	// what it was to this call. QuickCapturePersonResult hands back the person
+	// what it was to this call. QuickCaptureContactResult hands back the contact
 	// created plus the company_id they were attached to, and probing only
-	// the person returned an employer id to a caller who may since have lost
+	// the contact returned an employer id to a caller who may since have lost
 	// sight of that employer. PromoteLeadResponse has the same shape twice
 	// over.
 	//
@@ -74,7 +74,7 @@ type companionRef struct {
 // The row-scoped tables, and the RBAC objects that mirror them word for word.
 // One spelling each, so a typo cannot make two entries disagree in silence.
 const (
-	tablePerson        = "person"
+	tableContact       = "contact"
 	tableCompany       = "company"
 	tableDeal          = "deal"
 	tableLead          = "lead"
@@ -107,7 +107,7 @@ const (
 	// The fields a body names another record by, spelled where the table that
 	// uses them is.
 	offerDealField        = "deal_id"
-	companionPersonField  = "person_id"
+	companionContactField = "contact_id"
 	companionCompanyField = "company_id"
 	companionLeadField    = "lead_id"
 
@@ -153,15 +153,15 @@ const (
 var replayableOperations = map[string]replayTarget{
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).
-	"POST /v1/people": {object: tablePerson, table: tablePerson, idPath: "id"},
-	"POST /v1/people/quick-capture": {
-		object: tablePerson, table: tablePerson, idPath: "person.id",
+	"POST /v1/contacts": {object: tableContact, table: tableContact, idPath: "id"},
+	"POST /v1/contacts/quick-capture": {
+		object: tableContact, table: tableContact, idPath: "contact.id",
 		companions: []companionRef{{table: tableCompany, idPath: companionCompanyField}},
 	},
-	"PATCH /v1/people/{id}":      {object: tablePerson, table: tablePerson, idPath: "id"},
-	"POST /v1/people/{id}/merge": {object: tablePerson, table: tablePerson, idPath: "id"},
+	"PATCH /v1/contacts/{id}":      {object: tableContact, table: tableContact, idPath: "id"},
+	"POST /v1/contacts/{id}/merge": {object: tableContact, table: tableContact, idPath: "id"},
 	"POST /v1/leads/{id}/promote": {
-		object: tablePerson, table: tablePerson, idPath: "person.id",
+		object: tableContact, table: tableContact, idPath: "contact.id",
 		companions: []companionRef{
 			{table: tableLead, idPath: companionLeadField},
 			{table: tableDeal, idPath: offerDealField},
@@ -207,11 +207,11 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/projects/transfer-ownership": {object: tableProject, rowNote: "the response is a count, not a record: the handover's rows were each gated on the caller's write authority when it ran, and a replay hands back the number alone"},
 	"POST /v1/leads":                       {object: tableLead, table: tableLead, idPath: "id"},
 	"PATCH /v1/leads/{id}":                 {object: tableLead, table: tableLead, idPath: "id"},
-	// The demote answers the lead it restored plus the person it was demoted
+	// The demote answers the lead it restored plus the contact it was demoted
 	// FROM — a second record, beside the one the replay is keyed on.
 	"POST /v1/leads/{id}/demote": {
 		object: tableLead, table: tableLead, idPath: "lead.id",
-		companions: []companionRef{{table: tablePerson, idPath: companionPersonField}},
+		companions: []companionRef{{table: tableContact, idPath: companionContactField}},
 	},
 	// The reopen answers the lead it put back, keyed on the same row the
 	// disqualify it reverses was keyed on.
@@ -301,7 +301,7 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/signals":                   {object: objectSignal, table: tableSignal, idPath: "id"},
 	"PATCH /v1/signals/{id}":             {object: objectSignal, table: tableSignal, idPath: "id"},
 	"POST /v1/signals/{id}/resolve":      {object: objectSignal, table: tableSignal, idPath: "id"},
-	"POST /v1/people/{id}/consent":       {object: tablePerson, table: tablePerson, pathParam: "id"},
+	"POST /v1/contacts/{id}/consent":     {object: tableContact, table: tableContact, pathParam: "id"},
 	"POST /v1/company/site-reads":        {object: tableCompany, rowNote: "an ingestion job against the installation's own company (A107), not a customer record"},
 
 	"POST /v1/company/site-reads/{readId}/confirm":  {object: tableCompany, rowNote: "the installation's singleton company profile — one company per installation (A107), so there is no row to scope"},
@@ -349,10 +349,10 @@ var replayableOperations = map[string]replayTarget{
 	// this makes the retry return the same run rather than race that index.
 	//
 	// The body is a ProviderRun: a spend-ledger row, not a row-scoped record.
-	// It carries no person values — only a state, a cost and the categories
-	// that were requested — so there is nothing in it that a person's row
-	// scope would protect. The person grant still gates the ORIGINAL request
+	// It carries no contact values — only a state, a cost and the categories
+	// that were requested — so there is nothing in it that a contact's row
+	// scope would protect. The contact grant still gates the ORIGINAL request
 	// through the handler's own EnsureVisible; what a replay hands back is the
 	// receipt, which names no subject.
-	"POST /v1/people/{id}/enrichment-runs": {object: tablePerson, rowNote: "a run receipt: state, cost and requested categories, carrying no person values to scope"},
+	"POST /v1/contacts/{id}/enrichment-runs": {object: tableContact, rowNote: "a run receipt: state, cost and requested categories, carrying no contact values to scope"},
 }

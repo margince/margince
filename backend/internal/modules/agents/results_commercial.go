@@ -94,12 +94,12 @@ type HandoffDeal struct {
 // it. Every other nested list in this answer names its records; the seat was
 // the one that did not.
 //
-// It is absent for a person the caller may not read — the seat itself survived
+// It is absent for a contact the caller may not read — the seat itself survived
 // the edge's own visibility rule, so this is the narrow case of a name read
 // that came back empty, and a reader shows the id rather than a blank.
 type HandoffStakeholder struct {
-	PersonID ids.UUID `json:"person_id"`
-	Name     string   `json:"name,omitempty"`
+	ContactID ids.UUID `json:"contact_id"`
+	Name      string   `json:"name,omitempty"`
 	// Role is absent for a seat nobody titled. It is the field the receiving
 	// side reads first, so an empty one is a gap rather than a blank.
 	Role string `json:"role,omitempty"`

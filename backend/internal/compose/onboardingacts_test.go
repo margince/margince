@@ -14,8 +14,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -38,27 +38,27 @@ func (s onboardingVoiceReaderStub) ProfilePresentation(context.Context, ids.UUID
 }
 
 type onboardingCompanyReaderStub struct {
-	company people.Company
+	company contacts.Company
 	err     error
 }
 
-func (s onboardingCompanyReaderStub) GetAnchorCompany(context.Context) (people.Company, error) {
+func (s onboardingCompanyReaderStub) GetAnchorCompany(context.Context) (contacts.Company, error) {
 	return s.company, s.err
 }
 
 func TestVerifySelectedOptionBindsTheGrantToTheCurrentClarifications(t *testing.T) {
 	current := "Acme Software"
-	read := &people.SiteRead{DraftVersion: 3, LegalEntities: []people.SiteReadLegalEntity{
+	read := &contacts.SiteRead{DraftVersion: 3, LegalEntities: []contacts.SiteReadLegalEntity{
 		{Name: "Acme GmbH", SourceURL: "https://acme.example/legal"},
 		{Name: "Acme Holding AG", SourceURL: "https://acme.example/legal"},
 	}}
-	comparisons := []people.SiteReadComparison{{Key: "display_name", Classification: "human_conflict", CurrentValue: &current, ProposedValue: "Acme GmbH"}}
+	comparisons := []contacts.SiteReadComparison{{Key: "display_name", Classification: "human_conflict", CurrentValue: &current, ProposedValue: "Acme GmbH"}}
 	selection := func(id, field, value string) crmcontracts.OnboardingClarifySelection {
 		return crmcontracts.OnboardingClarifySelection{ClarifyId: id, Field: field, Value: value}
 	}
 	tests := map[string]struct {
 		selection crmcontracts.OnboardingClarifySelection
-		read      *people.SiteRead
+		read      *contacts.SiteRead
 		wantOK    bool
 	}{
 		"listed entity option passes":             {selection: selection("clarify:legal_name:3", "legal_name", "Acme GmbH"), read: read, wantOK: true},
@@ -134,7 +134,7 @@ func TestSelectedOptionAuthorizesTheChangeEndToEnd(t *testing.T) {
 		"source_ids":[]}`}}
 	assistant := onboardingCompanyAssistant{
 		state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
-		people: onboardingSiteReadReaderStub{read: people.SiteRead{ID: readID, Status: siteReadWireStatusDone, LegalEntities: []people.SiteReadLegalEntity{
+		contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID, Status: siteReadWireStatusDone, LegalEntities: []contacts.SiteReadLegalEntity{
 			{Name: "Acme GmbH", SourceURL: "https://acme.example/impressum"},
 			{Name: "Acme Holding AG", SourceURL: "https://acme.example/impressum"},
 		}}},
@@ -175,7 +175,7 @@ func TestForgedSelectedOptionIsRefusedBeforeTheModelRuns(t *testing.T) {
 	brain := &replyBrainStub{err: errors.New("the model must not run for a forged selection")}
 	assistant := onboardingCompanyAssistant{
 		state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
-		people: onboardingSiteReadReaderStub{read: people.SiteRead{ID: readID, Status: siteReadWireStatusDone, LegalEntities: []people.SiteReadLegalEntity{
+		contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID, Status: siteReadWireStatusDone, LegalEntities: []contacts.SiteReadLegalEntity{
 			{Name: "Acme GmbH", SourceURL: "https://acme.example/legal"},
 			{Name: "Acme Holding AG", SourceURL: "https://acme.example/legal"},
 		}}},
@@ -216,7 +216,7 @@ func TestCompanyActClarificationCarriesTheDetectedQuestion(t *testing.T) {
 		"kind":"clarification","message":"The legal notice names two entities.","proposed_changes":[],"source_ids":[]}`}}
 	assistant := onboardingCompanyAssistant{
 		state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
-		people: onboardingSiteReadReaderStub{read: people.SiteRead{ID: readID, Status: siteReadWireStatusDone, DraftVersion: 3, LegalEntities: []people.SiteReadLegalEntity{
+		contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID, Status: siteReadWireStatusDone, DraftVersion: 3, LegalEntities: []contacts.SiteReadLegalEntity{
 			{Name: "Acme GmbH", SourceURL: "https://acme.example/impressum"},
 			{Name: "Acme Holding AG", SourceURL: "https://acme.example/impressum"},
 		}}},
@@ -242,7 +242,7 @@ func TestCompanyActClarificationSkipsQuestionsTheDraftAnswers(t *testing.T) {
 		"kind":"clarification","message":"One address question remains.","proposed_changes":[],"source_ids":[]}`}}
 	assistant := onboardingCompanyAssistant{
 		state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
-		people: onboardingSiteReadReaderStub{read: people.SiteRead{ID: readID, Status: siteReadWireStatusDone, DraftVersion: 3, LegalEntities: []people.SiteReadLegalEntity{
+		contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID, Status: siteReadWireStatusDone, DraftVersion: 3, LegalEntities: []contacts.SiteReadLegalEntity{
 			{Name: "Acme GmbH", RegisteredAddress: "Berlin 1", SourceURL: "https://acme.example/legal"},
 			{Name: "Acme Holding AG", RegisteredAddress: "Zug 2", SourceURL: "https://acme.example/legal"},
 		}}},
@@ -348,7 +348,7 @@ func TestResultsActRecognizesAManuallySavedCompany(t *testing.T) {
 		// path, so only the anchor knows it exists.
 		state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}},
 		brain: brain, runtime: &onboardingRuntimeStub{summary: ai.RunSummary{Currency: "USD"}},
-		company: onboardingCompanyReaderStub{company: people.Company{DisplayName: "Acme"}},
+		company: onboardingCompanyReaderStub{company: contacts.Company{DisplayName: "Acme"}},
 	}
 	recorder := onboardingCompanyRequest(&assistant, `{"message":"Where do I stand?","locale":"en","act":"results"}`)
 	if recorder.Code != http.StatusOK {
@@ -393,7 +393,7 @@ func TestResultsActWithoutAnyCompanyStaysUnconfirmed(t *testing.T) {
 
 func TestResultsAndConnectActsAnswerFromProgressContext(t *testing.T) {
 	readID := ids.NewV7()
-	confirmed := people.SiteRead{ID: readID, Status: siteReadWireStatusDone}
+	confirmed := contacts.SiteRead{ID: readID, Status: siteReadWireStatusDone}
 	now := confirmed.CreatedAt
 	confirmed.ConfirmedAt = &now
 	tests := map[string]struct {
@@ -408,9 +408,9 @@ func TestResultsAndConnectActsAnswerFromProgressContext(t *testing.T) {
 			brain := &validatedOnboardingBrainStub{response: model.Response{Text: `{
 				"kind":"answer","message":"Here is where you stand.","proposed_changes":[],"source_ids":[]}`}}
 			assistant := onboardingCompanyAssistant{
-				state:  onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
-				people: onboardingSiteReadReaderStub{read: confirmed},
-				brain:  brain, runtime: &onboardingRuntimeStub{summary: ai.RunSummary{Currency: "USD"}},
+				state:    onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID}},
+				contacts: onboardingSiteReadReaderStub{read: confirmed},
+				brain:    brain, runtime: &onboardingRuntimeStub{summary: ai.RunSummary{Currency: "USD"}},
 				voice: onboardingVoiceReaderStub{},
 			}
 			recorder := onboardingCompanyRequest(&assistant, `{"message":"Where do I stand?","locale":"en","act":"`+tc.act+`"}`)

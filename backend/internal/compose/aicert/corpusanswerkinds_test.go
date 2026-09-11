@@ -295,7 +295,7 @@ const notGroundedExpectationKey = "not_grounded"
 // walkExpectation is the ONE place this gate reads a decoded expectation, which
 // is why the `any` is here and nowhere else.
 //
-//craft:ignore naked-any expect.answer is free-form per site by contract — a bare string, a person-to-role map, a list of labels, a nested {kind, changes} object — so there is no shape to name, and naming one would be this gate deciding what a site may assert
+//craft:ignore naked-any expect.answer is free-form per site by contract — a bare string, a contact-to-role map, a list of labels, a nested {kind, changes} object — so there is no shape to name, and naming one would be this gate deciding what a site may assert
 func walkExpectation(node any, named map[string]bool) {
 	switch typed := node.(type) {
 	case string:

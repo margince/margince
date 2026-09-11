@@ -38,7 +38,7 @@ import (
 var retractionAdmin = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":    {Create: true, Read: true, Update: true, Delete: true},
+		"contact":   {Create: true, Read: true, Update: true, Delete: true},
 		"company":   {Create: true, Read: true, Update: true, Delete: true},
 		"deal":      {Create: true, Read: true, Update: true, Delete: true},
 		"deal_room": {Create: true, Read: true, Update: true, Delete: true},
@@ -221,7 +221,7 @@ func TestAShareOnAnArchivedRecordCanStillBeRevoked(t *testing.T) {
 		t.Fatalf("sharing the record: %v", err)
 	}
 
-	if _, err := e.People.ArchiveCompany(ctx, ids.From[ids.CompanyKind](company), nil); err != nil {
+	if _, err := e.Contacts.ArchiveCompany(ctx, ids.From[ids.CompanyKind](company), nil); err != nil {
 		t.Fatalf("archiving the shared record: %v", err)
 	}
 

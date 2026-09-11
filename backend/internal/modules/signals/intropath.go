@@ -64,7 +64,7 @@ func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.T
 	out := crmcontracts.SignalIntroPath{
 		SignalId:          sig.Id,
 		ResolvedCompanyId: warmth.ResolvedCompanyId,
-		ContactId:         route.PersonId,
+		ContactId:         route.ContactId,
 		ContactName:       route.FullName,
 		Relationship:      route,
 	}
@@ -73,10 +73,10 @@ func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.T
 	out.Evidence.ContactIds = warmth.ContactIds
 
 	// The move is a real branch: when the signal resolved (under consent)
-	// to a specific person who is NOT the route-in contact, the play is
+	// to a specific contact who is NOT the route-in contact, the play is
 	// asking our contact for an intro; otherwise it is a direct draft.
 	kind := crmcontracts.SignalIntroPathNextMoveKind("draft_to_contact")
-	if sig.ResolvedPersonId != nil && openapi_types.UUID(*sig.ResolvedPersonId) != route.PersonId {
+	if sig.ResolvedContactId != nil && openapi_types.UUID(*sig.ResolvedContactId) != route.ContactId {
 		kind = crmcontracts.SignalIntroPathNextMoveKind("intro_request")
 	}
 	out.NextMove.Kind = kind
@@ -119,7 +119,7 @@ var introTable = map[textlang.Lang]introPhrases{
 	textlang.English: {
 		IntroSubject: "Could you introduce us at %s?",
 		IntroBody: "Hi %s,\n\nSomething came up on our side about %s: %s. You know the " +
-			"right people there - would you be open to making an intro?\n\n%s",
+			"right contacts there - would you be open to making an intro?\n\n%s",
 		DirectSubject: "Getting in touch about %s",
 		DirectBody: "Hi %s,\n\nI am writing because of something we picked up about %s: %s. " +
 			"Given that we %s, this felt worth raising with you directly.\n\n%s",

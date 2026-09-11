@@ -20,7 +20,7 @@ const sourceWaiting = "customer_waiting"
 
 // sourceTask names the open-task producer. Named for the reason sourceWaiting
 // is: the owner filter asks whether a row came from the lane that narrowed to
-// one person in its own query, and a typo there would silently drop every task
+// one contact in its own query, and a typo there would silently drop every task
 // out of the queue it was asked for.
 const sourceTask = "task"
 
@@ -38,7 +38,7 @@ const sourceAtRisk = "deal_at_risk"
 //
 // The brief ranks against the reader's OWN responsibility — their deal, or one
 // they hold an open assigned task on — so a row from this lane is already
-// bound to the person asking, exactly as a task or a meeting row is. Judging it
+// bound to the contact asking, exactly as a task or a meeting row is. Judging it
 // afterwards by DEAL OWNER would drop the assist case the ranking admitted: the
 // night picks a colleague's deal because this rep has work on it, and the owner
 // filter then removes it before they ever see it. That is the same starvation
@@ -51,9 +51,9 @@ const subjectCompany = "company"
 // subjectDeal is the subject type a deal-shaped row names.
 const subjectDeal = "deal"
 
-// subjectPerson is the subject type a person-shaped row names.
+// subjectContact is the subject type a contact-shaped row names.
 //
 // A constant for the reason sourceDecay is one: the suppressor pairing the
 // decay lane against a waiting row matches on it, and a misspelt literal there
 // fails silently — it matches nothing, drops nothing, and reads green.
-const subjectPerson = "person"
+const subjectContact = "contact"

@@ -131,8 +131,8 @@ func TestTheRenderedBodyNeverCarriesTheLink(t *testing.T) {
 // A controller template is the only mail Margince writes as ITSELF rather than
 // on a rep's behalf: the confirm-details link and the double-opt-in link. Both
 // go to somebody who did not ask for them, and both are evidence — the consent
-// proof records which version a person was shown, so "what exactly did this
-// person read on 4 March" has to stay answerable after the wording moves on.
+// proof records which version a contact was shown, so "what exactly did this
+// contact read on 4 March" has to stay answerable after the wording moves on.
 //
 // That makes an unversioned edit a silent falsification rather than a typo fix.
 // The proof row keeps pointing at version 1 while version 1's text no longer
@@ -215,7 +215,7 @@ func TestEveryControllerTemplateIsPinnedToItsWording(t *testing.T) {
 		if !seen[pin] {
 			t.Errorf("%s is pinned here but no registered template renders it. Remove the row: "+
 				"this map is what THIS build sends, and a pin nothing renders is a claim about "+
-				"wording that no longer exists. What that person was shown is recoverable from "+
+				"wording that no longer exists. What that contact was shown is recoverable from "+
 				"consent_event.policy_text, not from here", pin)
 		}
 	}
@@ -250,7 +250,7 @@ func checkPin(t *testing.T, seen map[string]bool, key, locale string, rendered R
 			"Bump the template's version and REPLACE this row with one for the new "+
 			"version. Do not keep the old row: this map is what THIS build sends, and the "+
 			"check below fails a pin nothing renders. What version %d actually showed a "+
-			"person is recoverable from consent_event.policy_text, which is where that "+
+			"contact is recoverable from consent_event.policy_text, which is where that "+
 			"history belongs — not here",
 			pin, want, got, rendered.Version)
 	}

@@ -526,13 +526,13 @@ export function AddDocumentDialog({
  *
  * The two libraries are read by different surfaces and so by different keys:
  * the account's is one unpaginated read plus the 360 that counts it, the
- * contact's is its own cursor-paginated tab and nothing else — the person 360
+ * contact's is its own cursor-paginated tab and nothing else — the contact 360
  * carries no attachments section, so invalidating it would refetch a composite
  * that says nothing about the file just filed.
  */
 function staleAfterUpload(anchor: DocumentAnchor): readonly QueryKey[] {
-  if (anchor.record === "person") {
-    return [["attachments", "person", anchor.id]];
+  if (anchor.record === "contact") {
+    return [["attachments", "contact", anchor.id]];
   }
   if (anchor.record === "deal") {
     return [

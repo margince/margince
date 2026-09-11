@@ -5,7 +5,7 @@ package compose
 
 // The page-fact gate's contract — the no-guess rules restated over
 // snippet citations: closed vocabulary, the value's name in the cited
-// passage, people published-only, entities only from shallow legal
+// passage, contacts published-only, entities only from shallow legal
 // pages, and every refusal recorded with its reason.
 
 import (
@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
@@ -41,7 +41,7 @@ func TestFactFieldNamesAreGloballyUniqueAcrossCategories(t *testing.T) {
 	// The compact reply names no category — the field implies it, which
 	// only works while no field name appears in two categories.
 	seen := map[string]string{}
-	for category, fields := range people.CompanyFactFields {
+	for category, fields := range contacts.CompanyFactFields {
 		for _, field := range fields {
 			if prior, dup := seen[field]; dup {
 				t.Fatalf("fact field %q lives in both %s and %s — the category inference breaks", field, prior, category)
@@ -56,11 +56,11 @@ func TestMenuForKindRoutesFactBearingKindsOnly(t *testing.T) {
 		t.Fatal("unclassified pages must make no call")
 	}
 	menu, ok := menuForKind(crmcontracts.SiteReadPageKindImpressum)
-	if !ok || !menu.entities || !menu.people {
-		t.Fatalf("impressum menu = %+v, want company fields + entities + people", menu)
+	if !ok || !menu.entities || !menu.contacts {
+		t.Fatalf("impressum menu = %+v, want company fields + entities + contacts", menu)
 	}
 	menu, ok = menuForKind(crmcontracts.SiteReadPageKindServices)
-	if !ok || menu.entities || menu.people {
+	if !ok || menu.entities || menu.contacts {
 		t.Fatalf("services menu = %+v, want offering fields only", menu)
 	}
 	found := false
@@ -72,13 +72,13 @@ func TestMenuForKindRoutesFactBearingKindsOnly(t *testing.T) {
 	if !found {
 		t.Fatal("catalog pages must be allowed to name technologies")
 	}
-	for _, expected := range []string{people.FactService, people.FactProduct, people.FactServedIndustry} {
+	for _, expected := range []string{contacts.FactService, contacts.FactProduct, contacts.FactServedIndustry} {
 		if !slices.Contains(menu.factFields, expected) {
 			t.Fatalf("catalog menu must include %q: %+v", expected, menu.factFields)
 		}
 	}
 	home, ok := menuForKind(crmcontracts.SiteReadPageKindHome)
-	if !ok || !slices.Contains(home.factFields, people.FactProduct) || !slices.Contains(home.factFields, people.FactCompanySize) {
+	if !ok || !slices.Contains(home.factFields, contacts.FactProduct) || !slices.Contains(home.factFields, contacts.FactCompanySize) {
 		t.Fatalf("home pages must capture headline offers and markets: %+v", home)
 	}
 }
@@ -141,8 +141,8 @@ func TestPageFactsRequestAsksOnlyWhatThisPageKindsMenuOffers(t *testing.T) {
 		offered string
 		absent  string
 	}{
-		{name: "legal notice", schema: string(legal.ResponseSchema), offered: people.FactPhone, absent: people.FactService},
-		{name: "catalog page", schema: string(catalog.ResponseSchema), offered: people.FactService, absent: people.FactPhone},
+		{name: "legal notice", schema: string(legal.ResponseSchema), offered: contacts.FactPhone, absent: contacts.FactService},
+		{name: "catalog page", schema: string(catalog.ResponseSchema), offered: contacts.FactService, absent: contacts.FactPhone},
 	} {
 		if !strings.Contains(tc.schema, `"`+tc.offered+`"`) {
 			t.Errorf("the %s schema does not offer %q, which its menu carries: %s", tc.name, tc.offered, tc.schema)
@@ -208,21 +208,21 @@ func TestGatePageFactsDemandsTheNameInTheCitedPassage(t *testing.T) {
 	}
 }
 
-func TestGatePageFactsPeopleStayPublishedOnly(t *testing.T) {
+func TestGatePageFactsContactsStayPublishedOnly(t *testing.T) {
 	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindTeam, seedURL+"/team",
 		"Anna Muster is our Chief Executive Officer and founded the automation practice. Reach her at anna@acme.example for partnership topics.")
-	reply := `{"facts":[],"people":[
+	reply := `{"facts":[],"contacts":[
 		{"n":"Anna Muster","r":"Chief Executive Officer","q":"Anna Muster is our Chief Executive Officer","m":"anna@acme.example","l":"https://linkedin.com/in/anna","e":"s0"},
 		{"n":"Carla Invented","r":"CTO","q":"Carla Invented, CTO","e":"s0"}]}`
 	res, dropped := gatePageFacts(reply, page, menu, idx)
-	if len(res.people) != 1 || res.people[0].Name != "Anna Muster" {
-		t.Fatalf("only the published person may survive: %+v", res.people)
+	if len(res.contacts) != 1 || res.contacts[0].Name != "Anna Muster" {
+		t.Fatalf("only the published contact may survive: %+v", res.contacts)
 	}
-	if res.people[0].PublishedEmail != "anna@acme.example" || res.people[0].LinkedinURL != "" {
-		t.Fatalf("printed email kept, unprinted linkedin stripped: %+v", res.people[0])
+	if res.contacts[0].PublishedEmail != "anna@acme.example" || res.contacts[0].LinkedinURL != "" {
+		t.Fatalf("printed email kept, unprinted linkedin stripped: %+v", res.contacts[0])
 	}
 	if reasons := dropReasons(dropped); reasons["Carla Invented"] != dropValueNotInSnippet {
-		t.Fatalf("the invented person must drop: %+v", dropped)
+		t.Fatalf("the invented contact must drop: %+v", dropped)
 	}
 }
 
@@ -455,50 +455,50 @@ func TestGatePageEntitiesJoinsALegalBlockContinuation(t *testing.T) {
 }
 
 func TestATestimonialDoesNotBecomeALead(t *testing.T) {
-	// A home page's "what our clients say" wall names people who work
+	// A home page's "what our clients say" wall names contacts who work
 	// ELSEWHERE, and filing them as contacts at the company whose site it is
 	// contradicts their own quoted job title on the same line.
 	//
 	// The published-email floor is what separates them from the founders and
 	// staff on the same pages, which are worth having: a company prints an
-	// address for the person you should talk to, and never for the customer
+	// address for the contact you should talk to, and never for the customer
 	// it is quoting.
 	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindHome, seedURL,
 		"What our clients say: Marc Costea, CEO at Qilin.Cloud, calls it amazing. "+
 			"Our founder Anna Muster runs the practice, anna@acme.example.")
-	if !menu.people {
-		t.Fatal("a home page still asks for people — its founders are worth having")
+	if !menu.contacts {
+		t.Fatal("a home page still asks for contacts — its founders are worth having")
 	}
-	reply := `{"facts":[],"people":[
+	reply := `{"facts":[],"contacts":[
 		{"n":"Marc Costea","r":"CEO","q":"Marc Costea, CEO at Qilin.Cloud","e":"s0"},
 		{"n":"Anna Muster","r":"founder","q":"Our founder Anna Muster","m":"anna@acme.example","e":"s0"}]}`
 	res, dropped := gatePageFacts(reply, page, menu, idx)
-	if len(res.people) != 1 || res.people[0].Name != "Anna Muster" {
-		t.Fatalf("only the company's own contactable person survives: %+v", res.people)
+	if len(res.contacts) != 1 || res.contacts[0].Name != "Anna Muster" {
+		t.Fatalf("only the company's own contactable contact survives: %+v", res.contacts)
 	}
 	if reasons := dropReasons(dropped); reasons["Marc Costea"] != dropNoPublishedEmail {
 		t.Fatalf("the quoted customer must drop: %+v", dropped)
 	}
 }
 
-func TestAPersonWithNoPublishedEmailIsNotProposed(t *testing.T) {
+func TestAContactWithNoPublishedEmailIsNotProposed(t *testing.T) {
 	// A lead nobody can contact is not a lead: the proposal would ask a human
 	// to confirm a name they then have no way to act on.
 	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindTeam, seedURL+"/team",
 		"Bernd Beispiel leads sales as Head of Sales. Anna Muster is our Chief Executive Officer, anna@acme.example.")
-	reply := `{"facts":[],"people":[
+	reply := `{"facts":[],"contacts":[
 		{"n":"Anna Muster","r":"Chief Executive Officer","q":"Anna Muster is our Chief Executive Officer","m":"anna@acme.example","e":"s0"},
 		{"n":"Bernd Beispiel","r":"Head of Sales","q":"Bernd Beispiel leads sales as Head of Sales","e":"s0"}]}`
 	res, dropped := gatePageFacts(reply, page, menu, idx)
-	if len(res.people) != 1 || res.people[0].Name != "Anna Muster" {
-		t.Fatalf("only the contactable person may be proposed: %+v", res.people)
+	if len(res.contacts) != 1 || res.contacts[0].Name != "Anna Muster" {
+		t.Fatalf("only the contactable contact may be proposed: %+v", res.contacts)
 	}
 	if reasons := dropReasons(dropped); reasons["Bernd Beispiel"] != dropNoPublishedEmail {
 		t.Fatalf("Bernd must drop for having no published address: %+v", dropped)
 	}
 }
 
-func TestTheImprintIsReadForPeopleBecauseGermanLawPutsTheBoardOnIt(t *testing.T) {
+func TestTheImprintIsReadForContactsBecauseGermanLawPutsTheBoardOnIt(t *testing.T) {
 	// §5 TMG requires a company to name its Vertretungsberechtigte on the
 	// imprint, so for a large German firm that page is often the only place
 	// anyone is named: adesso.de publishes no team directory the crawl
@@ -508,8 +508,8 @@ func TestTheImprintIsReadForPeopleBecauseGermanLawPutsTheBoardOnIt(t *testing.T)
 	if !ok {
 		t.Fatal("the imprint must make a call")
 	}
-	if !menu.people {
-		t.Error("the imprint carries no people lane, so a board nobody else " +
+	if !menu.contacts {
+		t.Error("the imprint carries no contacts lane, so a board nobody else " +
 			"publishes is never read")
 	}
 	if !menu.entities {
@@ -524,12 +524,12 @@ func TestOneRoleLabelServesEveryOfficerListedUnderIt(t *testing.T) {
 	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindImpressum, seedURL+"/impressum",
 		"Vertretungsberechtigte Geschaeftsfuehrer: Dr. Thilo Gans Bernd Vermaaten "+
 			"Registergericht Amtsgericht Mannheim, gans@acme.example vermaaten@acme.example.")
-	reply := `{"facts":[],"people":[
+	reply := `{"facts":[],"contacts":[
 		{"n":"Thilo Gans","r":"Geschaeftsfuehrer","q":"Geschaeftsfuehrer: Dr. Thilo Gans","m":"gans@acme.example","e":"s0"},
 		{"n":"Bernd Vermaaten","r":"Geschaeftsfuehrer","q":"Geschaeftsfuehrer: Dr. Thilo Gans Bernd Vermaaten","w":"Thilo Gans","m":"vermaaten@acme.example","e":"s0"}]}`
 	res, dropped := gatePageFacts(reply, page, menu, idx)
-	got := make([]string, 0, len(res.people))
-	for _, p := range res.people {
+	got := make([]string, 0, len(res.contacts))
+	for _, p := range res.contacts {
 		got = append(got, p.Name)
 	}
 	slices.Sort(got)
@@ -538,7 +538,7 @@ func TestOneRoleLabelServesEveryOfficerListedUnderIt(t *testing.T) {
 	}
 }
 
-// The case every proximity rule got wrong. Both people are named in one
+// The case every proximity rule got wrong. Both contacts are named in one
 // passage under their own titles, so "near" cannot separate them: Prokurist
 // is as close to Anna Muster as her own title is. Only the words between the
 // two decide it, which is what the attribution quote carries.
@@ -547,17 +547,17 @@ func TestANameCannotTakeTheTitlePrintedForSomebodyElse(t *testing.T) {
 		"Geschaeftsfuehrer Anna Muster anna@acme.example Prokurist Bernd Beispiel bernd@acme.example")
 	// The only verbatim quote joining "Anna Muster" to "Prokurist" has to
 	// reach across Bernd, who holds that title.
-	reply := `{"facts":[],"people":[
+	reply := `{"facts":[],"contacts":[
 		{"n":"Anna Muster","r":"Prokurist","q":"Anna Muster anna@acme.example Prokurist Bernd Beispiel","m":"anna@acme.example","e":"s0"},
 		{"n":"Bernd Beispiel","r":"Prokurist","q":"Prokurist Bernd Beispiel","m":"bernd@acme.example","e":"s0"}]}`
 	res, dropped := gatePageFacts(reply, page, menu, idx)
-	for _, p := range res.people {
+	for _, p := range res.contacts {
 		if p.Name == "Anna Muster" {
 			t.Fatalf("Anna holds Geschaeftsfuehrer, not Bernd's title: %+v", p)
 		}
 	}
-	if len(res.people) != 1 || res.people[0].Name != "Bernd Beispiel" {
-		t.Fatalf("the real Prokurist must still survive: %+v", res.people)
+	if len(res.contacts) != 1 || res.contacts[0].Name != "Bernd Beispiel" {
+		t.Fatalf("the real Prokurist must still survive: %+v", res.contacts)
 	}
 	if reasons := dropReasons(dropped); reasons["Anna Muster"] != dropNameRoleUnlinked {
 		t.Fatalf("Anna must drop as unlinked: %+v", dropped)
@@ -575,11 +575,11 @@ func TestAnInventedAttributionQuoteIsRefused(t *testing.T) {
 		{"empty", ""},
 	} {
 		reply := fmt.Sprintf(
-			`{"facts":[],"people":[{"n":"Anna Muster","r":"Chief Executive Officer","q":%q,"m":"anna@acme.example","e":"s0"}]}`,
+			`{"facts":[],"contacts":[{"n":"Anna Muster","r":"Chief Executive Officer","q":%q,"m":"anna@acme.example","e":"s0"}]}`,
 			tc.quote)
 		res, dropped := gatePageFacts(reply, page, menu, idx)
-		if len(res.people) != 0 {
-			t.Fatalf("%s: a quote the page does not carry must be refused: %+v", tc.name, res.people)
+		if len(res.contacts) != 0 {
+			t.Fatalf("%s: a quote the page does not carry must be refused: %+v", tc.name, res.contacts)
 		}
 		if reasons := dropReasons(dropped); reasons["Anna Muster"] != dropNameRoleUnlinked {
 			t.Fatalf("%s: want %s, got %+v", tc.name, dropNameRoleUnlinked, dropped)
@@ -590,44 +590,44 @@ func TestAnInventedAttributionQuoteIsRefused(t *testing.T) {
 // The prompt asks for the WHOLE printed title, and this pins that the ask is
 // there. It is not a gate: adsmasters.de prints its team as an unpunctuated
 // run ("…Senior Amazon Account-Manager Anh Dinh Creative Amazon Designer…"),
-// so the word after any complete title is the next person's first name and no
+// so the word after any complete title is the next contact's first name and no
 // text rule can tell that from a title continuing. Asking the model, which can
 // see the layout, is the check that works — a truncated role costs a wrong
-// title, never a wrong person.
+// title, never a wrong contact.
 func TestThePromptAsksForTheWholePrintedTitle(t *testing.T) {
 	menu, ok := menuForKind(crmcontracts.SiteReadPageKindTeam)
-	if !ok || !menu.people {
-		t.Fatal("a team page must carry the people lane")
+	if !ok || !menu.contacts {
+		t.Fatal("a team page must carry the contacts lane")
 	}
 	system := pageFactsSystem(menu, promptfence.New())
 	if !strings.Contains(system, "WHOLE title") {
-		t.Fatalf("the people lane must ask for the whole printed title: %q", system)
+		t.Fatalf("the contacts lane must ask for the whole printed title: %q", system)
 	}
 }
 
 // The co-holder exemption must not run backwards. "Geschäftsführer Anna
 // Muster … Prokurist Bernd Beispiel" prints Bernd AFTER the Geschäftsführer
-// label too, so a rule that only asks "is this person after the label?" hands
+// label too, so a rule that only asks "is this contact after the label?" hands
 // him Anna's title. Anna standing between the label and Bernd is what ends
 // the list it heads.
 //
 // The claimed roles are identical here on purpose: a reply that gives
 // everybody the same wrong role leaves no second role to detect, so the
 // boundary cannot be read off the reply and has to come from the quote.
-func TestALaterPersonCannotTakeAnEarlierPersonsTitle(t *testing.T) {
+func TestALaterContactCannotTakeAnEarlierContactsTitle(t *testing.T) {
 	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindImpressum, seedURL+"/impressum",
 		"Geschaeftsfuehrer Anna Muster anna@acme.example Prokurist Bernd Beispiel bernd@acme.example")
-	reply := `{"facts":[],"people":[
+	reply := `{"facts":[],"contacts":[
 		{"n":"Bernd Beispiel","r":"Geschaeftsfuehrer","q":"Geschaeftsfuehrer Anna Muster anna@acme.example Prokurist Bernd Beispiel","m":"bernd@acme.example","e":"s0"},
 		{"n":"Anna Muster","r":"Geschaeftsfuehrer","q":"Geschaeftsfuehrer Anna Muster","m":"anna@acme.example","e":"s0"}]}`
 	res, dropped := gatePageFacts(reply, page, menu, idx)
-	for _, p := range res.people {
+	for _, p := range res.contacts {
 		if p.Name == "Bernd Beispiel" {
 			t.Fatalf("Bernd is Prokurist; Anna's title is not his to take: %+v", p)
 		}
 	}
-	if len(res.people) != 1 || res.people[0].Name != "Anna Muster" {
-		t.Fatalf("the officer the label does head must survive: %+v", res.people)
+	if len(res.contacts) != 1 || res.contacts[0].Name != "Anna Muster" {
+		t.Fatalf("the officer the label does head must survive: %+v", res.contacts)
 	}
 	if reasons := dropReasons(dropped); reasons["Bernd Beispiel"] != dropNameRoleUnlinked {
 		t.Fatalf("want %s, got %+v", dropNameRoleUnlinked, dropped)
@@ -635,7 +635,7 @@ func TestALaterPersonCannotTakeAnEarlierPersonsTitle(t *testing.T) {
 }
 
 // The declaration is checked against the rest of the reply, so buying another
-// person's title costs a self-contradiction: to hand Bernd the
+// contact's title costs a self-contradiction: to hand Bernd the
 // "Geschaeftsfuehrer" label the reply must declare Anna Muster under it, and
 // the same reply then cannot report her real role or Bernd's own Prokurist
 // title.
@@ -653,12 +653,12 @@ func TestALaterPersonCannotTakeAnEarlierPersonsTitle(t *testing.T) {
 func TestDeclaringACompanionCostsAContradiction(t *testing.T) {
 	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindImpressum, seedURL+"/impressum",
 		"Geschaeftsfuehrer Anna Muster anna@acme.example Prokurist Bernd Beispiel bernd@acme.example")
-	reply := `{"facts":[],"people":[
+	reply := `{"facts":[],"contacts":[
 		{"n":"Bernd Beispiel","r":"Geschaeftsfuehrer","q":"Geschaeftsfuehrer Anna Muster anna@acme.example Prokurist Bernd Beispiel","w":"Anna Muster","m":"bernd@acme.example","e":"s0"},
 		{"n":"Anna Muster","r":"Geschaeftsfuehrer","q":"Geschaeftsfuehrer Anna Muster","m":"anna@acme.example","e":"s0"},
 		{"n":"Bernd Beispiel","r":"Prokurist","q":"Prokurist Bernd Beispiel","m":"bernd@acme.example","e":"s0"}]}`
 	res, dropped := gatePageFacts(reply, page, menu, idx)
-	for _, p := range res.people {
+	for _, p := range res.contacts {
 		if p.Name == "Bernd Beispiel" && p.Role == "Geschaeftsfuehrer" {
 			t.Fatalf("reporting Bernd's own title must sink the borrowed one: %+v", p)
 		}
@@ -671,7 +671,7 @@ func TestDeclaringACompanionCostsAContradiction(t *testing.T) {
 // A TESTIMONIAL THAT PRINTS AN ADDRESS IS STILL A TESTIMONIAL.
 //
 // The published-email floor proves CONTACTABILITY, not affiliation. A wall that
-// prints the quoted person's own address clears it and still yields a lead
+// prints the quoted contact's own address clears it and still yields a lead
 // filed as a contact at the quoting company — which their own job title
 // disproves on the same line, and which then propagates into whatever the
 // account page says.
@@ -679,29 +679,29 @@ func TestAQuotedCustomerWhoPrintsTheirOwnAddressIsStillNotALead(t *testing.T) {
 	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindHome, seedURL,
 		"What our clients say: Marc Costea, CEO at Qilin.Cloud, marc@qilin.example, calls it amazing. "+
 			"Our founder Anna Muster runs the practice, anna@acme.example.")
-	reply := `{"facts":[],"people":[
+	reply := `{"facts":[],"contacts":[
 		{"n":"Marc Costea","r":"CEO","q":"Marc Costea, CEO at Qilin.Cloud","m":"marc@qilin.example","e":"s0"},
 		{"n":"Anna Muster","r":"founder","q":"Our founder Anna Muster","m":"anna@acme.example","e":"s0"}]}`
 	res, dropped := gatePageFacts(reply, page, menu, idx)
-	if len(res.people) != 1 || res.people[0].Name != "Anna Muster" {
-		t.Fatalf("only the site's own person may be proposed: %+v", res.people)
+	if len(res.contacts) != 1 || res.contacts[0].Name != "Anna Muster" {
+		t.Fatalf("only the site's own contact may be proposed: %+v", res.contacts)
 	}
 	if reasons := dropReasons(dropped); reasons["Marc Costea"] != dropEmailOffSiteDomain {
 		t.Fatalf("the quoted customer must drop for the domain, not by luck: %+v", dropped)
 	}
 }
 
-// AND THE SITE'S OWN PEOPLE ARE NOT DROPPED WITH THEM, across the subdomains a
+// AND THE SITE'S OWN CONTACTS ARE NOT DROPPED WITH THEM, across the subdomains a
 // site actually uses: the comparison is registrable domains, which is the same
 // "same site" test the crawler's own off-domain gate applies.
 func TestAnAddressOnASubdomainOfTheSiteIsStillTheSiteS(t *testing.T) {
 	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindTeam, "https://www.acme.example/team",
 		"Anna Muster is our Chief Executive Officer, anna@mail.acme.example.")
-	reply := `{"facts":[],"people":[
+	reply := `{"facts":[],"contacts":[
 		{"n":"Anna Muster","r":"Chief Executive Officer","q":"Anna Muster is our Chief Executive Officer","m":"anna@mail.acme.example","e":"s0"}]}`
 	res, dropped := gatePageFacts(reply, page, menu, idx)
-	if len(res.people) != 1 || res.people[0].Name != "Anna Muster" {
-		t.Fatalf("a www page and a mail subdomain are one site: %+v people=%+v", dropped, res.people)
+	if len(res.contacts) != 1 || res.contacts[0].Name != "Anna Muster" {
+		t.Fatalf("a www page and a mail subdomain are one site: %+v contacts=%+v", dropped, res.contacts)
 	}
 }
 
@@ -711,11 +711,11 @@ func TestAnAddressOnASubdomainOfTheSiteIsStillTheSiteS(t *testing.T) {
 func TestAStaffMemberWithAPersonalAddressIsUnproposableAndSaysSo(t *testing.T) {
 	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindTeam, seedURL+"/team",
 		"Bernd Beispiel leads sales as Head of Sales, bernd.beispiel@gmail.example.")
-	reply := `{"facts":[],"people":[
+	reply := `{"facts":[],"contacts":[
 		{"n":"Bernd Beispiel","r":"Head of Sales","q":"Bernd Beispiel leads sales as Head of Sales","m":"bernd.beispiel@gmail.example","e":"s0"}]}`
 	res, dropped := gatePageFacts(reply, page, menu, idx)
-	if len(res.people) != 0 {
-		t.Fatalf("a personal address cannot vouch for the affiliation: %+v", res.people)
+	if len(res.contacts) != 0 {
+		t.Fatalf("a personal address cannot vouch for the affiliation: %+v", res.contacts)
 	}
 	if reasons := dropReasons(dropped); reasons["Bernd Beispiel"] != dropEmailOffSiteDomain {
 		t.Fatalf("the drop must name the rule that took him: %+v", dropped)
@@ -801,7 +801,7 @@ func TestAValueEndingOnTheSeparatorStillLandsAndKeysToItsName(t *testing.T) {
 	}
 	// The assertion the failure was: the key the producer stores must be the
 	// one the row check re-derives from the value beside it.
-	if want := people.NormalizeFactValueKey(got.Value); got.ValueKey != want {
+	if want := contacts.NormalizeFactValueKey(got.Value); got.ValueKey != want {
 		t.Errorf("value_key = %q but the value %q normalizes to %q — the write refuses this fact, and "+
 			"refusing one discards the whole read", got.ValueKey, got.Value, want)
 	}

@@ -8,7 +8,7 @@ package compose
 // Capture stamps participants for new mail, but every message already in the
 // timeline predates ACT-DDL-3. Until those are recovered, "who on our team
 // knows this contact" reads empty on exactly the workspaces that have the most
-// history — which, to the person looking at the screen, is indistinguishable
+// history — which, to the contact looking at the screen, is indistinguishable
 // from a broken feature.
 //
 // It is a job and not an UPDATE inside migration 0157 because a migration

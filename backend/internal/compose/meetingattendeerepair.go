@@ -36,7 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -168,14 +168,14 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string
 		// an event that genuinely names no further party, and one the party cap
 		// refused. connector.CapParticipants returns NOTHING rather than a
 		// truncated list once a message names more than MaxParticipants further
-		// parties — deliberately, because a 200-person invitation is a
+		// parties — deliberately, because a 200-contact invitation is a
 		// distribution list and folding its names in would report a relationship
 		// with everyone who got the same mail. That rule is not this change's to
 		// relax.
 		//
 		// What it costs here is real: a capped meeting keeps every attendee
 		// unresolved, so a colleague who was on it still cannot read it. Recording
-		// that as `none` would let a pass that left real people locked out report
+		// that as `none` would let a pass that left real contacts locked out report
 		// itself complete, so both land in the same UNRESOLVED bucket the
 		// rollout check reads — the honest answer while the two are
 		// indistinguishable. Telling them apart needs the pre-cap count, which
@@ -196,7 +196,7 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string
 	//
 	// StampFurtherParticipants inserts ON CONFLICT DO NOTHING against
 	// uq_activity_participant, and that index keys on (activity_id, role,
-	// user_id, person_id, address) — so a row naming the SAME address with a
+	// user_id, contact_id, address) — so a row naming the SAME address with a
 	// resolved user_id is a different key, not a conflict. Without this the
 	// repair leaves two rows describing one attendee: the old unresolved one and
 	// the new bound one. The graph then still reports the colleague as an
@@ -205,11 +205,11 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string
 	if err := activities.RetireSupersededAttendeesTx(ctx, tx, c.activityID); err != nil {
 		return "", err
 	}
-	// The rows just written carry whatever name the original gave, so the people
+	// The rows just written carry whatever name the original gave, so the contacts
 	// they resolved to are named here — the same pairing the participant replay
 	// makes, and for the same reason: the recovery pass beside it selects on
 	// display_name IS NULL, which this stamp has just filled in.
-	if err := people.FillParticipantNamesTx(ctx, tx, c.activityID); err != nil {
+	if err := contacts.FillParticipantNamesTx(ctx, tx, c.activityID); err != nil {
 		return "", err
 	}
 	return repairBoundAttendees, nil

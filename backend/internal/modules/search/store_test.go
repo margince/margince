@@ -25,8 +25,8 @@ func TestDecodeCursorRejectsGarbage(t *testing.T) {
 	for name, cursor := range map[string]string{
 		"not base64":    "%%%",
 		"too few parts": base64.RawURLEncoding.EncodeToString([]byte("only-one")),
-		"bad score":     base64.RawURLEncoding.EncodeToString([]byte("NaNish|person|" + ids.NewV7().String())),
-		"bad id":        base64.RawURLEncoding.EncodeToString([]byte("0.5|person|not-a-uuid")),
+		"bad score":     base64.RawURLEncoding.EncodeToString([]byte("NaNish|contact|" + ids.NewV7().String())),
+		"bad id":        base64.RawURLEncoding.EncodeToString([]byte("0.5|contact|not-a-uuid")),
 	} {
 		if _, err := decodeCursor(cursor); err == nil {
 			t.Errorf("%s: malformed cursor accepted", name)

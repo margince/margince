@@ -25,7 +25,7 @@ import (
 
 // The bounds a reader actually reads. A reason is a paragraph and a note is a
 // short mail; past these nobody reads either, and the colleague deciding is
-// the person who pays for a wall of text.
+// the contact who pays for a wall of text.
 const (
 	reasonBound = 2000
 	noteBound   = 4000
@@ -45,11 +45,11 @@ func NewStore(db *database.DB, now func() time.Time) *Store {
 // Request is one ask, as the surfaces read it.
 type Request struct {
 	ID               ids.UUID
-	PersonID         ids.UUID
+	ContactID        ids.UUID
 	RequesterUserID  ids.UUID
 	IntroducerUser   ids.UUID
 	RouteType        string
-	ThroughPersonID  *ids.UUID
+	ThroughContactID *ids.UUID
 	InternalReason   string
 	ValueForTarget   string
 	ForwardableNote  string
@@ -72,40 +72,40 @@ type Request struct {
 
 // NewRequest is an ask being made.
 type NewRequest struct {
-	PersonID        ids.UUID
-	IntroducerUser  ids.UUID
-	RouteType       string
-	ThroughPersonID *ids.UUID
-	InternalReason  string
-	ValueForTarget  string
-	ForwardableNote string
-	NoteGeneratedBy string
-	NoteAIGenerated bool
-	FallbackPolicy  string
-	NameDropAllowed bool
-	DueAt           time.Time
+	ContactID        ids.UUID
+	IntroducerUser   ids.UUID
+	RouteType        string
+	ThroughContactID *ids.UUID
+	InternalReason   string
+	ValueForTarget   string
+	ForwardableNote  string
+	NoteGeneratedBy  string
+	NoteAIGenerated  bool
+	FallbackPolicy   string
+	NameDropAllowed  bool
+	DueAt            time.Time
 }
 
 // Create records one ask.
 //
-// The requester is the authenticated person and never a field on the request:
+// The requester is the authenticated contact and never a field on the request:
 // a body that could name its own requester would let one rep put an ask in
 // another's name, and the colleague answering would be answering the wrong
-// person.
+// contact.
 func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 	if err := auth.Require(ctx, "introduction", principal.ActionCreate); err != nil {
 		return ids.UUID{}, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		// Asking a colleague for a favour is a person's act. An agent holding
+		// Asking a colleague for a favour is a contact's act. An agent holding
 		// a human's id is not that human deciding to spend their goodwill.
 		return ids.UUID{}, fmt.Errorf(
-			"introductions: asking for an introduction needs an authenticated person: %w",
+			"introductions: asking for an introduction needs an authenticated contact: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	if req.IntroducerUser == actor.UserID {
-		// An introduction has two people on our side, and the requester is
+		// An introduction has two contacts on our side, and the requester is
 		// already one of them. The graph ranks every colleague who corresponds
 		// with the contact and the reader is among them, so this is the shape a
 		// client sends when it has offered its own reader as the way in — the
@@ -119,9 +119,9 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 		return ids.UUID{}, errors.New("introductions: an ask says why it is worth making")
 	}
 	// The contact has to be one this rep can actually see. Without it an ask
-	// would name a person the requester cannot open, and the colleague's
+	// would name a contact the requester cannot open, and the colleague's
 	// screen would disclose them.
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return ids.UUID{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
@@ -131,27 +131,27 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 
 	id := ids.NewV7()
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisibleLive(ctx, tx, "person", req.PersonID); err != nil {
+		if err := auth.EnsureVisibleLive(ctx, tx, "contact", req.ContactID); err != nil {
 			return err
 		}
 		// The intermediary is named by the caller too, and naming a record is
 		// reading it: without this a rep could learn that a contact exists by
 		// routing an ask through them and reading which error came back.
-		if req.ThroughPersonID != nil {
-			if err := auth.EnsureVisibleLive(ctx, tx, "person", *req.ThroughPersonID); err != nil {
+		if req.ThroughContactID != nil {
+			if err := auth.EnsureVisibleLive(ctx, tx, "contact", *req.ThroughContactID); err != nil {
 				return err
 			}
 		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO intro_request (
-				id, person_id, requester_user_id, introducer_user_id,
-				route_type, through_person_id,
+				id, contact_id, requester_user_id, introducer_user_id,
+				route_type, through_contact_id,
 				internal_reason, value_for_target, forwardable_note,
 				note_generated_by, note_ai_generated,
 				fallback_policy, name_drop_allowed, due_at, captured_by)
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
-			id, req.PersonID, actor.UserID, req.IntroducerUser,
-			req.RouteType, req.ThroughPersonID,
+			id, req.ContactID, actor.UserID, req.IntroducerUser,
+			req.RouteType, req.ThroughContactID,
 			truncate(req.InternalReason, reasonBound),
 			truncate(req.ValueForTarget, reasonBound),
 			truncate(req.ForwardableNote, noteBound),
@@ -171,17 +171,17 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 		}
 		auditID, err := storekit.AuditEvent(ctx, tx, "create", "intro_request", id,
 			map[string]any{
-				"person_id":          req.PersonID.String(),
+				"contact_id":         req.ContactID.String(),
 				"introducer_user_id": req.IntroducerUser.String(),
 				"route_type":         req.RouteType,
 			})
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, req.PersonID,
+		return storekit.EmitEvent(ctx, tx, auditID, req.ContactID,
 			crmcontracts.PublicEventIntroRequestCreated{
 				IntroRequestId:   openapi_types.UUID(id),
-				PersonId:         openapi_types.UUID(req.PersonID),
+				ContactId:        openapi_types.UUID(req.ContactID),
 				RequesterUserId:  openapi_types.UUID(actor.UserID),
 				IntroducerUserId: openapi_types.UUID(req.IntroducerUser),
 			})
@@ -217,7 +217,7 @@ func (s *Store) Decide(
 	}, func(cur *Request) events.Payload {
 		return crmcontracts.PublicEventIntroRequestDecided{
 			IntroRequestId:   openapi_types.UUID(id),
-			PersonId:         openapi_types.UUID(cur.PersonID),
+			ContactId:        openapi_types.UUID(cur.ContactID),
 			IntroducerUserId: openapi_types.UUID(cur.IntroducerUser),
 			Decision:         crmcontracts.PublicEventIntroRequestDecidedDecision(answer),
 		}
@@ -254,8 +254,8 @@ func (s *Store) Complete(ctx context.Context, id ids.UUID, activity *ids.UUID, v
 			if err := tx.QueryRow(ctx, `
 				SELECT EXISTS (
 					SELECT 1 FROM activity_link
-					 WHERE activity_id = $1 AND entity_type = 'person' AND person_id = $2)`,
-				*activity, cur.PersonID).Scan(&linked); err != nil {
+					 WHERE activity_id = $1 AND entity_type = 'contact' AND contact_id = $2)`,
+				*activity, cur.ContactID).Scan(&linked); err != nil {
 				return pgconn.CommandTag{}, fmt.Errorf(
 					"introductions: checking the evidence: %w", err)
 			}
@@ -281,7 +281,7 @@ func (s *Store) Complete(ctx context.Context, id ids.UUID, activity *ids.UUID, v
 	}, func(cur *Request) events.Payload {
 		return crmcontracts.PublicEventIntroRequestCompleted{
 			IntroRequestId: openapi_types.UUID(id),
-			PersonId:       openapi_types.UUID(cur.PersonID),
+			ContactId:      openapi_types.UUID(cur.ContactID),
 			Outcome:        crmcontracts.PublicEventIntroRequestCompletedOutcome(outcome),
 		}
 	})
@@ -301,7 +301,7 @@ func (s *Store) Cancel(ctx context.Context, id ids.UUID, reason string, version 
 	}, func(cur *Request) events.Payload {
 		return crmcontracts.PublicEventIntroRequestClosed{
 			IntroRequestId: openapi_types.UUID(id),
-			PersonId:       openapi_types.UUID(cur.PersonID),
+			ContactId:      openapi_types.UUID(cur.ContactID),
 			Reason:         crmcontracts.IntroRequestClosedCancelled,
 		}
 	})
@@ -366,7 +366,7 @@ func (s *Store) move(
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, cur.PersonID, event(cur))
+		return storekit.EmitEvent(ctx, tx, auditID, cur.ContactID, event(cur))
 	})
 }
 

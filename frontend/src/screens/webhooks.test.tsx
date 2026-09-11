@@ -385,7 +385,7 @@ describe("WebhooksCard", () => {
     // hardcoded list the moment the backend catalog grows again.
     expect(screen.getByLabelText("deal.stage_changed")).toBeTruthy();
     expect(screen.getByLabelText("lead.promoted")).toBeTruthy();
-    expect(screen.getByLabelText("person.merged")).toBeTruthy();
+    expect(screen.getByLabelText("contact.merged")).toBeTruthy();
     // Every rendered checkbox is one of the generated catalog's values —
     // confirms the option list is DERIVED from subscribableEventTypeValues
     // (imported straight from the generated public-events module) rather

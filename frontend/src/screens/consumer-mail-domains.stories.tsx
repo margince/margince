@@ -10,7 +10,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// Mail from a consumer domain still creates the person; what it never creates is
+// Mail from a consumer domain still creates the contact; what it never creates is
 // a company. The shipped baseline is ~8 700 domains, so this card is where an
 // operator adds what it missed (`extra`) and takes back what it wrongly claimed
 // (`never`).

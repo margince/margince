@@ -46,7 +46,7 @@ export const AtProductDuration: Story = {
 /**
  * Under `prefers-reduced-motion` there is NO scene: the end state of a
  * decorative delay is being past it, so the callback fires at once and nothing
- * renders. Anything else would make the people who asked for less motion wait
+ * renders. Anything else would make the contacts who asked for less motion wait
  * longest. This frame is blank on purpose — set the OS reduced-motion
  * preference to see it.
  */

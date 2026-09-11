@@ -6,7 +6,7 @@ package activities
 // The deliverable ADDRESS a reply goes to, as distinct from the name it greets.
 //
 // ReplyRecipientFor beside this answers a NAME, and a name is all a greeting
-// needs — an activity with no resolvable person yields an unnamed greeting and
+// needs — an activity with no resolvable contact yields an unnamed greeting and
 // that is a correct draft. An address cannot degrade the same way: a send with
 // no addressee is not a quieter send, it is a message with nowhere to go, so
 // this refuses where the greeting shrugs.
@@ -68,7 +68,7 @@ func (e *NoReplyAddressError) FieldFault() (field, code, message string) {
 // distinction is why this cannot simply reuse ReplyRecipientFor's ranking: on an
 // OUTBOUND message the `from` participant is us, so a rank that puts `from`
 // first would answer with our own address and cheerfully mail ourselves. A
-// participant carrying user_id is one of this installation's own people, and is
+// participant carrying user_id is one of this installation's own contacts, and is
 // excluded here for exactly that reason.
 //
 // Among what remains the rank is the same shape as the greeting's, and for the
@@ -87,10 +87,10 @@ func (e *NoReplyAddressError) FieldFault() (field, code, message string) {
 // A nil predicate treats nobody as a colleague. When every candidate is one,
 // the refusal says so.
 func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleague func(address string) bool) (string, error) {
-	// Reaching a person's address is a person read, exactly as reaching their
-	// name is: a caller who may read activities but not people must not be told
-	// through this door what the people surface withholds.
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	// Reaching a contact's address is a contact read, exactly as reaching their
+	// name is: a caller who may read activities but not contacts must not be told
+	// through this door what the contacts surface withholds.
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return "", err
 	}
 
@@ -104,7 +104,7 @@ func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleagu
 		}
 
 		args := []any{id}
-		scope, err := auth.ScopeClauseFor(ctx, "person", "p", func(v any) int {
+		scope, err := auth.ScopeClauseFor(ctx, "contact", "p", func(v any) int {
 			args = append(args, v)
 			return len(args)
 		})
@@ -113,17 +113,17 @@ func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleagu
 		}
 
 		// Two sources, ranked together rather than tried in sequence. The
-		// participant's OWN address is preferred over the person's primary
+		// participant's OWN address is preferred over the contact's primary
 		// email because it is the address that actually corresponded: a
 		// contact who wrote from a second mailbox gets answered where they
-		// wrote from, which is what a reply means. The person's primary email
+		// wrote from, which is what a reply means. The contact's primary email
 		// is the fallback for a participant recorded by identity alone.
 		//
-		// The person row-scope applies only to the arm that reads a person. A
+		// The contact row-scope applies only to the arm that reads a contact. A
 		// bare participant address is on the activity the caller already
-		// reached and names no person row to be scoped against.
+		// reached and names no contact row to be scoped against.
 		// The tiebreak columns carry BOTH levels, and they have to. The
-		// participant arm ranks by which participant; the person-email arm can
+		// participant arm ranks by which participant; the contact-email arm can
 		// return several rows for ONE participant, and those are separated by
 		// is_primary and position — the record's own ordering. Ranking the
 		// second arm on the participant's created_at/id alone leaves every one
@@ -132,7 +132,7 @@ func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleagu
 		// a business thread, chosen by nothing.
 		q := `
 			WITH counterparty AS (
-			     SELECT person_id, address,
+			     SELECT contact_id, address,
 			            CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
 			            created_at, id
 			       FROM activity_participant
@@ -148,9 +148,9 @@ func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleagu
 			     SELECT e.email AS addr, c.rank, 2 AS source,
 			            e.is_primary AS primary_first, e.position, c.created_at, c.id
 			       FROM counterparty c
-			       JOIN person p ON p.id = c.person_id
-			       JOIN person_email e ON e.person_id = p.id AND e.archived_at IS NULL
-			      WHERE c.person_id IS NOT NULL
+			       JOIN contact p ON p.id = c.contact_id
+			       JOIN contact_email e ON e.contact_id = p.id AND e.archived_at IS NULL
+			      WHERE c.contact_id IS NOT NULL
 			        AND p.archived_at IS NULL`
 		if scope != "" {
 			q += ` AND (` + scope + `)`

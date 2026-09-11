@@ -1,6 +1,6 @@
 # Set up and run a partner program
 
-This guide is for the person who runs the partner program — no code, no API. It shows where
+This guide is for whoever runs the partner program — no code, no API. It shows where
 partners live in the app, how to make a company a partner, what every field on the form means,
 and how to work the pipeline afterwards. The one thing you *cannot* do from the UI — changing
 the value lists themselves — is covered at the end.
@@ -13,7 +13,7 @@ means.
 ## What a partner is in Margince
 
 A partner is not a separate record you create next to a company. It is an **extra layer on a
-company that already exists**: the company keeps its name, domain, people, and timeline, and
+company that already exists**: the company keeps its name, domain, contacts, and timeline, and
 gains partner state on top — a role, a certification status, a margin tier, and a relationship
 stage. Nothing is duplicated, so the same company page shows both its commercial life and its
 partner life.
@@ -98,7 +98,7 @@ partners so filtering stays useful.
 - **The partner list** — from the **Companies** list header, open **Partners**. It is the flat
   list of every partner, filterable by role and certification status. This is your program
   overview: who's applied, who's certified, who's suspended.
-- **The company page stays the home** — activities, people, and deals with a partner live on
+- **The company page stays the home** — activities, contacts, and deals with a partner live on
   the company page like for any other company. The Partner tab is one more tab there, not a
   separate world.
 - **Two lists, two questions.** A company's **Deals** tab shows deals where it is the

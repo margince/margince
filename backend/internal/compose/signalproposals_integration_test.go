@@ -290,7 +290,7 @@ var teamScopedDecider = principal.Permissions{
 		"company": {Read: true, Update: true},
 		"signal":  {Read: true, Update: true},
 		"deal":    {Read: true},
-		"person":  {Read: true},
+		"contact": {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,
 }
@@ -313,9 +313,9 @@ func TestAcceptingSettlesOnlyTheContradictionsTheDeciderCanSee(t *testing.T) {
 	// team-scoped decider must own the account they are deciding on.
 	e.WsExec(t, "UPDATE company SET owner_id = $1 WHERE id = $2", e.Rep1, company)
 	mine := seedOpenContractEnded(t, e, company)
-	// Same account, but its subject is a person capture-private to the OTHER
+	// Same account, but its subject is a contact capture-private to the OTHER
 	// team's rep — the one state that still hides an identity row from a seat.
-	theirs := seedOpenContractEndedOnPerson(t, e, company, seedCapturePrivatePersonOf(t, e, e.Rep3))
+	theirs := seedOpenContractEndedOnContact(t, e, company, seedCapturePrivateContactOf(t, e, e.Rep3))
 
 	proposePass(t, e)
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
@@ -339,19 +339,19 @@ func TestAcceptingSettlesOnlyTheContradictionsTheDeciderCanSee(t *testing.T) {
 	}
 }
 
-// seedCapturePrivatePersonOf plants a contact capture-private to one rep, so
+// seedCapturePrivateContactOf plants a contact capture-private to one rep, so
 // a signal subjected to it sits outside every other seat's read scope.
-func seedCapturePrivatePersonOf(t *testing.T, e *integration.Env, owner ids.UUID) ids.UUID {
+func seedCapturePrivateContactOf(t *testing.T, e *integration.Env, owner ids.UUID) ids.UUID {
 	t.Helper()
-	person := e.SeedPerson(t, "Their contact", &owner)
-	e.MakeCapturePrivate(t, "person", person, owner)
-	return person
+	contact := e.SeedContact(t, "Their contact", &owner)
+	e.MakeCapturePrivate(t, "contact", contact, owner)
+	return contact
 }
 
-// seedOpenContractEndedOnPerson files a contradiction that RESOLVES to the
-// account but is ABOUT a person — the shape where resolved_company_id and the
+// seedOpenContractEndedOnContact files a contradiction that RESOLVES to the
+// account but is ABOUT a contact — the shape where resolved_company_id and the
 // subject scope disagree.
-func seedOpenContractEndedOnPerson(t *testing.T, e *integration.Env, company, person ids.UUID) ids.UUID {
+func seedOpenContractEndedOnContact(t *testing.T, e *integration.Env, company, contact ids.UUID) ids.UUID {
 	t.Helper()
 	signal := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -359,10 +359,10 @@ func seedOpenContractEndedOnPerson(t *testing.T, e *integration.Env, company, pe
 			INSERT INTO signal (id, kind, source_channel, entity_type, entity_id,
 			                    resolved_company_id, resolution_state, severity, summary, status,
 			                    detected_at, source, captured_by)
-			VALUES ($1, 'contract_ended', 'derived', 'person', $2, $3, 'resolved',
+			VALUES ($1, 'contract_ended', 'derived', 'contact', $2, $3, 'resolved',
 			        'warn', 'Their contact wrote that the renewal will not proceed.', 'open',
 			        now(), 'signal-scan', 'agent:contract_ended')`,
-			signal, person, company)
+			signal, contact, company)
 		return err
 	}); err != nil {
 		t.Fatal(err)

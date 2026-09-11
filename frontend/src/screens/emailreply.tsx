@@ -29,13 +29,13 @@ type ActivityLink = components["schemas"]["ActivityLink"];
  * page at all, so it answers from the message's own filing instead of from
  * where it was opened.
  *
- * A contact leads because a reply is written TO a person and their timeline is
+ * A contact leads because a reply is written TO a contact and their timeline is
  * where the conversation reads as a conversation. Where the message names no
  * contact, the work it is about; the account last, being the broadest thing
  * the message could be filed under.
  */
 const ANCHOR_ORDER: readonly RelinkKind[] = [
-  "person",
+  "contact",
   "deal",
   "lead",
   "project",
@@ -107,7 +107,9 @@ export function EmailReplyAction({
       // leads the order above, so a message that names one has it AS its
       // anchor. A second `find` here would be a second answer to the same
       // question, free to disagree with the first the day the order changes.
-      personId={anchor.entity_type === "person" ? anchor.entity_id : undefined}
+      contactId={
+        anchor.entity_type === "contact" ? anchor.entity_id : undefined
+      }
       onSent={onSent}
     />
   );

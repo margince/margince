@@ -161,7 +161,7 @@ type storedGrowthFit struct {
 // the company's current facts or our own confirmation state.
 func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, force bool) (crmcontracts.CompanyGrowthFit, error) {
 	var zero crmcontracts.CompanyGrowthFit
-	// A growth fit is a reading aid for a person; an agent reading records
+	// A growth fit is a reading aid for a contact; an agent reading records
 	// through a passport has the records themselves.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return zero, err

@@ -310,7 +310,7 @@ func TestAICallPayloadRetentionAgesOutContentKeepingMetadata(t *testing.T) {
 // cascade reaches captured payloads whose text mentions the erased subject.
 func TestAICallPayloadErasureCascadePurgesSubjectMentions(t *testing.T) {
 	e := Setup(t)
-	personID := seedSubject(t, e) // plants the subject with subjectEmail
+	contactID := seedSubject(t, e) // plants the subject with subjectEmail
 
 	// A captured payload whose request text names the subject's address, and
 	// a control payload that never mentions them.
@@ -319,7 +319,7 @@ func TestAICallPayloadErasureCascadePurgesSubjectMentions(t *testing.T) {
 	control := seedAgedPayload(t, e, 1,
 		`{"messages":[{"role":"user","content":"unrelated request"}]}`)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), personID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 

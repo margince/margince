@@ -21,7 +21,7 @@ fixture:
     Kranzler Druck & Messebau GmbH
 expect:
   outcome: accepted
-  answer: person
+  answer: contact
   rubric: >
     The guard on the direction-of-offer rule, written as the HARD case rather
     than the easy one. This sender is also offering to sell something and also
@@ -34,7 +34,7 @@ expect:
     is the SHAPE of the mail: a quote for a named job with fixed dates, an
     itemised scope and a deadline is work already discussed, not an opening
     pitch. A pitch describes a capability; this describes an agreement.
-    A verdict of "person" scores high. "spam" scores zero, and it is the costly
+    A verdict of "contact" scores high. "spam" scores zero, and it is the costly
     direction: a spam verdict hides the mail and suppresses the sender's whole
     DOMAIN workspace-wide, so one wrong answer here blocks every future mail
     from that supplier for every colleague.

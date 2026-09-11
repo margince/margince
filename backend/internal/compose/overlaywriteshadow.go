@@ -6,7 +6,7 @@ package compose
 // The overlay-mode human write surface (design.md §4.5, the write-back half
 // of "Overlay does not fork the data API"): Server shadows the contract
 // update/archive ops for the write verbs overlay.SupportsWrite reports true
-// — update on all five mirror entity types, archive on person/company/
+// — update on all five mirror entity types, archive on contact/company/
 // deal — routing them through the SAME Dispatcher the MCP/agent seam
 // consumers ride, and delegating to the native module handler otherwise.
 // The overlaywrite.go guard already refuses every write the provider cannot
@@ -171,7 +171,7 @@ func archivePrecondition(w http.ResponseWriter, r *http.Request) (*int64, bool) 
 // overlay mode, otherwise a dispatched seam Archive answered with the
 // archived row's last-known state — the contract's own archive response
 // shape (200 with the full entity body; architecture/11 §8 rules out a bare
-// 204 for a domain row, and every native ArchivePerson/ArchiveCompany/
+// 204 for a domain row, and every native ArchiveContact/ArchiveCompany/
 // ArchiveDeal handler answers exactly that). The mirror row is purged by the
 // archive itself (provider_writes.go's Archive calls PurgeRecord), so
 // unlike overlayUpdate there is no read-BACK to ride: the record is read
@@ -262,31 +262,31 @@ func overlayArchive[Res any](s Server, w http.ResponseWriter, r *http.Request,
 	httperr.WriteJSON(w, http.StatusOK, body)
 }
 
-// UpdatePerson shadows the person update.
-func (s Server) UpdatePerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.UpdatePersonParams) {
-	overlayUpdate[crmcontracts.UpdatePersonRequest](s, w, r, datasource.EntityPerson, id,
-		func() { s.peopleHandlers.UpdatePerson(w, r, id, params) }, overlayWirePerson)
+// UpdateContact shadows the contact update.
+func (s Server) UpdateContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.UpdateContactParams) {
+	overlayUpdate[crmcontracts.UpdateContactRequest](s, w, r, datasource.EntityContact, id,
+		func() { s.contactsHandlers.UpdateContact(w, r, id, params) }, overlayWireContact)
 }
 
-// ArchivePerson shadows the person archive.
-func (s Server) ArchivePerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ArchivePersonParams) {
-	overlayArchive(s, w, r, datasource.EntityPerson, id,
-		func() { s.peopleHandlers.ArchivePerson(w, r, id, params) }, archiveWire[crmcontracts.Person]{
-			assemble:     overlayWirePerson,
-			markArchived: func(p *crmcontracts.Person, at time.Time) { p.ArchivedAt = &at },
+// ArchiveContact shadows the contact archive.
+func (s Server) ArchiveContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ArchiveContactParams) {
+	overlayArchive(s, w, r, datasource.EntityContact, id,
+		func() { s.contactsHandlers.ArchiveContact(w, r, id, params) }, archiveWire[crmcontracts.Contact]{
+			assemble:     overlayWireContact,
+			markArchived: func(p *crmcontracts.Contact, at time.Time) { p.ArchivedAt = &at },
 		})
 }
 
 // UpdateCompany shadows the company update.
 func (s Server) UpdateCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.UpdateCompanyParams) {
 	overlayUpdate[crmcontracts.UpdateCompanyRequest](s, w, r, datasource.EntityCompany, id,
-		func() { s.peopleHandlers.UpdateCompany(w, r, id, params) }, overlayWireCompany)
+		func() { s.contactsHandlers.UpdateCompany(w, r, id, params) }, overlayWireCompany)
 }
 
 // ArchiveCompany shadows the company archive.
 func (s Server) ArchiveCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ArchiveCompanyParams) {
 	overlayArchive(s, w, r, datasource.EntityCompany, id,
-		func() { s.peopleHandlers.ArchiveCompany(w, r, id, params) }, archiveWire[crmcontracts.Company]{
+		func() { s.contactsHandlers.ArchiveCompany(w, r, id, params) }, archiveWire[crmcontracts.Company]{
 			assemble:     overlayWireCompany,
 			markArchived: func(o *crmcontracts.Company, at time.Time) { o.ArchivedAt = &at },
 		})
@@ -312,7 +312,7 @@ func (s Server) ArchiveDeal(w http.ResponseWriter, r *http.Request, id crmcontra
 // so the guard refuses its archive route before any handler is reached.
 func (s Server) UpdateLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.UpdateLeadParams) {
 	overlayUpdate[crmcontracts.UpdateLeadRequest](s, w, r, datasource.EntityLead, id,
-		func() { s.peopleHandlers.UpdateLead(w, r, id, params) }, overlayWireLead)
+		func() { s.contactsHandlers.UpdateLead(w, r, id, params) }, overlayWireLead)
 }
 
 // UpdateActivity shadows the activity update. Activity has no archive

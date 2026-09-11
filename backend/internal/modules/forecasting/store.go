@@ -75,7 +75,7 @@ type Scope struct {
 	ID *ids.UUID
 }
 
-// Call is one person's assertion about what will close.
+// Call is one contact's assertion about what will close.
 type Call struct {
 	ID           ids.UUID
 	PeriodStart  time.Time

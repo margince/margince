@@ -11,7 +11,7 @@ package gates
 // companyprofilevocabulary_test.go holds the Go mirrors against the
 // company_profile_field CHECK. It cannot read TypeScript, so the five
 // below were unheld — and all five were genuinely missing three fields while
-// that gate stayed green. What each miss does to a person:
+// that gate stayed green. What each miss does to a contact:
 //
 //   - COLD_FIELD_LABELS and PROFILE_FIELD_LABELS both fall back to the raw
 //     column with its underscores spaced out, so a missing entry renders

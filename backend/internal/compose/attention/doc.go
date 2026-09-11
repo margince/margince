@@ -11,7 +11,7 @@
 // meant the rep's actual question had no single answer, and the cheapest way
 // to answer it was to visit every screen and hold the total in their head.
 //
-// It lives in compose because it spans approvals, people, activities and the
+// It lives in compose because it spans approvals, contacts, activities and the
 // brief engine — the composition layer's charter — and it owns no table of its
 // own. Nothing here is a second copy of a lifecycle: every lane is a READ
 // through the owning module's own entry point, and every verb the client
@@ -22,7 +22,7 @@
 //
 // The tier is derived from what an item COSTS, not from who raised it. An
 // approval to send an email and a duplicate merge both land in needs_you
-// because both are irreversible and only a person may choose; a task lands in
+// because both are irreversible and only a contact may choose; a task lands in
 // planned because the choosing already happened; a receipt lands in
 // done_for_you because the work is finished and the rep is owed the fact
 // rather than a question. Sorting by producer instead would put a merge next

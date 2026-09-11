@@ -51,7 +51,7 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 //
 // THREE paths destroy an activity's content and every one of them needs it: the
 // nightly erase action, a statutory floor expiring, and a controller's release. Each is reached without an Art. 17 request, so none can
-// lean on the person-scoped purge the erasure cascade does — and a path wired
+// lean on the contact-scoped purge the erasure cascade does — and a path wired
 // without it destroys the parsed text while the verbatim original stands,
 // joined on the pair the erasure deliberately keeps, and an Art. 15 export
 // serves it back.

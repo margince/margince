@@ -61,7 +61,7 @@ func TestEverySARSectionStatementResolvesAgainstTheSchema(t *testing.T) {
 	// added to any chapter is covered the day it is added, and one that stops
 	// being reachable stops being checked, which is correct in both directions.
 	var pkg SARPackage
-	sections := sarSections(&pkg, ids.New[ids.PersonKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	sections := sarSections(&pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
 
 	// A floor, because a gather list that came back empty would report the same
 	// clean pass as one that resolved every statement. The number is the shape

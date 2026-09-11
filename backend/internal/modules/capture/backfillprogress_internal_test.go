@@ -66,24 +66,24 @@ func TestPageTallyTakesOnlyForwardReports(t *testing.T) {
 // re-import that is nearly every message. A run that ledgered those would
 // report the size of the mailbox as its reach.
 func TestOnlyACreationIsLedgered(t *testing.T) {
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	for what, probe := range map[string]struct {
 		outcome EnsureOutcome
 		want    []createdSubject
 	}{
 		"resolved onto rows that already existed": {EnsureOutcome{}, nil},
-		"a person created": {
-			EnsureOutcome{PersonCreated: true, PersonID: person},
-			[]createdSubject{{kind: "person", subject: person.String()}},
+		"a contact created": {
+			EnsureOutcome{ContactCreated: true, ContactID: contact},
+			[]createdSubject{{kind: "contact", subject: contact.String()}},
 		},
 		"a domain queued for a verdict": {
 			EnsureOutcome{CompanyQueued: true, QueuedDomain: "acme.test"},
 			[]createdSubject{{kind: "company_queued", subject: "acme.test"}},
 		},
 		"both, from one message": {
-			EnsureOutcome{PersonCreated: true, PersonID: person, CompanyQueued: true, QueuedDomain: "acme.test"},
+			EnsureOutcome{ContactCreated: true, ContactID: contact, CompanyQueued: true, QueuedDomain: "acme.test"},
 			[]createdSubject{
-				{kind: "person", subject: person.String()},
+				{kind: "contact", subject: contact.String()},
 				{kind: "company_queued", subject: "acme.test"},
 			},
 		},
@@ -92,8 +92,8 @@ func TestOnlyACreationIsLedgered(t *testing.T) {
 		// two of them would collide on the empty key and count as one — so it
 		// is not ledgered, and the log line about an uncounted row is the
 		// honest answer.
-		"a person created but not named": {EnsureOutcome{PersonCreated: true}, nil},
-		"a domain queued but not named":  {EnsureOutcome{CompanyQueued: true}, nil},
+		"a contact created but not named": {EnsureOutcome{ContactCreated: true}, nil},
+		"a domain queued but not named":   {EnsureOutcome{CompanyQueued: true}, nil},
 	} {
 		t.Run(what, func(t *testing.T) {
 			got := createdSubjects(probe.outcome)

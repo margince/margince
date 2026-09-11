@@ -12,7 +12,7 @@ package activities
 // depending on HOW the conversation was recorded.
 //
 // Both ends are known here without inference. The human logging it is the
-// authenticated principal, and the counterparty is whichever person the caller
+// authenticated principal, and the counterparty is whichever contact the caller
 // linked — a link the store has already put through the row-scope gate.
 
 import (
@@ -30,7 +30,7 @@ import (
 // a typo is a compile error rather than a participant row that silently never
 // gets written.
 const (
-	linkEntityPerson   = "person"
+	linkEntityContact  = "contact"
 	linkEntityCompany  = "company"
 	linkEntityDeal     = "deal"
 	linkEntityActivity = "activity"
@@ -38,9 +38,9 @@ const (
 )
 
 // stampLoggedParticipants records who was in a hand-logged interaction: the
-// human who logged it, and the people it was linked to.
+// human who logged it, and the contacts it was linked to.
 //
-// It is silent for a non-interaction kind and for an activity with no person
+// It is silent for a non-interaction kind and for an activity with no contact
 // link — an unlinked note is a workspace-shared thought, not a conversation
 // with anybody.
 func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, direction *string, links []ActivityLinkInput) error {
@@ -51,7 +51,7 @@ func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.Acti
 	if !ok || actor.UserID == ids.Nil {
 		// A logging path with no human behind it (a system backfill, an agent
 		// acting on its own) records no our-side participant rather than
-		// attributing the conversation to nobody. The person side below still
+		// attributing the conversation to nobody. The contact side below still
 		// stands, so the timeline keeps what it knows.
 		return stampLoggedCounterparties(ctx, tx, activityID, direction, links, ids.Nil)
 	}
@@ -77,11 +77,11 @@ func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 		}
 	}
 	for _, link := range links {
-		if link.EntityType != linkEntityPerson {
+		if link.EntityType != linkEntityContact {
 			continue
 		}
-		person := link.EntityID
-		if err := insertLoggedParticipant(ctx, tx, activityID, theirRole, nil, &person); err != nil {
+		contact := link.EntityID
+		if err := insertLoggedParticipant(ctx, tx, activityID, theirRole, nil, &contact); err != nil {
 			return err
 		}
 	}
@@ -91,7 +91,7 @@ func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 // insertLoggedParticipant writes one row, idempotently against the ACT-DDL-3
 // uniqueness index — the log path has its own replay guard, and this must not
 // become a second place that can fail on a retry.
-func insertLoggedParticipant(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role string, userID, personID *ids.UUID) error {
+func insertLoggedParticipant(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role string, userID, contactID *ids.UUID) error {
 	// The user arm is written through a SELECT over app_user rather than a
 	// bare VALUES: a principal's UserID is not guaranteed to name a workspace
 	// member. An agent or a service principal can carry an id that belongs to
@@ -100,11 +100,11 @@ func insertLoggedParticipant(ctx context.Context, tx pgx.Tx, activityID ids.Acti
 	// operation. Guarding here rather than pre-checking also avoids a race
 	// with a member being archived between the check and the insert.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, person_id, role)
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, role)
 		SELECT $1, $2, $3, $4
 		 WHERE $2::uuid IS NULL
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE u.id = $2)
-		ON CONFLICT DO NOTHING`, activityID, userID, personID, role); err != nil {
+		ON CONFLICT DO NOTHING`, activityID, userID, contactID, role); err != nil {
 		return fmt.Errorf("activities: recording who was in a logged interaction: %w", err)
 	}
 	return nil

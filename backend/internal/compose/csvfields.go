@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -36,13 +36,13 @@ const fieldEmail = "email"
 // different companies may share.
 const fieldDomain = "domain"
 
-// fieldTitle is the job title, carried by both a lead and a person: the same
+// fieldTitle is the job title, carried by both a lead and a contact: the same
 // column of the same contact file, whichever object it is imported as.
 const fieldTitle = "title"
 
 // leadStatusNew is where an imported prospect starts: the unworked state a
 // human moves it out of, which is the whole point of landing machine-sourced
-// rows as leads rather than as people.
+// rows as leads rather than as contacts.
 const leadStatusNew = "new"
 
 // The fields a CSV import may target, per object. A closed set, because a
@@ -50,9 +50,9 @@ const leadStatusNew = "new"
 // writer knows how to both create and update — a target it can only create
 // would silently stop honouring the file on the second upload.
 //
-// `lead` and `person` are both offered and the caller picks per run: a
+// `lead` and `contact` are both offered and the caller picks per run: a
 // machine-sourced list lands as leads for a human to promote, a file the
-// business already knows lands as people. Neither skips the identity ladder.
+// business already knows lands as contacts. Neither skips the identity ladder.
 //
 // Every field here round-trips: the writer can both CREATE it and UPDATE it.
 // `linkedin_url` is deliberately absent from both lists even though the stores
@@ -69,11 +69,11 @@ var csvTargets = map[string][]string{
 	// share. It round-trips: the create input takes a domain set and the patch
 	// input takes the same set as a replace-set.
 	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain}, recordAddressTargets...),
-	// `phone`, `social` and `owner_id` are deliberately absent. A person's
+	// `phone`, `social` and `owner_id` are deliberately absent. A contact's
 	// patch input carries no Phones member and no single-column spelling of
 	// Social, and an owner is a uuid a spreadsheet cannot honestly carry —
 	// storekit.OwnerOrActor already defaults it to whoever ran the import.
-	migration.ObjectPerson: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldTitle}, recordAddressTargets...),
+	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldTitle}, recordAddressTargets...),
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -107,7 +107,7 @@ const csvTargetID = "id"
 // Both halves of the round-trip rule this list is built on hold: the create
 // input and the patch input each take an *Address, so a mapped column is
 // written on the first import and rewritten on the second. That holds for a
-// person as well as a company, which is why one list serves both — the
+// contact as well as a company, which is why one list serves both — the
 // six names are the contract's, not either object's.
 var recordAddressTargets = []string{
 	"address.line1", "address.line2", "address.city",
@@ -120,7 +120,7 @@ var recordAddressTargets = []string{
 var csvSourceKeyDefault = map[string]string{
 	migration.ObjectLead:    fieldEmail,
 	migration.ObjectCompany: fieldDisplayName,
-	migration.ObjectPerson:  fieldEmail,
+	migration.ObjectContact: fieldEmail,
 }
 
 // importTargets is the closed set a mapping may name for one object.
@@ -166,13 +166,13 @@ func selectsByID(object string) bool {
 // linksEmployer reports whether an object's rows may name a company to be
 // linked to, rather than written.
 //
-// People only: a contact file's company column is the person's employer, which
+// Contacts only: a contact file's company column is the contact's employer, which
 // is a RELATIONSHIP between two records. A company row naming a company
 // would be naming itself, and a lead holds its employer as free text on the lead
 // itself (`company_name`, an ordinary writable field) precisely because a lead is
 // not yet a record the estate links things to.
 func linksEmployer(object string) bool {
-	return object == migration.ObjectPerson
+	return object == migration.ObjectContact
 }
 
 // isNonFieldTarget reports whether a mapped target names something other than a
@@ -297,8 +297,8 @@ func textOf(raw json.RawMessage) string {
 // leadCreateFrom builds the create input for one mapped row. Only mapped
 // fields are set: an absent column leaves the field absent rather than
 // clearing it, because the file said nothing about it.
-func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source string) people.CreateLeadInput {
-	in := people.CreateLeadInput{
+func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source string) contacts.CreateLeadInput {
+	in := contacts.CreateLeadInput{
 		Status:       leadStatusNew,
 		SourceSystem: &sourceSystem,
 		SourceID:     &externalID,
@@ -312,8 +312,8 @@ func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source s
 }
 
 // leadUpdateFrom builds the patch for the fields that actually differ.
-func leadUpdateFrom(changed map[string]string) people.UpdateLeadInput {
-	return people.UpdateLeadInput{
+func leadUpdateFrom(changed map[string]string) contacts.UpdateLeadInput {
+	return contacts.UpdateLeadInput{
 		FullName:    importString(changed, fieldFullName),
 		Email:       importString(changed, fieldEmail),
 		Title:       importString(changed, fieldTitle),
@@ -368,14 +368,14 @@ func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontra
 // opposite.
 //
 // The vocabulary is read off the generated contract, not hand-copied, for the
-// same reason people.validSizeBands is: a band added to crm.yaml must not
+// same reason contacts.validSizeBands is: a band added to crm.yaml must not
 // leave a second list behind saying otherwise. That obligation is on the set
 // rather than on the spelling, so it is gated rather than stated.
 // Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
 func unwritableReason(object string, fields map[string]string) string {
-	if object == migration.ObjectPerson {
-		// A person's addresses are parsed before the write transaction opens
-		// (parsePersonContacts), so a malformed one refuses the row at commit.
+	if object == migration.ObjectContact {
+		// A contact's addresses are parsed before the write transaction opens
+		// (parseContactContacts), so a malformed one refuses the row at commit.
 		// Unchecked here, the dry run would promise a create for every bad
 		// address in the file and the commit would answer differently — the
 		// same shape as the size_band defect below, on the other object.

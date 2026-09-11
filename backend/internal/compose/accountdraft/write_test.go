@@ -94,18 +94,18 @@ func TestAReasonCitingARecordTheReaderCannotSeeIsDropped(t *testing.T) {
 }
 
 // A citation is a PAIR. An id checked without its type lets a deal id come
-// back labelled as a person, and the chip then opens the wrong record's page
+// back labelled as a contact, and the chip then opens the wrong record's page
 // rather than nothing — the worse failure, because it looks like it worked.
 func TestAReasonCitingTheRightIdAsTheWrongKindIsDropped(t *testing.T) {
 	answer := `{"subject":"S","body":"B","reasoning":[
-	  {"kind":"deal","label":"mislabelled","entity_type":"person",
+	  {"kind":"deal","label":"mislabelled","entity_type":"contact",
 	   "entity_id":"019fe7ae-0000-7000-8000-000000000002"}]}`
 	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput(), draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(draft.Reasoning) != 0 {
-		t.Fatalf("reasoning = %+v, want none: the deal was cited as a person", draft.Reasoning)
+		t.Fatalf("reasoning = %+v, want none: the deal was cited as a contact", draft.Reasoning)
 	}
 }
 
@@ -163,7 +163,7 @@ func TestAFailedLaneDegradesToTheFloorRatherThanErroring(t *testing.T) {
 }
 
 // The account's own text — a contact's name, a deal's name — is written by
-// people outside this workspace's control. It is quoted inside a one-time
+// contacts outside this workspace's control. It is quoted inside a one-time
 // boundary rather than concatenated into the instructions.
 func TestTheAccountSummaryTravelsInsideAFence(t *testing.T) {
 	lane := &scriptedLane{answer: `{"subject":"S","body":"B"}`}
@@ -182,7 +182,7 @@ func TestTheAccountSummaryTravelsInsideAFence(t *testing.T) {
 }
 
 // The caller's own instruction is the one input NOT fenced: fencing a
-// person's own words would tell the model to treat the reader as an attacker.
+// contact's own words would tell the model to treat the reader as an attacker.
 func TestTheCallersOwnIntentIsOutsideTheFence(t *testing.T) {
 	in := sampleInput()
 	in.Intent = "keep it short"
@@ -226,7 +226,7 @@ func TestDraftingNeverReturnsADraftRef(t *testing.T) {
 	}
 }
 
-// The account composer's wire mapping is a second spelling of persondraft.Wire,
+// The account composer's wire mapping is a second spelling of contactdraft.Wire,
 // so the degraded flag is pinned here too — in both states, because a client
 // reading an absent field as false must not see "fine" for a lost voice.
 func TestWireCarriesTheVoiceDegradedFlag(t *testing.T) {

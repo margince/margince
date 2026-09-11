@@ -33,10 +33,10 @@ func TestStagedApprovalErrorCarriesTheApprovalIDThroughErrorsAs(t *testing.T) {
 	}
 }
 
-// The caller that wrote the arguments is the one relaying the wait to a person,
+// The caller that wrote the arguments is the one relaying the wait to a contact,
 // so the answer has to carry what was staged and not only that something was.
 func TestAStagedAnswerRepeatsWhatWasStaged(t *testing.T) {
-	const summary = "Update person Ada Lovelace: overwrite human-edited job_title"
+	const summary = "Update contact Ada Lovelace: overwrite human-edited job_title"
 	id := ids.ApprovalID{UUID: ids.NewV7()}
 
 	for _, tc := range []struct {
@@ -67,7 +67,7 @@ func TestAStagedAnswerRepeatsWhatWasStaged(t *testing.T) {
 func TestAStagedAnswerWithNoSummaryDoesNotInventOne(t *testing.T) {
 	id := ids.ApprovalID{UUID: ids.NewV7()}
 	bare := (&workflow.StagedApprovalError{ApprovalID: id}).Error()
-	described := (&workflow.StagedApprovalError{ApprovalID: id, Summary: "Archive person Ada"}).Error()
+	described := (&workflow.StagedApprovalError{ApprovalID: id, Summary: "Archive contact Ada"}).Error()
 
 	// Asserted against the described rendering rather than against a joining
 	// word: what must not happen is a placeholder standing where a description

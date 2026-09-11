@@ -42,7 +42,7 @@ func TestWhoamiNamesTheHumanThePassportActsFor(t *testing.T) {
 }
 
 // Nobody behind the call is an answer, not an error: a system principal acts
-// for no one, and a person who never chose a language has no locale. An empty
+// for no one, and a contact who never chose a language has no locale. An empty
 // locale must not be reported as "en", which cannot be told from a choice.
 func TestWhoamiAnswersEmptyForAPrincipalWithNoHuman(t *testing.T) {
 	out, err := whoami{read: func(context.Context) (ActingIdentity, error) {

@@ -74,7 +74,7 @@ func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetai
 			Name:     row.Name,
 			Archived: row.ArchivedAt != nil,
 		},
-		People:    usage.People,
+		Contacts:  usage.Contacts,
 		Companies: usage.Companies,
 		Deals:     usage.Deals,
 	}
@@ -85,7 +85,7 @@ func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetai
 }
 
 // RecordTags hands the record-tag read across. The tool and the record page
-// read the SAME store method, so a model and a person looking at one company
+// read the SAME store method, so a model and a contact looking at one company
 // cannot be told different things about who tagged it.
 func (a tagAdapter) RecordTags(ctx context.Context, entityType string, entityID ids.UUID) (agents.RecordTagsResult, error) {
 	read, err := a.store.RecordTagsFor(ctx, entityType, entityID)
@@ -166,7 +166,7 @@ func (a tagAdapter) RemoveTag(ctx context.Context, tagID ids.UUID, entityType st
 //
 // Each hands straight to the store method the HTTP handler and the admin card
 // already call, so an agent coining or renaming a word takes exactly the gates
-// a person does — `tag.create` and `tag.update`, which the seeded roles give
+// a contact does — `tag.create` and `tag.update`, which the seeded roles give
 // Admin and Ops alone. Re-deriving any of that here would be a second write
 // gate to keep in step with the first.
 

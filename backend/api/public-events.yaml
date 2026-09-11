@@ -23,7 +23,7 @@ components:
       description: >-
         The closed set of domain event types a webhook subscription may
         select — every subscribable event across the deal, offer,
-        pipeline/stage, person/company, lead, activities,
+        pipeline/stage, contact/company, lead, activities,
         consent/privacy, signals, ai voice, identity, and overlay families.
         A subscription's event-type filter is validated against this set;
         an unlisted type cannot be subscribed to.
@@ -67,11 +67,11 @@ components:
         - stage.created
         - stage.updated
         - stage.archived
-        - person.created
-        - person.archived
-        - person.merged
-        - person.updated
-        - person.restored
+        - contact.created
+        - contact.archived
+        - contact.merged
+        - contact.updated
+        - contact.restored
         - conversation_claim.captured
         - conversation_claim.changed
         - company.created
@@ -169,7 +169,7 @@ components:
       properties:
         type:
           type: string
-          description: Entity kind (e.g. deal, person, company).
+          description: Entity kind (e.g. deal, contact, company).
         id:
           type: string
           format: uuid
@@ -359,7 +359,7 @@ components:
       x-entity-type: deal_room
       x-version: 1
       description: |
-        Payload for deal_room.participant_invited — an outside person was admitted to a
+        Payload for deal_room.participant_invited — an outside contact was admitted to a
         Deal Room.
 
         The event names the participant and the room, never the credential or its hash:
@@ -387,7 +387,7 @@ components:
       x-entity-type: deal_room
       x-version: 1
       description: |
-        Payload for deal_room.participant_revoked — an outside person's access to a Deal
+        Payload for deal_room.participant_revoked — an outside contact's access to a Deal
         Room was taken away. Their live session ended and any unconsumed credential was
         retired at the same moment.
       required:
@@ -1250,11 +1250,11 @@ components:
           description: The pipeline the stage belonged to.
       additionalProperties: false
 
-    PublicEventPersonMergedRelinkCounts:
+    PublicEventContactMergedRelinkCounts:
       type: object
       description: >-
         How many child rows on each side were repointed from the merged-
-        away person onto the survivor (people/merge.go relinkCounts).
+        away contact onto the survivor (contacts/merge.go relinkCounts).
       required:
         - emails
         - phones
@@ -1264,11 +1264,11 @@ components:
         emails:
           type: integer
           format: int64
-          description: person_email rows relinked.
+          description: contact_email rows relinked.
         phones:
           type: integer
           format: int64
-          description: person_phone rows relinked.
+          description: contact_phone rows relinked.
         relationships:
           type: integer
           format: int64
@@ -1279,36 +1279,36 @@ components:
           description: activity_link rows relinked.
       additionalProperties: false
 
-    PublicEventPersonCreated:
+    PublicEventContactCreated:
       type: object
-      x-event-type: person.created
-      x-entity-type: person
+      x-event-type: contact.created
+      x-entity-type: contact
       x-version: 1
-      description: Payload for person.created — a person was created.
+      description: Payload for contact.created — a contact was created.
       required:
         - full_name
       properties:
         full_name:
           type: string
-          description: The person's name at creation.
+          description: The contact's name at creation.
       additionalProperties: false
 
-    PublicEventPersonArchived:
+    PublicEventContactArchived:
       type: object
-      x-event-type: person.archived
-      x-entity-type: person
+      x-event-type: contact.archived
+      x-entity-type: contact
       x-version: 1
-      description: Payload for person.archived — a person was archived. Carries no data.
+      description: Payload for contact.archived — a contact was archived. Carries no data.
       additionalProperties: false
 
-    PublicEventPersonMerged:
+    PublicEventContactMerged:
       type: object
-      x-event-type: person.merged
-      x-entity-type: person
+      x-event-type: contact.merged
+      x-entity-type: contact
       x-version: 1
       description: >-
-        Payload for person.merged — two person records collapsed into one
-        (the §1.3 merge); neither person.updated nor person.archived can
+        Payload for contact.merged — two contact records collapsed into one
+        (the §1.3 merge); neither contact.updated nor contact.archived can
         say this, so it is its own verb.
       required:
         - merged_from_id
@@ -1318,22 +1318,22 @@ components:
         merged_from_id:
           type: string
           format: uuid
-          description: The merged-away (source) person, retired but still fetchable by id.
+          description: The merged-away (source) contact, retired but still fetchable by id.
         merged_into_id:
           type: string
           format: uuid
-          description: The survivor (target) person.
+          description: The survivor (target) contact.
         relinked:
-          $ref: '#/components/schemas/PublicEventPersonMergedRelinkCounts'
+          $ref: '#/components/schemas/PublicEventContactMergedRelinkCounts'
       additionalProperties: false
 
-    PublicEventPersonUpdated:
+    PublicEventContactUpdated:
       type: object
-      x-event-type: person.updated
-      x-entity-type: person
+      x-event-type: contact.updated
+      x-entity-type: contact
       x-version: 1
       description: >-
-        Payload for person.updated — an OPEN envelope: its emit sites carry
+        Payload for contact.updated — an OPEN envelope: its emit sites carry
         divergent shapes (a flat column patch, a lead-promotion conversion
         note, a signature-enrichment fill, a relationship delta), so the
         honest shape is a change-set map rather than a fixed field list.
@@ -1352,14 +1352,14 @@ components:
             key's value as either form.
       additionalProperties: false
 
-    PublicEventPersonRestored:
+    PublicEventContactRestored:
       type: object
-      x-event-type: person.restored
-      x-entity-type: person
+      x-event-type: contact.restored
+      x-entity-type: contact
       x-version: 1
       description: >-
-        Payload for person.restored. Never emitted today (no restore path
-        exists for person); the schema is published so the type is a
+        Payload for contact.restored. Never emitted today (no restore path
+        exists for contact); the schema is published so the type is a
         valid subscription target and the coverage gate can name it
         explicitly rather than silently omitting it.
       additionalProperties: false
@@ -1367,12 +1367,12 @@ components:
     PublicEventConversationClaimCaptured:
       type: object
       x-event-type: conversation_claim.captured
-      x-entity-type: person
+      x-entity-type: contact
       x-version: 1
       description: >-
         Payload for conversation_claim.captured — something promised, asked or
         decided in a captured conversation was written to the record
-        (ADR-0097 D1). The entity is the PERSON the claim is about: a
+        (ADR-0097 D1). The entity is the CONTACT the claim is about: a
         subscriber reacting to what a contact said wants the contact, and the
         claim id rides the payload for the reader that needs the row itself.
       required:
@@ -1395,7 +1395,7 @@ components:
     PublicEventConversationClaimChanged:
       type: object
       x-event-type: conversation_claim.changed
-      x-entity-type: person
+      x-entity-type: contact
       x-version: 1
       description: >-
         Payload for conversation_claim.changed — a human typed over the
@@ -1521,7 +1521,7 @@ components:
       x-version: 1
       description: >-
         Payload for lead.created — a lead was created. Two emit sites: a
-        direct create (people/lead.go) that sets no fields, and the
+        direct create (contacts/lead.go) that sets no fields, and the
         capture auto-create engine (capture/sink.go) that names its
         originating source system; source_system is therefore optional.
       properties:
@@ -1547,7 +1547,7 @@ components:
       x-version: 1
       description: >-
         Payload for lead_source.changed — a lead source was added, edited or
-        removed (people/leadsource.go). It rides the lead stream because the
+        removed (contacts/leadsource.go). It rides the lead stream because the
         source is a value every lead carries, so a subscriber that renders or
         groups by source re-reads the catalog on this.
 
@@ -1579,7 +1579,7 @@ components:
       x-version: 1
       description: >-
         Payload for lead_disqualify_reason.changed — a disqualification reason
-        was added, edited or removed (people/leaddisqualifyreason.go). It rides
+        was added, edited or removed (contacts/leaddisqualifyreason.go). It rides
         the lead stream for the reason its source sibling does: a subscriber
         reporting on why leads were disqualified re-reads the catalog on this.
 
@@ -1610,20 +1610,20 @@ components:
       description: >-
         Payload for lead.promoted — the lead's genuine-engagement
         promotion into the context graph (events.md §5.5); its own verb,
-        never a lead.updated, since neither person.created nor
-        person.updated on its own says a lead crossed this line.
+        never a lead.updated, since neither contact.created nor
+        contact.updated on its own says a lead crossed this line.
       required:
-        - promoted_person_id
+        - promoted_contact_id
         - dedupe_outcome
         - trigger
       properties:
-        promoted_person_id:
+        promoted_contact_id:
           type: string
           format: uuid
-          description: The person this lead promoted into (fresh or an existing survivor).
+          description: The contact this lead promoted into (fresh or an existing survivor).
         dedupe_outcome:
           type: string
-          description: 'Whether promotion created a new person or merged into an existing one: created or merged.'
+          description: 'Whether promotion created a new contact or merged into an existing one: created or merged.'
         trigger:
           type: string
           description: 'The genuine-engagement trigger that authorized promotion: inbound_reply, meeting_booked, meeting_held, or human_qualify.'
@@ -1635,18 +1635,18 @@ components:
           type: array
           items: { type: string, format: uuid }
           description: >-
-            The activities whose link this promotion moved from the lead onto the person —
+            The activities whose link this promotion moved from the lead onto the contact —
             what carryLeadActivities re-pointed, which is the lead's own timeline and
             nothing the survivor already had.
 
-            It names them because the person id cannot. A promotion that MERGES lands the
-            lead's follow-up task on a person that may already carry its own unrelated
-            reminders, so "the open system tasks on this person" is not the same set as
+            It names them because the contact id cannot. A promotion that MERGES lands the
+            lead's follow-up task on a contact that may already carry its own unrelated
+            reminders, so "the open system tasks on this contact" is not the same set as
             "the tasks this promotion carried" — and a consumer completing the first would
             tick off work the promotion never touched.
 
             Absent on an event written before this field existed, and a consumer replaying
-            one has no worse an answer than it had then: for a freshly created person the
+            one has no worse an answer than it had then: for a freshly created contact the
             two sets coincide, which is why that case worked without it.
       additionalProperties: false
 
@@ -1658,19 +1658,19 @@ components:
       description: >-
         Payload for lead.demoted — the audited reverse of lead.promoted
         (formulas §26): the lead is back in the segregated pool and the
-        person-side lineage is nulled. Its own verb, because a lead.updated
-        cannot say a person node lost its lineage.
+        contact-side lineage is nulled. Its own verb, because a lead.updated
+        cannot say a contact node lost its lineage.
       required:
-        - from_person_id
+        - from_contact_id
         - unwind
       properties:
-        from_person_id:
+        from_contact_id:
           type: string
           format: uuid
-          description: The person the promotion had created or merged into.
+          description: The contact the promotion had created or merged into.
         unwind:
           type: string
-          description: 'reversed (the created person is archived) or merge_lineage_only (the pre-existing person is untouched; only lineage pointers are nulled).'
+          description: 'reversed (the created contact is archived) or merge_lineage_only (the pre-existing contact is untouched; only lineage pointers are nulled).'
       additionalProperties: false
 
     PublicEventLeadMerged:
@@ -1811,7 +1811,7 @@ components:
       properties:
         entity_type:
           type: string
-          description: The relink target's kind (person | company | deal | lead).
+          description: The relink target's kind (contact | company | deal | lead).
         entity_id:
           type: string
           format: uuid
@@ -1826,7 +1826,7 @@ components:
         assignee_id, is_done, meeting_status) each carried only when this update touched
         them, plus RelinkActivity's relinked target and SetActivityAudience's
         audience — a fixed, KNOWN key
-        set (unlike person/company/deal/lead.updated's genuinely
+        set (unlike contact/company/deal/lead.updated's genuinely
         open patch), so it is typed rather than an open map.
       properties:
         subject:
@@ -1891,7 +1891,7 @@ components:
       x-version: 1
       description: >-
         Payload for activity.updated — a BOUNDED delta (unlike the
-        person/company/deal/lead family's genuinely open patch):
+        contact/company/deal/lead family's genuinely open patch):
         UpdateActivity and RelinkActivity together cover a fixed, KNOWN
         set of inner keys, so changed_fields is a typed struct here, not
         an open map.
@@ -1910,8 +1910,8 @@ components:
       description: >-
         Payload for forecast.created — somebody accountable for a number said
         what they believe will close. The entity is the AUTHOR rather than a
-        deal or a team, because a call is an assertion by a person and that
-        person is who it is attributable to.
+        deal or a team, because a call is an assertion by a contact and that
+        contact is who it is attributable to.
 
         A call supersedes rather than overwrites, so `supersedes_id` names the
         one it replaces and is absent for the first call of a period. The
@@ -2018,7 +2018,7 @@ components:
         revenue commitment is made from, so a surface counting open findings has to drop
         them; `remind_later` leaves the finding open and it comes back.
 
-        The reason does not ride along. It is prose a person wrote for another person,
+        The reason does not ride along. It is prose a contact wrote for another contact,
         and a subscriber acting on it is acting on something the author may edit.
       required: [exception_id, outcome, actor_user_id]
       properties:
@@ -2120,7 +2120,7 @@ components:
       x-version: 1
       description: >-
         Payload for forecast.share_revoked — a share link was closed before its expiry.
-        The entity is the person who revoked it.
+        The entity is the contact who revoked it.
 
         A consumer that recorded the issue must record this too: the two together are
         the window during which a number was reachable by whoever held the link, and
@@ -2193,7 +2193,7 @@ components:
       x-version: 1
       description: >-
         Payload for notice.created — a durable informational notice was
-        recorded for one person (notices/store.go's Create). Recording the
+        recorded for one contact (notices/store.go's Create). Recording the
         row IS the delivery on this transport; the entity is the recipient.
         The content stays on the row: an event fan-out of subject and body
         would put the same prose on two wires to drift.
@@ -2248,12 +2248,12 @@ components:
     PublicEventRelationshipNudgeDecided:
       type: object
       x-event-type: relationship_nudge.decided
-      x-entity-type: person
+      x-entity-type: contact
       x-version: 1
       description: >-
         Payload for relationship_nudge.decided — a rep set a lapsed contact
         aside so their own Worklist stops raising them, or put them back
-        (people's nudge dismissal). The entity is the CONTACT, which is what
+        (contacts's nudge dismissal). The entity is the CONTACT, which is what
         the judgement is about.
 
         WHOSE morning it was is not on the wire, and the omission is the same
@@ -2262,10 +2262,10 @@ components:
         rep's private decision as the contact's own state. The reader stays on
         the row, for a caller entitled to it.
       required:
-        - person_id
+        - contact_id
         - action
       properties:
-        person_id:
+        contact_id:
           type: string
           format: uuid
         action:
@@ -2289,23 +2289,23 @@ components:
     PublicEventIntroRequestCreated:
       type: object
       x-event-type: intro_request.created
-      x-entity-type: person
+      x-entity-type: contact
       x-version: 1
       description: >-
         Payload for intro_request.created — a rep asked a colleague to open a
         door to this contact (introductions/store.go's Create). The entity is
         the CONTACT, because that is what the ask is about and what a consumer
-        ranking a person's open work reads it against. The prose stays on the
+        ranking a contact's open work reads it against. The prose stays on the
         row: the internal reason and the forwardable note have different
         audiences, and neither belongs on a bus.
       required:
         - intro_request_id
-        - person_id
+        - contact_id
         - requester_user_id
         - introducer_user_id
       properties:
         intro_request_id: { type: string, format: uuid }
-        person_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
         requester_user_id: { type: string, format: uuid }
         introducer_user_id: { type: string, format: uuid }
       additionalProperties: false
@@ -2313,7 +2313,7 @@ components:
     PublicEventIntroRequestDecided:
       type: object
       x-event-type: intro_request.decided
-      x-entity-type: person
+      x-entity-type: contact
       x-version: 1
       description: >-
         Payload for intro_request.decided — the colleague gave one of the four
@@ -2322,12 +2322,12 @@ components:
         deciding on state that may already have moved.
       required:
         - intro_request_id
-        - person_id
+        - contact_id
         - introducer_user_id
         - decision
       properties:
         intro_request_id: { type: string, format: uuid }
-        person_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
         introducer_user_id: { type: string, format: uuid }
         decision:
           type: string
@@ -2344,7 +2344,7 @@ components:
     PublicEventIntroRequestCompleted:
       type: object
       x-event-type: intro_request.completed
-      x-entity-type: person
+      x-entity-type: contact
       x-version: 1
       description: >-
         Payload for intro_request.completed — the handshake happened, or the
@@ -2353,11 +2353,11 @@ components:
         collapsed them would report doors opened that nobody opened.
       required:
         - intro_request_id
-        - person_id
+        - contact_id
         - outcome
       properties:
         intro_request_id: { type: string, format: uuid }
-        person_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
         outcome:
           type: string
           enum: [introduced, name_dropped]
@@ -2371,25 +2371,25 @@ components:
     PublicEventIntroRequestReplied:
       type: object
       x-event-type: intro_request.replied
-      x-entity-type: person
+      x-entity-type: contact
       x-version: 1
       description: >-
         Payload for intro_request.replied — the contact answered, observed from
-        captured activity rather than asserted by a person. `source_activity_id`
+        captured activity rather than asserted by a contact. `source_activity_id`
         is the evidence, so a reader can open the message the claim rests on.
       required:
         - intro_request_id
-        - person_id
+        - contact_id
       properties:
         intro_request_id: { type: string, format: uuid }
-        person_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
         source_activity_id: { type: string, format: uuid }
       additionalProperties: false
 
     PublicEventIntroRequestClosed:
       type: object
       x-event-type: intro_request.closed
-      x-entity-type: person
+      x-entity-type: contact
       x-version: 1
       description: >-
         Payload for intro_request.closed — the ask ended without a handshake:
@@ -2398,11 +2398,11 @@ components:
         follow-ups.
       required:
         - intro_request_id
-        - person_id
+        - contact_id
         - reason
       properties:
         intro_request_id: { type: string, format: uuid }
-        person_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
         reason:
           type: string
           enum: [cancelled, expired]
@@ -2497,7 +2497,7 @@ components:
           type: string
           format: uuid
           description: >-
-            The already-known person behind the counterparty — resolved
+            The already-known contact behind the counterparty — resolved
             from the address on the mail path and from the channel
             identity on a messaging one (absent when the counterparty
             resolves only in a follow-up ensure).
@@ -2506,18 +2506,18 @@ components:
     PublicEventConsentSuppressionLifted:
       type: object
       x-event-type: consent.suppression_lifted
-      x-entity-type: person
+      x-entity-type: contact
       x-version: 1
       description: >-
         Payload for consent.suppression_lifted — somebody with the authority to
         do so took back ONE stop.
 
         That is not the same as "mail may resume", and a consumer must not read
-        it that way. A person can carry several stops at once — their own
+        it that way. A contact can carry several stops at once — their own
         objection and a rep's separate note — and lifting one says nothing about
         the others. `remaining_suppressions` is the field that answers the
         question a consumer actually has, and `still_suppressed` is that answer
-        stated plainly: true means this person is STILL not writable, however
+        stated plainly: true means this contact is STILL not writable, however
         many stops were just taken back.
 
         Margince itself never relied on this event to decide a send — the engine
@@ -2530,7 +2530,7 @@ components:
         unanswerable without joining the row that no longer says it.
 
         It never carries the reason either party gave. Those words belong to the
-        people who wrote them, and an event reaches readers the explanation was
+        contacts who wrote them, and an event reaches readers the explanation was
         not given to.
       # The three fields below are OPTIONAL and the version stays 1, because a
       # consumer already validating this payload must keep validating it. An
@@ -2557,17 +2557,17 @@ components:
           format: uuid
           description: >-
             Which stop was lifted. Without it a consumer holding two stops for
-            one person cannot tell which one this event describes.
+            one contact cannot tell which one this event describes.
         remaining_suppressions:
           type: integer
           minimum: 0
           description: >-
-            How many stops are still live for this person after the lift,
+            How many stops are still live for this contact after the lift,
             counted inside the same transaction that did the lifting.
         still_suppressed:
           type: boolean
           description: >-
-            Whether this person is still not writable. Equivalent to
+            Whether this contact is still not writable. Equivalent to
             remaining_suppressions > 0, stated as its own field so a consumer
             cannot get the comparison wrong in the direction that resumes mail.
       additionalProperties: false
@@ -2575,7 +2575,7 @@ components:
     PublicEventConsentSuppressed:
       type: object
       x-event-type: consent.suppressed
-      x-entity-type: person
+      x-entity-type: contact
       x-version: 1
       description: >-
         Payload for consent.suppressed — somebody recorded that we may not
@@ -2585,7 +2585,7 @@ components:
         own, and a later re-grant must not silently erase it. A consumer
         that folded the two would resume mail the subject asked us to stop.
 
-        The subject is a person and only a person: the write door names that
+        The subject is a contact and only a contact: the write door names that
         object as a literal, so this is a static entity whose delivery scope
         the fan-out gate proves mechanically rather than by hand-ratification.
 
@@ -2618,7 +2618,7 @@ components:
       x-version: 1
       description: >-
         Payload for consent.changed — a subject's per-purpose consent state
-        was recorded (consent/store.go's Record). The subject is a person
+        was recorded (consent/store.go's Record). The subject is a contact
         XOR a lead (data-model §7, before promotion) — a RUNTIME choice
         Record resolves via consentSubject, not a fixed type this schema
         can name, so this is the first dynamic-entity event (contract
@@ -2650,7 +2650,7 @@ components:
       description: >-
         Payload for email_signature.changed — a member wrote, edited or cleared
         the sign-off appended to every message they send
-        (people/emailsignature.go's SaveMyEmailSignature). How a person is
+        (contacts/emailsignature.go's SaveMyEmailSignature). How a contact is
         represented on outbound mail is a fact worth answering later, so the
         change is audited and published rather than written quietly. The
         signature TEXT is NOT in the payload: it is the member's own words about
@@ -2675,11 +2675,11 @@ components:
         Payload for user_delivery.changed — a member chose what the product may
         send them (identity/userdelivery.go's SaveMyDelivery). The brief and the
         weekly are on their screen either way; this is about the nudge toward
-        them, which is the one part a person is entitled to switch off.
+        them, which is the one part a contact is entitled to switch off.
         It names WHAT moved and not what it moved to. What somebody chose about
         their own inbox is theirs, and a fan-out carrying the values would tell
         every subscription owner who had turned their mail off — so the values
-        stay on the row, which only that person and the job reads.
+        stay on the row, which only that contact and the job reads.
       required:
         - changed_fields
       properties:
@@ -2702,7 +2702,7 @@ components:
         a change to the member's own seat rather than to anything the
         installation is measured in: the language AI writes for the whole team
         is the installation's base_language, which is an admin setting and
-        publishes separately. A subscriber that renders anything for this person
+        publishes separately. A subscriber that renders anything for this contact
         needs to know which catalog to reach for.
       required:
         - locale
@@ -2726,7 +2726,7 @@ components:
         SaveMyDisplayName). Always their own: this API offers no way to rename
         somebody else. A subscriber holding a copy of the roster needs it,
         because the name is read from app_user wherever it is shown and a cached
-        copy would keep addressing the person by a name they have corrected.
+        copy would keep addressing the contact by a name they have corrected.
       required:
         - display_name
       properties:
@@ -2745,7 +2745,7 @@ components:
       x-version: 1
       description: >-
         Payload for linkedin_account.changed — a member recorded or corrected
-        their OWN LinkedIn authorization (people/linkedinaccount.go's
+        their OWN LinkedIn authorization (contacts/linkedinaccount.go's
         SaveMyLinkedInAccount). Consent to read a professional network is the
         same class of fact as consent.changed, so it is auditable and published
         rather than written quietly. The profile URL itself is NOT in the
@@ -2866,7 +2866,7 @@ components:
             The statutory class that holds it (e.g. commercial_correspondence).
             No free text and no reason string: the administrator's reason is
             audit-log material, and a public event is not the place to publish
-            why a named person decided something about a named record.
+            why a named contact decided something about a named record.
       additionalProperties: false
 
     PublicEventRetentionApplied:
@@ -2879,8 +2879,8 @@ components:
         against one record. Four emit sites, four different runtime
         subjects: the embed-call sweep (ai_call), the voice-learning-signal
         content sweep (voice_learning_signal), a workspace's configured
-        retention policy's object type (activity | deal | lead | person |
-        ai_call_payload), and Art. 17 erasure (person) — none fixed enough
+        retention policy's object type (activity | deal | lead | contact |
+        ai_call_payload), and Art. 17 erasure (contact) — none fixed enough
         for this schema to name, so this is dynamic-entity (contract
         `x-entity-type: dynamic`): the generated EntityType() is unused,
         and each emit site supplies its own runtime entity type through
@@ -2932,7 +2932,7 @@ components:
       description: >-
         Payload for signal.detected — a signal was created (signals/signal.go's
         CreateSignal). entity_type/entity_id are DATA fields naming the
-        signal's subject (deal | company | person) when one is already
+        signal's subject (deal | company | contact) when one is already
         known at creation time — not the envelope's own entity ref, which is
         the signal itself (this event's entity type is the static "signal").
         Both are absent on a raw signal (only a raw_ref), which enters
@@ -2969,7 +2969,7 @@ components:
           type: string
           x-go-name: SubjectEntityType
           description: >-
-            The subject record's type (deal | company | person) — a
+            The subject record's type (deal | company | contact) — a
             payload data field, absent until a raw signal resolves (both
             entity fields set together). x-go-name avoids colliding with the
             generated EntityType() method, which names the ENVELOPE'S entity
@@ -2993,9 +2993,9 @@ components:
         Payload for signal.resolved — the resolver ran over a signal
         (signals/resolver.go's Resolve). The verdict IS the candidate count
         (P12): zero candidates drops the signal (resolved_company_id,
-        resolved_person_id, matched_on, match_confidence all absent);
+        resolved_contact_id, matched_on, match_confidence all absent);
         exactly one resolves it to that company (resolved_company_id set,
-        resolved_person_id set only under a recorded consent grant);
+        resolved_contact_id set only under a recorded consent grant);
         several flags it low_confidence for review (matched_on/
         match_confidence describe the top candidate, resolved_company_id stays
         absent).
@@ -3014,12 +3014,12 @@ components:
           type: string
           format: uuid
           description: The company the signal resolved to (absent when dropped or ambiguous).
-        resolved_person_id:
+        resolved_contact_id:
           type: string
           format: uuid
           description: >-
-            The consent-gated person the signal resolved to (absent unless
-            an existing person under a recorded consent grant matched).
+            The consent-gated contact the signal resolved to (absent unless
+            an existing contact under a recorded consent grant matched).
         matched_on:
           type: string
           description: The match basis of the top candidate (domain | name | prior_interaction).
@@ -3622,7 +3622,7 @@ components:
         reconcile.go's emitMirrorConflict) observed the incumbent CRM had
         moved a record the mirror's own baseline still called current, an
         overwrite-worthy divergence (OVA-EVT-1). object_class is the
-        RUNTIME canonical class of the record involved (e.g. "person",
+        RUNTIME canonical class of the record involved (e.g. "contact",
         "deal") — not a fixed type this schema can name — so this is a
         dynamic-entity event (contract `x-entity-type: dynamic`): the
         generated EntityType() is unused, and the emit site supplies the
@@ -3856,15 +3856,15 @@ components:
             The deciding human's user id. ABSENT on the `expired` verdict, and
             that absence is the payload's own statement that nobody decided
             this — a zero or placeholder id here would put a phantom user's name
-            on a refusal no person made.
+            on a refusal no contact made.
         decided_by_system:
           type: boolean
           description: >-
             True when the product applied this itself under a governing policy
-            rather than putting it to a person. It is NOT the complement of
+            rather than putting it to a contact. It is NOT the complement of
             `decided_by`: the `expired` verdict also carries no decider, and
             those two are opposite facts — one is the product acting, the other
-            is nobody acting. A consumer measuring whether people agree with
+            is nobody acting. A consumer measuring whether contacts agree with
             what is proposed must exclude an automatic apply from its
             denominator, because the autopilot agreeing with itself is not
             evidence that anyone agreed.

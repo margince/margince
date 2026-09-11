@@ -91,6 +91,12 @@
         "read": true,
         "update": true
       },
+      "contact": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "contract": {
         "create": true,
         "delete": true,
@@ -236,12 +242,6 @@
         "update": true
       },
       "partner": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "person": {
         "create": true,
         "delete": true,
         "read": true,
@@ -444,6 +444,12 @@
         "read": true,
         "update": false
       },
+      "contact": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "contract": {
         "create": true,
         "delete": true,
@@ -589,12 +595,6 @@
         "update": false
       },
       "partner": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "person": {
         "create": true,
         "delete": true,
         "read": true,
@@ -797,6 +797,12 @@
         "read": false,
         "update": false
       },
+      "contact": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "contract": {
         "create": true,
         "delete": true,
@@ -942,12 +948,6 @@
         "update": false
       },
       "partner": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "person": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1150,6 +1150,12 @@
         "read": true,
         "update": true
       },
+      "contact": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "contract": {
         "create": true,
         "delete": true,
@@ -1295,12 +1301,6 @@
         "update": true
       },
       "partner": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "person": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1503,6 +1503,12 @@
         "read": false,
         "update": false
       },
+      "contact": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "contract": {
         "create": false,
         "delete": false,
@@ -1648,12 +1654,6 @@
         "update": false
       },
       "partner": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
-      "person": {
         "create": false,
         "delete": false,
         "read": true,
@@ -1856,6 +1856,12 @@
         "read": false,
         "update": false
       },
+      "contact": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "contract": {
         "create": true,
         "delete": false,
@@ -2005,12 +2011,6 @@
         "delete": false,
         "read": true,
         "update": false
-      },
-      "person": {
-        "create": true,
-        "delete": false,
-        "read": true,
-        "update": true
       },
       "pipeline": {
         "create": false,

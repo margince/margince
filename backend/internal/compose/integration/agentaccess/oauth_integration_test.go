@@ -298,8 +298,8 @@ func TestOAuthHandshakeMintsAWorkingPassport(t *testing.T) {
 
 	// The minted Bearer works on the resource surface.
 	bearer := map[string]string{"Authorization": "Bearer " + token}
-	if status := o.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusOK {
-		t.Fatalf("bearer GET /v1/people → %d", status)
+	if status := o.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusOK {
+		t.Fatalf("bearer GET /v1/contacts → %d", status)
 	}
 }
 

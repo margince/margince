@@ -8,7 +8,7 @@ package compose
 // A completed task stores the VERBATIM tool result its execution produced, for
 // the reason the row exists at all: a second poll must be answerable without
 // re-running anything. For most of the confirm-first set that result is a whole
-// record read-back — a person with their names, e-mails and phones; a deal with
+// record read-back — a contact with their names, e-mails and phones; a deal with
 // its amount — so the row holds subject data exactly as the idempotency claim
 // body does, and for exactly as long as somebody remembers to remove it.
 //

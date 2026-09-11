@@ -116,8 +116,8 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   // on through the rate table beside it, so a fixture meaning "every page" needs
   // both.
   ai_model_rate: ["read", "create", "update"],
-  person: ["read"],
-  // What opens Privacy & retention now that `person:read` does not.
+  contact: ["read"],
+  // What opens Privacy & retention now that `contact:read` does not.
   retention_policy: ["read", "create", "update"],
   audit_log: ["read"],
   job_health: ["read"],
@@ -172,12 +172,12 @@ const SALES_READS: readonly {
 // whether capture is working, what an automation ran.
 //
 // Privacy is a fourth page that moved but NOT to a write. It dropped its
-// `person:read` arm and kept two reads nobody below admin and ops holds at all,
-// plus a `person` AND `consent_config` pair for the management role, which is
+// `contact:read` arm and kept two reads nobody below admin and ops holds at all,
+// plus a `contact` AND `consent_config` pair for the management role, which is
 // seeded the consent vocabulary and nothing else on that page.
 const SEEDED_READS: GrantSpec = {
   automation: ["read"],
-  person: ["read"],
+  contact: ["read"],
   capture_settings: ["read"],
   custom_field: ["read"],
   installation_settings: ["read"],
@@ -401,7 +401,7 @@ describe("SettingsScreen page visibility", () => {
       const allow = readOn(object);
       vi.stubGlobal("fetch", settingsNavBackend({ roles: ["ops"], allow }));
       renderHome();
-      // `readOn` carries `person:read` with it as a floor, so a case about ONE
+      // `readOn` carries `contact:read` with it as a floor, so a case about ONE
       // object stays about one object. It no longer opens Privacy: that page
       // asks the two governance objects nobody below admin and ops holds.
       await waitFor(() => expect(offeredPages()).toEqual(floorPlus(...opens)));

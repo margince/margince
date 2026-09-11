@@ -139,8 +139,8 @@ func (s *Store) holdForReviewTx(ctx context.Context, origin SendOrigin, in SendE
 		// certify the subject's data destroyed, and commit — and then this
 		// write would put the subject's address, name and the words meant for
 		// them back into the database, in a row nothing would find again. The
-		// erasure's address list is derived from person_email, which the sweep
-		// has by then deleted, so a later erasure of the same person would not
+		// erasure's address list is derived from contact_email, which the sweep
+		// has by then deleted, so a later erasure of the same contact would not
 		// reach this row either.
 		//
 		// The same advisory lock the erasure takes on each address closes it.

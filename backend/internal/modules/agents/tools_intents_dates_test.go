@@ -22,7 +22,7 @@ import (
 // on the prose alone repeats that to the customer. The date now rides the item.
 func TestAnAssembledContextCarriesWhenEachThingHappened(t *testing.T) {
 	when := time.Date(2025, 9, 13, 9, 30, 0, 0, time.UTC)
-	activity, person := ids.NewV7(), ids.NewV7()
+	activity, contactID := ids.NewV7(), ids.NewV7()
 	got := assembledContext(context.Background(), retrieval.Context{
 		Anchor: datasource.EntityRef{Type: datasource.EntityCompany, ID: ids.NewV7()},
 		Sections: []retrieval.Section{{Name: "recent", Items: []retrieval.Item{
@@ -30,9 +30,9 @@ func TestAnAssembledContextCarriesWhenEachThingHappened(t *testing.T) {
 				Ref:     datasource.EntityRef{Type: datasource.EntityActivity, ID: activity},
 				Summary: "Zu viele Ansprechpartner", OccurredAt: when,
 			},
-			// A person is not an event and carries no date; a zero one would
+			// A contact is not an event and carries no date; a zero one would
 			// render as 0001-01-01 rather than as absent.
-			{Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: person}, Summary: "Andrea"},
+			{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: contactID}, Summary: "Andrea"},
 		}}},
 	})
 	if len(got.Sections) != 1 || len(got.Sections[0].Items) != 2 {
@@ -44,6 +44,6 @@ func TestAnAssembledContextCarriesWhenEachThingHappened(t *testing.T) {
 			"take dates from the prose", event.OccurredAt, when)
 	}
 	if contact.OccurredAt != nil {
-		t.Errorf("a person carries occurred_at %v, want it absent", contact.OccurredAt)
+		t.Errorf("a contact carries occurred_at %v, want it absent", contact.OccurredAt)
 	}
 }

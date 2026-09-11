@@ -26,8 +26,8 @@ import (
 // `GET /v1/brief`, which loses nothing by getting a deadline it does not need.
 //
 // `/brief` matches three routes, not one: the caller's own morning brief
-// (`/v1/brief`) and the person's and company's own brief endpoints
-// (`/people/{id}/brief`, `/companies/{id}/brief`) — all three call a
+// (`/v1/brief`) and the contact's and company's own brief endpoints
+// (`/contacts/{id}/brief`, `/companies/{id}/brief`) — all three call a
 // model and none held this deadline before. `TestTheModelRouteDeadlineSuffixesCoverTheContract`
 // (backend/gates) holds this list to the contract's own `x-waits-on-model`
 // marker, so a route added there without a matching suffix here fails on its

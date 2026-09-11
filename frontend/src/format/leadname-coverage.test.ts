@@ -13,13 +13,13 @@ import { filesUnder, parseSource } from "../../scripts/lib/source-tree";
 //
 // The rule is one fact: a lead's own name if it has one, otherwise the email
 // address that is the only other thing naming it. `format/leadname.ts` is where
-// this application answers it, mirroring `leadIdentityName` in the people
+// this application answers it, mirroring `leadIdentityName` in the contacts
 // module and the SQL census that holds the query side.
 //
 // It is not a tidiness argument. The spelling this gate refuses —
 // `lead.full_name ?? lead.email` — fires on `null` alone, so a lead carrying a
 // present-but-empty `full_name` renders BLANK on every screen that spells it,
-// while the server promotes the same lead into a person named by its address.
+// while the server promotes the same lead into a contact named by its address.
 // Nothing between a `CreateLead` body and the stored row refuses an empty name,
 // so that lead is one the product makes. Eight screens carried the spelling.
 //
@@ -95,7 +95,7 @@ function isOutermostChain(node: ts.BinaryExpression): boolean {
 }
 
 /** One term of a chain: WHOSE field it reads, and which. The receiver is half
- *  the finding — `person.full_name ?? lead.email` reads two records and is not
+ *  the finding — `contact.full_name ?? lead.email` reads two records and is not
  *  this rule, so a gate comparing property names alone would send somebody to
  *  "fix" a fallback that means what it says. */
 type FieldRead = Readonly<{ receiver: string; field: string }>;
@@ -231,7 +231,7 @@ describe("what a lead is called", () => {
       0,
     ],
     [
-      "a person, who is not a lead and has no address to fall back to",
+      "a contact, who is not a lead and has no address to fall back to",
       "const name = data.full_name ?? null;",
       0,
     ],
@@ -241,11 +241,11 @@ describe("what a lead is called", () => {
       0,
     ],
     [
-      // Two records, one chain: a person's name with a lead's address behind
+      // Two records, one chain: a contact's name with a lead's address behind
       // it is a fallback somebody meant, and calling it this rule would send
       // the next author to break it.
       "two different receivers, which is not one record being named",
-      "const name = person.full_name ?? lead.email;",
+      "const name = contact.full_name ?? lead.email;",
       0,
     ],
     [
@@ -258,7 +258,7 @@ describe("what a lead is called", () => {
       // Somebody else's name first. A scan reading only the first `full_name`
       // looks for the address under THAT receiver and reports nothing.
       "another record's name ahead of the lead's own",
-      "const name = person.full_name ?? lead.full_name ?? lead.email;",
+      "const name = contact.full_name ?? lead.full_name ?? lead.email;",
       1,
     ],
   ];

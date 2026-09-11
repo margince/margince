@@ -48,12 +48,12 @@ import (
 
 // Nothing is ratified here, and that is the point.
 //
-// The helper used to live in modules/people, where a module never imports a
-// sibling (ADR-0054 §3). compose could reach it and did; people's own files
+// The helper used to live in modules/contacts, where a module never imports a
+// sibling (ADR-0054 §3). compose could reach it and did; contacts's own files
 // reach it directly, and so can the five sibling modules that could not — the
 // predicate moved to shared/kernel/employment, which is Tier 0 and reachable
 // from everywhere. Eight statements in seven files were ratified here by name
-// while it lived in `modules/people`; all eight now call it, so there is
+// while it lived in `modules/contacts`; all eight now call it, so there is
 // nothing left to ratify and the map is gone rather than emptied.
 // carriesASecondEdgeKind ratifies the two statements whose employment arm DOES
 // call the helper and which still read as findings here, because they ask about
@@ -77,7 +77,7 @@ var carriesASecondEdgeKind = gatekit.Waive(map[string]string{
 const (
 	employmentHelper = "IsCurrentSQL"
 	primaryHelper    = "CurrentPrimarySQL"
-	employmentIssue  = "eight statements in five sibling modules are ratified separately: a module may not import people (ADR-0054 §3), so the predicate has to move tier before they can adopt it; see issue 2360"
+	employmentIssue  = "eight statements in five sibling modules are ratified separately: a module may not import contacts (ADR-0054 §3), so the predicate has to move tier before they can adopt it; see issue 2360"
 )
 
 // employmentKind matches a statement that has scoped itself to employments.
@@ -100,7 +100,7 @@ var employmentKind = regexp.MustCompile(`kind\s*=\s*'employment'|kind\s+IN\s*\((
 // semantics right but is still a second copy.
 //
 // `IS NOT NULL` is matched too. The negation is the same decision made
-// backwards, and leaving it out let a statement ask "has this person left?" by
+// backwards, and leaving it out let a statement ask "has this contact left?" by
 // hand while its sibling half asked "are they still here?" through the helper
 // — one query, two definitions, and they disagreed on the day a notice period
 // ended.
@@ -159,7 +159,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		return
 	}
 	t.Errorf("these statements decide whether an employment is current by testing ended_at themselves:\n  %s\n\n"+
-		"people.%s is the one definition, and it is a DATE comparison: somebody serving three months' "+
+		"contacts.%s is the one definition, and it is a DATE comparison: somebody serving three months' "+
 		"notice still works there, and reading the column's presence as \"gone\" takes them off their "+
 		"employer's contact list the day their notice is filed — with no way back, because ended_at "+
 		"cannot be cleared through the API. Call the helper. (%s)",
@@ -190,14 +190,14 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 // Per DECLARATION and not per file: a file may hold one query about employments
 // and another about deal stakeholders, and asking whether both shapes appear
 // somewhere in the same file reports a pairing nobody wrote.
-func employmentStatements(decl ast.Decl, people helperScope) []string {
+func employmentStatements(decl ast.Decl, contacts helperScope) []string {
 	var out []string
 	seen := map[ast.Node]bool{}
 	ast.Inspect(decl, func(n ast.Node) bool {
 		if seen[n] {
 			return false
 		}
-		text, ok := flattenSQL(n, seen, people)
+		text, ok := flattenSQL(n, seen, contacts)
 		if !ok || !employmentKind.MatchString(text) {
 			return true
 		}
@@ -228,9 +228,9 @@ type employmentProbe struct {
 	// depend on it and a probe that guesses wrong asks a different question
 	// than the tree does:
 	//
-	//   ""         package probe, importing people — an ordinary caller
-	//   "people"   package people — the one place a bare call is the helper's
-	//   "noimport" package probe, NOT importing people — most of the tree, and
+	//   ""         package probe, importing contacts — an ordinary caller
+	//   "contacts"   package contacts — the one place a bare call is the helper's
+	//   "noimport" package probe, NOT importing contacts — most of the tree, and
 	//              where a bare helper name is somebody else's function
 	mode string
 	src  string
@@ -276,12 +276,12 @@ func read() string {
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + employment.IsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.archived_at IS NULL` + "`" + `
 }`},
-	{"the real helper, unqualified inside people", false, "people", `
+	{"the real helper, unqualified inside contacts", false, "contacts", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + employment.IsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.archived_at IS NULL` + "`" + `
 }`},
-	// A bare call outside people names something else entirely.
-	{"an unqualified call outside people", true, "", `
+	// A bare call outside contacts names something else entirely.
+	{"an unqualified call outside contacts", true, "", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + employment.IsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
 }`},
@@ -293,10 +293,10 @@ func read() string {
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind IN ('deal_stakeholder', 'employment') AND r.ended_at IS NULL` + "`" + `
 }`},
-	// A bare call in a file that simply does not import people names something
-	// else. An empty qualifier used to mean both "this file IS people" and
-	// "this file does not import people", and most of the tree is the second.
-	{"a bare helper name in a file that does not import people", true, "noimport", `
+	// A bare call in a file that simply does not import contacts names something
+	// else. An empty qualifier used to mean both "this file IS contacts" and
+	// "this file does not import contacts", and most of the tree is the second.
+	{"a bare helper name in a file that does not import contacts", true, "noimport", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + employment.IsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
 }`},
@@ -321,14 +321,14 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"
 			names := map[string]bool{employmentHelper: true, primaryHelper: true}
-			scope := helperScope{qualifier: "people", names: names}
+			scope := helperScope{qualifier: "contacts", names: names}
 			switch tc.mode {
-			case "people":
-				head, scope = "package people\n", helperScope{inside: true, names: names}
+			case "contacts":
+				head, scope = "package contacts\n", helperScope{inside: true, names: names}
 			case "noimport":
 				scope = helperScope{names: names}
 			default:
-				head += "import (\n\t\"fmt\"\n\n\t\"github.com/margince/margince/backend/internal/modules/people\"\n)\n"
+				head += "import (\n\t\"fmt\"\n\n\t\"github.com/margince/margince/backend/internal/modules/contacts\"\n)\n"
 			}
 			file, err := parser.ParseFile(fset, "probe.go", head+tc.src, 0)
 			if err != nil {
@@ -355,7 +355,7 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 // The OTHER question about is_current_primary: which row holds the slot
 // uq_rel_current_primary_employer keeps unique. It is date-BLIND, so it cannot
 // share employment.IsCurrentSQL — a guard that asked "are they still employed"
-// would read a person serving notice as having freed a slot the index still
+// would read a contact serving notice as having freed a slot the index still
 // holds, and the write behind it would 409 instead of skipping.
 //
 // Six statements asked it by hand. The census above could not see any of them:
@@ -370,7 +370,7 @@ const currentPrimarySlotPredicate = "employment.CurrentPrimarySlotSQL"
 
 // slotBlockedByTheModuleDAG ratifies the statement that cannot adopt the
 // helper today, for the architectural reason above and not for want of
-// somebody getting round to it: projects may not import people (ADR-0054 §3).
+// somebody getting round to it: projects may not import contacts (ADR-0054 §3).
 //
 // Its own declaration and not a share of blockedByTheModuleDAG: a Waivers set
 // records what reached it, and AssertAllMatched belongs to exactly one census —
@@ -396,7 +396,7 @@ var slotBlockedByTheModuleDAG = gatekit.Waive(map[string]string{})
 // different groups, which is a different question rather than a copy of this
 // one. Brackets are TRIMMED from a term rather than treated as separators: a
 // bracket is where a conjunction nests, not where it ends, and a split on them
-// missed `is_current_primary AND (archived_at IS NULL AND person_id = $1)`.
+// missed `is_current_primary AND (archived_at IS NULL AND contact_id = $1)`.
 func spellsSlotPredicate(sql string) bool {
 	for _, group := range slotOr.Split(strings.ToLower(sql), -1) {
 		flag, archived := false, false
@@ -578,7 +578,7 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 		return
 	}
 	t.Errorf("these statements spell the current-primary slot predicate by hand:\n  %s\n\n"+
-		"people.%s is the one spelling, and it mirrors uq_rel_current_primary_employer's own "+
+		"contacts.%s is the one spelling, and it mirrors uq_rel_current_primary_employer's own "+
 		"predicate — including the kind, which is part of that index. Call it.",
 		strings.Join(findings, "\n  "), currentPrimarySlotPredicate)
 }
@@ -586,14 +586,14 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 // slotStatements returns the SQL statements in a declaration that name the
 // slot column, flattened so a helper call contributes its NAME and a
 // concatenated fragment is judged with the statement it belongs to.
-func slotStatements(decl ast.Decl, people helperScope) []string {
+func slotStatements(decl ast.Decl, contacts helperScope) []string {
 	var out []string
 	seen := map[ast.Node]bool{}
 	ast.Inspect(decl, func(n ast.Node) bool {
 		if seen[n] {
 			return false
 		}
-		text, ok := flattenSQL(n, seen, people)
+		text, ok := flattenSQL(n, seen, contacts)
 		if !ok || !slotColumn.MatchString(text) {
 			return true
 		}
@@ -629,7 +629,7 @@ var slotProbes = []struct {
 	mode  string
 	src   string
 }{
-	{"the bare form that shipped", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE kind = 'employment' AND person_id = $1 AND is_current_primary AND archived_at IS NULL`\n}"},
+	{"the bare form that shipped", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE kind = 'employment' AND contact_id = $1 AND is_current_primary AND archived_at IS NULL`\n}"},
 	{"the aliased form", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE b.is_current_primary AND b.archived_at IS NULL`\n}"},
 	// The mirrored conjunction is the same predicate written the other way
 	// round, and a census that reads one direction lets it through.
@@ -638,14 +638,14 @@ var slotProbes = []struct {
 	// A helper call claims its whole subtree, so a lookalike from another
 	// package would have hidden a hand-written fragment inside its arguments.
 	{"a lookalike helper from another package", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE ` + other.CurrentPrimarySlotSQL(\"b.is_current_primary AND b.archived_at IS NULL\")\n}"},
-	{"a bare helper name in a file that does not import people", true, "noimport", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE ` + employment.CurrentPrimarySlotSQL(\"b.is_current_primary AND b.archived_at IS NULL\")\n}"},
+	{"a bare helper name in a file that does not import contacts", true, "noimport", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE ` + employment.CurrentPrimarySlotSQL(\"b.is_current_primary AND b.archived_at IS NULL\")\n}"},
 
-	{"the real helper, qualified", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE b.person_id = $1 AND ` + employment.CurrentPrimarySlotSQL(\"b\")\n}"},
-	{"the real helper, unqualified inside people", false, "people", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE person_id = $1 AND ` + employment.CurrentPrimarySlotSQL(\"\")\n}"},
+	{"the real helper, qualified", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE b.contact_id = $1 AND ` + employment.CurrentPrimarySlotSQL(\"b\")\n}"},
+	{"the real helper, unqualified inside contacts", false, "contacts", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE contact_id = $1 AND ` + employment.CurrentPrimarySlotSQL(\"\")\n}"},
 	// The create path's guard is deliberately WIDER than the slot: it refuses
-	// the flag when the person has any employment that is current OR flagged,
+	// the flag when the contact has any employment that is current OR flagged,
 	// which is not the index's predicate and must not be rewritten as it.
-	{"the wider create-path guard, where the flag sits inside an OR", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE kind = 'employment' AND person_id = $2 AND archived_at IS NULL AND (` + employment.IsCurrentSQL(\"ended_at\") + ` OR is_current_primary)`\n}"},
+	{"the wider create-path guard, where the flag sits inside an OR", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE kind = 'employment' AND contact_id = $2 AND archived_at IS NULL AND (` + employment.IsCurrentSQL(\"ended_at\") + ` OR is_current_primary)`\n}"},
 	{"the flag with no archived test beside it", false, "", "\nfunc read() string {\n\treturn `UPDATE relationship SET is_current_primary = coalesce($3, is_current_primary)`\n}"},
 
 	// Four spellings a two-term pattern missed, each verified green against it
@@ -660,13 +660,13 @@ var slotProbes = []struct {
 	// A bracket is where a conjunction NESTS, not where it ends. A detector
 	// that ended a group at every bracket read this as two groups and missed
 	// the guard sitting whole inside them.
-	{"the second half inside a bracketed conjunction", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary AND (archived_at IS NULL AND person_id = $1)`\n}"},
+	{"the second half inside a bracketed conjunction", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary AND (archived_at IS NULL AND contact_id = $1)`\n}"},
 	// The merge relinks CARRY the flag across rather than testing it; the
 	// guard beside them is the EXISTS, which calls the helper.
-	{"the flag as the value of an assignment", false, "", "\nfunc read() string {\n\treturn `UPDATE relationship a SET is_current_primary = a.is_current_primary AND NOT EXISTS (SELECT 1 FROM relationship b WHERE b.person_id = $2) WHERE a.person_id = $1 AND a.archived_at IS NULL`\n}"},
+	{"the flag as the value of an assignment", false, "", "\nfunc read() string {\n\treturn `UPDATE relationship a SET is_current_primary = a.is_current_primary AND NOT EXISTS (SELECT 1 FROM relationship b WHERE b.contact_id = $2) WHERE a.contact_id = $1 AND a.archived_at IS NULL`\n}"},
 	// A statement that merely WRITES the column names it in a list; naming is
 	// not asking.
-	{"the flag in an INSERT's column list", false, "", "\nfunc read() string {\n\treturn `INSERT INTO relationship (kind, person_id, is_current_primary, archived_at) SELECT 'employment', $1, true, NULL FROM person WHERE archived_at IS NULL`\n}"},
+	{"the flag in an INSERT's column list", false, "", "\nfunc read() string {\n\treturn `INSERT INTO relationship (kind, contact_id, is_current_primary, archived_at) SELECT 'employment', $1, true, NULL FROM contact WHERE archived_at IS NULL`\n}"},
 	// The negation asks who does NOT hold the slot, which is the opposite
 	// question and not a second spelling of this one.
 	{"the flag negated", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE NOT is_current_primary AND archived_at IS NULL`\n}"},
@@ -683,14 +683,14 @@ func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"
 			names := map[string]bool{currentPrimarySlotPredicate: true}
-			scope := helperScope{qualifier: "people", names: names}
+			scope := helperScope{qualifier: "contacts", names: names}
 			switch tc.mode {
-			case "people":
-				head, scope = "package people\n", helperScope{inside: true, names: names}
+			case "contacts":
+				head, scope = "package contacts\n", helperScope{inside: true, names: names}
 			case "noimport":
 				scope = helperScope{names: names}
 			default:
-				head += "import \"github.com/margince/margince/backend/internal/modules/people\"\n"
+				head += "import \"github.com/margince/margince/backend/internal/modules/contacts\"\n"
 			}
 			file, err := parser.ParseFile(fset, "probe.go", head+tc.src, 0)
 			if err != nil {

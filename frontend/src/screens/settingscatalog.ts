@@ -277,7 +277,7 @@ export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number];
  * Whose state a setting changes, in the reader's words.
  *
  * `workspace` is the internal enum's name for it and is deliberately not shown:
- * a person reading a settings page knows "Company", not the tenancy model.
+ * a reader reading a settings page knows "Company", not the tenancy model.
  */
 export type SettingsScope =
   | "self"
@@ -734,40 +734,40 @@ export const SETTINGS_PAGES = [
     // and `/retention-policies` lists "the installation's retention policies".
     // What this page destroys, it destroys everywhere.
     scope: "installation",
-    // `person` is deliberately NOT an arm, though the purposes card reads
-    // through it. `person:read` is held by every seeded role, so that arm put
+    // `contact` is deliberately NOT an arm, though the purposes card reads
+    // through it. `contact:read` is held by every seeded role, so that arm put
     // the governance page in front of the whole workspace — the retention
     // ladder, the subject-request queue and the restricted-record list, none of
     // which a rep can act on.
     //
-    // The purposes LIST stays gated on `person` server-side and must not move:
-    // that endpoint feeds the Person 360, and narrowing it would 403 every rep
+    // The purposes LIST stays gated on `contact` server-side and must not move:
+    // that endpoint feeds the Contact 360, and narrowing it would 403 every rep
     // on a screen they use all day. A card narrower than its page is the safe
     // direction — the card withholds itself.
     //
     // `consent_config` buys no read either (consent/store.go ListPurposes is on
-    // `person`), so it is not an arm; its holders all hold retention or the
+    // `contact`), so it is not an arm; its holders all hold retention or the
     // request queue anyway.
     requires: anyOf(
       reads("retention_policy"),
       reads("privacy_request"),
-      // The consent vocabulary, as a PAIR. `person:read` is what the purposes
+      // The consent vocabulary, as a PAIR. `contact:read` is what the purposes
       // endpoint asks (consent/store.go ListPurposes) and every seeded role
       // holds it, so it cannot open the page alone. `consent_config` is who the
       // vocabulary belongs to — management is seeded its read and nothing else
       // on this page, so without this arm the one role deliberately granted the
       // vocabulary could not reach the only page that renders it.
-      allOf(reads("person"), reads("consent_config")),
+      allOf(reads("contact"), reads("consent_config")),
     ),
-    // Four cards, four objects. `person:update` is what PrivacyInboxCard asks to
-    // open a subject request — the request is about a person's record, so the
-    // grant is the person's, not the queue's.
+    // Four cards, four objects. `contact:update` is what PrivacyInboxCard asks to
+    // open a subject request — the request is about a contact's record, so the
+    // grant is the contact's, not the queue's.
     changes: acts(
       writes("consent_config", ["create"]),
       writes("retention_policy"),
       destroys("retention_policy"),
       writes("privacy_request", ["update"]),
-      writes("person", ["update"]),
+      writes("contact", ["update"]),
     ),
   },
   {
@@ -878,7 +878,7 @@ export function visibleSettingsPages(
  * under headings that say which is which.
  *
  * Splitting here rather than at each caller is what keeps the rail, the home
- * and the read-only banner agreeing. Three readers deriving "can this person
+ * and the read-only banner agreeing. Three readers deriving "can this contact
  * act?" separately is three chances to disagree in front of one user.
  */
 export type SettingsReach = {

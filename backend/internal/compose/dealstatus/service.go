@@ -95,7 +95,7 @@ type facts struct {
 	moreTasks bool
 	room      *crmcontracts.DealRoom
 	threads   []crmcontracts.DealRoomThread
-	// seats are the people on the deal with their roles. Empty when nobody is
+	// seats are the contacts on the deal with their roles. Empty when nobody is
 	// named AND when the reader may not read the stakeholder edge — the card
 	// cannot tell those apart and says nothing about seats in either case,
 	// which is the honest answer for both.

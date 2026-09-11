@@ -73,7 +73,7 @@ function isConsultation(body: VatCheck | undefined): body is VatCheck {
   );
 }
 
-/** When the mark looks again after a person asked. The register usually answers
+/** When the mark looks again after a contact asked. The register usually answers
  * within a second or two, so the first look is soon; the later two are for a
  * service being slow, and there is no fourth because a reader who has not been
  * answered by then is better served by the page they will open next than by a
@@ -315,7 +315,7 @@ function VatReceipt({
 }
 
 /**
- * useAskTheRegister owns the consultation a person asks for, and it lives on
+ * useAskTheRegister owns the consultation a contact asks for, and it lives on
  * the MARK rather than inside the popover panel.
  *
  * That placement is the whole point. `Popover` unmounts its children on close

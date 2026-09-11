@@ -29,7 +29,7 @@ import (
 const voiceLearningSignalRetention = 180 * 24 * time.Hour
 
 // ActiveVoiceForActor returns the ready profile and active version of the
-// person the message goes out AS. ok=false — no profile, none ready, or no
+// contact the message goes out AS. ok=false — no profile, none ready, or no
 // activated artifact — is the drafter's clean-fallback signal, never an error.
 //
 // The sender is usually the actor, and on an automation's firing it is not: the
@@ -80,17 +80,17 @@ func (s *VoiceStore) ActiveVoiceForActor(ctx context.Context) (VoiceProfile, Voi
 
 // voiceSender answers whose voice a draft on this call is written in.
 //
-// An ACTOR THAT NAMES A PERSON is that person, and no bound sender may override
+// An ACTOR THAT NAMES A CONTACT is that contact, and no bound sender may override
 // them. This ordering is a boundary, not a preference: a voice profile holds its
 // owner's verbatim written text, so a call that could name somebody else's owner
-// is a read of that person's private writing. A human call already knows whose
+// is a read of that contact's private writing. A human call already knows whose
 // voice it wants — their own — and admitting an override there would make this
 // value an authorization input, which it must never be.
 //
 // The bound sender is consulted only when the actor names nobody. That is the
 // automation's firing: the engine composes under the system principal so its
 // writes stay attributed to the system, while the mail leaves under the
-// automation owner's name. There is no person to override in that case, which
+// automation owner's name. There is no contact to override in that case, which
 // is why the override is safe exactly there and nowhere else.
 //
 // A false answer is a caller with nobody to write as — a system job with no

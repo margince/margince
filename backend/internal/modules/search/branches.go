@@ -51,7 +51,7 @@ type searchBranch struct {
 	// apply it: a record named by id is not being discovered, and the own
 	// company stays readable everywhere it is asked for by name.
 	// The company branch uses it to keep the installation's own company
-	// out of results: search is how people find accounts, and the company
+	// out of results: search is how contacts find accounts, and the company
 	// running the CRM is not one to find (ADR-0082/A127). It stays reachable
 	// by id, and the company page is where it is read.
 	//
@@ -158,13 +158,13 @@ const noSnippet = "NULL"
 const columnName = "name"
 
 var searchBranches = []searchBranch{
-	{entity: "person", table: entityPerson, title: "full_name", snippet: noSnippet},
+	{entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet},
 	{entity: "company", table: entityCompany, title: "display_name", snippet: noSnippet, extraWhere: "NOT %s.is_anchor"},
 	{entity: "deal", table: entityDeal, title: columnName, snippet: noSnippet},
 	{entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)", snippet: noSnippet},
 	// A project's name alone does not say which account's work it is, and two
 	// accounts can run a "Phase 2". The excerpt is the key and the company,
-	// which is how a person tells the hits apart; see projectSnippet for the
+	// which is how a contact tells the hits apart; see projectSnippet for the
 	// gate the company name passes first.
 	{entity: "project", table: entityProject, title: columnName, snippet: "t.key", snippetFor: projectSnippet},
 	// The catalog a quote is priced from. A rep reaching for a line item knows
@@ -195,7 +195,7 @@ var searchBranches = []searchBranch{
 	// message's kind is the bare word "message", so a subject-less chat would
 	// render identically for every transport. coalesce falls through to the kind
 	// for everything that never travelled on one.
-	// A tag is a word, not a record, and it is what a person types when they
+	// A tag is a word, not a record, and it is what a human types when they
 	// mean "show me the accounts we called Key Account". Finding the word is
 	// the step before finding the records, and without it a reader has to know
 	// the vocabulary already.

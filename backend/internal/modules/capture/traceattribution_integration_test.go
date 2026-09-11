@@ -158,7 +158,7 @@ func sinkContextFor(ctx context.Context, ws, userID, onBehalfOf ids.UUID) contex
 			RoleKeys: []string{"capture"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true},
-				"person":   {Create: true},
+				"contact":  {Create: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

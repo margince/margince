@@ -79,7 +79,7 @@ type BackfillRun struct {
 	Scanned      int
 	Captured     int
 	Skipped      int
-	People       int
+	Contacts     int
 	Companies    int
 	DedupeCands  int
 	StartedAt    *time.Time
@@ -264,14 +264,14 @@ func latestBackfill(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*BackfillR
 	row := tx.QueryRow(ctx, `
 		SELECT b.id, b.connection_id, b.window_months, b.after_date, b.status, b.cursor, b.total_estimate,
 		       b.scanned + b.inflight_scanned, b.captured + b.inflight_captured, b.skipped + b.inflight_skipped,
-		       b.people_created, b.companies_created,
+		       b.contacts_created, b.companies_created,
 		       b.dedupe_candidates,
 		       b.started_at, b.completed_at, b.updated_at, b.last_error_class
 		FROM capture_backfill b WHERE b.connection_id = $1
 		ORDER BY b.created_at DESC LIMIT 1`, connID)
 	var b BackfillRun
 	err := row.Scan(&b.ID, &b.ConnectionID, &b.WindowMonths, &b.AfterDate, &b.Status, &b.Cursor, &b.Estimate,
-		&b.Scanned, &b.Captured, &b.Skipped, &b.People, &b.Companies, &b.DedupeCands,
+		&b.Scanned, &b.Captured, &b.Skipped, &b.Contacts, &b.Companies, &b.DedupeCands,
 		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil //nolint:nilnil // absence IS the answer: the contract's state "none", not an error
@@ -318,7 +318,7 @@ func (r *Registry) CancelBackfill(ctx context.Context, provider string, userID i
 // attempt is lost to something the engine never sees — a worker killed
 // mid-page, a rescue, a queue that dropped it — the row stays live with no job
 // behind it, and the index then refuses every future StartBackfill for that
-// connection. The import stops, and the only symptom is a person who cannot
+// connection. The import stops, and the only symptom is a contact who cannot
 // start one.
 //
 // A run's own give-up cap is NOT consulted here. A stranded run has recorded no

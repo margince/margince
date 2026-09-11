@@ -78,11 +78,11 @@ const historyQuery = `
 	  AND (a.kind <> 'meeting' OR a.meeting_status IS NULL OR a.meeting_status = 'held')
 	  AND (EXISTS (
 	         SELECT 1 FROM activity_participant ap
-	         WHERE ap.activity_id = a.id AND ap.person_id = ANY($%[7]d))
+	         WHERE ap.activity_id = a.id AND ap.contact_id = ANY($%[7]d))
 	       OR EXISTS (
 	         SELECT 1 FROM activity_link pl
-	         WHERE pl.activity_id = a.id AND pl.entity_type = 'person'
-	           AND pl.person_id = ANY($%[7]d)))
+	         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact'
+	           AND pl.contact_id = ANY($%[7]d)))
 	  AND %[1]s
 	  AND %[8]s
 	-- The id breaks a tie on the timestamp. Two conversations captured in the
@@ -95,7 +95,7 @@ const historyQuery = `
 
 // readHistory returns the room's conversations, newest first.
 //
-// Gated the way the person timeline is (person360's readActivities): DISCOVER
+// Gated the way the contact timeline is (contact360's readActivities): DISCOVER
 // decides whether the row is visible at all, and the audience arm decides
 // whether its content comes back. Reading only what passes the content clause
 // would drop a restricted conversation out of the arc entirely, and an arc

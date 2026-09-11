@@ -26,11 +26,11 @@ func TestACurrentEmploymentIsADateComparisonAndNotANullCheck(t *testing.T) {
 	got := IsCurrentSQL("r.ended_at")
 
 	// Somebody serving three months' notice still works there. Reading the
-	// column's presence as "gone" took a person off their employer's contact
+	// column's presence as "gone" took a contact off their employer's contact
 	// list the day their notice was filed — with no way back, because ended_at
 	// cannot be cleared through the API.
 	if !strings.Contains(got, "current_date") {
-		t.Errorf("the predicate is %q, with no date comparison in it: a person serving notice "+
+		t.Errorf("the predicate is %q, with no date comparison in it: a contact serving notice "+
 			"drops off their employer's contact list the day it is filed", got)
 	}
 	if !strings.Contains(got, "r.ended_at IS NULL") {

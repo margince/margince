@@ -52,10 +52,10 @@ func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int) ([]
 	out := make([]attention.NoticeCase, 0, len(owed))
 	for _, duty := range owed {
 		// duty.Blocked is deliberately dropped: a blocked case reaches the lane
-		// like any other, and the obstacle is read on the person's own screen.
+		// like any other, and the obstacle is read on the contact's own screen.
 		out = append(out, attention.NoticeCase{
 			ID: duty.ID, Rule: string(duty.Rule),
-			PersonID: duty.PersonID.UUID, DueAt: duty.DueAt,
+			ContactID: duty.ContactID.UUID, DueAt: duty.DueAt,
 		})
 	}
 	return out, nil
@@ -107,7 +107,7 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 }
 
 // attentionAIWork binds the AI-work-health lane to the same projection the
-// activity rail reads; the person-only refusal lives in the store's read.
+// activity rail reads; the contact-only refusal lives in the store's read.
 type attentionAIWork struct{ store *aiactivity.Store }
 
 func (a attentionAIWork) Troubled(ctx context.Context, since time.Time, limit int) ([]attention.TroubledRun, error) {
@@ -135,7 +135,7 @@ func (a attentionAIWork) Troubled(ctx context.Context, since time.Time, limit in
 }
 
 // attentionBounces binds the bounce lane to the comms store's own per-user
-// read of the stamp RecordBounce leaves; the person-only refusal lives there.
+// read of the stamp RecordBounce leaves; the contact-only refusal lives there.
 type attentionBounces struct{ store *comms.Store }
 
 func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limit int) ([]attention.BouncedSend, error) {
@@ -150,7 +150,7 @@ func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limi
 			Subject:   send.Subject,
 			Reason:    send.Reason,
 			BouncedAt: send.BouncedAt,
-			PersonID:  send.PersonID,
+			ContactID: send.ContactID,
 			Recipient: send.Recipient,
 		})
 	}
@@ -158,7 +158,7 @@ func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limi
 }
 
 // attentionUndelivered binds the undelivered lane to the comms store's own
-// per-user read of the stamp the dispatcher's park leaves; the person-only
+// per-user read of the stamp the dispatcher's park leaves; the contact-only
 // refusal lives there.
 type attentionUndelivered struct{ store *comms.Store }
 
@@ -170,11 +170,11 @@ func (u attentionUndelivered) ParkedSends(ctx context.Context, since time.Time, 
 	out := make([]attention.ParkedSend, 0, len(parked))
 	for _, send := range parked {
 		out = append(out, attention.ParkedSend{
-			ID:       send.ID,
-			Subject:  send.Subject,
-			Reason:   send.Reason,
-			ParkedAt: send.ParkedAt,
-			PersonID: send.PersonID,
+			ID:        send.ID,
+			Subject:   send.Subject,
+			Reason:    send.Reason,
+			ParkedAt:  send.ParkedAt,
+			ContactID: send.ContactID,
 		})
 	}
 	return out, nil
@@ -248,8 +248,8 @@ func (a attentionIntroductions) Pending(
 	out := make([]attention.PendingIntroduction, 0, len(asks))
 	for _, ask := range asks {
 		out = append(out, attention.PendingIntroduction{
-			ID:       ask.ID,
-			PersonID: ask.PersonID,
+			ID:        ask.ID,
+			ContactID: ask.ContactID,
 			// The requester's own words, carried rather than summarised: the
 			// colleague is deciding whether to spend their relationship, and a
 			// paraphrase is not what they would be agreeing to.

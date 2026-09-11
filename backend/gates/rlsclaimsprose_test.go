@@ -187,7 +187,7 @@ func TestNoProseClaimsRLSStillScopesARead(t *testing.T) {
 		"DB-free floor under the RLS runtime proof",
 		"name: integration (RLS + erasure + HTTP e2e)",
 		"addresses the superuser pool directly (RLS bypass)",
-		"ALTER TABLE person ENABLE ROW LEVEL SECURITY;",
+		"ALTER TABLE contact ENABLE ROW LEVEL SECURITY;",
 		"Extension runtime code is bound by row-level security exactly as core code is",
 	} {
 		if !proseRLSClaim.MatchString(line) {

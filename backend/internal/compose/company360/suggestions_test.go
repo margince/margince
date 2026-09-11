@@ -63,7 +63,7 @@ func TestStaleThreadFiresOnOurUnansweredMessage(t *testing.T) {
 // TestStaleThreadStaysSilentWhenTheyAnsweredLast guards the direction half of
 // the rule. An unanswered INBOUND message is a thread waiting on us — the
 // opposite problem, with the opposite action — so telling the rep to chase the
-// person who is waiting for their reply would be worse than silence.
+// contact who is waiting for their reply would be worse than silence.
 func TestStaleThreadStaysSilentWhenTheyAnsweredLast(t *testing.T) {
 	companyID := testCompanyID(t)
 	if got := staleThread(companyID, suggestNow, sentAgo(10, crmcontracts.ActivityDirectionInbound)); got != nil {

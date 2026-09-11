@@ -22,7 +22,7 @@ import (
 )
 
 func TestNetworkToolsAreReadTierAndNeedOnlyReadScope(t *testing.T) {
-	// They name people and change nothing. A tool that reported a warm intro
+	// They name contacts and change nothing. A tool that reported a warm intro
 	// under a write tier would ask a human to approve a question.
 	for _, spec := range []mcp.ToolSpec{
 		whoKnowsTool{}.Spec(), accountCoverageTool{}.Spec(),
@@ -55,7 +55,7 @@ func TestNobodyKnowsThemIsAnAnswerNotAnError(t *testing.T) {
 	tool := whoKnowsTool{list: func(context.Context, ids.UUID) ([]KnownColleague, bool, error) {
 		return nil, false, nil
 	}}
-	out, err := tool.Handle(context.Background(), json.RawMessage(`{"person_id":"`+ids.NewV7().String()+`"}`))
+	out, err := tool.Handle(context.Background(), json.RawMessage(`{"contact_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
 		t.Fatalf("an empty network answered an error: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestACappedColleagueListSaysSo(t *testing.T) {
 	r.Register(tool)
 
 	out, err := r.Invoke(scopedAgentCtx(principal.ScopeRead), "who_knows",
-		json.RawMessage(`{"person_id":"`+ids.NewV7().String()+`"}`))
+		json.RawMessage(`{"contact_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
 		t.Fatalf("who_knows: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestAnUncappedColleagueListClaimsNoCap(t *testing.T) {
 	r.Register(tool)
 
 	out, err := r.Invoke(scopedAgentCtx(principal.ScopeRead), "who_knows",
-		json.RawMessage(`{"person_id":"`+ids.NewV7().String()+`"}`))
+		json.RawMessage(`{"contact_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
 		t.Fatalf("who_knows: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestAnUncappedColleagueListClaimsNoCap(t *testing.T) {
 	}
 }
 
-func TestWhoKnowsRefusesAMalformedPersonID(t *testing.T) {
+func TestWhoKnowsRefusesAMalformedContactID(t *testing.T) {
 	// The seam is never reached with a bad id: a tool that forwarded garbage
 	// would turn a typo into a database error.
 	reached := false
@@ -119,8 +119,8 @@ func TestWhoKnowsRefusesAMalformedPersonID(t *testing.T) {
 		reached = true
 		return nil, false, nil
 	}}
-	if _, err := tool.Handle(context.Background(), json.RawMessage(`{"person_id":"not-a-uuid"}`)); err == nil {
-		t.Error("a malformed person_id was accepted")
+	if _, err := tool.Handle(context.Background(), json.RawMessage(`{"contact_id":"not-a-uuid"}`)); err == nil {
+		t.Error("a malformed contact_id was accepted")
 	}
 	if reached {
 		t.Error("the seam was called with an unparsed id")
@@ -135,7 +135,7 @@ func TestTheSeamsErrorReachesTheCaller(t *testing.T) {
 	tool := whoKnowsTool{list: func(context.Context, ids.UUID) ([]KnownColleague, bool, error) {
 		return nil, false, denied
 	}}
-	_, err := tool.Handle(context.Background(), json.RawMessage(`{"person_id":"`+ids.NewV7().String()+`"}`))
+	_, err := tool.Handle(context.Background(), json.RawMessage(`{"contact_id":"`+ids.NewV7().String()+`"}`))
 	if !errors.Is(err, denied) {
 		t.Errorf("the seam's error became %v; a refusal must not read as an empty network", err)
 	}
@@ -173,7 +173,7 @@ func TestAnIntroRouteNamesBothTheColleagueAndTheContact(t *testing.T) {
 	tool := introPathTool{list: func(context.Context, ids.UUID) ([]IntroRoute, bool, error) {
 		return []IntroRoute{{
 			UserID: colleague, DisplayName: "Anna Weber",
-			PersonID: contact, PersonName: "Jonas Bach",
+			ContactID: contact, ContactName: "Jonas Bach",
 			StrengthBucket: "strong", Interactions90d: 12,
 		}}, false, nil
 	}}
@@ -190,10 +190,10 @@ func TestAnIntroRouteNamesBothTheColleagueAndTheContact(t *testing.T) {
 	if len(payload.Routes) != 1 {
 		t.Fatalf("got %d routes, want 1", len(payload.Routes))
 	}
-	if payload.Routes[0].UserID != colleague || payload.Routes[0].PersonID != contact {
+	if payload.Routes[0].UserID != colleague || payload.Routes[0].ContactID != contact {
 		t.Errorf("the route lost one of its two ends: %+v", payload.Routes[0])
 	}
-	if payload.Routes[0].PersonName == "" {
+	if payload.Routes[0].ContactName == "" {
 		t.Error("the route names the contact by id alone; a rep cannot act on a uuid")
 	}
 }
@@ -226,13 +226,13 @@ func TestTheAtRiskSweepReportsThatItWasCappedRatherThanLookingClean(t *testing.T
 func TestCoverageForwardsTheFindingsWithTheirEvidence(t *testing.T) {
 	// A risk kind without its ids is a red dot nobody can act on.
 	deal := ids.NewV7()
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	tool := accountCoverageTool{read: func(context.Context, ids.UUID) (DealCoverageAnswer, error) {
 		return DealCoverageAnswer{
 			DealID: deal,
 			Risks: []CoverageRisk{{
 				Kind: "single_threaded_theirs", Summary: "one relationship",
-				PersonIDs: []ids.UUID{person},
+				ContactIDs: []ids.UUID{contact},
 			}},
 		}, nil
 	}}
@@ -247,7 +247,7 @@ func TestCoverageForwardsTheFindingsWithTheirEvidence(t *testing.T) {
 	if len(got.Risks) != 1 || got.Risks[0].Kind != "single_threaded_theirs" {
 		t.Fatalf("risks did not survive the round trip: %+v", got.Risks)
 	}
-	if len(got.Risks[0].PersonIDs) != 1 || got.Risks[0].PersonIDs[0] != person {
+	if len(got.Risks[0].ContactIDs) != 1 || got.Risks[0].ContactIDs[0] != contact {
 		t.Errorf("the finding lost the record behind it: %+v", got.Risks[0])
 	}
 }

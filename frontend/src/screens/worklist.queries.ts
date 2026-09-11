@@ -57,7 +57,7 @@ export const worklistKey = ["worklist"] as const;
 // rather than a refetch of the same one — which is what lets the reader move
 // back to a view they have already loaded without watching it reassemble.
 //
-// A named owner narrows the day to one person's queue and OUTRANKS the scope
+// A named owner narrows the day to one contact's queue and OUTRANKS the scope
 // word: "their queue" is a narrower question than any of mine/team/all, and the
 // server answers 422 for the pair rather than guessing which was meant. So the
 // scope travels only when nobody is named.
@@ -119,9 +119,9 @@ export function loadedQueue(pages: readonly Worklist[]): WorklistItem[] {
 // Who on the team is carrying what.
 //
 // Its own read rather than a widening of the queue above, because that queue
-// assembles ONE person's day: the per-user sources were never read for anybody
+// assembles ONE contact's day: the per-user sources were never read for anybody
 // else, so no scope could produce a colleague's rows. This answers counts, and
-// pressing a row opens that person's day through the owner above — which is the
+// pressing a row opens that contact's day through the owner above — which is the
 // drill-down the board exists to route to.
 //
 // `enabled` carries the reader's tier, taken from the queue's own scope_options
@@ -220,8 +220,8 @@ export function useReassignTask() {
     mutationFn: async (input: {
       activityId: string;
       // The version the reassigning lead was looking at. Unpinned, two leads
-      // hand the same task to different people, the second press overwrites the
-      // first, and neither is told: the row then sits on one person's queue
+      // hand the same task to different contacts, the second press overwrites the
+      // first, and neither is told: the row then sits on one contact's queue
       // while the other believes they delegated it.
       version: number | undefined;
       assigneeId: string;
@@ -239,7 +239,7 @@ export function useReassignTask() {
     },
     onSuccess: (_data, input) => {
       // Every scope and owner of this queue, because the task left one
-      // person's day and arrived in another's: refetching only the view in
+      // contact's day and arrived in another's: refetching only the view in
       // front of the reader would leave the receiving queue stale until
       // something else happened to invalidate it.
       queryClient.invalidateQueries({ queryKey: worklistKey });
@@ -266,7 +266,7 @@ export function useReassignTask() {
 const OWNER_WRITE = {
   deal: { path: "/deals/{id}", field: "owner_id" },
   lead: { path: "/leads/{id}", field: "owner_id" },
-  person: { path: "/people/{id}", field: "owner_id" },
+  contact: { path: "/contacts/{id}", field: "owner_id" },
   company: { path: "/companies/{id}", field: "owner_id" },
   project: { path: "/projects/{id}", field: "owner_id" },
   activity: { path: "/activities/{id}", field: "assignee_id" },
@@ -404,9 +404,9 @@ export function useNudgeDismissal() {
     queryClient.invalidateQueries({ queryKey: worklistKey });
   };
   const dismiss = useMutation({
-    mutationFn: async (input: { personId: string }) => {
-      const { error } = await api.PUT("/people/{id}/nudge-dismissal", {
-        params: { path: { id: input.personId } },
+    mutationFn: async (input: { contactId: string }) => {
+      const { error } = await api.PUT("/contacts/{id}/nudge-dismissal", {
+        params: { path: { id: input.contactId } },
         body: { days: DISMISSAL_DAYS },
       });
       if (error) {
@@ -416,9 +416,9 @@ export function useNudgeDismissal() {
     onSuccess: invalidate,
   });
   const restore = useMutation({
-    mutationFn: async (input: { personId: string }) => {
-      const { error } = await api.DELETE("/people/{id}/nudge-dismissal", {
-        params: { path: { id: input.personId } },
+    mutationFn: async (input: { contactId: string }) => {
+      const { error } = await api.DELETE("/contacts/{id}/nudge-dismissal", {
+        params: { path: { id: input.contactId } },
       });
       if (error) {
         throwProblem(error);

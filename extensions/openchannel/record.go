@@ -9,7 +9,7 @@ package openchannel
 // bytes on a signature and interpreted nothing in them; a connector is exactly
 // the thing that says what a remote system's document MEANS here. So this file
 // is the connector's published contract with whoever configures the sender, and
-// every refusal below is one that reaches that person as a parked request on
+// every refusal below is one that reaches that contact as a parked request on
 // their own screen rather than as a silently dropped message.
 //
 // It is deliberately SMALL. A field this connector cannot land is a field a
@@ -68,7 +68,7 @@ type arrival struct {
 	From party `json:"from"`
 	To   party `json:"to"`
 	// Participants is who ELSE was in the conversation — the roster of a group,
-	// the people neither end of the exchange. Optional: a two-party message
+	// the contacts neither end of the exchange. Optional: a two-party message
 	// names nobody here and nothing changes.
 	//
 	// The two ends stay where they are. `from` is still the sender and `to`
@@ -87,7 +87,7 @@ type arrival struct {
 // party is one end of a message as the sending system names it.
 type party struct {
 	// Account is that system's own id for the human, and it is what makes a
-	// captured message repliable: the core binds it to a person and the reply
+	// captured message repliable: the core binds it to a contact and the reply
 	// path resolves the recipient from that binding.
 	Account string `json:"account"`
 	Email   string `json:"email"`

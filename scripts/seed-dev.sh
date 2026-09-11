@@ -10,7 +10,7 @@
 #
 # Pure client: the stack must already be running (`make dev`). Idempotent:
 # a re-run logs in instead of re-bootstrapping, and re-creating a record
-# that already exists answers 409 on its natural key (person email, company
+# that already exists answers 409 on its natural key (contact email, company
 # domain, deal name checked via list), which counts as "already seeded".
 #
 # Bootstrap happens at api boot from the deployment configuration
@@ -95,8 +95,8 @@ capture_session() {
 }
 
 # A configured bootstrap has the OPERATOR choose the first admin's password, and
-# that account reaches nothing but the change route until the person using it
-# picks their own. This script is that person: it completes the first login the
+# that account reaches nothing but the change route until the contact using it
+# picks their own. This script is that contact: it completes the first login the
 # way a human would, so everything downstream — and every credential the docs
 # name — works against an account that owns its own password.
 #
@@ -335,7 +335,7 @@ ensure_activity() { # ensure_activity <label> <subject> <source-id> <json-body>
 #
 # 200 is the endpoint answering idempotently with the row that stands — see
 # LogActivity's `http.StatusOK // idempotent capture replay`. Accepting it in
-# `ensure` itself would be wrong: a 200 from creating a person, a company
+# `ensure` itself would be wrong: a 200 from creating a contact, a company
 # or a deal is not a replay, and reading one as "already present" would let a
 # contract regression pass as a seeded fixture nobody wrote.
 ensure_keyed() { # ensure_keyed <label> <path> <json-body>
@@ -366,12 +366,12 @@ ensure() { # ensure <label> <path> <json-body>
   esac
 }
 
-echo "== seed-dev: demo people =="
-ensure "person Alice Müller" /people \
+echo "== seed-dev: demo contacts =="
+ensure "contact Alice Müller" /contacts \
   '{"full_name":"Alice Müller","emails":[{"email":"alice@demo.test","is_primary":true}],"source":"seed"}'
-ensure "person Bob Schmidt" /people \
+ensure "contact Bob Schmidt" /contacts \
   '{"full_name":"Bob Schmidt","emails":[{"email":"bob@demo.test","is_primary":true}],"source":"seed"}'
-ensure "person Carol Wagner" /people \
+ensure "contact Carol Wagner" /contacts \
   '{"full_name":"Carol Wagner","emails":[{"email":"carol@demo.test","is_primary":true}],"source":"seed"}'
 
 echo "== seed-dev: demo company =="
@@ -379,8 +379,8 @@ ensure "company Demo GmbH" /companies \
   '{"display_name":"Demo GmbH","domains":[{"domain":"demo.test","is_primary":true}],"source":"seed"}'
 
 # What these records are FOR is being looked at, so they are held to the bar the
-# demo dataset's own verify pass states: every person employed somewhere, every
-# account off `unknown`. Three people who work nowhere show on no company page,
+# demo dataset's own verify pass states: every contact employed somewhere, every
+# account off `unknown`. Three contacts who work nowhere show on no company page,
 # and an account left at the default makes "who are our customers?" return
 # everything — which is exactly what `make verify-demo` reports, and it reported
 # it against these four rows rather than against the dataset's.
@@ -401,7 +401,7 @@ TODAY="$(date -u +%F)"
 #
 # One page was enough while the dev seed was the only thing in the installation.
 # It is not enough on a stack that also carries the demo dataset: `q` is a
-# full-text query, so a page of matches can be all the people who share a word
+# full-text query, so a page of matches can be all the contacts who share a word
 # with the one being looked for, and a lookup that reads the first hundred of
 # them reports "absent" for a record that is present. That is the failure a
 # census must never have — it stops finding what it is looking for and says so
@@ -431,15 +431,15 @@ find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
   done
 }
 
-# The person, identified the way the seed identifies them: their EMAIL.
+# The contact, identified the way the seed identifies them: their EMAIL.
 #
 # `q` is full-text over name and title only, so it cannot fetch by address — it
-# narrows, and the email then decides. Two people can share a full name, and
+# narrows, and the email then decides. Two contacts can share a full name, and
 # taking the first hit would attach an employment to whichever row the query
 # happened to answer with; the address is the natural key the seeded row was
 # created with, so it is the one that says "this is that record".
-person_id() { # person_id <full-name> <email> — prints the id, empty when absent
-  find_first "/people?q=$(url_encode "$1")" \
+contact_id() { # contact_id <full-name> <email> — prints the id, empty when absent
+  find_first "/contacts?q=$(url_encode "$1")" \
     '.full_name == $name and any(.emails[]?; .email == $email)' \
     --arg name "$1" --arg email "$2" \
     | jq -r '.id // empty'
@@ -452,7 +452,7 @@ company_id="$(find_first '/companies?domain=demo.test' '.display_name == "Demo G
 # titles reads as a page that failed to load them.
 #
 # What counts as employed is the CURRENT PRIMARY edge, which is the one the
-# product reads: a company page, a person card and the enrichment path all ask
+# product reads: a company page, a contact card and the enrichment path all ask
 # `is_current_primary AND not ended`, so an ended or secondary row leaves the
 # contact off the very page this seed exists to draw, and an existence probe
 # would call that state seeded and repair nothing.
@@ -460,13 +460,13 @@ company_id="$(find_first '/companies?domain=demo.test' '.display_name == "Demo G
 # Two repairs, because the two states are not the same fact. A standing edge that
 # merely lost the flag is promoted. An ENDED edge is history, and the API offers
 # no way to un-end one on purpose — a former employment keeps its row — so the
-# person is re-hired with a new edge instead, which is also what happened in the
+# contact is re-hired with a new edge instead, which is also what happened in the
 # story the demo tells.
 employ() { # employ <full-name> <email> <role>
   local name="$1" email="$2" role="$3" id edges standing rel_id rel_version status
-  id="$(person_id "$name" "$email")"
+  id="$(contact_id "$name" "$email")"
   [[ -n "$id" ]] || fail "$name <$email> is not in the installation the seed just wrote to"
-  edges="/relationships?kind=employment&person_id=$id"
+  edges="/relationships?kind=employment&contact_id=$id"
   if [[ -n "$(find_first "$edges" ".company_id == \$company and $CURRENT_PRIMARY_JQ" --arg company "$company_id")" ]]; then
     echo "  OK: $name already employed at Demo GmbH"
     return
@@ -490,11 +490,11 @@ employ() { # employ <full-name> <email> <role>
     return
   fi
   # `is_current_primary` is left out on purpose: the server makes an employment
-  # primary when the person has no other current one, and stating it here would
+  # primary when the contact has no other current one, and stating it here would
   # be this script deciding something it has not read.
   ensure "employment $name at Demo GmbH" /relationships \
     "$(jq -n --arg p "$id" --arg o "$company_id" --arg r "$role" \
-      '{kind:"employment",person_id:$p,company_id:$o,role:$r,source:"seed"}')"
+      '{kind:"employment",contact_id:$p,company_id:$o,role:$r,source:"seed"}')"
 }
 
 employ "Alice Müller" "alice@demo.test" "Head of Operations"
@@ -552,7 +552,7 @@ ensure_deal() { # ensure_deal <name> <stage-id> <amount-minor>
 ensure_deal "Acme Expansion" "$stage_id_qualified" 2500000
 ensure_deal "Globex Renewal" "$stage_id_proposal" 1200000
 
-# The Worklist needs WORK to show, and nothing above produces any: people,
+# The Worklist needs WORK to show, and nothing above produces any: contacts,
 # companies and deals are records, and the queue ranks obligations. A demo
 # database with none of those renders the surface as an honest empty page, which
 # is the one state a demo must not open on — and it is why two shipped changes
@@ -563,7 +563,7 @@ ensure_deal "Globex Renewal" "$stage_id_proposal" 1200000
 # those teaches whoever reads it something false about the software.
 echo "== seed-dev: work for the Worklist =="
 
-alice_id="$(person_id "Alice Müller" "alice@demo.test")"
+alice_id="$(contact_id "Alice Müller" "alice@demo.test")"
 [[ -n "$alice_id" ]] || fail "Alice Müller is missing, so there is nobody for the demo mail to be from"
 
 # A task the admin wrote themselves and did not assign. It lands on their own
@@ -578,7 +578,7 @@ alice_id="$(person_id "Alice Müller" "alice@demo.test")"
 ensure_activity "task: call Alice back" "Call Alice back about the retrofit" "task:call-alice-back" "$(jq -n --arg p "$alice_id" --arg due "$(iso_in_days 0)" \
   '{kind:"task",subject:"Call Alice back about the retrofit",source:"seed",due_at:$due,
     source_system:"seed",source_id:"task:call-alice-back",
-    links:[{entity_type:"person",entity_id:$p}]}')"
+    links:[{entity_type:"contact",entity_id:$p}]}')"
 
 # The unanswered inbound that makes a customer WAIT is seeded in seed-dev.sql
 # instead. A waiting row needs a thread_key, and that column is capture's to
@@ -596,30 +596,30 @@ ensure_activity "task: call Alice back" "Call Alice back about the retrofit" "ta
 ensure_activity "task: follow up with the lead" "Follow up with the new lead" "task:follow-up-new-lead" "$(jq -n --arg p "$alice_id" --arg due "$(iso_in_days 1)" \
   '{kind:"task",subject:"Follow up with the new lead",source:"seed",due_at:$due,
     source_system:"seed",source_id:"task:follow-up-new-lead",
-    links:[{entity_type:"person",entity_id:$p}]}')"
+    links:[{entity_type:"contact",entity_id:$p}]}')"
 
 echo "== seed-dev: demo conversations =="
 # WITHOUT THESE, HALF THE PRODUCT RENDERS ITS EMPTY STATE. The relationship
 # graph, the contact peers, who-knows-this-contact and the decay lane all derive
 # from activity_participant, and nothing else in this seed writes a row of it:
-# links alone do not say two people spoke, and a task or a note is not a
+# links alone do not say two contacts spoke, and a task or a note is not a
 # conversation. A cold demo stack therefore showed every network surface blank,
 # and reading one meant hand-seeding participant rows first.
 #
 # Logged through the API like everything else here, and that is what makes it
-# work: the server stamps the participants itself from the person links, for an
+# work: the server stamps the participants itself from the contact links, for an
 # INTERACTION kind only (email, call, meeting). The seeder states the
 # conversation and the server decides who was in it, which is the same rule the
 # capture path follows.
 #
-# Two person links on a thread, not one: a single counterparty draws the
+# Two contact links on a thread, not one: a single counterparty draws the
 # colleague-to-contact edge and leaves contact-to-contact and the peer arm
 # empty, which is half the surface this exists to fill.
-ensure_conversation() { # ensure_conversation <slug> <subject> <kind> <direction|-> <days-back> <person-id>…
+ensure_conversation() { # ensure_conversation <slug> <subject> <kind> <direction|-> <days-back> <contact-id>…
   local slug="$1" subject="$2" kind="$3" direction="$4" back="$5"
   shift 5
   local links direction_field='{}'
-  links="$(printf '%s\n' "$@" | jq -R '{entity_type:"person",entity_id:.}' | jq -s '.')"
+  links="$(printf '%s\n' "$@" | jq -R '{entity_type:"contact",entity_id:.}' | jq -s '.')"
   # NOBODY SENDS A MEETING. `-` leaves the field off rather than asserting a
   # direction the event does not have; the server then stamps the roles it
   # stamps for an undirected interaction, which is what a meeting is.
@@ -641,10 +641,10 @@ ensure_conversation() { # ensure_conversation <slug> <subject> <kind> <direction
           source_system:"seed",source_id:$key,links:$l} + $dir')"
 }
 
-bob_id="$(person_id "Bob Schmidt" "bob@demo.test")"
-carol_id="$(person_id "Carol Wagner" "carol@demo.test")"
+bob_id="$(contact_id "Bob Schmidt" "bob@demo.test")"
+carol_id="$(contact_id "Carol Wagner" "carol@demo.test")"
 [[ -n "$bob_id" ]] && [[ -n "$carol_id" ]] \
-  || fail "the demo people this seed just wrote are not readable back — nothing to hang a conversation on"
+  || fail "the demo contacts this seed just wrote are not readable back — nothing to hang a conversation on"
 
 # Both directions on the same contact, deliberately: the strength score's
 # reciprocity term has nothing to say about a one-way exchange, so a seed that

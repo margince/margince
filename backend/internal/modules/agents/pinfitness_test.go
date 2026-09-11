@@ -62,7 +62,7 @@ var pinExemptWrites = gatekit.Waive(map[string]string{
 	"sendEmailTool":        "the effect is a NEW activity, on the ground sendMessageTool states. The target is what the message is ABOUT, and the version of a record nobody is editing binds nothing the approval rests on",
 	"sendAccountEmailTool": "the effect is a NEW activity and the call anchors on no row at all — its links carry the target. There is no operand row whose version could condition the send",
 	"bookMeetingTool":      "a booking creates its own row and anchors on no existing one; the links name what it is about. Nothing it writes has a prior version",
-	"mergeRecords":         "the merge conditions itself on both endpoints INSIDE its own transaction, under the locks it takes on the pair (people/merge.go). A pin here would be a third answer to a question the write already asks race-free, and only about the survivor — the source is the half a caller-supplied pin could never cover",
+	"mergeRecords":         "the merge conditions itself on both endpoints INSIDE its own transaction, under the locks it takes on the pair (contacts/merge.go). A pin here would be a third answer to a question the write already asks race-free, and only about the survivor — the source is the half a caller-supplied pin could never cover",
 	"relinkThread":         "a thread is MANY activity rows reached by key, and one pin cannot condition many rows. Its sibling relinkActivity takes one because it names exactly one activity; the batch shape is what makes the pin unrepresentable rather than forgotten, and relinkbatch.go re-checks each row under its own lock",
 	"relinkActivities":     "the batch form of relinkThread's reason: the call names a LIST of activities and a single version could only ever condition one of them. The per-row check under the write's own lock is what holds here, and it holds for every row rather than for one",
 })
@@ -79,7 +79,7 @@ var pinExemptWrites = gatekit.Waive(map[string]string{
 // to. It stays declared rather than deleted, because the next write that cannot
 // carry a pin today needs somewhere honest to go.
 var pinDeferredWrites = gatekit.Waive(map[string]string{
-	"promoteLead": "stages a pinnable lead version and applies none: LeadPromoter cannot carry one, exactly as LeadDisqualifier could not. The promotion mints a person from lead fields a concurrent edit may have changed since the human approved. Tracked in issue 5021 — the cost of leaving it is that an approved promotion can read content nobody released",
+	"promoteLead": "stages a pinnable lead version and applies none: LeadPromoter cannot carry one, exactly as LeadDisqualifier could not. The promotion mints a contact from lead fields a concurrent edit may have changed since the human approved. Tracked in issue 5021 — the cost of leaving it is that an approved promotion can read content nobody released",
 	"demoteLead":  "stages a pinnable lead version and applies none, on the same seam shape as promoteLead. The reversal unwinds a promotion the approval may no longer be describing. Tracked in issue 5021 — same cost, in the opposite direction",
 })
 

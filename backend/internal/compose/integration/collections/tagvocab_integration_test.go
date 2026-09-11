@@ -42,20 +42,20 @@ func createTag(t *testing.T, e *apptest.AppEnv, name string) string {
 	return id
 }
 
-// createPersonWithTag makes a person and hangs the named tags on them.
-func createPersonWithTag(t *testing.T, e *apptest.AppEnv, name string, tagIDs ...string) string {
+// createContactWithTag makes a contact and hangs the named tags on them.
+func createContactWithTag(t *testing.T, e *apptest.AppEnv, name string, tagIDs ...string) string {
 	t.Helper()
-	var person integration.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", integration.AnyMap{
+	var contact integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
 		"full_name": name, "source": "ui",
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("creating %q: status=%d body=%v", name, status, person)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("creating %q: status=%d body=%v", name, status, contact)
 	}
-	id, _ := person["id"].(string)
+	id, _ := contact["id"].(string)
 	for _, tagID := range tagIDs {
 		var applied integration.AnyMap
 		if status := e.Call(t, "POST", "/v1/tags/"+tagID+"/apply", integration.AnyMap{
-			"entity_type": "person", "entity_id": id,
+			"entity_type": "contact", "entity_id": id,
 		}, nil, &applied); status != http.StatusCreated {
 			t.Fatalf("tagging %q: status=%d body=%v", name, status, applied)
 		}
@@ -65,14 +65,14 @@ func createPersonWithTag(t *testing.T, e *apptest.AppEnv, name string, tagIDs ..
 
 // Merge separates MOVED from COLLAPSED because they are different facts, and a
 // single total would tell an admin the wrong number. The fixture is built so
-// the two differ: one person carries only the source, one carries both.
+// the two differ: one contact carries only the source, one carries both.
 func TestMergeCountsWhatMovedApartFromWhatCollapsed(t *testing.T) {
 	e := tagEnv(t)
 	source := createTag(t, e, "Keyaccount")
 	target := createTag(t, e, "Key Account")
 
-	createPersonWithTag(t, e, "Only Source", source)
-	createPersonWithTag(t, e, "Carries Both", source, target)
+	createContactWithTag(t, e, "Only Source", source)
+	createContactWithTag(t, e, "Carries Both", source, target)
 
 	var result struct {
 		IntoTagID string `json:"into_tag_id"`
@@ -86,39 +86,39 @@ func TestMergeCountsWhatMovedApartFromWhatCollapsed(t *testing.T) {
 	}
 
 	if result.Moved != 1 {
-		t.Errorf("moved = %d, want 1 — only the person carrying the source alone moves", result.Moved)
+		t.Errorf("moved = %d, want 1 — only the contact carrying the source alone moves", result.Moved)
 	}
 	if result.Collapsed != 1 {
-		t.Errorf("collapsed = %d, want 1 — the person already carrying both gains nothing", result.Collapsed)
+		t.Errorf("collapsed = %d, want 1 — the contact already carrying both gains nothing", result.Collapsed)
 	}
 
-	// The target's own weight is what the numbers claimed: it had one person
+	// The target's own weight is what the numbers claimed: it had one contact
 	// and gained exactly the moved one.
 	var detail struct {
-		Usage struct{ People int } `json:"usage"`
+		Usage struct{ Contacts int } `json:"usage"`
 	}
 	if status := e.Call(t, "GET", "/v1/tags/"+target, nil, nil, &detail); status != http.StatusOK {
 		t.Fatalf("reading the target: status=%d", status)
 	}
-	if detail.Usage.People != 2 {
-		t.Errorf("the target carries %d people, want 2 — one it had, one that moved", detail.Usage.People)
+	if detail.Usage.Contacts != 2 {
+		t.Errorf("the target carries %d contacts, want 2 — one it had, one that moved", detail.Usage.Contacts)
 	}
 
 	// And the collapsed row is GONE, not merely uncounted. A merge that left
-	// the duplicate behind would report the same numbers and leave the person
+	// the duplicate behind would report the same numbers and leave the contact
 	// carrying a tag nobody can see.
 	var srcDetail detail0
 	if status := e.Call(t, "GET", "/v1/tags/"+source, nil, nil, &srcDetail); status != http.StatusOK {
 		t.Fatalf("reading the merged source: status=%d", status)
 	}
-	if srcDetail.Usage.People != 0 {
-		t.Errorf("the merged-away tag still carries %d people; every tagging was meant to move or be dropped", srcDetail.Usage.People)
+	if srcDetail.Usage.Contacts != 0 {
+		t.Errorf("the merged-away tag still carries %d contacts; every tagging was meant to move or be dropped", srcDetail.Usage.Contacts)
 	}
 }
 
 // detail0 is the shape both merge tests read back.
 type detail0 struct {
-	Usage struct{ People int } `json:"usage"`
+	Usage struct{ Contacts int } `json:"usage"`
 }
 
 // The source is archived and its NAME IS RELEASED. That is the product
@@ -160,7 +160,7 @@ func TestMergeArchivesTheSourceAndReleasesItsName(t *testing.T) {
 func TestMergeRefusesATagIntoItself(t *testing.T) {
 	e := tagEnv(t)
 	tag := createTag(t, e, "Inbound")
-	createPersonWithTag(t, e, "Tagged", tag)
+	createContactWithTag(t, e, "Tagged", tag)
 
 	var problem integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/tags/"+tag+"/merge", integration.AnyMap{
@@ -172,14 +172,14 @@ func TestMergeRefusesATagIntoItself(t *testing.T) {
 	// And it is untouched — a refusal that had already archived the tag would
 	// be worse than the merge it refused.
 	var detail struct {
-		ArchivedAt *string              `json:"archived_at"`
-		Usage      struct{ People int } `json:"usage"`
+		ArchivedAt *string                `json:"archived_at"`
+		Usage      struct{ Contacts int } `json:"usage"`
 	}
 	if status := e.Call(t, "GET", "/v1/tags/"+tag, nil, nil, &detail); status != http.StatusOK {
 		t.Fatalf("reading it back: status=%d", status)
 	}
-	if detail.ArchivedAt != nil || detail.Usage.People != 1 {
-		t.Errorf("the refused merge changed the tag: archived=%v people=%d", detail.ArchivedAt, detail.Usage.People)
+	if detail.ArchivedAt != nil || detail.Usage.Contacts != 1 {
+		t.Errorf("the refused merge changed the tag: archived=%v contacts=%d", detail.ArchivedAt, detail.Usage.Contacts)
 	}
 }
 
@@ -209,7 +209,7 @@ func TestRestoreRefusesWhenALiveTagHasTakenTheName(t *testing.T) {
 func TestRestoreBringsBackAWordNobodyElseTook(t *testing.T) {
 	e := tagEnv(t)
 	tag := createTag(t, e, "Trade Fair 2026")
-	createPersonWithTag(t, e, "Met At The Fair", tag)
+	createContactWithTag(t, e, "Met At The Fair", tag)
 
 	var archived integration.AnyMap
 	if status := e.Call(t, "DELETE", "/v1/tags/"+tag, nil, nil, &archived); status != http.StatusOK {
@@ -228,13 +228,13 @@ func TestRestoreBringsBackAWordNobodyElseTook(t *testing.T) {
 
 	// Archiving never dropped the taggings, so the weight comes back with it.
 	var detail struct {
-		Usage struct{ People int } `json:"usage"`
+		Usage struct{ Contacts int } `json:"usage"`
 	}
 	if status := e.Call(t, "GET", "/v1/tags/"+tag, nil, nil, &detail); status != http.StatusOK {
 		t.Fatalf("reading it back: status=%d", status)
 	}
-	if detail.Usage.People != 1 {
-		t.Errorf("the restored tag carries %d people, want 1 — archiving retires a word, it does not untag records", detail.Usage.People)
+	if detail.Usage.Contacts != 1 {
+		t.Errorf("the restored tag carries %d contacts, want 1 — archiving retires a word, it does not untag records", detail.Usage.Contacts)
 	}
 }
 
@@ -259,7 +259,7 @@ func TestRenamingOntoALiveNameIsRefused(t *testing.T) {
 func TestUsageCountsOnlyTheAdvertisedRecordTypes(t *testing.T) {
 	e := tagEnv(t)
 	tag := createTag(t, e, "Cross Type")
-	createPersonWithTag(t, e, "A Person", tag)
+	createContactWithTag(t, e, "A Contact", tag)
 
 	var company integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/companies", integration.AnyMap{
@@ -277,7 +277,7 @@ func TestUsageCountsOnlyTheAdvertisedRecordTypes(t *testing.T) {
 
 	var detail struct {
 		Usage struct {
-			People    int `json:"people"`
+			Contacts  int `json:"contacts"`
 			Companies int `json:"companies"`
 			Deals     int `json:"deals"`
 		} `json:"usage"`
@@ -285,8 +285,8 @@ func TestUsageCountsOnlyTheAdvertisedRecordTypes(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/tags/"+tag, nil, nil, &detail); status != http.StatusOK {
 		t.Fatalf("reading the tag: status=%d", status)
 	}
-	if detail.Usage.People != 1 || detail.Usage.Companies != 1 || detail.Usage.Deals != 0 {
-		t.Errorf("usage = %+v, want 1 person, 1 company, 0 deals", detail.Usage)
+	if detail.Usage.Contacts != 1 || detail.Usage.Companies != 1 || detail.Usage.Deals != 0 {
+		t.Errorf("usage = %+v, want 1 contact, 1 company, 0 deals", detail.Usage)
 	}
 }
 

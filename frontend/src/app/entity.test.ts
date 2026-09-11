@@ -4,7 +4,7 @@ import { ENTITY, ENTITY_KINDS, SCREEN_ENTITY } from "./entity";
 describe("ENTITY registry", () => {
   it("covers exactly the five record kinds (no activity)", () => {
     expect([...ENTITY_KINDS]).toEqual([
-      "person",
+      "contact",
       "company",
       "deal",
       "lead",
@@ -14,13 +14,13 @@ describe("ENTITY registry", () => {
       "company",
       "deal",
       "lead",
-      "person",
+      "contact",
       "project",
     ]);
   });
 
   it("maps each kind to its 360 route", () => {
-    expect(ENTITY.person.route("p-1")).toEqual({
+    expect(ENTITY.contact.route("p-1")).toEqual({
       screen: "contacts",
       id: "p-1",
     });
@@ -38,7 +38,7 @@ describe("ENTITY registry", () => {
 
   it("reverses every route into SCREEN_ENTITY, with nothing left over", () => {
     expect(SCREEN_ENTITY).toEqual({
-      contacts: "person",
+      contacts: "contact",
       companies: "company",
       deals: "deal",
       leads: "lead",

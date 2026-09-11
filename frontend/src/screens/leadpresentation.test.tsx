@@ -214,7 +214,7 @@ describe("lead work-board presentation", () => {
   // Dropping on a terminal column opens its DIALOG and sends no PATCH.
   //
   // Neither transition is a status change: qualifying promotes the lead into a
-  // person and maybe a deal, disqualifying records a reason. The server refuses
+  // contact and maybe a deal, disqualifying records a reason. The server refuses
   // a bare status PATCH into either, so a board that sent one would put a
   // refusal in front of a reader who did the ordinary thing.
   it("opens the qualify dialog on a drop, instead of patching the status", async () => {

@@ -38,7 +38,7 @@ func TestAnotherRepsOpenAskTakesTheRoute(t *testing.T) {
 	}
 
 	taken, err := e.store.RouteStates(
-		e.asUser(e.stranger), ids.From[ids.PersonKind](e.contact))
+		e.asUser(e.stranger), ids.From[ids.ContactKind](e.contact))
 	if err != nil {
 		t.Fatalf("RouteStates: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestARefusedRouteReportsRefusedAndStaysAskable(t *testing.T) {
 	}
 
 	taken, err := e.store.RouteStates(
-		e.asUser(e.requester), ids.From[ids.PersonKind](e.contact))
+		e.asUser(e.requester), ids.From[ids.ContactKind](e.contact))
 	if err != nil {
 		t.Fatalf("RouteStates: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestALiveAskOutranksAnEarlierRefusal(t *testing.T) {
 	}
 
 	taken, err := e.store.RouteStates(
-		e.asUser(e.requester), ids.From[ids.PersonKind](e.contact))
+		e.asUser(e.requester), ids.From[ids.ContactKind](e.contact))
 	if err != nil {
 		t.Fatalf("RouteStates: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestASettledAskReleasesItsRoute(t *testing.T) {
 	}
 
 	taken, err := e.store.RouteStates(
-		e.asUser(e.requester), ids.From[ids.PersonKind](e.contact))
+		e.asUser(e.requester), ids.From[ids.ContactKind](e.contact))
 	if err != nil {
 		t.Fatalf("RouteStates: %v", err)
 	}
@@ -141,16 +141,16 @@ func TestRouteStatesRefusesAContactTheCallerCannotSee(t *testing.T) {
 	e := setupIntro(t)
 
 	_, err := e.store.RouteStates(
-		e.asUser(e.requester), ids.From[ids.PersonKind](ids.NewV7()))
+		e.asUser(e.requester), ids.From[ids.ContactKind](ids.NewV7()))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("route states for a contact that does not exist gave %v; want not-found", err)
 	}
 
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE person SET archived_at = now() WHERE id = $1`, e.unseen); err != nil {
+		`UPDATE contact SET archived_at = now() WHERE id = $1`, e.unseen); err != nil {
 		t.Fatal(err)
 	}
-	_, err = e.store.RouteStates(e.asUser(e.requester), ids.From[ids.PersonKind](e.unseen))
+	_, err = e.store.RouteStates(e.asUser(e.requester), ids.From[ids.ContactKind](e.unseen))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("route states for an erased contact gave %v; want not-found", err)
 	}
@@ -158,25 +158,25 @@ func TestRouteStatesRefusesAContactTheCallerCannotSee(t *testing.T) {
 	// The admit case, without which both refusals above would pass against a
 	// read that refused every contact.
 	if _, err := e.store.RouteStates(
-		e.asUser(e.requester), ids.From[ids.PersonKind](e.contact)); err != nil {
+		e.asUser(e.requester), ids.From[ids.ContactKind](e.contact)); err != nil {
 		t.Errorf("a live contact's route states could not be read: %v", err)
 	}
 }
 
 // No seat, no answer. This read is blind by design — it reports on asks the
-// caller is not party to — and that trade is only safe while a person is
+// caller is not party to — and that trade is only safe while a contact is
 // behind it.
-func TestRouteStatesNeedsAPersonBehindIt(t *testing.T) {
+func TestRouteStatesNeedsAContactBehindIt(t *testing.T) {
 	e := setupIntro(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:none",
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"introduction": {Read: true}, "person": {Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"introduction": {Read: true}, "contact": {Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	_, err := e.store.RouteStates(ctx, ids.From[ids.PersonKind](e.contact))
+	_, err := e.store.RouteStates(ctx, ids.From[ids.ContactKind](e.contact))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a caller with no seat read route states (%v)", err)
 	}
@@ -188,7 +188,7 @@ func TestRouteStatesNeedsAPersonBehindIt(t *testing.T) {
 // The open ask above is reported to everybody because the guard index refuses
 // everybody. A refusal blocks nothing — the route stays askable — so telling a
 // third rep buys no collision-avoidance and gives away that this colleague
-// turned somebody down over this contact. ForPerson calls that the
+// turned somebody down over this contact. ForContact calls that the
 // introducer's answer to give; this read does not overrule it.
 func TestARefusalIsToldOnlyToTheRepWhoWasRefused(t *testing.T) {
 	e := setupIntro(t)
@@ -203,7 +203,7 @@ func TestARefusalIsToldOnlyToTheRepWhoWasRefused(t *testing.T) {
 	}
 
 	stranger, err := e.store.RouteStates(
-		e.asUser(e.stranger), ids.From[ids.PersonKind](e.contact))
+		e.asUser(e.stranger), ids.From[ids.ContactKind](e.contact))
 	if err != nil {
 		t.Fatalf("RouteStates: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestARefusalIsToldOnlyToTheRepWhoWasRefused(t *testing.T) {
 	// The admit case: the rep who WAS refused still reads it, or the check
 	// above would pass against a read that reported no refusal to anybody.
 	refused, err := e.store.RouteStates(
-		e.asUser(e.requester), ids.From[ids.PersonKind](e.contact))
+		e.asUser(e.requester), ids.From[ids.ContactKind](e.contact))
 	if err != nil {
 		t.Fatalf("RouteStates: %v", err)
 	}

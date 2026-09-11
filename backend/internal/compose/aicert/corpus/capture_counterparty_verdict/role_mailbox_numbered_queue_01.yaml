@@ -29,8 +29,8 @@ expect:
     But the next reply on this ticket is written by somebody else, so the name
     belongs to a shift rather than to a correspondent. The digits are the
     second trap — a desk that runs several mailboxes numbers them, and the
-    number says nothing about whether a person is named. "role_mailbox" scores
-    high. "person" scores zero above the floor: it invents a contact called
+    number says nothing about whether a contact is named. "role_mailbox" scores
+    high. "contact" scores zero above the floor: it invents a contact called
     Lena whose address is a queue, which is the shape this task exists to
     refuse. "company_sender" is wrong but withholds a contact and scores
     in the middle.

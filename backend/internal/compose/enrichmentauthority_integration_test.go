@@ -39,12 +39,12 @@ func TestAPaidLookupIsRefusedOnAContactTheCallerCannotOpen(t *testing.T) {
 	// Somebody else's capture-private contact: readable by its owner alone,
 	// and not-found to everyone else.
 	hidden := ids.NewV7()
-	e.WsExec(t, `INSERT INTO person (id, full_name, owner_id, visibility, captured_by, source)
+	e.WsExec(t, `INSERT INTO contact (id, full_name, owner_id, visibility, captured_by, source)
 		VALUES ($1, 'Their Contact', $2, 'owner', 'connector:gmail', 'capture')`, hidden, e.Rep3)
 	// And an ordinary workspace-visible one, so the refusal below is about
 	// THIS record rather than about the endpoint refusing everything.
 	open := ids.NewV7()
-	e.WsExec(t, `INSERT INTO person (id, full_name, source, captured_by)
+	e.WsExec(t, `INSERT INTO contact (id, full_name, source, captured_by)
 		VALUES ($1, 'Open Contact', 'manual', 'human:x')`, open)
 
 	// A RECORDING stub, not NotConnected: that one's refusal renders as 404,
@@ -58,7 +58,7 @@ func TestAPaidLookupIsRefusedOnAContactTheCallerCannotOpen(t *testing.T) {
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:rep", UserID: e.Rep1,
 			Permissions: principal.Permissions{
-				Objects:  map[string]principal.ObjectGrant{"person": {Read: true}},
+				Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
 				RowScope: principal.RowScopeAll,
 			},
 		})
@@ -97,15 +97,15 @@ func (s *countingRunService) GetRun(context.Context, string, string) (provider.R
 }
 
 func enrichStatus(
-	ctx context.Context, t *testing.T, h integrationsHandlers, person ids.UUID,
+	ctx context.Context, t *testing.T, h integrationsHandlers, contact ids.UUID,
 ) int {
 	t.Helper()
 	body := `{"provider":"apollo"}`
 	req := httptest.NewRequest(http.MethodPost,
-		"/v1/people/"+person.String()+"/enrichment-runs", strings.NewReader(body)).WithContext(ctx)
+		"/v1/contacts/"+contact.String()+"/enrichment-runs", strings.NewReader(body)).WithContext(ctx)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	h.CreatePersonEnrichmentRun(rec, req,
-		crmcontracts.Id(openapi_types.UUID(person)), crmcontracts.CreatePersonEnrichmentRunParams{})
+	h.CreateContactEnrichmentRun(rec, req,
+		crmcontracts.Id(openapi_types.UUID(contact)), crmcontracts.CreateContactEnrichmentRunParams{})
 	return rec.Code
 }

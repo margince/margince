@@ -116,7 +116,7 @@ describe("TeamAct", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it("an invite lists the person, turns the skip into a finish, and mints their link where no mail can carry it", async () => {
+  it("an invite lists the contact, turns the skip into a finish, and mints their link where no mail can carry it", async () => {
     renderTeam({ passwordLink: true });
     const user = userEvent.setup();
 

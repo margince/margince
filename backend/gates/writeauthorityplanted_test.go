@@ -121,21 +121,21 @@ func TestAMutationWithNoRowProbeAtAllIsAFinding(t *testing.T) {
 	t.Parallel()
 	written, guarded := judgePlantedWrite(t, plantedSource(`
 func (s *Store) DisposePair(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx, `+"`UPDATE person SET display_name = $1 WHERE id = $2`"+`, "x", id)
+	_, err := tx.Exec(ctx, `+"`UPDATE contact SET display_name = $1 WHERE id = $2`"+`, "x", id)
 	return err
 }
 `))
 	if !written["DisposePair"] {
-		t.Fatal("the census did not see a write of `person` at all, so it is judging nothing here — " +
+		t.Fatal("the census did not see a write of `contact` at all, so it is judging nothing here — " +
 			"the extractor has stopped recognising this tree's UPDATE shape")
 	}
 	if guarded["DisposePair"] {
 		t.Error("a mutation holding auth.Require and no row probe was judged guarded, which is #1881 " +
-			"exactly: object admission answers whether the caller may change people, never whether " +
-			"they may change THIS person, and a gate that accepts it reads green over the defect it " +
+			"exactly: object admission answers whether the caller may change contacts, never whether " +
+			"they may change THIS contact, and a gate that accepts it reads green over the defect it " +
 			"was written for")
 	}
 }
@@ -146,10 +146,10 @@ func TestAMutationThatTakesTheRowProbeIsNotAFinding(t *testing.T) {
 	t.Parallel()
 	_, guarded := judgePlantedWrite(t, plantedSource(`
 func (s *Store) DisposePair(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if err := auth.EnsureWritable(ctx, tx, "person", id); err != nil {
+	if err := auth.EnsureWritable(ctx, tx, "contact", id); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx, `+"`UPDATE person SET display_name = $1 WHERE id = $2`"+`, "x", id)
+	_, err := tx.Exec(ctx, `+"`UPDATE contact SET display_name = $1 WHERE id = $2`"+`, "x", id)
 	return err
 }
 `))
@@ -166,14 +166,14 @@ func TestAWriteUnderAProbedCallerIsNotAFinding(t *testing.T) {
 	t.Parallel()
 	written, guarded := judgePlantedWrite(t, plantedSource(`
 func (s *Store) Dispose(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if err := auth.EnsureWritable(ctx, tx, "person", id); err != nil {
+	if err := auth.EnsureWritable(ctx, tx, "contact", id); err != nil {
 		return err
 	}
 	return writePair(ctx, tx, id)
 }
 
 func writePair(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	_, err := tx.Exec(ctx, `+"`UPDATE person SET display_name = $1 WHERE id = $2`"+`, "x", id)
+	_, err := tx.Exec(ctx, `+"`UPDATE contact SET display_name = $1 WHERE id = $2`"+`, "x", id)
 	return err
 }
 `))
@@ -193,7 +193,7 @@ func TestAHelperWithOneUnprobedCallerStaysAFinding(t *testing.T) {
 	t.Parallel()
 	written, guarded := judgePlantedWrite(t, plantedSource(`
 func (s *Store) Dispose(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if err := auth.EnsureWritable(ctx, tx, "person", id); err != nil {
+	if err := auth.EnsureWritable(ctx, tx, "contact", id); err != nil {
 		return err
 	}
 	return writePair(ctx, tx, id)
@@ -204,7 +204,7 @@ func (s *Store) DisposeFromTheOtherDoor(ctx context.Context, tx pgx.Tx, id ids.U
 }
 
 func writePair(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	_, err := tx.Exec(ctx, `+"`UPDATE person SET display_name = $1 WHERE id = $2`"+`, "x", id)
+	_, err := tx.Exec(ctx, `+"`UPDATE contact SET display_name = $1 WHERE id = $2`"+`, "x", id)
 	return err
 }
 `))
@@ -224,12 +224,12 @@ func TestADeleteWithNoRowProbeIsAFinding(t *testing.T) {
 	t.Parallel()
 	written, guarded := judgePlantedWrite(t, plantedSource(`
 func (s *Store) DropPair(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	_, err := tx.Exec(ctx, `+"`DELETE FROM person WHERE id = $1`"+`, id)
+	_, err := tx.Exec(ctx, `+"`DELETE FROM contact WHERE id = $1`"+`, id)
 	return err
 }
 `))
 	if !written["DropPair"] || guarded["DropPair"] {
-		t.Errorf("an unprobed DELETE of `person` was judged written=%v guarded=%v, want seen and "+
+		t.Errorf("an unprobed DELETE of `contact` was judged written=%v guarded=%v, want seen and "+
 			"unguarded", written["DropPair"], guarded["DropPair"])
 	}
 }
@@ -268,10 +268,10 @@ func TestAVisibilityProbeDoesNotAnswerTheWriteQuestion(t *testing.T) {
 	}
 	_, guarded := judgePlantedWrite(t, plantedSource(`
 func (s *Store) Dispose(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if err := auth.EnsureVisible(ctx, tx, "person", id); err != nil {
+	if err := auth.EnsureVisible(ctx, tx, "contact", id); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx, `+"`UPDATE person SET display_name = $1 WHERE id = $2`"+`, "x", id)
+	_, err := tx.Exec(ctx, `+"`UPDATE contact SET display_name = $1 WHERE id = $2`"+`, "x", id)
 	return err
 }
 `))
@@ -287,8 +287,8 @@ func (s *Store) Dispose(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 func TestThePlantedCasesNameATableThisGateStillJudges(t *testing.T) {
 	t.Parallel()
 	tables := shareableTables(t)
-	if !tables["person"] {
-		t.Fatalf("`person` is no longer a shareable table (the set is %v), so every case in this file "+
+	if !tables["contact"] {
+		t.Fatalf("`contact` is no longer a shareable table (the set is %v), so every case in this file "+
 			"plants a write the census correctly ignores and passes for the wrong reason",
 			strings.Join(sortedKeys(tables), ", "))
 	}

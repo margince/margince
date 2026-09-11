@@ -5,7 +5,7 @@ package approvals
 
 // The summary is the one part of an approval that is prose, and several
 // stagers build it out of record text an agent or an inbound sender wrote:
-// a display name arrives from captured mail, and creating a person is
+// a display name arrives from captured mail, and creating a contact is
 // auto-execute for an agent. So the text a human reads before deciding is
 // attacker-influenced, and these cases pin what may reach their screen.
 

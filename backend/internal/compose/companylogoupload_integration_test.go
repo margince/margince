@@ -5,7 +5,7 @@
 
 package compose
 
-// A person putting their own mark on the installation's company, and taking it
+// A contact putting their own mark on the installation's company, and taking it
 // off again.
 //
 // What these cases hold is the PRECEDENCE between the two writers of this one
@@ -28,17 +28,17 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 )
 
 // theCompanyExists gives the installation the record a mark can be put on.
-func theCompanyExists(t *testing.T, e *integration.Env) people.Company {
+func theCompanyExists(t *testing.T, e *integration.Env) contacts.Company {
 	t.Helper()
 	offer, icp := "Revenue operations software", "RevOps at SaaS scale-ups"
-	company, err := e.People.SaveCompany(e.As(e.Rep1, nil, integration.AdminPerms),
-		people.SaveCompanyInput{
+	company, err := e.Contacts.SaveCompany(e.As(e.Rep1, nil, integration.AdminPerms),
+		contacts.SaveCompanyInput{
 			DisplayName: "Acme GmbH",
 			Fields:      map[string]*string{"offer_summary": &offer, "icp": &icp},
 		})
@@ -98,16 +98,16 @@ func decodeCompany(t *testing.T, recorder *httptest.ResponseRecorder) crmcontrac
 func TestAnUploadedMarkIsStoredAsThisServersOwnPNG(t *testing.T) {
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
-	handlers := companyHandlers{store: e.People, blob: blob}
+	handlers := companyHandlers{store: e.Contacts, blob: blob}
 	company := theCompanyExists(t, e)
 
 	uploaded := uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
 
-	key, err := e.People.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.CompanyID, people.LogoWide)
+	key, err := e.Contacts.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.CompanyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("the company wears no mark after its own upload: %v", err)
 	}
-	wantURL := *people.LogoURL(company.CompanyID.UUID, &key, people.LogoWide)
+	wantURL := *contacts.LogoURL(company.CompanyID.UUID, &key, contacts.LogoWide)
 	if uploaded.LogoUrl == nil || *uploaded.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q — the face the shell and the record both render",
 			uploaded.LogoUrl, wantURL)
@@ -125,7 +125,7 @@ func TestAnUploadedMarkIsStoredAsThisServersOwnPNG(t *testing.T) {
 		t.Fatalf("stored content type %q, want the normalized %q", object.ContentType, imagenorm.ContentType)
 	}
 	// The bytes are this server's re-encode, not the upload echoed back. What a
-	// person hands over is never what the next viewer is served.
+	// contact hands over is never what the next viewer is served.
 	raw, err := io.ReadAll(stored)
 	if err != nil {
 		t.Fatalf("reading the stored object: %v", err)
@@ -139,15 +139,15 @@ func TestAnUploadedMarkIsStoredAsThisServersOwnPNG(t *testing.T) {
 	}
 }
 
-func TestAPersonsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
+func TestAContactsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
-	handlers := companyHandlers{store: e.People, blob: blob}
+	handlers := companyHandlers{store: e.Contacts, blob: blob}
 	company := theCompanyExists(t, e)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
-	chosen, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
+	chosen, err := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("reading the uploaded mark: %v", err)
 	}
@@ -155,18 +155,18 @@ func TestAPersonsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
 	// A read resolving a different mark afterwards. It reports that it wrote
 	// nothing and hands its own object back, which is what lets the resolve lane
 	// collect bytes the record never took.
-	written, superseded, err := e.People.SetCompanyLogo(ctx, company.CompanyID,
+	written, superseded, err := e.Contacts.SetCompanyLogo(ctx, company.CompanyID,
 		chosen+"-from-the-site", touchIconURL)
 	if err != nil {
 		t.Fatalf("the resolve failed outright: %v", err)
 	}
 	if written {
-		t.Fatal("a website read overwrote the mark a person chose")
+		t.Fatal("a website read overwrote the mark a contact chose")
 	}
 	if superseded != nil {
 		t.Fatalf("a declined resolve reported %q as superseded, want nothing", *superseded)
 	}
-	after, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
+	after, err := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("reading the mark after the resolve: %v", err)
 	}
@@ -178,12 +178,12 @@ func TestAPersonsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
 func TestRemovingAMarkGivesTheFieldBackToTheNextRead(t *testing.T) {
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
-	handlers := companyHandlers{store: e.People, blob: blob}
+	handlers := companyHandlers{store: e.Contacts, blob: blob}
 	company := theCompanyExists(t, e)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
-	uploaded, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
+	uploaded, err := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("reading the uploaded mark: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestRemovingAMarkGivesTheFieldBackToTheNextRead(t *testing.T) {
 
 	// And the field is genuinely back: the removal is not a standing hold, so a
 	// later read may give this company a face again.
-	written, _, err := e.People.SetCompanyLogo(ctx, company.CompanyID,
+	written, _, err := e.Contacts.SetCompanyLogo(ctx, company.CompanyID,
 		uploaded+"-from-the-site", touchIconURL)
 	if err != nil {
 		t.Fatalf("the resolve after a removal failed: %v", err)
@@ -223,16 +223,16 @@ func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	blob := newRecordingBlobstore()
-	engine := &deepReadEngine{people: e.People, blob: blob, log: slog.New(slog.DiscardHandler)}
+	engine := &deepReadEngine{contacts: e.Contacts, blob: blob, log: slog.New(slog.DiscardHandler)}
 
 	// The first read, which is onboarding: it creates the company and gives it
 	// the mark its site declared. Driven through the real flow rather than
 	// planted, because what a planted row cannot carry is the PROVENANCE, and
 	// provenance is the whole question here — a mark stamped by hand would be a
-	// person's, which is the case that must NOT be replaced.
+	// contact's, which is the case that must NOT be replaced.
 	firstArgs, first := readTheAnchorsSiteFor(t, e, blob)
 	created := confirmTheAnchorAsTheAPIDoes(t, e, engine, firstArgs)
-	if wearing, err := e.People.CompanyLogoKey(human, created, people.LogoWide); err != nil || wearing != first {
+	if wearing, err := e.Contacts.CompanyLogoKey(human, created, contacts.LogoWide); err != nil || wearing != first {
 		t.Fatalf("after onboarding the company wears %q (%v), want the first read's mark at %q — "+
 			"this case has no replacement to observe otherwise", wearing, err, first)
 	}
@@ -254,7 +254,7 @@ func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T
 	}
 	stale := first
 
-	wearing, err := e.People.CompanyLogoKey(human, companyID, people.LogoWide)
+	wearing, err := e.Contacts.CompanyLogoKey(human, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("the company lost its logo to the re-read: %v", err)
 	}

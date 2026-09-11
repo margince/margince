@@ -8,7 +8,7 @@ package migrations
 //
 // The hazard is not the lock's duration, it is its acquisition. A pending strong
 // request queues behind whatever transaction is already running, and — this is
-// the part that surprises people — every request arriving after it queues behind
+// the part that surprises contacts — every request arriving after it queues behind
 // the request. One idle-in-transaction session therefore turns a migration into
 // an installation-wide write stall for as long as the migration is willing to
 // wait, which without lock_timeout is forever. Three seconds turns it into a
@@ -344,7 +344,7 @@ func TestTheLockGateReportsWhatItClaimsTo(t *testing.T) {
 	}{
 		// The whole class the first version missed: no lock level is spelled.
 		{"ALTER TABLE on a table it did not create", "ALTER TABLE relationship ADD COLUMN note text;", true},
-		{"CREATE INDEX on a table it did not create", "CREATE INDEX i ON relationship (person_id);", true},
+		{"CREATE INDEX on a table it did not create", "CREATE INDEX i ON relationship (contact_id);", true},
 		{"DROP INDEX acts on something already shipped", "DROP INDEX IF EXISTS idx_old;", true},
 
 		// And the noise that class would bury it under, if the check could not
@@ -372,7 +372,7 @@ func TestTheLockGateReportsWhatItClaimsTo(t *testing.T) {
 		// both legal spellings that must not slip past.
 		{"a bare lock with no mode", "LOCK TABLE relationship;", true},
 		{"ONLY", "LOCK TABLE ONLY relationship IN SHARE ROW EXCLUSIVE MODE;", true},
-		{"a table list", "LOCK TABLE relationship, person;", true},
+		{"a table list", "LOCK TABLE relationship, contact;", true},
 		// The two bypasses a reviewer found by reading the matcher rather than the
 		// tree, both of which passed every case above.
 		{"a timeout that is only a string literal", "SELECT 'SET LOCAL lock_timeout = x';\nALTER TABLE relationship ADD COLUMN note text;", true},

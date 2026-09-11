@@ -11,7 +11,7 @@ package compose
 //
 //   - THE ANSWER IS RIGHT: a colleague who exchanged mail with a contact
 //     appears, with counts that match the traffic;
-//   - CC COUNTS, but ranks below a real exchange: the person permanently in
+//   - CC COUNTS, but ranks below a real exchange: the contact permanently in
 //     copy is often the one who knows the customer, and reciprocity — not a
 //     role filter — is what keeps them from outranking a two-way thread;
 //   - REDELIVERY IS FREE: the bus is at-least-once, so recomputing five times
@@ -40,8 +40,8 @@ import (
 type edgeEnv struct{ e *integration.Env }
 
 // interaction writes one activity plus the participant rows for a (user,
-// person) exchange in the given role pair.
-func (v edgeEnv) interaction(t *testing.T, user ids.UUID, person ids.PersonID, at time.Time, direction, personRole string) ids.UUID {
+// contact) exchange in the given role pair.
+func (v edgeEnv) interaction(t *testing.T, user ids.UUID, contact ids.ContactID, at time.Time, direction, contactRole string) ids.UUID {
 	t.Helper()
 	var activityID ids.UUID
 	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
@@ -64,9 +64,9 @@ func (v edgeEnv) interaction(t *testing.T, user ids.UUID, person ids.PersonID, a
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, role)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
 			VALUES ($1, $2, $3)`,
-			activityID, person, personRole)
+			activityID, contact, contactRole)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding an interaction: %v", err)
@@ -74,17 +74,17 @@ func (v edgeEnv) interaction(t *testing.T, user ids.UUID, person ids.PersonID, a
 	return activityID
 }
 
-func (v edgeEnv) person(t *testing.T, name string) ids.PersonID {
+func (v edgeEnv) contact(t *testing.T, name string) ids.ContactID {
 	t.Helper()
-	id := ids.New[ids.PersonKind]()
+	id := ids.New[ids.ContactKind]()
 	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person (id, full_name, owner_id, source, captured_by, visibility)
+			INSERT INTO contact (id, full_name, owner_id, source, captured_by, visibility)
 			VALUES ($1, $2, $3, 'manual', 'human:test', 'workspace')`,
 			id, name, v.e.Rep1)
 		return err
 	}); err != nil {
-		t.Fatalf("seeding person %s: %v", name, err)
+		t.Fatalf("seeding contact %s: %v", name, err)
 	}
 	return id
 }
@@ -100,12 +100,12 @@ func (v edgeEnv) recompute(t *testing.T, activityIDs ...ids.UUID) {
 }
 
 // edgesFor reads the projection for one contact.
-func (v edgeEnv) edgesFor(t *testing.T, person ids.PersonID) []search.InteractionEdge {
+func (v edgeEnv) edgesFor(t *testing.T, contact ids.ContactID) []search.InteractionEdge {
 	t.Helper()
 	var out []search.InteractionEdge
 	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		var err error
-		out, err = search.EdgesForPerson(v.e.Admin(), tx, person.UUID, 50)
+		out, err = search.EdgesForContact(v.e.Admin(), tx, contact.UUID, 50)
 		return err
 	}); err != nil {
 		t.Fatalf("reading edges: %v", err)
@@ -120,8 +120,8 @@ func (v edgeEnv) snapshot(t *testing.T) map[string][4]int {
 	out := map[string][4]int{}
 	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
-			SELECT user_id, person_id, count_90d, in_count_90d, out_count_90d, count_total
-			  FROM graph_interaction_edge ORDER BY user_id, person_id`)
+			SELECT user_id, contact_id, count_90d, in_count_90d, out_count_90d, count_total
+			  FROM graph_interaction_edge ORDER BY user_id, contact_id`)
 		if err != nil {
 			return err
 		}
@@ -144,7 +144,7 @@ func (v edgeEnv) snapshot(t *testing.T) map[string][4]int {
 func TestTheProjectionAnswersWhoKnowsThisContact(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
-	contact := v.person(t, "Pat Counterparty")
+	contact := v.contact(t, "Pat Counterparty")
 
 	// Rep1 has a real two-way exchange; Rep2 has written once and had no reply.
 	a1 := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -2), "outbound", "to")
@@ -182,11 +182,11 @@ func TestBeingCopiedCountsButRanksBelowARealExchange(t *testing.T) {
 
 	// The market convention is to drop cc outright, on the argument that being
 	// copied is not a relationship. This product counts it (founder decision):
-	// in the accounts it is built for, the person permanently in copy is often
+	// in the accounts it is built for, the contact permanently in copy is often
 	// the one who actually knows the customer — the account lead cc'd on their
 	// team's mail, the partner copied on every exchange. Dropping cc removed
-	// exactly those people from "who here knows them".
-	ccOnly := v.person(t, "Cc Contact")
+	// exactly those contacts from "who here knows them".
+	ccOnly := v.contact(t, "Cc Contact")
 	var ccIDs []ids.UUID
 	for i := 0; i < 20; i++ {
 		ccIDs = append(ccIDs, v.interaction(t, v.e.Rep1, ccOnly, now.AddDate(0, 0, -i), "outbound", "cc"))
@@ -201,7 +201,7 @@ func TestBeingCopiedCountsButRanksBelowARealExchange(t *testing.T) {
 	// What keeps it honest is the score, not a role filter. Copy traffic is
 	// one-directional, so reciprocity floors it — the colleague appears,
 	// ranked where they belong, rather than vanishing.
-	direct := v.person(t, "Direct Contact")
+	direct := v.contact(t, "Direct Contact")
 	var directIDs []ids.UUID
 	for i := 0; i < 10; i++ {
 		dir, role := "outbound", "to"
@@ -227,7 +227,7 @@ func TestBeingCopiedCountsButRanksBelowARealExchange(t *testing.T) {
 func TestRecomputingIsIdempotentUnderRedelivery(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
-	contact := v.person(t, "Repeat Contact")
+	contact := v.contact(t, "Repeat Contact")
 	a1 := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -3), "inbound", "from")
 	a2 := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -2), "outbound", "to")
 
@@ -247,7 +247,7 @@ func TestRecomputingIsIdempotentUnderRedelivery(t *testing.T) {
 func TestAnEdgeThatLostItsEvidenceIsDeleted(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
-	contact := v.person(t, "Archived Evidence")
+	contact := v.contact(t, "Archived Evidence")
 	a1 := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -1), "inbound", "from")
 	v.recompute(t, a1)
 
@@ -280,8 +280,8 @@ func TestAnEdgeThatLostItsEvidenceIsDeleted(t *testing.T) {
 func TestARelinkDropsTheEdgeToTheContactTheActivityLeft(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
-	was := v.person(t, "Dana Mistaken")
-	corrected := v.person(t, "Nils Actually")
+	was := v.contact(t, "Dana Mistaken")
+	corrected := v.contact(t, "Nils Actually")
 	a1 := v.interaction(t, v.e.Rep1, was, now.AddDate(0, 0, -1), "inbound", "from")
 	v.recompute(t, a1)
 
@@ -294,7 +294,7 @@ func TestARelinkDropsTheEdgeToTheContactTheActivityLeft(t *testing.T) {
 	// was ever about the first contact.
 	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE activity_participant SET person_id = $3 WHERE activity_id = $1 AND person_id = $2`,
+			`UPDATE activity_participant SET contact_id = $3 WHERE activity_id = $1 AND contact_id = $2`,
 			a1, was, corrected)
 		return err
 	}); err != nil {
@@ -317,8 +317,8 @@ func TestTheNightlyRebuildAgreesWithTheIncrementalPath(t *testing.T) {
 	// A spread of traffic across two colleagues and two contacts, including a
 	// cc row — which counts, one-directionally — and an archived one, which
 	// does not count at all. Both paths must fold them the same way.
-	c1 := v.person(t, "Contact One")
-	c2 := v.person(t, "Contact Two")
+	c1 := v.contact(t, "Contact One")
+	c2 := v.contact(t, "Contact Two")
 	var all []ids.UUID
 	for i := 0; i < 6; i++ {
 		all = append(all, v.interaction(t, v.e.Rep1, c1, now.AddDate(0, 0, -i), "inbound", "from"))
@@ -361,7 +361,7 @@ func equalSnapshots(a, b map[string][4]int) bool {
 func TestArchivingOneOfTwoInteractionsCorrectsTheCountsRatherThanNothing(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
-	contact := v.person(t, "Two Threads")
+	contact := v.contact(t, "Two Threads")
 
 	older := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -5), "inbound", "from")
 	newer := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -1), "outbound", "to")
@@ -410,7 +410,7 @@ func TestArchivingOneOfTwoInteractionsCorrectsTheCountsRatherThanNothing(t *test
 func TestOneMessageCountsOnceHoweverManyRolesItNames(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
-	contact := v.person(t, "Both To And Cc")
+	contact := v.contact(t, "Both To And Cc")
 
 	// One message, and the contact is named twice on it: once as a direct
 	// recipient and once in copy. That is ordinary — a thread where someone
@@ -419,7 +419,7 @@ func TestOneMessageCountsOnceHoweverManyRolesItNames(t *testing.T) {
 	activityID := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -1), "outbound", "to")
 	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_participant (activity_id, person_id, role)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
 			VALUES ($1, $2, 'cc')`,
 			activityID, contact)
 		return err

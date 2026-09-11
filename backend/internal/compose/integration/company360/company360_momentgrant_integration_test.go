@@ -52,11 +52,11 @@ func TestTheAccountCardWithholdsItsLogVerbFromAReaderWhoCannotLog(t *testing.T) 
 			"and without it this test proves nothing about the verb under it")
 	}
 	action := page.Moment.RecommendedAction
-	if action.Kind != crmcontracts.PersonMomentActionKindLogActivity {
+	if action.Kind != crmcontracts.ContactMomentActionKindLogActivity {
 		t.Fatalf("recommended action kind = %q, want log_activity — a fresh account owes nothing, "+
 			"so the quiet rung should have fired", action.Kind)
 	}
-	if action.State != crmcontracts.PersonMomentActionStateBlocked {
+	if action.State != crmcontracts.ContactMomentActionStateBlocked {
 		t.Errorf("recommended action state = %q, want blocked: this reader's POST /activities is refused, "+
 			"so an actionable verb is a button that silently does nothing", action.State)
 	}
@@ -77,7 +77,7 @@ func TestTheAccountCardWithholdsItsLogVerbFromAReaderWhoCannotLog(t *testing.T) 
 	if granted.Moment == nil {
 		t.Fatal("no moment card for a fully granted rep")
 	}
-	if got := granted.Moment.RecommendedAction.State; got != crmcontracts.PersonMomentActionStateWillConfirm {
+	if got := granted.Moment.RecommendedAction.State; got != crmcontracts.ContactMomentActionStateWillConfirm {
 		t.Errorf("recommended action state = %q for a rep who may log, want the will_confirm the "+
 			"card is minted with", got)
 	}

@@ -26,7 +26,7 @@ func TestRouteInEdgesRefusesBeforeItReachesAStatement(t *testing.T) {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Read: true}, "company": {Read: true}, "signal": {Read: true},
+				"contact": {Read: true}, "company": {Read: true}, "signal": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

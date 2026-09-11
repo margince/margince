@@ -18,20 +18,20 @@ import (
 
 // The objects a delimited file may carry.
 //
-// `lead` and `person` are two answers to one question about a file of humans,
+// `lead` and `contact` are two answers to one question about a file of humans,
 // and the caller picks per run. `lead` stays the right answer for a
 // machine-sourced list — those rows land unworked and a human promotes the ones
-// worth keeping. `person` is for a file the business already knows: a migration
+// worth keeping. `contact` is for a file the business already knows: a migration
 // off another CRM, a corrected export coming back, a customer list from a system
 // being retired. Routing those through the lead table would force a human to
 // re-approve records nobody doubts.
 //
-// `person` bypasses nothing. It runs the same identity ladder every other person
+// `contact` bypasses nothing. It runs the same identity ladder every other contact
 // create runs, and an email already belonging to someone else refuses the row.
 const (
 	ObjectLead    = "lead"
 	ObjectCompany = "company"
-	ObjectPerson  = "person"
+	ObjectContact = "contact"
 	// ConnectorCSV is the direct migrate-in connector this source serves
 	// (UC-E11-03). Its sibling constants name the flip's own sources.
 	ConnectorCSV = "csv"

@@ -3,7 +3,7 @@
 One installation serves one company — and Margince keeps a confirmed,
 durable understanding of that company: what it sells, to whom, and what proves
 it. That understanding is born in first-run onboarding (from a website read, a
-manual form, or both), lives as provenance-bearing rows in the `people` module,
+manual form, or both), lives as provenance-bearing rows in the `contacts` module,
 and is injected into AI tasks as **governed, scoped data** — never as ad-hoc
 prompt prose. This page explains the whole lane; the model runtime it feeds is
 [ai-runtime.md](ai-runtime.md).
@@ -11,7 +11,7 @@ prompt prose. This page explains the whole lane; the model runtime it feeds is
 ## The shape at a glance
 
 ```text
- FIRST RUN (the wizard)                 THE PROFILE (people module)       AI TASKS (compose + ai)
+ FIRST RUN (the wizard)                 THE PROFILE (contacts module)       AI TASKS (compose + ai)
  ─────────────────────                 ───────────────────────────      ───────────────────────
  Read → Confirm → Basis → Voice         company        (identity)   CompanyContextProvider
       → Connect                         company_profile_field         task → scopes | none
@@ -44,7 +44,7 @@ The standing rule across all of them: **human edits outrank machine
 refreshes.** A website re-read may *propose* a change; it never silently
 replaces a human-held value.
 
-Over these rows the people module exposes one typed, read-only
+Over these rows the contacts module exposes one typed, read-only
 **`CompanyContext`** read model (`GET /company/context`) — deterministic field
 ordering, named scopes (identity, positioning, sales, offer, markets, proof,
 capabilities, administrative), and a deterministic fingerprint. Consumers get
@@ -62,7 +62,7 @@ round-trip reconstructs the same scene.
 
 The creator's rail reads **Read · Confirm · Basis · Voice · Connect**. Basis is
 what the setup settles right after the company is confirmed and before any step
-about the person answering: the installation's reporting basis — base currency
+about the contact answering: the installation's reporting basis — base currency
 and reporting timezone — and what the agent may change on its own. An admin can
 change any of it later in Settings, and a currency a deal has already frozen is
 shown locked there as it is here. Connect is the last stop: leaving it writes
@@ -137,8 +137,8 @@ The safety frame:
 
 | Concern | Where |
 |---|---|
-| Read model + policy | `GET /company`, `GET /company/context` (people module); scopes/fingerprint |
-| Onboarding dossier | `/company/site-reads` start/poll/confirm; unbound `site_read` (people) |
+| Read model + policy | `GET /company`, `GET /company/context` (contacts module); scopes/fingerprint |
+| Onboarding dossier | `/company/site-reads` start/poll/confirm; unbound `site_read` (contacts) |
 | Wizard state | `/onboarding/state`, `onboarding_wizard_state` (identity; migration `0103`) |
 | Provider + prompt block | `internal/compose/companycontextprompt.go` |
 | Rollout switch | `company_context.rollout` (`margince.yaml`, `platform/deployconfig`, migration `0105`) |

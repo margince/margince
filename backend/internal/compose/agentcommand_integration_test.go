@@ -123,33 +123,33 @@ func isSeamEntity(recordType string) bool {
 // Through the REAL provider and the REAL approvals engine: the refusal under
 // test is the store's row-scope clause answering not-found, and a stub that
 // returns ErrNotFound proves only that the door forwards whatever it is handed.
-// The person is seeded by the real writer under a rep whose team the agent's
+// The contact is seeded by the real writer under a rep whose team the agent's
 // granting human is not in, so nothing about the fixture is hand-made.
 func TestAnArchiveOfARowOutsideTheAgentsScopeStagesNothing(t *testing.T) {
 	e := integration.Setup(t)
 	native := NewProvider(e.Pool)
 	staging := approvalsAdapter{svc: approvals.NewService(e.DB())}
 
-	// Rep3 sits in Team2; the agent below acts for Rep1, in Team1. A person is
+	// Rep3 sits in Team2; the agent below acts for Rep1, in Team1. A contact is
 	// readable by every seat of the workspace whoever owns it, so ownership alone
 	// hides nothing — the row is made CAPTURE-PRIVATE to Rep3 (visibility='owner'),
-	// the one state that still puts a person out of another seat's read scope.
+	// the one state that still puts a contact out of another seat's read scope.
 	elsewhere := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AdminPerms)
 	hidden, err := native.Create(elsewhere, datasource.CreateInput{
-		EntityType: datasource.EntityPerson,
+		EntityType: datasource.EntityContact,
 		Fields:     json.RawMessage(`{"full_name":"Out Of Scope","owner_id":"` + e.Rep3.String() + `"}`),
 		Source:     "test",
 	})
 	if err != nil {
-		t.Fatalf("seeding the out-of-scope person: %v", err)
+		t.Fatalf("seeding the out-of-scope contact: %v", err)
 	}
-	e.MakeCapturePrivate(t, "person", hidden.ID, e.Rep3)
+	e.MakeCapturePrivate(t, "contact", hidden.ID, e.Rep3)
 	// The fixture is only evidence if the agent's own seat really cannot reach
 	// it, and the row scope is what must do the hiding — not a missing grant.
 	if _, err := native.Read(e.As(e.Rep3, []ids.UUID{e.Team2}, integration.RepPerms), datasource.EntityRef{
-		Type: datasource.EntityPerson, ID: hidden.ID,
+		Type: datasource.EntityContact, ID: hidden.ID,
 	}); err != nil {
-		t.Fatalf("the owning rep cannot read the seeded person either (%v) — the refusal below would then "+
+		t.Fatalf("the owning rep cannot read the seeded contact either (%v) — the refusal below would then "+
 			"say nothing about the AGENT's scope", err)
 	}
 
@@ -157,14 +157,14 @@ func TestAnArchiveOfARowOutsideTheAgentsScopeStagesNothing(t *testing.T) {
 	// approvals" then means the gate declined to stage, not that there was
 	// nothing present to stage with.
 	agent := scopedArchiveAgent(t, e)
-	req := httptest.NewRequest(http.MethodDelete, "/v1/people/"+hidden.ID.String(), nil)
+	req := httptest.NewRequest(http.MethodDelete, "/v1/contacts/"+hidden.ID.String(), nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", hidden.ID.String())
 	req = req.WithContext(context.WithValue(agent, chi.RouteCtxKey, rctx))
 	rec := httptest.NewRecorder()
 
 	stageRefusal(rec, req, staging, restCommandDeps{records: native},
-		agentPolicy{Op: "archivePerson", Access: accessTool, Tool: "archive_record", RecordType: recordTypePerson}, nil)
+		agentPolicy{Op: "archiveContact", Access: accessTool, Tool: "archive_record", RecordType: recordTypeContact}, nil)
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("archiving a row outside the agent's scope answered %d, want 404 — the archive itself "+
@@ -177,7 +177,7 @@ func TestAnArchiveOfARowOutsideTheAgentsScopeStagesNothing(t *testing.T) {
 
 // archiveRepPerms is RepPerms plus the one grant an archive needs.
 //
-// RepPerms carries person create/read/update and NO delete, which made every
+// RepPerms carries contact create/read/update and NO delete, which made every
 // archive under it refusable for a reason none of these tests is about. That
 // was invisible while staging asked only whether the target could be READ:
 // the row was staged, a human could answer it, and the store refused the
@@ -191,9 +191,9 @@ var archiveRepPerms = func() principal.Permissions {
 	for object, grant := range perms.Objects {
 		objects[object] = grant
 	}
-	person := objects["person"]
-	person.Delete = true
-	objects["person"] = person
+	contact := objects["contact"]
+	contact.Delete = true
+	objects["contact"] = contact
 	perms.Objects = objects
 	return perms
 }()

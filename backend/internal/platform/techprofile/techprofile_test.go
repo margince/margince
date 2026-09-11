@@ -135,15 +135,15 @@ func TestEmailSecurityIgnoresAMalformedDMARCRecord(t *testing.T) {
 
 // TestOperatedServicesDropsEveryNameThatIsNotAService is the privacy boundary's
 // own test. A certificate log publishes whatever hostnames a company ever had a
-// certificate for, and those include people. Nothing but a known service label
+// certificate for, and those include contacts. Nothing but a known service label
 // may survive the classifier.
 func TestOperatedServicesDropsEveryNameThatIsNotAService(t *testing.T) {
 	t.Parallel()
 	hostnames := []string{
 		"shop.example.de",
 		"karriere.example.de",
-		// Every one of these is the shape the guardrail exists for: a person's
-		// name, a person's initials, a contractor's box, somebody's laptop.
+		// Every one of these is the shape the guardrail exists for: a contact's
+		// name, a contact's initials, a contractor's box, somebody's laptop.
 		"jan.mueller.example.de",
 		"anna-schmidt.example.de",
 		"jmueller.example.de",

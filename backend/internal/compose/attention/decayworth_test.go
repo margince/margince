@@ -22,16 +22,16 @@ import (
 )
 
 func decayItem(facts *crmcontracts.AttentionRelationshipFacts) crmcontracts.AttentionItem {
-	personID := ids.NewV7()
+	contactID := ids.NewV7()
 	name := "Dana Weiss"
 	days := 63
 	return crmcontracts.AttentionItem{
-		Id:           personID.String(),
+		Id:           contactID.String(),
 		Source:       "relationship_decay",
 		Title:        &name,
 		QuietDays:    &days,
 		Relationship: facts,
-		Subject:      subjectOf("person", personID),
+		Subject:      subjectOf("contact", contactID),
 		Actions:      []crmcontracts.AttentionItemActions{},
 	}
 }
@@ -130,7 +130,7 @@ func TestALapsedRelationshipWithNoDealClaimsNoRevenue(t *testing.T) {
 
 // The band moves the rank and states NOTHING. `no_champion` is the nearest word
 // the reason vocabulary has and it means the opposite here — an account with
-// nobody carrying it, rather than the person who WAS carrying it going quiet.
+// nobody carrying it, rather than the contact who WAS carrying it going quiet.
 //
 // This is a test for a deliberate silence, so it is written to fail if somebody
 // reaches for that word: a reason that reads backwards is worse than a rank the

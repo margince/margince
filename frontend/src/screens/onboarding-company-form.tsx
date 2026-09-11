@@ -292,7 +292,7 @@ function LegalEntityChoice({
                   <span>{entity.registered_address}</span>
                 ) : null}
                 {/* Both numbers, because either may be the only one a notice
-                    printed — and this is the moment a person tells two
+                    printed — and this is the moment a contact tells two
                     candidates apart. */}
                 {entity.register_number ? (
                   <small>{entity.register_number}</small>

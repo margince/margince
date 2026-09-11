@@ -89,14 +89,14 @@ func (e *sendEnv) absorbedRow(t *testing.T, id ids.ActivityID) absorbedEcho {
 	return row
 }
 
-// seedPerson writes the counterparty an auto-created record would have made.
-func (e *sendEnv) seedPerson(t *testing.T, name string) ids.UUID {
+// seedContact writes the counterparty an auto-created record would have made.
+func (e *sendEnv) seedContact(t *testing.T, name string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, $2, $3, 'manual', 'human:x')`, id, name, e.rep); err != nil {
-		t.Fatalf("seeding the person: %v", err)
+		t.Fatalf("seeding the contact: %v", err)
 	}
 	return id
 }
@@ -127,9 +127,9 @@ func (e *sendEnv) seedProject(t *testing.T, name string) ids.UUID {
 func (e *sendEnv) link(t *testing.T, activityID ids.ActivityID, entityType string, target ids.UUID) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO activity_link (activity_id, entity_type, person_id, project_id)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id, project_id)
 		VALUES ($1, $2,
-		        CASE WHEN $2 = 'person'  THEN $3::uuid END,
+		        CASE WHEN $2 = 'contact'  THEN $3::uuid END,
 		        CASE WHEN $2 = 'project' THEN $3::uuid END)`, activityID, entityType, target); err != nil {
 		t.Fatalf("linking the activity to a %s: %v", entityType, err)
 	}
@@ -180,7 +180,7 @@ func (e *sendEnv) reconcileAbsorbing(t *testing.T, survivor ids.ActivityID) {
 func (e *sendEnv) linkedTargets(t *testing.T, activityID ids.ActivityID, entityType string) []ids.UUID {
 	t.Helper()
 	rows, err := e.owner.Query(context.Background(), `
-		SELECT coalesce(person_id, company_id, deal_id, lead_id, project_id)
+		SELECT coalesce(contact_id, company_id, deal_id, lead_id, project_id)
 		  FROM activity_link
 		 WHERE activity_id = $1 AND entity_type = $2
 		 ORDER BY 1`, activityID, entityType)
@@ -210,8 +210,8 @@ func TestReconcileAbsorbsAnEchoThatAlreadyHoldsTheStampedIdentity(t *testing.T) 
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
-	buyer := e.seedPerson(t, "Buyer")
-	e.link(t, echo, "person", buyer)
+	buyer := e.seedContact(t, "Buyer")
+	e.link(t, echo, "contact", buyer)
 
 	e.reconcileAbsorbing(t, survivor)
 
@@ -233,8 +233,8 @@ func TestReconcileAbsorbsAnEchoThatAlreadyHoldsTheStampedIdentity(t *testing.T) 
 		t.Errorf("the absorbed echo still holds (%q, %q) — the partial natural-key index would refuse the survivor",
 			absorbed.sourceSystem, absorbed.sourceID)
 	}
-	if targets := e.linkedTargets(t, survivor, "person"); len(targets) != 1 || targets[0] != buyer {
-		t.Errorf("the survivor's person links = %v, want just the buyer %s: the echo's placement on the record must move", targets, buyer)
+	if targets := e.linkedTargets(t, survivor, "contact"); len(targets) != 1 || targets[0] != buyer {
+		t.Errorf("the survivor's contact links = %v, want just the buyer %s: the echo's placement on the record must move", targets, buyer)
 	}
 	// The archive is audited AS an archive — the verb the row's own state now
 	// carries — with the folded-in identity and the row it went into as the
@@ -266,7 +266,7 @@ func TestReconcileAbsorbsAnEchoThatAlreadyHoldsTheStampedIdentity(t *testing.T) 
 }
 
 // THE ERASURE REACH, and the reason the echo is archived rather than deleted.
-// Subject-scoped Art. 17 erasure walks from a person to an activity's
+// Subject-scoped Art. 17 erasure walks from a contact to an activity's
 // attachments, provenance and embeddings THROUGH activity_link. An archived row
 // stripped of its links is therefore a row whose derived evidence that walk no
 // longer finds — the same defect as the hard delete, in a smaller shape. So the
@@ -277,21 +277,21 @@ func TestAbsorbLeavesTheEchoTheLinksErasureReachesItBy(t *testing.T) {
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
-	buyer := e.seedPerson(t, "Buyer")
-	e.link(t, echo, "person", buyer)
+	buyer := e.seedContact(t, "Buyer")
+	e.link(t, echo, "contact", buyer)
 
 	e.reconcileAbsorbing(t, survivor)
 
-	if targets := e.linkedTargets(t, echo, "person"); len(targets) != 1 || targets[0] != buyer {
-		t.Errorf("the absorbed echo's person links = %v, want its own link to %s kept — erasure reaches this row's attachments and embeddings through it",
+	if targets := e.linkedTargets(t, echo, "contact"); len(targets) != 1 || targets[0] != buyer {
+		t.Errorf("the absorbed echo's contact links = %v, want its own link to %s kept — erasure reaches this row's attachments and embeddings through it",
 			targets, buyer)
 	}
-	if targets := e.linkedTargets(t, survivor, "person"); len(targets) != 1 || targets[0] != buyer {
-		t.Errorf("the survivor's person links = %v, want the placement on its own record too", targets)
+	if targets := e.linkedTargets(t, survivor, "contact"); len(targets) != 1 || targets[0] != buyer {
+		t.Errorf("the survivor's contact links = %v, want the placement on its own record too", targets)
 	}
 }
 
-// Both rows sit on the same person, which is the ordinary case: the send linked
+// Both rows sit on the same contact, which is the ordinary case: the send linked
 // the counterparty and capture derived the same one. Copying the echo's link
 // would raise the uniqueness violation the absorb exists to answer, so the
 // survivor keeps the one it has and the echo keeps its own.
@@ -299,14 +299,14 @@ func TestAbsorbDoesNotDuplicateALinkTheSurvivorAlreadyHolds(t *testing.T) {
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
-	buyer := e.seedPerson(t, "Buyer")
-	e.link(t, survivor, "person", buyer)
-	e.link(t, echo, "person", buyer)
+	buyer := e.seedContact(t, "Buyer")
+	e.link(t, survivor, "contact", buyer)
+	e.link(t, echo, "contact", buyer)
 
 	e.reconcileAbsorbing(t, survivor)
 
-	if targets := e.linkedTargets(t, survivor, "person"); len(targets) != 1 || targets[0] != buyer {
-		t.Errorf("the survivor's person links = %v, want exactly one to the buyer %s", targets, buyer)
+	if targets := e.linkedTargets(t, survivor, "contact"); len(targets) != 1 || targets[0] != buyer {
+		t.Errorf("the survivor's contact links = %v, want exactly one to the buyer %s", targets, buyer)
 	}
 }
 
@@ -498,12 +498,12 @@ func TestAbsorbRePointsAQueuedCounterpartyReview(t *testing.T) {
 // mark, the cheaper grant became the cheaper way in. Two doors onto one act
 // must not disagree about who may perform it.
 //
-// A person link in the same body still lands on the create grant alone: the
+// A contact link in the same body still lands on the create grant alone: the
 // rule is about what a PROJECT link means, not about links in general.
 func TestFilingUnderAProjectNeedsTheUpdateGrantNotJustCreate(t *testing.T) {
 	e := setupSend(t)
 	project := e.seedProject(t, "Migration")
-	person := e.seedPerson(t, "Dieter")
+	contact := e.seedContact(t, "Dieter")
 
 	createOnly := principal.WithActor(
 		principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()),
@@ -513,7 +513,7 @@ func TestFilingUnderAProjectNeedsTheUpdateGrantNotJustCreate(t *testing.T) {
 				RoleKeys: []string{"rep"},
 				Objects: map[string]principal.ObjectGrant{
 					"activity": {Create: true, Read: true},
-					"person":   {Read: true},
+					"contact":  {Read: true},
 					"project":  {Read: true},
 				},
 				RowScope: principal.RowScopeAll,
@@ -534,9 +534,9 @@ func TestFilingUnderAProjectNeedsTheUpdateGrantNotJustCreate(t *testing.T) {
 	// project link, not about creating a row.
 	if _, _, err := store.LogActivity(createOnly, LogActivityInput{
 		Kind: "note", Subject: &ordinary,
-		Links: []ActivityLinkInput{{EntityType: "person", EntityID: person}},
+		Links: []ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	}); err != nil {
-		t.Errorf("logging an ordinary person-linked activity on the create grant failed: %v — the gate is meant to narrow one link type, not the verb", err)
+		t.Errorf("logging an ordinary contact-linked activity on the create grant failed: %v — the gate is meant to narrow one link type, not the verb", err)
 	}
 }
 
@@ -554,7 +554,7 @@ func (e *sendEnv) asAgent(scope principal.RowScope) context.Context {
 // An agent cannot mint the retention mark on the create path.
 //
 // Filing under a project classifies an activity as commercial correspondence:
-// write-once, monotonic, and removable only by a named person giving a written
+// write-once, monotonic, and removable only by a named contact giving a written
 // reason. relink_activity is confirm-first for a project destination for that
 // reason; the CREATE door reached the same write and five auto-execute tools
 // ride it, so a passport holding activity:update could mint one mark per call
@@ -598,20 +598,20 @@ func TestAnAgentCannotFileANewActivityUnderAProject(t *testing.T) {
 	}
 }
 
-// And the human path is untouched, which is the whole distinction: a person at
+// And the human path is untouched, which is the whole distinction: a contact at
 // a form has already decided, and the mark is theirs to write.
 func TestAHumanStillFilesANewActivityUnderAProject(t *testing.T) {
 	e := setupSend(t)
 	project := e.seedProject(t, "Migration")
 
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	subject := "Filed by a person"
+	subject := "Filed by a contact"
 	activity, _, err := store.LogActivity(e.as(principal.RowScopeAll), LogActivityInput{
 		Kind: "note", Subject: &subject,
 		Links: []ActivityLinkInput{{EntityType: "project", EntityID: project}},
 	})
 	if err != nil {
-		t.Fatalf("a person filing under a project: %v", err)
+		t.Fatalf("a contact filing under a project: %v", err)
 	}
 	var class *string
 	if err := e.owner.QueryRow(context.Background(),
@@ -619,6 +619,6 @@ func TestAHumanStillFilesANewActivityUnderAProject(t *testing.T) {
 		t.Fatalf("reading the class: %v", err)
 	}
 	if class == nil {
-		t.Error("a person filed under a project and no mark was written — the refusal above is too wide")
+		t.Error("a contact filed under a project and no mark was written — the refusal above is too wide")
 	}
 }

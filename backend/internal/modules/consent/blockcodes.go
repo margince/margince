@@ -28,7 +28,7 @@ const (
 	// BlockSuppressed is a live communication_suppression row — an objection, a
 	// statutory restriction, a subject's own request, or a hard bounce. A
 	// different legal fact from BlockWithdrawn: that one is a purpose-scoped
-	// consent state, this one binds by CATEGORY regardless of what the person
+	// consent state, this one binds by CATEGORY regardless of what the contact
 	// ever granted for this specific purpose.
 	BlockSuppressed = "suppressed"
 )

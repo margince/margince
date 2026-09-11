@@ -265,7 +265,7 @@ func TestAnAddressHoldCoversThatAddressAndNotItsDomain(t *testing.T) {
 	allowSharedPosture(t, e)
 	setPosture(t, env, e.Rep1, capturemod.PostureShared)
 
-	// An ADDRESS hold, not a domain one. Holding one person at a firm says
+	// An ADDRESS hold, not a domain one. Holding one contact at a firm says
 	// nothing about their colleagues — a seat holding their own lawyer has not
 	// asked to hide every message from that firm's billing desk.
 	holdCounterparty(t, e, e.Rep1, capturemod.HoldKindAddress, "anwalt@bigfirm.example")
@@ -689,8 +689,8 @@ func threadVerdictStatus(t *testing.T, e *integration.SearchEnv, user ids.UUID, 
 // once shared the word `explicitly_confidential`.
 //
 // A SENDER's subject-line marking is row-carried and survives an opening
-// verdict: a person marked that message, and no model and no later pass
-// overrules a person. A CLASSIFIER's answer of the same name is a judgement,
+// verdict: a contact marked that message, and no model and no later pass
+// overrules a contact. A CLASSIFIER's answer of the same name is a judgement,
 // and the seat whose mail it is may disagree with it.
 //
 // Sharing the word made the second behave like the first. The reported symptom:
@@ -886,7 +886,7 @@ func TestAnOwnerShareLiftsAVerdictHoldAndNothingElse(t *testing.T) {
 			got, reason)
 	}
 
-	// A COUNTERPARTY hold is this seat's standing decision about a person.
+	// A COUNTERPARTY hold is this seat's standing decision about a contact.
 	// Sharing one thread says nothing about whether they want that party's mail
 	// in a shared CRM.
 	holdCounterparty(t, e, e.Rep1, capturemod.HoldKindDomain, "ownerhold.example")

@@ -6,7 +6,7 @@ package company360
 // Who on our side can actually reach each contact.
 //
 // The V2 company page has to answer this per CONTACT rather than as a
-// contact × every-colleague matrix. A forty-person sales team makes the matrix
+// contact × every-colleague matrix. A forty-contact sales team makes the matrix
 // unreadable, and the reader's question is never "show me all the pairs" — it is
 // "who should make this call". So each contact carries the few colleagues worth
 // naming and a count of the rest.
@@ -19,7 +19,7 @@ package company360
 // The colleagues named here are live members only, by the same pair the roster
 // lists by (liveMemberWhere): recommending an intro from someone who left is
 // advice that cannot be taken. Their historical messages still count on the
-// timeline — the person is gone, what happened is not.
+// timeline — the contact is gone, what happened is not.
 
 import (
 	"context"
@@ -46,20 +46,20 @@ import (
 const routeCap = 3
 
 // contactRoutes resolves the internal routes for every contact the card placed,
-// keyed by person.
+// keyed by contact.
 //
 // ONE query for the whole contact set, not one per contact: the section already
 // has a fixed query budget, and a per-contact read is how a composite starts
 // costing more on the accounts that matter most.
 //
-// The contacts passed in have already passed the person row-scope gate — the
+// The contacts passed in have already passed the contact row-scope gate — the
 // card placed them — so the visibility question left here is about the COLLEAGUE
 // being named, which liveMemberWhere and the roster's own readability settle.
 // Reading a route means reading graph_interaction_edge, and an edge is derived
 // from an activity — the same claim graphourside.go makes before it touches the
 // same table, and it requires activity:read for exactly this reason. Without
-// that grant a reader with people:read alone would learn who spoke to whom and
-// when, through the people section, having been refused it everywhere else.
+// that grant a reader with contacts:read alone would learn who spoke to whom and
+// when, through the contacts section, having been refused it everywhere else.
 //
 // A caller who may not ask gets NO routes rather than an empty set: an empty
 // set is an answer ("nobody can reach them"), and answering that to someone who
@@ -95,11 +95,11 @@ func contactRoutes(
 	}
 
 	rows, err := tx.Query(ctx, `
-		SELECT e.person_id, u.id, u.display_name, e.last_at,
+		SELECT e.contact_id, u.id, u.display_name, e.last_at,
 		       e.count_90d, e.in_count_90d, e.out_count_90d
 		  FROM graph_interaction_edge e
 		  JOIN app_user u ON u.id = e.user_id AND `+liveMemberWhere+`
-		 WHERE e.person_id = ANY($1)`, contactIDs)
+		 WHERE e.contact_id = ANY($1)`, contactIDs)
 	if err != nil {
 		return nil, fmt.Errorf("company360: reading the contacts' internal routes: %w", err)
 	}
@@ -107,15 +107,15 @@ func contactRoutes(
 		route crmcontracts.Company360Route
 		score int
 	}
-	byPerson := map[ids.UUID][]scored{}
+	byContact := map[ids.UUID][]scored{}
 	for rows.Next() {
 		var (
-			personID, userID ids.UUID
-			displayName      string
-			lastAt           time.Time
-			in               relstrength.Inputs
+			contactID, userID ids.UUID
+			displayName       string
+			lastAt            time.Time
+			in                relstrength.Inputs
 		)
-		if err := rows.Scan(&personID, &userID, &displayName, &lastAt,
+		if err := rows.Scan(&contactID, &userID, &displayName, &lastAt,
 			&in.Count90d, &in.Inbound90d, &in.Outbound90d); err != nil {
 			return nil, fmt.Errorf("company360: scanning an internal route: %w", err)
 		}
@@ -126,7 +126,7 @@ func contactRoutes(
 		in.LastInteraction = &lastAt
 		strength := relstrength.Compute(in, now)
 		at := lastAt
-		byPerson[personID] = append(byPerson[personID], scored{
+		byContact[contactID] = append(byContact[contactID], scored{
 			route: crmcontracts.Company360Route{
 				UserId:            openapi_types.UUID(userID),
 				DisplayName:       displayName,
@@ -140,7 +140,7 @@ func contactRoutes(
 		return nil, fmt.Errorf("company360: iterating internal routes: %w", err)
 	}
 
-	for personID, found := range byPerson {
+	for contactID, found := range byContact {
 		// Strongest first, then most recent, then by name: the first two are
 		// the ranking a reader expects and the third only exists so two equal
 		// colleagues come back in a stable order rather than the scan's.
@@ -160,7 +160,7 @@ func contactRoutes(
 		for _, entry := range found[:min(len(found), routeCap)] {
 			top = append(top, entry.route)
 		}
-		routes[personID] = crmcontracts.Company360ContactRoutes{
+		routes[contactID] = crmcontracts.Company360ContactRoutes{
 			Top:       top,
 			Remainder: len(found) - len(top),
 			// Somebody has exchanged messages with them, so the account is not

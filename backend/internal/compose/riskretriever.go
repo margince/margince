@@ -6,7 +6,7 @@ package compose
 // Putting a deal's coverage risks into the assembled context (ADR-0078).
 //
 // The risk rules live in compose/network because every one of them joins deals,
-// people and the interaction projection, and a module never imports a sibling.
+// contacts and the interaction projection, and a module never imports a sibling.
 // The retriever lives in search. So the assistant summarising a deal could see
 // its timeline and its related records, and could not see that the account has
 // been silent for six weeks or that the champion has left — the two facts a

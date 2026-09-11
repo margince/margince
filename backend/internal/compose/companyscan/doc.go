@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package companyscan is the account scan: the model's reading of one account
-// for one reader, saying what needs a person and quoting the words it read.
+// for one reader, saying what needs a contact and quoting the words it read.
 //
 //	Tables owned: company_scan (the per-user scan row: the read in flight and
 //	the last findings that settled).

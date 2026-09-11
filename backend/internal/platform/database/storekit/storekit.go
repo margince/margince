@@ -51,9 +51,9 @@ func CapturedBy(ctx context.Context) (string, error) {
 // caller named, else the human behind the call. A record someone creates by
 // hand is theirs until they hand it on — an ownerless row would be every
 // seat's to change (the write arm admits a null owner) and, under an own
-// scope on a commercial table, invisible to the very person who made it.
+// scope on a commercial table, invisible to the very contact who made it.
 // A principal with no human behind it (system, a bare connector) leaves the
-// row ownerless, which is the honest answer for a row no person made.
+// row ownerless, which is the honest answer for a row no contact made.
 func OwnerOrActor(ctx context.Context, owner *ids.UserID) *ids.UserID {
 	if owner != nil {
 		return owner

@@ -28,7 +28,7 @@ import (
 )
 
 var shareableRecordTypes = map[string]bool{
-	"person": true, "company": true, "deal": true, "lead": true, "project": true,
+	"contact": true, "company": true, "deal": true, "lead": true, "project": true,
 }
 
 const grantColumns = `id, record_type, record_id, subject_type, subject_id, access, granted_by, reason, expires_at, created_at`
@@ -151,7 +151,7 @@ func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (g
 		if !subjectExists {
 			return apperrors.ErrNotFound
 		}
-		// Two rules bind a grant and they judge different people.
+		// Two rules bind a grant and they judge different contacts.
 		//
 		// Scope-intersection (ADR-0039) judges the GRANTOR, at every access
 		// level. EnsureLinkTarget above is satisfied by the grant arm, so a
@@ -320,14 +320,14 @@ func refuseWriteGrantToReadSeat(ctx context.Context, tx pgx.Tx, in CreateGrantIn
 // asserting one does (ADR-0039's scope-intersection rule, EnsureCanGrant):
 // otherwise anyone the record was ever shared with — read-only — could delete a
 // colleague's `write` grant on it, which is not an escalation but is a way to
-// take work away from people who are doing it. The write probe is what stops
+// take work away from contacts who are doing it. The write probe is what stops
 // that, and it keeps the read half's 404 first, so a caller who cannot see the
 // record still learns nothing from the shape of the refusal.
 //
 // The one arm that is NOT about authority over the record is a subject
 // declining their own share. That was possible before this rule and stays
 // possible: the grant names them, taking it away costs nobody anything, and
-// nothing else in the product lets a person get out from under a share they did
+// nothing else in the product lets a contact get out from under a share they did
 // not ask for. A TEAM grant is not covered — its subject is the team, not the
 // member reading it — so removing one is the record's business.
 func mayRevoke(ctx context.Context, tx pgx.Tx, actor principal.Principal, grant grantRow) error {

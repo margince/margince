@@ -26,7 +26,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -43,7 +43,7 @@ const (
 // scrapeEngine stages a per-company enrichment over the shared extractor.
 type scrapeEngine struct {
 	extract   evidenceExtractor
-	people    *people.Store
+	contacts  *contacts.Store
 	approvals *approvals.Service
 }
 
@@ -55,7 +55,7 @@ func (e *scrapeEngine) Propose(ctx context.Context, companyID ids.UUID, override
 	if rawURL == "" {
 		var err error
 		// EnrichTargetURL enforces visibility AND yields the domain.
-		rawURL, err = e.people.EnrichTargetURL(ctx, ids.From[ids.CompanyKind](companyID))
+		rawURL, err = e.contacts.EnrichTargetURL(ctx, ids.From[ids.CompanyKind](companyID))
 		if err != nil {
 			return crmcontracts.EnrichmentProposal{}, err
 		}
@@ -63,7 +63,7 @@ func (e *scrapeEngine) Propose(ctx context.Context, companyID ids.UUID, override
 		// An override skips the domain lookup, so visibility must be proven
 		// on its own — reading the company row-scoped 404s a hidden id before any
 		// egress happens on the caller's behalf.
-		if _, err := e.people.GetCompany(ctx, ids.From[ids.CompanyKind](companyID), storekit.LiveOnly); err != nil {
+		if _, err := e.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](companyID), storekit.LiveOnly); err != nil {
 			return crmcontracts.EnrichmentProposal{}, err
 		}
 	}
@@ -159,7 +159,7 @@ func (h scrapeHandlers) ScrapeCompany(w http.ResponseWriter, r *http.Request, id
 				Code:   companyUnreadable,
 				Detail: "Couldn't read enough from this company's site. Retry or add a URL.",
 			})
-		case errors.Is(err, people.ErrNoEnrichTarget):
+		case errors.Is(err, contacts.ErrNoEnrichTarget):
 			httperr.Write(w, r, &httperr.DetailedError{
 				Status: http.StatusUnprocessableEntity,
 				Code:   companyUnreadable,

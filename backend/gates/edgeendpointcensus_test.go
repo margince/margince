@@ -344,7 +344,7 @@ func TestTheRelationshipExportTestsEveryEndpointTheTableHas(t *testing.T) {
 
 // endpointColumnsInTheExport reads the FIRST string of each element in the
 // endpoint list inside relationshipExportScope. The elements are unkeyed
-// (`{"person_id", "person"}`), so there is no field name to match on — position
+// (`{"contact_id", "contact"}`), so there is no field name to match on — position
 // is the contract, and the column is first.
 func endpointColumnsInTheExport(t *testing.T) map[string]bool {
 	t.Helper()

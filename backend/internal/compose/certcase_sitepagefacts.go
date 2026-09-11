@@ -31,9 +31,9 @@ package compose
 // value. Facts are what this lane is named for and what the deep read stores as
 // company facts, and their vocabulary is the closed menu the schema enum
 // offers — which is what lets an unanswerable expectation be named at Prepare
-// instead of measured as a zero. The same call carries the people and entity
+// instead of measured as a zero. The same call carries the contacts and entity
 // lanes for the kinds whose menu asks for them, and every refusal in those lanes
-// reaches the Detail, so a fabricated person or a sibling entity's address shows
+// reaches the Detail, so a fabricated contact or a sibling entity's address shows
 // up in the record.
 //
 // It is a subset claim, never an inventory: one page grounds more than a
@@ -52,7 +52,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -205,7 +205,7 @@ func refuseUngroundableFacts(
 // does not decide the verdict. Every other field states one value and is held to
 // all of it.
 func factIdentity(field, value string) string {
-	if people.CompanyFactMultiValue[field] {
+	if contacts.CompanyFactMultiValue[field] {
 		return factName(value)
 	}
 	return strings.TrimSpace(value)
@@ -247,14 +247,14 @@ func (c *sitePageFactsCase) Run(ctx context.Context, completer aitasks.Completer
 //
 // A reply is unusable when the fact lane refused everything it claimed there: an
 // unreadable answer, a field off this page's menu, a value the cited passage does
-// not name. Claiming NOTHING — no fact, no person, no entity, and nothing for
+// not name. Claiming NOTHING — no fact, no contact, no entity, and nothing for
 // any lane to refuse — is the opposite event and is reported as an abstention,
 // because omission is what this prompt asks for when the page states nothing:
 // the lane stores no fact and the deep read carries on, exactly as it does after
 // a page that grounded ten.
 //
 // The abstention is asked of every lane the call carries, not of the facts
-// alone. A reply that named three people states plenty; that the scenario grades
+// alone. A reply that named three contacts states plenty; that the scenario grades
 // facts is a fact about the scenario, and calling such a reply silent would put
 // the word "abstained" on a record for a model that spoke.
 //
@@ -263,9 +263,9 @@ func (c *sitePageFactsCase) Run(ctx context.Context, completer aitasks.Completer
 // the product keeps.
 func (c *sitePageFactsCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	result, dropped := gatePageFacts(trace.Output, c.page, c.menu, c.idx)
-	// Every refusal reaches the Detail whatever the result, the people and entity
+	// Every refusal reaches the Detail whatever the result, the contacts and entity
 	// lanes included: a reply that grounded the expected facts while inventing a
-	// person is not the clean run it would otherwise look like.
+	// contact is not the clean run it would otherwise look like.
 	detail := gateRefusals(dropped)
 	if len(result.facts) == 0 && factLaneRefused(dropped) {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: strings.Join(detail, "; ")}
@@ -305,14 +305,14 @@ func (c *sitePageFactsCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 // that declined to fabricate.
 func pageFactsReplyIsSilent(result pageFactsResult, dropped []droppedFinding) bool {
 	return len(result.facts) == 0 &&
-		len(result.people) == 0 &&
+		len(result.contacts) == 0 &&
 		len(result.entities) == 0 &&
 		len(dropped) == 0
 }
 
 // factLaneRefused answers whether the FACT lane refused anything, which is what
 // separates a reply the gate emptied from one that stated no fact. A refusal in
-// the people or entity lane says nothing about either.
+// the contacts or entity lane says nothing about either.
 func factLaneRefused(dropped []droppedFinding) bool {
 	for _, d := range dropped {
 		if d.Lane == lanePageFacts {
@@ -328,7 +328,7 @@ func factLaneRefused(dropped []droppedFinding) bool {
 // under one name while a scenario names one of them. The row the scenario names
 // wins where the reply carries it; otherwise the first grounded row stands, so a
 // disagreement still reports what the page did say instead of an absence.
-func groundedFactIdentities(facts []people.DeepReadFact, expected map[string]string) map[string]string {
+func groundedFactIdentities(facts []contacts.DeepReadFact, expected map[string]string) map[string]string {
 	out := make(map[string]string, len(facts))
 	for _, f := range facts {
 		identity := factIdentity(f.Field, f.Value)

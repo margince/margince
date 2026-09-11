@@ -21,8 +21,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -45,7 +45,7 @@ func setupBriefJob(t *testing.T) *briefJobEnv {
 	// installation-settings read is what the base-currency and timezone lookups need.
 	b.grantEveryRepTheBriefsReads(t)
 	b.worker = &briefGenerateWorker{
-		engine: briefs.NewBriefEngine(e.Pool, people.NewStore(InstallationDB(e.Pool))),
+		engine: briefs.NewBriefEngine(e.Pool, contacts.NewStore(InstallationDB(e.Pool))),
 		pool:   e.Pool,
 		users:  identity.NewService(e.Pool),
 		log:    slog.Default(),

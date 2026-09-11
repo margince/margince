@@ -69,7 +69,7 @@ func TestTheProjectSummaryNamesTheProjectBeforeTheDayCount(t *testing.T) {
 }
 
 // An unshipped language answers English rather than an empty set, because the
-// language comes off a settings row a person can edit by hand.
+// language comes off a settings row a contact can edit by hand.
 func TestAnUnknownLanguageFallsBackToEnglish(t *testing.T) {
 	said := signalSummaryCopyFor(textlang.Lang("kl"))
 	if said.ghostedThread != signalSummaryByLang[textlang.English].ghostedThread {

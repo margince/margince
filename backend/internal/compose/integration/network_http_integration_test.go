@@ -24,16 +24,16 @@ type networkColleagueDTO struct {
 	Interactions90d int    `json:"interactions_90d"`
 }
 
-type personNetworkDTO struct {
-	PersonID   string                `json:"person_id"`
+type contactNetworkDTO struct {
+	ContactID  string                `json:"contact_id"`
 	Colleagues []networkColleagueDTO `json:"colleagues"`
 }
 
 type coverageRiskDTO struct {
-	Kind      string   `json:"kind"`
-	Summary   string   `json:"summary"`
-	PersonIDs []string `json:"person_ids"`
-	UserIDs   []string `json:"user_ids"`
+	Kind       string   `json:"kind"`
+	Summary    string   `json:"summary"`
+	ContactIDs []string `json:"contact_ids"`
+	UserIDs    []string `json:"user_ids"`
 	// A pointer, so a test can tell "no day count sent" from "zero days" —
 	// which is the whole distinction the field exists to keep.
 	DaysSinceTouch *int `json:"days_since_touch"`
@@ -46,43 +46,43 @@ type dealCoverageDTO struct {
 	Risks        []coverageRiskDTO `json:"risks"`
 }
 
-func TestPersonNetworkAnswersHonestlyWhenNobodyKnowsThem(t *testing.T) {
+func TestContactNetworkAnswersHonestlyWhenNobodyKnowsThem(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var person AnyMap
-	if status := e.Call(t, "POST", "/v1/people",
-		AnyMap{"full_name": "Unknown Contact"}, nil, &person); status != http.StatusCreated {
+	var contact AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts",
+		AnyMap{"full_name": "Unknown Contact"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating the contact: %d", status)
 	}
-	id, _ := person["id"].(string)
+	id, _ := contact["id"].(string)
 
 	// A contact nobody has spoken to answers 200 with an EMPTY list, not 404
 	// and not an error. "The account is cold" is the useful answer here, and
 	// the surface has to be able to say it.
-	var got personNetworkDTO
-	if status := e.Call(t, "GET", "/v1/people/"+id+"/network", nil, nil, &got); status != http.StatusOK {
+	var got contactNetworkDTO
+	if status := e.Call(t, "GET", "/v1/contacts/"+id+"/network", nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("network status = %d, want 200", status)
 	}
-	if got.PersonID != id {
-		t.Errorf("payload names person %s, want %s", got.PersonID, id)
+	if got.ContactID != id {
+		t.Errorf("payload names contact %s, want %s", got.ContactID, id)
 	}
 	if len(got.Colleagues) != 0 {
 		t.Errorf("a contact with no interactions has %d colleagues", len(got.Colleagues))
 	}
 }
 
-func TestPersonNetworkHidesAContactTheCallerCannotRead(t *testing.T) {
+func TestContactNetworkHidesAContactTheCallerCannotRead(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	// A person id that does not exist is indistinguishable from one this
+	// A contact id that does not exist is indistinguishable from one this
 	// caller may not see — existence is not disclosed, here as everywhere.
 	var body AnyMap
 	if status := e.Call(t, "GET",
-		"/v1/people/019fb000-0000-7000-8000-00000000dead/network", nil, nil, &body); status != http.StatusNotFound {
+		"/v1/contacts/019fb000-0000-7000-8000-00000000dead/network", nil, nil, &body); status != http.StatusNotFound {
 		t.Errorf("an unknown contact answered %d, want 404 — a network read must not "+
-			"confirm that a record exists when the person read would not", status)
+			"confirm that a record exists when the contact read would not", status)
 	}
 }
 
@@ -147,7 +147,7 @@ func TestDealCoverageHidesADealTheCallerCannotRead(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	// The coverage payload names the deal's people, so a caller who cannot
+	// The coverage payload names the deal's contacts, so a caller who cannot
 	// read the deal must not learn who sits on it.
 	var body AnyMap
 	if status := e.Call(t, "GET",
@@ -161,9 +161,9 @@ func TestDealCoverageDistinguishesADepartedChampionFromADepartedStakeholder(t *t
 	e.BootstrapWorkspace(t)
 	company, deal := dealAtAnAccount(t, e, "Bär Pharma", "Renewal")
 
-	// Two people who used to work there and one who still does. The rule
+	// Two contacts who used to work there and one who still does. The rule
 	// demands EVIDENCE of a departure — an ended employment plus no live one —
-	// so the third person proves the flag is about leaving and not about
+	// so the third contact proves the flag is about leaving and not about
 	// having no employment row.
 	gone := contactAt(t, e, company, "Departed Champion", "2026-01-31")
 	alsoGone := contactAt(t, e, company, "Departed Legal", "2026-02-28")
@@ -178,8 +178,8 @@ func TestDealCoverageDistinguishesADepartedChampionFromADepartedStakeholder(t *t
 	if champion == nil {
 		t.Fatalf("the champion left the account and no champion_left risk fired: %+v", risks)
 	}
-	if len(champion.PersonIDs) != 1 || champion.PersonIDs[0] != gone {
-		t.Errorf("champion_left names %v, want only the departed champion %s", champion.PersonIDs, gone)
+	if len(champion.ContactIDs) != 1 || champion.ContactIDs[0] != gone {
+		t.Errorf("champion_left names %v, want only the departed champion %s", champion.ContactIDs, gone)
 	}
 
 	stakeholder := findRisk(risks, "stakeholder_left")
@@ -187,9 +187,9 @@ func TestDealCoverageDistinguishesADepartedChampionFromADepartedStakeholder(t *t
 		t.Fatalf("a non-champion seat left the account and no stakeholder_left risk fired: %+v", risks)
 	}
 	// The colleague who still works there must NOT appear. A departure list
-	// that swept in every seat would put a resignation on a person who is at
+	// that swept in every seat would put a resignation on a contact who is at
 	// their desk.
-	for _, id := range stakeholder.PersonIDs {
+	for _, id := range stakeholder.ContactIDs {
 		if id == stayed {
 			t.Errorf("a stakeholder who still works at the account was reported as having left")
 		}
@@ -208,9 +208,9 @@ func TestDealCoverageDoesNotCallARehiredStakeholderDeparted(t *testing.T) {
 	// a promotion. The closed row is real and so is the live one, and only the
 	// live one decides: flagging this would announce a resignation every time
 	// somebody changed job title.
-	person := contactAt(t, e, company, "Promoted Person", "2026-01-31")
-	employ(t, e, person, company, "2026-02-01", "")
-	stakeholder(t, e, deal, person, "champion")
+	contact := contactAt(t, e, company, "Promoted Contact", "2026-01-31")
+	employ(t, e, contact, company, "2026-02-01", "")
+	stakeholder(t, e, deal, contact, "champion")
 
 	risks := coverageRisks(t, e, deal)
 	if findRisk(risks, "champion_left") != nil {
@@ -332,24 +332,24 @@ func dealAtAnAccount(t *testing.T, e *apptest.AppEnv, companyName, dealName stri
 // shared value keeps the fixtures about the thing under test.
 const hiredOn = "2020-01-01"
 
-// contactAt creates a person and their employment at the account. An empty
+// contactAt creates a contact and their employment at the account. An empty
 // endedAt means they still work there.
 func contactAt(t *testing.T, e *apptest.AppEnv, company, name, endedAt string) string {
 	t.Helper()
-	var person AnyMap
-	if status := e.Call(t, "POST", "/v1/people",
-		AnyMap{"full_name": name}, nil, &person); status != http.StatusCreated {
+	var contact AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts",
+		AnyMap{"full_name": name}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating %s: %d", name, status)
 	}
-	id, _ := person["id"].(string)
+	id, _ := contact["id"].(string)
 	employ(t, e, id, company, hiredOn, endedAt)
 	return id
 }
 
-func employ(t *testing.T, e *apptest.AppEnv, person, company, startedAt, endedAt string) {
+func employ(t *testing.T, e *apptest.AppEnv, contact, company, startedAt, endedAt string) {
 	t.Helper()
 	body := AnyMap{
-		"kind": "employment", "person_id": person, "company_id": company,
+		"kind": "employment", "contact_id": contact, "company_id": company,
 		"started_at": startedAt, "source": "ui",
 	}
 	if endedAt != "" {
@@ -361,11 +361,11 @@ func employ(t *testing.T, e *apptest.AppEnv, person, company, startedAt, endedAt
 	}
 }
 
-func stakeholder(t *testing.T, e *apptest.AppEnv, deal, person, role string) {
+func stakeholder(t *testing.T, e *apptest.AppEnv, deal, contact, role string) {
 	t.Helper()
 	var out AnyMap
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "deal_stakeholder", "deal_id": deal, "person_id": person,
+		"kind": "deal_stakeholder", "deal_id": deal, "contact_id": contact,
 		"role": role, "source": "ui",
 	}, nil, &out); status != http.StatusCreated {
 		t.Fatalf("seating the %s stakeholder: %d (%v)", role, status, out)

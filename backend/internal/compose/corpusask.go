@@ -163,7 +163,7 @@ func CorpusAskRequest(question string, passages []knowledge.Passage, lang string
 // document's, which is the behaviour a reader of a German handbook asking in
 // German needs.
 //
-// The voice rule is composed for the sentences, which a person reads as prose.
+// The voice rule is composed for the sentences, which a reader reads as prose.
 //
 // And the FENCE RULE, which is the one that matters most here and was missing.
 // Minting a fence and wrapping the passages in it does nothing on its own: the

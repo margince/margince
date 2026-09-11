@@ -65,7 +65,7 @@ func ensureAttachmentParentVisible(ctx context.Context, tx pgx.Tx, entityType st
 // Out of scope still reads as ErrNotFound; a readable parent the caller may not
 // change answers ErrPermissionDenied.
 //
-// It does not require a deal, person or company parent to be LIVE, and
+// It does not require a deal, contact or company parent to be LIVE, and
 // that is the point of it being separate from the upload's gate below.
 // Archiving a record must not strand the files on it: removing a misfiled
 // document, relabelling one, and finishing a reading already in flight all run
@@ -93,7 +93,7 @@ func ensureAttachmentParentWritable(ctx context.Context, tx pgx.Tx, entityType s
 //
 // The activity arm needs no separate spelling — EnsureActivityWritable already
 // reaches EnsureActivityContentVisibleLive, so that arm has always been live and
-// the two gates differ only for a deal, person or company parent.
+// the two gates differ only for a deal, contact or company parent.
 func ensureAttachmentParentWritableLive(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
 	if entityType == "activity" {
 		return auth.EnsureActivityWritable(ctx, tx, id)
@@ -464,11 +464,11 @@ func ensureContractFileable(ctx context.Context, tx pgx.Tx, contractID *ids.UUID
 // depends on — a file uploaded without it is invisible to the account view
 // forever, and nothing about the upload looks wrong when that happens.
 //
-// A PERSON rolls up to nothing on purpose. person→company runs through
+// A CONTACT rolls up to nothing on purpose. contact→company runs through
 // `relationship` with kind 'employment', which is many-valued: a contact who
 // works at two companies has no single account, and picking one would file the
 // document under a company the uploader never named. A null here means the file
-// is reachable from the person, not that it was lost.
+// is reachable from the contact, not that it was lost.
 func accountRollUp(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (ids.UUID, bool, error) {
 	switch entityType {
 	case linkEntityCompany:

@@ -8,7 +8,7 @@ package integration
 // Fulfilling an erasure DSR against the REAL privacy.Eraser — exactly the
 // composition compose/server.go wires in production (consent.Handlers.WithEraser
 // over privacy.NewEraser) — rather than the recordingEraser fake the rest of
-// modules/consent's own DSR suite drives. ErasePerson anonymizes a person row IN
+// modules/consent's own DSR suite drives. EraseContact anonymizes a contact row IN
 // PLACE and never deletes it, so both cases here turn on a fact only the real
 // eraser can produce: a genuine ErrNotFound for a subject_ref naming nobody, and a
 // genuine nil on a harmless repeat scrub of an already-erased row. A fake can only
@@ -83,7 +83,7 @@ func dsrValidationField(t *testing.T, body []byte) string {
 
 // TestFulfillErasureHTTPRefusesASyntacticallyValidButNonexistentSubject drives
 // the real privacy.Eraser (not a fake that always succeeds): ids.Parse proves
-// syntax only, so a well-formed UUID that names no person in this workspace must
+// syntax only, so a well-formed UUID that names no contact in this workspace must
 // be refused exactly like a subject_ref that never parsed at all, on the genuine
 // "SELECT ... WHERE id = $1 found no row" ErrNotFound the real eraser returns —
 // and the request must stay open, never certify a deletion that never ran.
@@ -109,8 +109,8 @@ func TestFulfillErasureHTTPRefusesASyntacticallyValidButNonexistentSubject(t *te
 }
 
 // TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments is the load-bearing
-// proof for the premise the ErrNotFound-refusal path rests on: ErasePerson
-// anonymizes a person row IN PLACE rather than deleting it, so fulfilling the SAME
+// proof for the premise the ErrNotFound-refusal path rests on: EraseContact
+// anonymizes a contact row IN PLACE rather than deleting it, so fulfilling the SAME
 // erasure request a second time must keep succeeding — the second call finds the
 // (now-anonymized) row exactly like the first did, re-runs the scrub harmlessly,
 // and returns nil, never ErrNotFound. Only the real eraser can prove this; a fake
@@ -119,12 +119,12 @@ func TestFulfillErasureHTTPRefusesASyntacticallyValidButNonexistentSubject(t *te
 // blocking a re-fulfil idempotency actually requires to succeed.
 func TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Erasure Subject", nil)
-	h, _, id := setupErasureDSR(t, e, personID.String())
+	contactID := e.SeedContact(t, "Erasure Subject", nil)
+	h, _, id := setupErasureDSR(t, e, contactID.String())
 
 	first := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","resolution":"verified in person"}`)
 	if first.Code != http.StatusOK {
-		t.Fatalf("first fulfilment of a real person must succeed, got %d: %s", first.Code, first.Body)
+		t.Fatalf("first fulfilment of a real contact must succeed, got %d: %s", first.Code, first.Body)
 	}
 
 	// The request is already "fulfilled"; validateDSRUpdate treats a status
@@ -132,13 +132,13 @@ func TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments(t *testing.T) {
 	// to submit again — and it re-triggers the erase side effect.
 	second := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled"}`)
 	if second.Code != http.StatusOK {
-		t.Fatalf("re-fulfilling an already-erased person must still succeed (idempotent), got %d: %s",
+		t.Fatalf("re-fulfilling an already-erased contact must still succeed (idempotent), got %d: %s",
 			second.Code, second.Body)
 	}
 }
 
 // gatedEraser wraps the real eraser so the test can act WHILE a scrub is in
-// flight: it signals entry, blocks until released, then delegates. ErasePerson
+// flight: it signals entry, blocks until released, then delegates. EraseContact
 // runs only after FulfilErasure has already taken the request's FOR UPDATE
 // lock, so "inside the gate" is exactly the window the lock must span.
 type gatedEraser struct {
@@ -147,10 +147,10 @@ type gatedEraser struct {
 	release chan struct{}
 }
 
-func (g *gatedEraser) ErasePerson(ctx context.Context, personID ids.UUID, reason string) error {
+func (g *gatedEraser) EraseContact(ctx context.Context, contactID ids.UUID, reason string) error {
 	close(g.entered)
 	<-g.release
-	return g.inner.ErasePerson(ctx, personID, reason)
+	return g.inner.EraseContact(ctx, contactID, reason)
 }
 
 // errLockHeld marks the one expected failure of the probe below — the row is
@@ -200,11 +200,11 @@ func dsrRowLockHeld(t *testing.T, e *Env, id ids.UUID) bool {
 // too fast to catch the window at all.
 func TestFulfillErasureHoldsTheRequestLockedAcrossTheErase(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Locked Subject", nil)
+	contactID := e.SeedContact(t, "Locked Subject", nil)
 
 	store := consent.NewStore(e.DB())
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
-		Kind: "erasure", SubjectRef: personID.String(), DueAt: time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC),
+		Kind: "erasure", SubjectRef: contactID.String(), DueAt: time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC),
 	})
 	if err != nil {
 		t.Fatalf("creating erasure DSR: %v", err)

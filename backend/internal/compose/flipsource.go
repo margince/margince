@@ -19,17 +19,17 @@ import (
 // and the stage catalog cannot drift on a string literal.
 const (
 	flipObjectCompany  = "company"
-	flipObjectPerson   = "person"
+	flipObjectContact  = "contact"
 	flipObjectLead     = "lead"
 	flipObjectDeal     = "deal"
 	flipObjectActivity = "activity"
 )
 
 // flipImportOrder is the canonical import order: parents before
-// dependents (companies before the persons and deals that reference
+// dependents (companies before the contacts and deals that reference
 // them; activities last so every link target already exists).
 var flipImportOrder = []string{
-	flipObjectCompany, flipObjectPerson, flipObjectLead, flipObjectDeal, flipObjectActivity,
+	flipObjectCompany, flipObjectContact, flipObjectLead, flipObjectDeal, flipObjectActivity,
 }
 
 type mirrorFlipSource struct {

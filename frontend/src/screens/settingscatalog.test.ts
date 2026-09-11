@@ -239,7 +239,7 @@ describe("what each page lets a reader change", () => {
     "model-calls": "same-as-requires",
 
     privacy:
-      "all(full-seat, any(any(consent_config:create), any(retention_policy:update, retention_policy:create), retention_policy:delete, any(privacy_request:update), any(person:update)))",
+      "all(full-seat, any(any(consent_config:create), any(retention_policy:update, retention_policy:create), retention_policy:delete, any(privacy_request:update), any(contact:update)))",
     audit: "same-as-requires",
     // The reindex takes the seat; watching the queue beside it is a read, and
     // watching a stalled queue is an operator acting.
@@ -312,7 +312,7 @@ describe("who may open what", () => {
   const rep = meFixture({
     roles: ["rep"],
     allow: {
-      person: ["read"],
+      contact: ["read"],
       pipeline: ["read"],
       custom_field: ["read"],
       tag: ["read"],
@@ -363,14 +363,14 @@ describe("who may open what", () => {
   // but a directory is not an administration page, and a reader who may not
   // invite, change a role or switch a seat off has nothing to do on either.
   it("withholds members from a reader holding no user_admin", () => {
-    expect(visibleIds(readsOnly("person"))).not.toContain("members");
+    expect(visibleIds(readsOnly("contact"))).not.toContain("members");
     // Any authority over the roster opens it, and the READ is one of them —
     // it is what carries the role keys and the widened status view.
     expect(visibleIds(readsOnly("user_admin"))).toContain("members");
   });
 
   it("withholds teams from a reader holding neither team verb nor the roster read", () => {
-    expect(visibleIds(readsOnly("person"))).not.toContain("teams");
+    expect(visibleIds(readsOnly("contact"))).not.toContain("teams");
     // The team object's READ is not one of its arms: teams.go takes create and
     // update, and nothing on the page answers to a `team_admin:read`.
     expect(visibleIds(readsOnly("team_admin"))).not.toContain("teams");
@@ -444,7 +444,7 @@ describe("who may open what", () => {
   // The four pages whose subject is the installation's own configuration. Each
   // was reachable by a rep because the grant that opened it is a READ every
   // seeded role holds — the base currency, what an automation ran, whether
-  // capture is working, the person record behind the purposes list.
+  // capture is working, the contact record behind the purposes list.
   //
   // Every absence below is paired with the presence that proves the case is not
   // vacuous: an authority that refused everyone would pass the first half
@@ -465,35 +465,35 @@ describe("who may open what", () => {
   // Privacy is the fourth page but not the same shape: its arms stay READS,
   // because `retention_policy` and `privacy_request` are held by nobody below
   // admin and ops — the read already says whose page it is. What was wrong was
-  // the third arm, `person:read`, which every seeded role holds and which is
+  // the third arm, `contact:read`, which every seeded role holds and which is
   // why a rep opened the governance page at all.
   //
-  // The purposes card still reads through `person` server-side and must keep
-  // doing so; it feeds the Person 360. A card narrower than its page withholds
+  // The purposes card still reads through `contact` server-side and must keep
+  // doing so; it feeds the Contact 360. A card narrower than its page withholds
   // itself, which is the safe direction.
   // Management is seeded `consent_config:read` and NOTHING else on this page —
-  // no retention, no request queue. Dropping the `person` arm without this pair
+  // no retention, no request queue. Dropping the `contact` arm without this pair
   // locked the one role deliberately granted the consent vocabulary out of the
   // only page that renders it. The pair is what keeps them in without letting a
-  // rep back: a rep holds `person` and no consent grant at all.
-  it("opens privacy to the consent vocabulary's own reader, and to nobody else holding person", () => {
+  // rep back: a rep holds `contact` and no consent grant at all.
+  it("opens privacy to the consent vocabulary's own reader, and to nobody else holding contact", () => {
     const management = meFixture({
       roles: ["management"],
-      allow: { person: ["read"], consent_config: ["read"] },
+      allow: { contact: ["read"], consent_config: ["read"] },
     });
     expect(visibleSettingsPages(management).map((page) => page.id)).toContain(
       "privacy",
     );
     // The same reader without the consent grant is a rep, and stays out.
-    expect(visibleIds(readsOnly("person"))).not.toContain("privacy");
+    expect(visibleIds(readsOnly("contact"))).not.toContain("privacy");
     // And the consent grant alone does not do it either: the purposes list is
-    // read through `person`, so a holder without that read would open a page
+    // read through `contact`, so a holder without that read would open a page
     // whose only card is withheld.
     expect(visibleIds(readsOnly("consent_config"))).not.toContain("privacy");
   });
 
-  it("withholds privacy from a rep holding person, and opens it to a retention reader", () => {
-    expect(visibleIds(readsOnly("person"))).not.toContain("privacy");
+  it("withholds privacy from a rep holding contact, and opens it to a retention reader", () => {
+    expect(visibleIds(readsOnly("contact"))).not.toContain("privacy");
     expect(visibleIds(readsOnly("retention_policy"))).toContain("privacy");
     expect(visibleIds(readsOnly("privacy_request"))).toContain("privacy");
   });
@@ -615,18 +615,22 @@ describe("the reset page needs the deployment's consent as well as the grant", (
 describe("holds — the evaluator the four surfaces share", () => {
   it("denies a grant arm while /me is unresolved", () => {
     expect(
-      holds({ kind: "grant", object: "person", action: "read" }, undefined),
+      holds({ kind: "grant", object: "contact", action: "read" }, undefined),
     ).toBe(false);
   });
 
   it("reads `any` as at-least-one and `all` as every", () => {
-    const me = meFixture({ allow: { person: ["read"] } });
-    const person = { kind: "grant", object: "person", action: "read" } as const;
+    const me = meFixture({ allow: { contact: ["read"] } });
+    const contact = {
+      kind: "grant",
+      object: "contact",
+      action: "read",
+    } as const;
     const deal = { kind: "grant", object: "deal", action: "read" } as const;
 
-    expect(holds({ kind: "any", of: [person, deal] }, me)).toBe(true);
-    expect(holds({ kind: "all", of: [person, deal] }, me)).toBe(false);
-    expect(holds({ kind: "all", of: [person] }, me)).toBe(true);
+    expect(holds({ kind: "any", of: [contact, deal] }, me)).toBe(true);
+    expect(holds({ kind: "all", of: [contact, deal] }, me)).toBe(false);
+    expect(holds({ kind: "all", of: [contact] }, me)).toBe(true);
   });
 });
 
@@ -696,7 +700,7 @@ describe("a page and its cards ask the same question", () => {
       opens("audit", { roles: ["management"], allow: { audit_log: ["read"] } }),
     ).toBe(true);
     expect(
-      opens("audit", { roles: ["rep"], allow: { person: ["read"] } }),
+      opens("audit", { roles: ["rep"], allow: { contact: ["read"] } }),
     ).toBe(false);
   });
 
@@ -748,10 +752,10 @@ describe("a page and its cards ask the same question", () => {
   });
 
   // The purposes card is what `consent_config` administers, but the object
-  // buys no READ — the list stays on `person` (consent/store.go ListPurposes)
+  // buys no READ — the list stays on `contact` (consent/store.go ListPurposes)
   // and only the writes moved. A page opening on it would be a page whose every
   // card is withheld. Invisible in the seeded roles, where every consent holder
-  // also holds `person:read`; a custom role is where it would have shown.
+  // also holds `contact:read`; a custom role is where it would have shown.
   it("does not open privacy on a grant that reads nothing on it", () => {
     expect(
       opens("privacy", {
@@ -759,12 +763,12 @@ describe("a page and its cards ask the same question", () => {
         allow: { consent_config: ["read", "create"] },
       }),
     ).toBe(false);
-    // Nor on `person`, which every seeded role holds: the purposes card reads
+    // Nor on `contact`, which every seeded role holds: the purposes card reads
     // through it, but a page that opened on it was the whole workspace's
     // governance page. The arms that DO open it are the two objects nobody
     // below admin and ops holds at all.
     expect(
-      opens("privacy", { roles: ["rep"], allow: { person: ["read"] } }),
+      opens("privacy", { roles: ["rep"], allow: { contact: ["read"] } }),
     ).toBe(false);
     expect(
       opens("privacy", {
@@ -880,7 +884,7 @@ describe("what the rail carries and what it leaves behind", () => {
       company: ["create", "read", "update"],
       overlay_connection: ["read"],
       partner: ["read"],
-      person: ["create", "read", "update"],
+      contact: ["create", "read", "update"],
       pipeline: ["read"],
       product: ["create", "read", "update"],
       project: ["create", "read", "update"],

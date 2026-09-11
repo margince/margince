@@ -363,19 +363,19 @@ function partyName(party: EmailParty): string {
  * tab would close the message they are part-way through reading to reach a
  * page they could have opened from behind it. Opening beside it keeps both.
  *
- * `person_id` is the server's own resolution — set only when the address
+ * `contact_id` is the server's own resolution — set only when the address
  * belongs to a contact this caller may see — so a stranger's address stays
  * text rather than becoming a link into a 404.
  */
 function PartyName({ party }: Readonly<{ party: EmailParty }>) {
   const name = partyName(party);
-  if (!party.person_id) {
+  if (!party.contact_id) {
     return <>{name}</>;
   }
   return (
     <a
       className="entity-link"
-      href={routeHash(ENTITY.person.route(party.person_id))}
+      href={routeHash(ENTITY.contact.route(party.contact_id))}
       // `rel` travels with `target`, never behind it: a blank target without
       // `noopener` hands the opened page a live handle back into this one.
       target="_blank"
@@ -391,7 +391,7 @@ function PartyName({ party }: Readonly<{ party: EmailParty }>) {
  *
  * Only the parties that can actually be NAMED. A row carrying neither a name
  * nor an address says nothing to a reader, and joining it in puts a gap in the
- * list where a person should be — so it is dropped, and a line with nobody
+ * list where a contact should be — so it is dropped, and a line with nobody
  * left to name does not draw at all, rather than drawing a label over
  * punctuation.
  */
@@ -416,7 +416,7 @@ function PartyLine({
         // seat is two rows the server sends on one line, and two children
         // under one key is a rendering React warns about and then gets wrong.
         <Fragment
-          key={`${party.address}|${party.person_id ?? ""}|${party.user_id ?? ""}`}
+          key={`${party.address}|${party.contact_id ?? ""}|${party.user_id ?? ""}`}
         >
           {index > 0 && ", "}
           <PartyName party={party} />

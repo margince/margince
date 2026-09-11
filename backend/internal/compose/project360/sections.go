@@ -13,8 +13,8 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -39,7 +39,7 @@ func (a *assembly) readCompany() error {
 	// The catalog comes from ABOVE the transaction, like the project's and the
 	// deal's. Read here it opened a connection of its own while this one held
 	// the page's transaction.
-	company, err := a.svc.people.GetCompanyTx(a.ctx, a.tx, companyID, storekit.LiveOnly, a.cats.company)
+	company, err := a.svc.contacts.GetCompanyTx(a.ctx, a.tx, companyID, storekit.LiveOnly, a.cats.company)
 	if err != nil {
 		return err
 	}
@@ -102,26 +102,26 @@ func (a *assembly) readDeals() error {
 }
 
 // readStakeholders reads the seats through the relationship list, so the
-// edge's own visibility rule applies, and names each person under the
-// person grant. A caller holding the edge grant but not the person grant
+// edge's own visibility rule applies, and names each contact under the
+// contact grant. A caller holding the edge grant but not the contact grant
 // still sees the seats — the role is the field a handover is judged on —
 // with the names withheld, which the contract spells as a null name.
 func (a *assembly) readStakeholders() error {
 	limit := sectionLimit
-	kind := people.ProjectStakeholderKind
-	edges, page, err := a.svc.people.ListRelationshipsTx(a.ctx, a.tx, people.ListRelationshipsInput{
+	kind := contacts.ProjectStakeholderKind
+	edges, page, err := a.svc.contacts.ListRelationshipsTx(a.ctx, a.tx, contacts.ListRelationshipsInput{
 		Kind: &kind, ProjectID: &a.projectID, Limit: &limit,
 	})
 	if err != nil {
 		return err
 	}
-	seated := make([]ids.PersonID, 0, len(edges))
+	seated := make([]ids.ContactID, 0, len(edges))
 	for _, e := range edges {
-		if e.PersonID != nil {
-			seated = append(seated, *e.PersonID)
+		if e.ContactID != nil {
+			seated = append(seated, *e.ContactID)
 		}
 	}
-	names, err := a.svc.people.PersonNamesTx(a.ctx, a.tx, seated)
+	names, err := a.svc.contacts.ContactNamesTx(a.ctx, a.tx, seated)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		names = map[ids.UUID]string{}
 	} else if err != nil {
@@ -129,16 +129,16 @@ func (a *assembly) readStakeholders() error {
 	}
 	data := make([]crmcontracts.Project360Stakeholder, 0, len(edges))
 	for _, e := range edges {
-		if e.PersonID == nil {
+		if e.ContactID == nil {
 			continue
 		}
 		seat := crmcontracts.Project360Stakeholder{
 			RelationshipId: openapi_types.UUID(e.ID),
-			PersonId:       openapi_types.UUID(e.PersonID.UUID),
+			ContactId:      openapi_types.UUID(e.ContactID.UUID),
 			Role:           e.Role,
 		}
-		if name, known := names[e.PersonID.UUID]; known {
-			seat.PersonName = &name
+		if name, known := names[e.ContactID.UUID]; known {
+			seat.ContactName = &name
 		}
 		data = append(data, seat)
 	}

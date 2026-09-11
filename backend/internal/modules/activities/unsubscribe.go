@@ -25,7 +25,7 @@ import (
 // UnsubscribeLinker resolves a recipient address to their preference-center
 // token so the send path can build the List-Unsubscribe URL. ok is false
 // when the address carries no unsubscribe surface — a locked
-// (transactional) purpose, or an address no person holds — in which case
+// (transactional) purpose, or an address no contact holds — in which case
 // the send carries no unsubscribe header.
 type UnsubscribeLinker interface {
 	// UnsubscribeToken answers the credential the STOP links carry, and ok is
@@ -37,7 +37,7 @@ type UnsubscribeLinker interface {
 	// A SEPARATE METHOD rather than a second return value, because the two
 	// have different failure meanings. No stop token means this send carries no
 	// unsubscribe surface and the header is omitted. No manage token means the
-	// recipient has nothing to manage — a lead-only address holds no person
+	// recipient has nothing to manage — a lead-only address holds no contact
 	// record — and the send still goes out with its stop links intact.
 	ManageToken(ctx context.Context, recipientEmail string) (token string, ok bool, err error)
 }
@@ -82,7 +82,7 @@ func (s *Store) WithPublicBaseURL(base string) *Store {
 // SharedUnsubscribeTokenError refuses a send that would put ONE recipient's
 // preference token in front of the others.
 //
-// The token is a bearer credential over that person's consent record: it reads
+// The token is a bearer credential over that contact's consent record: it reads
 // their per-purpose state, withdraws, and GRANTS — a forged grant re-opens
 // mail to someone who never consented, with a proof row attributing the
 // decision to them. One rendered message carries one token, so a message with
@@ -109,7 +109,7 @@ func (e *SharedUnsubscribeTokenError) FieldFault() (field, code, message string)
 
 // redactedToken stands in for the recipient's preference token in the copy of
 // the message the workspace RECORDS. The token is a bearer credential over
-// that person's consent record — on the anonymous public edge it reads their
+// that contact's consent record — on the anonymous public edge it reads their
 // per-purpose state, withdraws, and grants, under a system principal that
 // short-circuits every RBAC gate — so it belongs on the mail and nowhere
 // else: not in the durable activity body, which any seat holding
@@ -160,7 +160,7 @@ type unsubscribeLinks struct {
 	// oneClick is the RFC 8058 endpoint, for the List-Unsubscribe header and
 	// NOTHING else. A mailbox provider POSTs it without a browser.
 	oneClick string
-	// unsubscribe is the page a person lands on, which asks before it acts:
+	// unsubscribe is the page a contact lands on, which asks before it acts:
 	// a GET must never withdraw, because mail scanners and link prefetchers
 	// follow links in a mailbox without a human involved.
 	unsubscribe string
@@ -210,7 +210,7 @@ type unsubscribeTokens struct {
 	// It must outlive the message it was sent in.
 	stop string
 	// manage is what the preference centre resolves. Empty when this send could
-	// mint none — a lead-only recipient holds no person record to manage — and
+	// mint none — a lead-only recipient holds no contact record to manage — and
 	// the manage link then falls back to the stop token, which draws the
 	// withdraw-only page rather than a dead link.
 	manage string
@@ -285,7 +285,7 @@ func lockedPurposeKey(key string) bool {
 // It returns both bodies, footer already applied.
 //
 // ok is false when the address carries no unsubscribe surface — a locked
-// (transactional) purpose, or an address no person holds — in which case a
+// (transactional) purpose, or an address no contact holds — in which case a
 // transactional message has nothing to unsubscribe from and an address the
 // consent gate would refuse discloses nothing. Those sends carry no token, so
 // both bodies are the one the caller wrote.
@@ -358,7 +358,7 @@ func (s *Store) deliverability(
 
 // distinctAddresses counts who a rendered message actually reaches. Addresses
 // are compared case- and space-insensitively, the way a mail server treats
-// them, so the same person listed twice — once in To and once in Cc, or with
+// them, so the same contact listed twice — once in To and once in Cc, or with
 // different capitalisation — is one addressee and not a refusal.
 func distinctAddresses(recipients []string) int {
 	seen := make(map[string]bool, len(recipients))

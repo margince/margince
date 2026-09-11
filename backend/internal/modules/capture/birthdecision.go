@@ -236,7 +236,7 @@ func decideBirthTx(
 		// Only this rung is affected. Steps 1 to 4 have already run and any hold
 		// they placed survives, because they set decision.posture and this does
 		// not clear it.
-		cleared, err := senderClearedPersonTx(ctx, tx, rec.Counterparty.Email)
+		cleared, err := senderClearedContactTx(ctx, tx, rec.Counterparty.Email)
 		if err != nil {
 			return birthDecision{}, err
 		}
@@ -333,7 +333,7 @@ func mailboxPostureForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider
 //
 // The SQL shape excludedTx uses, and for the same reason: a domain rule covers
 // its subdomains, so holding studiolegal.de holds mail.studiolegal.de too.
-// Scoped to THIS seat — a hold is one person's decision about their own
+// Scoped to THIS seat — a hold is one contact's decision about their own
 // correspondence, and a workspace-wide one would let anyone hold a colleague's
 // customer out of the shared CRM.
 func heldCounterpartyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {

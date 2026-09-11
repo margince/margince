@@ -6,7 +6,7 @@ package provider
 // Whether a provider can look somebody up at all, asked before spending a
 // call on them.
 //
-// A vendor matches a person BY something: Surfe by a LinkedIn URL, or by a
+// A vendor matches a contact BY something: Surfe by a LinkedIn URL, or by a
 // name together with a company. A subject carrying neither cannot be found,
 // and the vendor says so with a 400 rather than a polite empty answer — one
 // that the platform then has to read as a provider fault, because from the
@@ -16,11 +16,11 @@ package provider
 // Descriptor.Identifiers is the sentence a customer reads; MatchRules is the
 // same fact in a form the admission pipeline can apply.
 
-// IdentifierField names one member of PersonIdentifiers. It exists so a
+// IdentifierField names one member of ContactIdentifiers. It exists so a
 // descriptor can state its matching rule as data rather than as prose.
 type IdentifierField string
 
-// The fields of PersonIdentifiers, spelled the way a rule names them. Every
+// The fields of ContactIdentifiers, spelled the way a rule names them. Every
 // member of the struct has one, and `present` reads each — both held by
 // TestEveryIdentifierFieldIsNamedAndUnderstood
 // (backend/gates/identifierfields_test.go).
@@ -53,7 +53,7 @@ func IdentifierFields() []IdentifierField {
 }
 
 // present reports whether one field carries a value.
-func (p PersonIdentifiers) present(f IdentifierField) bool {
+func (p ContactIdentifiers) present(f IdentifierField) bool {
 	switch f {
 	case IdentifierLinkedInURL:
 		return p.LinkedInURL != ""
@@ -78,7 +78,7 @@ type MatchRule struct {
 	AnyOf []IdentifierField
 }
 
-func (r MatchRule) satisfiedBy(p PersonIdentifiers) bool {
+func (r MatchRule) satisfiedBy(p ContactIdentifiers) bool {
 	for _, f := range r.AllOf {
 		if !p.present(f) {
 			return false
@@ -101,7 +101,7 @@ func (r MatchRule) satisfiedBy(p PersonIdentifiers) bool {
 // No rules means matchable by anything. The platform does not invent a
 // constraint an adapter did not declare: refusing a lookup the vendor would
 // have answered is a worse failure than spending one call to find out.
-func (p PersonIdentifiers) Matchable(rules []MatchRule) bool {
+func (p ContactIdentifiers) Matchable(rules []MatchRule) bool {
 	if len(rules) == 0 {
 		return true
 	}

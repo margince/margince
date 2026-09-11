@@ -34,7 +34,7 @@ Rename them, reorder them, add your own. Two rules you cannot change: a won stag
 is always 100 and a lost stage is always 0. Those are not opinions about your
 sales process, they are what the words mean.
 
-You edit all this at **Settings → Data model → Pipelines**. Only a person can —
+You edit all this at **Settings → Data model → Pipelines**. Only a human can —
 an agent is refused outright, because the stage ladder is the ground truth that
 every "should this deal move?" decision is judged against.
 
@@ -52,7 +52,7 @@ save button.
 Two things to know:
 
 - **The board's drag does not work on touch.** Use the stepper on a tablet.
-- If two people move the same deal at once, the second is refused rather than
+- If two colleagues move the same deal at once, the second is refused rather than
   silently overwriting the first.
 
 Bulk move offers open stages only, and skips deals already there. You cannot
@@ -158,7 +158,7 @@ Separate from the stage, and a judgement rather than a fact. Four values:
 - **Pipeline**
 - **Omitted**
 
-Two more appear in reports but are never chosen by a person: **Slipped** and **No
+Two more appear in reports but are never chosen by a contact: **Slipped** and **No
 category yet**. Slipped is the server's own reading of a Commit or Best case
 whose close date has passed or gone missing. Nobody sets it; it is what the dates
 say.
@@ -183,7 +183,7 @@ per company.
 ## Badges on a deal card
 
 - **stalled** — nothing for 60 days
-- **single-threaded** — you know one person at this account
+- **single-threaded** — you know one contact at this account
 - **staged** — something is waiting in the approval inbox for this deal
 - **archived**
 

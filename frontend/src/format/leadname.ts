@@ -17,7 +17,7 @@ type NameableLead = Readonly<{
  * `??` is not this rule. A `full_name` that is PRESENT and EMPTY is not a name,
  * and nothing between a `CreateLead` body and the stored row refuses one — so a
  * screen falling back on null alone renders such a lead blank, while the server
- * promotes the very same lead into a person named by its address.
+ * promotes the very same lead into a contact named by its address.
  *
  * Both fields are trimmed, and for one reason: padding is not identity. The
  * server's address arrives through `values.ParseEmail`, which trims it there —
@@ -25,7 +25,7 @@ type NameableLead = Readonly<{
  * own. A field that is nothing but padding names nobody, and answering it would
  * hand a caller a truthy string their own `|| fallback` then never reaches.
  *
- * This mirrors `leadIdentityName` in the people module, which is where the
+ * This mirrors `leadIdentityName` in the contacts module, which is where the
  * server and its SQL answer the question. Return `""` and let the caller pick
  * its own last resort — a list row falls back to the id, a page heading to the
  * word "Leads" — because what to say about a lead nothing names is the

@@ -205,14 +205,14 @@ func TestTheAgentSeamNamesAnEntityItDoesNotServe(t *testing.T) {
 	p := projectProvider(e)
 
 	_, err := p.Create(e.Admin(), datasource.CreateInput{
-		EntityType: datasource.EntityPerson, Fields: map[string]any{}, Source: "agent",
+		EntityType: datasource.EntityContact, Fields: map[string]any{}, Source: "agent",
 	})
 	var unsupported *datasource.UnsupportedEntityError
 	if !errors.As(err, &unsupported) {
 		t.Fatalf("create of an unserved entity produced %v, want UnsupportedEntityError", err)
 	}
 	if _, err := p.Archive(e.Admin(), datasource.EntityRef{
-		Type: datasource.EntityPerson, ID: ids.NewV7(),
+		Type: datasource.EntityContact, ID: ids.NewV7(),
 	}); !errors.As(err, &unsupported) {
 		t.Fatalf("archive of an unserved entity produced %v, want UnsupportedEntityError", err)
 	}

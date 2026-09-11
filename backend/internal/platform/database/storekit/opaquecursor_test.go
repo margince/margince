@@ -22,7 +22,7 @@ type position struct {
 
 func TestAPositionSurvivesTheRoundTrip(t *testing.T) {
 	at := time.Date(2026, 8, 25, 9, 30, 0, 0, time.UTC)
-	want := position{Score: 0.75, Kind: "person", ID: ids.NewV7(), CreatedAt: &at}
+	want := position{Score: 0.75, Kind: "contact", ID: ids.NewV7(), CreatedAt: &at}
 	token, err := storekit.EncodeOpaque(want)
 	if err != nil {
 		t.Fatalf("minting a token: %v", err)

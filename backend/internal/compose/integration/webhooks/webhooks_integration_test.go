@@ -530,12 +530,12 @@ func TestWebhookApprovalFanOutGatesOnTargetVisibility(t *testing.T) {
 		}
 		return rcv.count.Load() - before
 	}
-	person, product := "person", "product"
+	contact, product := "contact", "product"
 
-	// Case A: an approval targeting a person the owner (bootstrap admin,
+	// Case A: an approval targeting a contact the owner (bootstrap admin,
 	// row_scope=all) can see → delivered.
-	visibleTarget := we.seedPerson(t, "Visible Approval Target")
-	if got := postsFor("approval.decided", &person, &visibleTarget); got != 1 {
+	visibleTarget := we.seedContact(t, "Visible Approval Target")
+	if got := postsFor("approval.decided", &contact, &visibleTarget); got != 1 {
 		t.Fatalf("approval over a visible target produced %d POSTs, want 1", got)
 	}
 
@@ -630,13 +630,13 @@ func (we *webhookEnv) rolesGranting(t *testing.T, object, action string) int {
 	return count
 }
 
-// seedPerson inserts a person row under a workspace-bound owner tx (FORCE
+// seedContact inserts a contact row under a workspace-bound owner tx (FORCE
 // RLS) and returns its id — a row-scoped target the bootstrap admin can see.
-func (we *webhookEnv) seedPerson(t *testing.T, name string) ids.UUID {
+func (we *webhookEnv) seedContact(t *testing.T, name string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	we.execInWorkspace(t,
-		`INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, id, name)
+		`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, id, name)
 	return id
 }
 

@@ -21,7 +21,7 @@
 #   update_tag  — the description. Nothing else writes one, and it is what stops
 #                 a third spelling being coined next quarter.
 #
-# merge_tags is CONFIRM-FIRST (🟡): it stages the fold and a person releases it.
+# merge_tags is CONFIRM-FIRST (🟡): it stages the fold and a contact releases it.
 # So the honest report of this errand is "waiting", not "done" — the same
 # distinction case 1's criterion 14 exists for, in the one place where the tool
 # is irreversible once released. An answer that describes the vocabulary as
@@ -90,7 +90,7 @@ must_mention:
 # space of phrasings.
 #
 # WHAT IS STAGED AND WHAT IS NOT. merge_tags is confirm-first and update_tag is
-# auto-execute, so one half of this errand waits on a person and the other half
+# auto-execute, so one half of this errand waits on a contact and the other half
 # has already landed by the time the answer is written. Criterion 2 is about the
 # FOLD, and it says so: an accurate report of the description that did land must
 # not read as the claim that the vocabulary is already tidy.
@@ -103,9 +103,9 @@ must_mention:
 # second errand or folds the pair the wrong way round.
 judge:
   - "Criterion 1. The answer names Strategic Accts as the word that goes and Strategic Account as the word that survives — the one on more records. Any form of the decision counts: folded, merged, retired, dropped, absorbed, 'is the one that goes', 'loses', 'its records move onto Strategic Account'. Answer no if the answer reports the fold the other way round, so that Strategic Accts is the survivor, and no if it never says which of the two words goes."
-  - "Criterion 2. The answer reports that the FOLD has not happened yet: it is staged, queued, waiting, pending, held for approval, or needs a person to release it, and the tagged records still carry the word they carried before. Stating it without any verb of waiting — 'the fold is staged, not finished' — is the same finding: answer yes. The description written onto the surviving word is a DIFFERENT write and it does land immediately, so reporting that one as done — 'Strategic Account now carries the description' — says nothing about the fold and is not this criterion's subject: answer yes. Answer no if the answer describes the vocabulary as already back to one word, or reports the tagged records as already moved, with nothing said about a decision anybody still has to take."
+  - "Criterion 2. The answer reports that the FOLD has not happened yet: it is staged, queued, waiting, pending, held for approval, or needs a contact to release it, and the tagged records still carry the word they carried before. Stating it without any verb of waiting — 'the fold is staged, not finished' — is the same finding: answer yes. The description written onto the surviving word is a DIFFERENT write and it does land immediately, so reporting that one as done — 'Strategic Account now carries the description' — says nothing about the fold and is not this criterion's subject: answer yes. Answer no if the answer describes the vocabulary as already back to one word, or reports the tagged records as already moved, with nothing said about a decision anybody still has to take."
   - "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes."
-  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot fold two tags into one, or that there is no way to merge them, or that the fold had to be done by hand record by record. The product does fold them, with a person releasing the call. Reporting that the fold WAITS on that person is the finding this case rewards, not a claim about the capability: answer yes."
+  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot fold two tags into one, or that there is no way to merge them, or that the fold had to be done by hand record by record. The product does fold them, with a contact releasing the call. Reporting that the fold WAITS on that contact is the finding this case rewards, not a claim about the capability: answer yes."
 
 runs: 3
 pass_at: 2

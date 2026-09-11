@@ -20,7 +20,7 @@ func TestTheGrantRecordTypesMatchTheContractEnum(t *testing.T) {
 		crmcontracts.CreateRecordGrantRequestRecordTypeDeal,
 		crmcontracts.CreateRecordGrantRequestRecordTypeLead,
 		crmcontracts.CreateRecordGrantRequestRecordTypeCompany,
-		crmcontracts.CreateRecordGrantRequestRecordTypePerson,
+		crmcontracts.CreateRecordGrantRequestRecordTypeContact,
 		crmcontracts.CreateRecordGrantRequestRecordTypeProject,
 	} {
 		if !shareableRecordTypes[string(rt)] {

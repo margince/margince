@@ -70,7 +70,7 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 	//
 	// installation_settings is the object every seeded role may read, which is
 	// what the onboarding gate needs: the reader being told to finish setup is
-	// not always the person entitled to change the model binding.
+	// not always the contact entitled to change the model binding.
 	if err := auth.Require(ctx, identity.SettingsObject, principal.ActionRead); err != nil {
 		httperr.Write(w, r, err)
 		return

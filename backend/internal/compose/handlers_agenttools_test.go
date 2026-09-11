@@ -48,7 +48,7 @@ func TestAgentToolsMapPreservesRegistryOrderAndFields(t *testing.T) {
 	if !strings.HasPrefix(got[0].Description, "Put a mail on the wire.") {
 		t.Errorf("description = %q, want it to open with the spec's written text", got[0].Description)
 	}
-	if !strings.Contains(got[0].Description, "a person approves") {
+	if !strings.Contains(got[0].Description, "a human approves") {
 		t.Errorf("description = %q, want the governance clause an MCP client also gets", got[0].Description)
 	}
 }

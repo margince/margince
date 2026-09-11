@@ -4,12 +4,12 @@
 package dealrooms
 
 // Delivery state answers "did the invitation arrive?", which is a different
-// question from "may this person in?" — and the whole reason the two are
+// question from "may this contact in?" — and the whole reason the two are
 // modelled apart is that a seller chasing silence has to tell a bounce from a
 // deliberate removal.
 //
 // These cases are the ones where a wrong answer sends somebody down the wrong
-// path: reporting `sent` for a bounce, or for a person who was revoked.
+// path: reporting `sent` for a bounce, or for a contact who was revoked.
 
 import (
 	"errors"
@@ -89,7 +89,7 @@ func TestDeliveryStateReadsTheMostDecidedOutcome(t *testing.T) {
 		},
 		{
 			// Even a consumed credential reads as none once access is gone: the
-			// person is not in the room, whatever they once did.
+			// contact is not in the room, whatever they once did.
 			name:    "revoked after signing in",
 			facts:   deliveryFacts{expiresAt: at(20), consumedAt: at(3)},
 			revoked: true,

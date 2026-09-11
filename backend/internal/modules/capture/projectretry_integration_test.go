@@ -153,7 +153,7 @@ func captureSinkContextFor(ctx context.Context, ws ids.UUID) context.Context {
 			RoleKeys: []string{"connector"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},
-				"person":   {Create: true, Read: true},
+				"contact":  {Create: true, Read: true},
 				"project":  {Read: true},
 			},
 			RowScope: principal.RowScopeAll,

@@ -40,7 +40,7 @@ func rbacActor(ctx context.Context) (principal.Principal, error) {
 // `Permissions` — so a buyer would be admitted by exactly the accident that it
 // is minted carrying none. That is not a guarantee; it is a coincidence one
 // careless constructor would end, and the caller admitted by it would be an
-// external person with a room link.
+// external contact with a room link.
 //
 // A buyer's authority is its Deal Room session, and the Deal Room's own store
 // methods carry the room predicate that grants it. Nothing in platform/auth
@@ -194,7 +194,7 @@ func RequireSystem(ctx context.Context) error {
 //
 // Each entry names the grant the verb's write path actually demands, so
 // the attribution is the rule that admitted the call rather than a
-// plausible-looking one: export is person.delete because SAR assembly is
+// plausible-looking one: export is contact.delete because SAR assembly is
 // gated on it, and erase is voice_profile.update because clearing a
 // corpus is gated as an update. A verb missing here renders a BLANK
 // authorization_rule, which reads as "no rule applied" years later —
@@ -243,7 +243,7 @@ var auditActionGrant = map[string]principal.Action{
 	// commissions.Store.Accrue actually requires; paying moves an existing
 	// entry's state, which is the update grant Decide requires. The rule
 	// recorded on the row has to be the grant the write really took.
-	// Deal Room ACCESS. Admitting an outside person and taking that access back
+	// Deal Room ACCESS. Admitting an outside contact and taking that access back
 	// are both writes against the room, gated on deal_room.update at the store —
 	// a participant carries no object grant of its own, so update is the rule
 	// that actually admitted the call.
@@ -348,7 +348,7 @@ var coachingRoles = []string{roleAdmin, "management", "manager"}
 // A system principal is refused rather than admitted, which is the opposite of
 // RequireAdmin. A system flow raising a notice uses its own kinds through the
 // notifier seam; one arriving here would be a background pass writing in a
-// person's voice.
+// contact's voice.
 func RequireCoach(ctx context.Context) error {
 	p, err := rbacActor(ctx)
 	if err != nil {

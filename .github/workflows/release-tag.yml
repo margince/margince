@@ -288,7 +288,7 @@ jobs:
             # The notes are rebuilt above on every run, so a re-run is also the
             # only way to correct them. Without this the body keeps whatever the
             # first run wrote, and a wrong first-launch instruction on the page
-            # people download from would be unfixable by the lane that wrote it.
+            # the download comes from would be unfixable by the lane that wrote it.
             gh release edit "$VERSION" --notes-file notes.md
           else
             args=(--target "$REVISION" --title "Margince $VERSION" --notes-file notes.md --verify-tag)

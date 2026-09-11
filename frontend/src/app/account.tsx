@@ -58,7 +58,7 @@ const SEAT_COUNT = 3;
 /**
  * Who is signed in, in the shapes the block prints them in.
  *
- * Everything here is derived from what the session actually carries: a person
+ * Everything here is derived from what the session actually carries: a contact
  * without a display name is their address, and nobody is ever given a name the
  * product made up to fill the line.
  */
@@ -86,7 +86,7 @@ function identityOf(user: SessionUser | undefined) {
 type Identity = ReturnType<typeof identityOf>;
 
 /**
- * The person, printed: their display name when the record carries one, otherwise
+ * The contact, printed: their display name when the record carries one, otherwise
  * the address alone — which is then not repeated underneath itself.
  *
  * One spelling, because the trigger, the panel and the phone sheet all print it
@@ -558,10 +558,10 @@ export function AccountMenu() {
         type="button"
         className="user"
         ref={trigger}
-        // Where the row PRINTS the person's name, WCAG 2.5.3 (Label in Name)
+        // Where the row PRINTS the contact's name, WCAG 2.5.3 (Label in Name)
         // requires that visible text to be part of the accessible name. This
         // trigger prints none — it is the avatar alone — so it is named by what
-        // it does, and the person it belongs to is carried as its DESCRIPTION
+        // it does, and the contact it belongs to is carried as its DESCRIPTION
         // below.
         aria-label={t("shell.accountAria")}
         aria-haspopup="menu"
@@ -580,14 +580,14 @@ export function AccountMenu() {
         {identity.label ? (
           // The one chip, from the design system. The tint is keyed on the
           // address rather than the display name, so it survives a rename and
-          // matches every other chip drawn for the same person.
+          // matches every other chip drawn for the same contact.
           <Avatar
             identity={identity.email || undefined}
             name={identity.label}
           />
         ) : (
           // The session has not resolved yet. The chip keeps its box so the row
-          // does not jump when the name arrives, and shows a person glyph rather
+          // does not jump when the name arrives, and shows a contact glyph rather
           // than an empty circle or initials of a name nobody has.
           <span className="avatar avatar-sm" aria-hidden>
             <UserRound size={15} />

@@ -45,7 +45,7 @@ func exceptionCtx(ws, user ids.UUID, grant principal.ObjectGrant) context.Contex
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"person":                  {Read: true, Update: true},
+				"contact":                 {Read: true, Update: true},
 				"communication_exception": grant,
 			},
 		},
@@ -55,7 +55,7 @@ func exceptionCtx(ws, user ids.UUID, grant principal.ObjectGrant) context.Contex
 // connectorCtx is an integration running under a director's own grants and
 // UserID. auth.RequireHuman ADMITS it — it refuses buyers and agents only — so
 // without an explicit type check an integration would mint a row saying that
-// person decided to send a refused message.
+// contact decided to send a refused message.
 func connectorCtx(ws, user ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -124,7 +124,7 @@ func TestOnlyAHumanHoldingTheGrantDirectsASend(t *testing.T) {
 		t.Errorf("a rep directed a send: %v — the exception grant is its own authority", err)
 	}
 
-	// AN AGENT MAY NOT, even carrying the grant. The row asserts that a PERSON
+	// AN AGENT MAY NOT, even carrying the grant. The row asserts that a CONTACT
 	// took responsibility, and an agent minting it would make that assertion
 	// false while looking entirely correct.
 	if _, err := e.store.DirectSend(agentCtx(ws, user), review, valid); err == nil {
@@ -133,7 +133,7 @@ func TestOnlyAHumanHoldingTheGrantDirectsASend(t *testing.T) {
 
 	// A CONNECTOR MAY NOT EITHER, and this is the arm auth.RequireHuman does
 	// not cover: it runs with the granting human's UserID and permissions, so
-	// the row it wrote would name a person who was not there. The whole content
+	// the row it wrote would name a contact who was not there. The whole content
 	// of this record is the claim that somebody took responsibility.
 	if _, err := e.store.DirectSend(connectorCtx(ws, user), review, valid); err == nil {
 		t.Error("a connector minted a decision attributed to the human who configured it")
@@ -187,7 +187,7 @@ func TestDirectingASendRecordsNoConsentAndLeavesTheRefusal(t *testing.T) {
 
 	var grants int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM person_consent WHERE state = 'granted'`).Scan(&grants); err != nil {
+		`SELECT count(*) FROM contact_consent WHERE state = 'granted'`).Scan(&grants); err != nil {
 		t.Fatalf("counting the grants: %v", err)
 	}
 	if grants != 0 {
@@ -196,7 +196,7 @@ func TestDirectingASendRecordsNoConsentAndLeavesTheRefusal(t *testing.T) {
 	}
 }
 
-// AN INSTRUCTION IS NOT REWRITABLE. It is the record of what one person decided
+// AN INSTRUCTION IS NOT REWRITABLE. It is the record of what one contact decided
 // and what they were told when they decided it, and a reason edited afterwards
 // would let the account of an override be improved by whoever gave it.
 func TestAnInstructionCannotBeRewritten(t *testing.T) {
@@ -276,7 +276,7 @@ func TestARevocationNamesItselfAndSpareAConsumedInstruction(t *testing.T) {
 }
 
 // THE FREEZE HAS EXACTLY ONE DOOR, and it is Art. 17. The explanation is a rep's
-// own sentence about a named person, so it is personal data an erasure destroys
+// own sentence about a named contact, so it is personal data an erasure destroys
 // — and a record that could not be scrubbed would put immutability above the
 // right it exists inside.
 //

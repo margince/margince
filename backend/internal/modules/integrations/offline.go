@@ -26,7 +26,7 @@ import (
 // passes here is testing the platform rather than a stand-in for it.
 //
 // Its answers are keyed off the SUBJECT, not off call order, so a test asks
-// for the case it wants by naming a person: "no match" is a person called
+// for the case it wants by naming a contact: "no match" is a contact called
 // Nomatch, an ambiguous submission is one called Ambiguous. That keeps the
 // failure set reachable from an integration test that only controls its
 // fixtures, and from a human clicking around a dev stack.
@@ -292,7 +292,7 @@ const (
 // scenarioFor reads the case out of the subject's name. Keyed off the SUBJECT
 // rather than call order so a test picks its case by naming a fixture, and so
 // two concurrent runs cannot steal each other's answer.
-func scenarioFor(id provider.PersonIdentifiers) scenario {
+func scenarioFor(id provider.ContactIdentifiers) scenario {
 	switch strings.ToLower(id.LastName) {
 	case "nomatch":
 		return scenarioNoMatch

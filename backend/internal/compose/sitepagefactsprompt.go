@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -32,8 +32,8 @@ func pageFactsSystem(menu pageMenu, fence promptfence.Fence) string {
 	var b strings.Builder
 	b.WriteString("You extract company facts from ONE page of a company's website for a CRM. The page is given as numbered passages [s0], [s1], ….\n")
 	b.WriteString(`Return ONLY a JSON object: {"facts":[...]`)
-	if menu.people {
-		b.WriteString(`,"people":[...]`)
+	if menu.contacts {
+		b.WriteString(`,"contacts":[...]`)
 	}
 	if menu.entities {
 		b.WriteString(`,"entities":[...]`)
@@ -46,13 +46,13 @@ func pageFactsSystem(menu pageMenu, fence promptfence.Fence) string {
 	} else {
 		b.WriteString("facts must be empty for this page.\n")
 	}
-	if menu.people {
-		b.WriteString("people — ONLY people this page itself publishes: {\"n\":full name,\"r\":stated role,\"q\":the words tying them together,\"w\":the other people inside q,\"m\":email,\"l\":linkedin url,\"e\":passage id}. " +
-			"r is the person's WHOLE title as printed — \"Senior Amazon Account-Manager\", never just \"Senior\". " +
+	if menu.contacts {
+		b.WriteString("contacts — ONLY contacts this page itself publishes: {\"n\":full name,\"r\":stated role,\"q\":the words tying them together,\"w\":the other contacts inside q,\"m\":email,\"l\":linkedin url,\"e\":passage id}. " +
+			"r is the contact's WHOLE title as printed — \"Senior Amazon Account-Manager\", never just \"Senior\". " +
 			"q is a VERBATIM copy of the page, running from the role to the name or from the name to the role, unbroken — copy every word in between, change nothing, add nothing. " +
-			"A page listing several people under one heading gives each of them a q that starts at that heading, and w then names the colleagues that q reaches over. " +
+			"A page listing several contacts under one heading gives each of them a q that starts at that heading, and w then names the colleagues that q reaches over. " +
 			"w is empty unless q prints somebody else; a name in q that w omits means the claim is refused. " +
-			"When the page never states that THIS person holds THIS role, leave the person out entirely rather than guessing a q. " +
+			"When the page never states that THIS contact holds THIS role, leave the contact out entirely rather than guessing a q. " +
 			"Include m or l ONLY when the page prints that exact address or URL — omit otherwise, NEVER guess.\n")
 	}
 	if menu.entities {
@@ -83,7 +83,7 @@ func menuGuidance(fields []string) string {
 	// the company's own name, a revenue figure. The categories are listed in
 	// the order the guidance reads best, not the order the map iterates.
 	for _, category := range []string{companyWord, "offering", "market", "signal"} {
-		for _, f := range people.CompanyFactFields[category] {
+		for _, f := range contacts.CompanyFactFields[category] {
 			if present[f] {
 				parts = append(parts, categoryGuidance[category])
 				break
@@ -110,23 +110,23 @@ func pageFactsSchema(menu pageMenu, snippetIDs []string) json.RawMessage {
 		// validator) but can only hold nothing.
 		props["facts"] = schema.Array(schema.Object(factItem, "v", "e"))
 	}
-	if menu.people {
-		props["people"] = schema.Array(schema.Object(map[string]schema.Node{
-			"n": schema.String().Describe("The person's full name as printed."),
-			"r": schema.String().Describe("The person's stated role."),
+	if menu.contacts {
+		props["contacts"] = schema.Array(schema.Object(map[string]schema.Node{
+			"n": schema.String().Describe("The contact's full name as printed."),
+			"r": schema.String().Describe("The contact's stated role."),
 			"q": schema.String().Describe(
-				"Copy the page's own words that give THIS person THIS role, " +
+				"Copy the page's own words that give THIS contact THIS role, " +
 					"from the role to the name or the name to the role, exactly as printed " +
 					"and with nothing left out in between. If the page never puts the two " +
-					"together, omit the person."),
+					"together, omit the contact."),
 			"w": schema.String().Describe(
-				"Every OTHER person printed inside q, separated by '; '. " +
+				"Every OTHER contact printed inside q, separated by '; '. " +
 					"Empty string when q names nobody else. Copy each name exactly as printed."),
 			"m": schema.String().Describe("An email ONLY if this page prints it verbatim."),
 			"l": schema.String().Describe("A LinkedIn URL ONLY if this page prints it verbatim."),
-			"e": schema.Enum(snippetIDs...).Describe("The passage id naming the person."),
+			"e": schema.Enum(snippetIDs...).Describe("The passage id naming the contact."),
 		}, "n", "r", "q", "w", "e"))
-		required = append(required, "people")
+		required = append(required, "contacts")
 	}
 	if menu.entities {
 		props["entities"] = schema.Array(schema.Object(map[string]schema.Node{

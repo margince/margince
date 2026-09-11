@@ -73,7 +73,7 @@ func (a activityLinkArm) title() string {
 // (backend/internal/modules/search/graphactivity_test.go), which reads the
 // DDL's own enum rather than a sibling list in Go.
 var activityLinkArms = []activityLinkArm{
-	{entity: string(datasource.EntityPerson), column: "person_id"},
+	{entity: string(datasource.EntityContact), column: "contact_id"},
 	{entity: string(datasource.EntityCompany), column: "company_id"},
 	{entity: string(datasource.EntityDeal), column: "deal_id"},
 	{entity: string(datasource.EntityProject), column: "project_id"},
@@ -85,7 +85,7 @@ var activityLinkArms = []activityLinkArm{
 // contact. A prep built around the deal answers what is at stake in the room;
 // the same prep built around one attendee answers a smaller question.
 //
-// A lead comes last, below the person it may one day become: an event naming
+// A lead comes last, below the contact it may one day become: an event naming
 // both has a promoted record to prepare against, and that is the one with a
 // neighborhood. An event naming ONLY a lead still prepares against it — an
 // honest "this is all we hold" beats naming nothing at all.
@@ -93,7 +93,7 @@ var subjectTier = map[string]int{
 	string(datasource.EntityDeal):    0,
 	string(datasource.EntityProject): 1,
 	string(datasource.EntityCompany): 2,
-	string(datasource.EntityPerson):  3,
+	string(datasource.EntityContact): 3,
 	string(datasource.EntityLead):    4,
 }
 
@@ -103,7 +103,7 @@ var subjectTier = map[string]int{
 // the attendee's current job. All three can reach the same record, and the fold
 // keeps it at its strongest.
 //
-// The employer hop is what lets a company be reached through the person who was
+// The employer hop is what lets a company be reached through the contact who was
 // in the room, which is the model the activity_link refusal for meetings and
 // calls rests on: without it, forbidding the direct link would remove the only
 // path a company had into a prep rather than a redundant one.
@@ -213,24 +213,24 @@ func linkedSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]acti
 	return out, nil
 }
 
-// participantSubjects reads the people capture matched to the event's parties.
+// participantSubjects reads the contacts capture matched to the event's parties.
 // There is no project or company half of activity_participant — those
 // reach a prep through activity_link like everything else.
 func participantSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]activitySubject, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.full_name, ap.role
-		  FROM activity_participant ap JOIN person p ON p.id = ap.person_id
+		  FROM activity_participant ap JOIN contact p ON p.id = ap.contact_id
 		 WHERE ap.activity_id = $1 AND p.archived_at IS NULL
 		 ORDER BY `+participantRoleOrder("ap")+`, p.id LIMIT $2`, activityID, graphExpansionLimit)
 	if err != nil {
-		return nil, fmt.Errorf("search: reading the people on an event: %w", err)
+		return nil, fmt.Errorf("search: reading the contacts on an event: %w", err)
 	}
 	defer rows.Close()
 	var out []activitySubject
 	for rows.Next() {
 		subject := activitySubject{
-			entityType: string(datasource.EntityPerson),
-			tier:       subjectTier[string(datasource.EntityPerson)], named: namedByParticipant,
+			entityType: string(datasource.EntityContact),
+			tier:       subjectTier[string(datasource.EntityContact)], named: namedByParticipant,
 		}
 		var role string
 		if err := rows.Scan(&subject.id, &subject.title, &role); err != nil {
@@ -246,16 +246,16 @@ func participantSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([
 	return out, rows.Err()
 }
 
-// employerSubjects reads the companies the event's people currently work for.
+// employerSubjects reads the companies the event's contacts currently work for.
 //
-// This is the hop that makes "a company is reached through the person who was
+// This is the hop that makes "a company is reached through the contact who was
 // in the room" true of the ASSEMBLY PATH rather than only of the model. Before
 // it, a company reached a prep by activity_link alone, so forbidding the
 // direct link on a meeting removed the company from every surface that
 // assembles context rather than removing a redundancy.
 //
-// BOTH ways a person is on an event, because they are different facts and
-// capture writes each of them: activity_link is the person the event was filed
+// BOTH ways a contact is on an event, because they are different facts and
+// capture writes each of them: activity_link is the contact the event was filed
 // against, activity_participant is the address it matched. A hop over one of
 // them would leave the other's company unreachable, which is the whole failure
 // this exists to prevent — and it is the same pair of arms
@@ -263,7 +263,7 @@ func participantSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([
 //
 // CURRENT employment only, and by design: an attendee's former employer is a
 // company they left, and naming it in a prep would put the reader in the wrong
-// room. A person with two current jobs contributes both — the primary first,
+// room. A contact with two current jobs contributes both — the primary first,
 // because that is the one the rest of the product treats as theirs.
 //
 // Every company it proposes still goes through rankSubjects like every
@@ -296,7 +296,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 	// ROLE first, then the primary-job flag. Which company a meeting is WITH
 	// follows from who was in the room: the organizer's employer is the answer
 	// even when that job is their second, because is_current_primary is a fact
-	// about the person and the role is a fact about the meeting. Ordered the
+	// about the contact and the role is a fact about the meeting. Ordered the
 	// other way, an attendee's primary employer displaced the organizer's.
 	//
 	// Two orderings, and they are not the same one. The inner ORDER BY is what
@@ -307,7 +307,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 	// the companies whose ids sort first, which is nobody's idea of the most
 	// relevant ones.
 	//
-	// A person the event both links and lists sorts at the LINK's rank, since
+	// A contact the event both links and lists sorts at the LINK's rank, since
 	// linkOnlyRole is ahead of every participant role — the same thing the fold
 	// does for a record named twice.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
@@ -316,16 +316,16 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 			       o.id, o.display_name, onEvent.role_rank,
 			       r.is_current_primary AS primary_job
 			  FROM (
-			        SELECT l.person_id, `+strconv.Itoa(linkOnlyRole)+` AS role_rank
+			        SELECT l.contact_id, `+strconv.Itoa(linkOnlyRole)+` AS role_rank
 			          FROM activity_link l
-			         WHERE l.activity_id = $%[1]d AND l.person_id IS NOT NULL
+			         WHERE l.activity_id = $%[1]d AND l.contact_id IS NOT NULL
 			        UNION ALL
-			        SELECT ap.person_id, `+participantRoleOrder("ap")+` AS role_rank
+			        SELECT ap.contact_id, `+participantRoleOrder("ap")+` AS role_rank
 			          FROM activity_participant ap
-			         WHERE ap.activity_id = $%[1]d AND ap.person_id IS NOT NULL
+			         WHERE ap.activity_id = $%[1]d AND ap.contact_id IS NOT NULL
 			       ) onEvent
-			  JOIN person p ON p.id = onEvent.person_id
-			  JOIN relationship r ON r.person_id = p.id
+			  JOIN contact p ON p.id = onEvent.contact_id
+			  JOIN relationship r ON r.contact_id = p.id
 			  JOIN company o ON o.id = r.company_id
 			 WHERE p.archived_at IS NULL
 			   AND r.kind = 'employment' AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
@@ -336,7 +336,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 		 ORDER BY e.role_rank, e.primary_job DESC, e.id
 		 LIMIT $%[2]d`, activityPos, limitPos, edgeBound), args...)
 	if err != nil {
-		return nil, fmt.Errorf("search: reading the companies an event's people work for: %w", err)
+		return nil, fmt.Errorf("search: reading the companies an event's contacts work for: %w", err)
 	}
 	defer rows.Close()
 	var out []activitySubject

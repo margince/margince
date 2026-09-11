@@ -57,7 +57,7 @@ var grantedToNobody = gatekit.Waive(map[string]string{
 	// The seeded policy gives `forecast` the createRead posture on the belief
 	// that "a forecast reading is derived, and a current call SUPERSEDES rather
 	// than being rewritten" — true of the readings, and not true of an
-	// input-check finding, which is answered in place by a named person.
+	// input-check finding, which is answered in place by a named contact.
 	//
 	// Which seats may answer one is a product call and not this gate's to make:
 	// it decides whether every reader of the forecast may resolve a finding or
@@ -85,7 +85,7 @@ const dynamicObjectCeiling = 107
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as
-// `auth.Require(ctx, "person", action)` does.
+// `auth.Require(ctx, "contact", action)` does.
 //
 // It was missing, and its absence was invisible in the way this gate's header
 // warns about. A new dynamic-action call site adds no resolved pair, so no pair
@@ -234,7 +234,7 @@ func grantsHandlersRequire(t *testing.T) requireCensus {
 			}
 			action, ok := actionName(call.Args[at+1])
 			if !ok {
-				// The action is a parameter (`auth.Require(ctx, "person", action)`),
+				// The action is a parameter (`auth.Require(ctx, "contact", action)`),
 				// so the pair is not decided here. The object is still known and
 				// every verb of it is checked at the call sites that name one —
 				// but the site is COUNTED, not dropped. A new one of these adds

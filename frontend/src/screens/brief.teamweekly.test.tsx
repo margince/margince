@@ -239,7 +239,7 @@ describe("the scorecard says what the wins were worth", () => {
 
 describe("the team's frozen week", () => {
   // A snapshot covering four of six reps reads exactly like a team of four, and
-  // every figure on the page is short by the same two people.
+  // every figure on the page is short by the same two contacts.
   it("states unread members rather than letting the totals imply full coverage", async () => {
     stubApi({
       "GET /weekly-reviews/team": () =>
@@ -292,7 +292,7 @@ describe("the team's frozen week", () => {
 
   // One row per member, including the member whose week went well. A page
   // promising one focus per rep and drawing rows only for the troubled ones
-  // reads as a team where only those people exist.
+  // reads as a team where only those contacts exist.
   it("draws a row for every member, the good week included", async () => {
     stubApi({
       "GET /weekly-reviews/team": () =>

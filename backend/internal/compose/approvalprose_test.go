@@ -10,7 +10,7 @@ package compose
 // construction. The prose above it is hand-written and is not — and the two
 // came apart. ADR-0055 stopped these verbs staging by default; the derived
 // line followed the tier automatically; ten descriptions went on saying "a
-// person approves this call before it runs" directly above "Governance: runs
+// contact approves this call before it runs" directly above "Governance: runs
 // immediately".
 //
 // The cost is not a stale sentence. A model reading send_email was told
@@ -34,11 +34,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// promisesAHuman matches an UNCONDITIONAL claim that a person answers the call
+// promisesAHuman matches an UNCONDITIONAL claim that a contact answers the call
 // before it takes effect.
 var promisesAHuman = regexp.MustCompile(
-	`(?i)a person approves (this|the) call|a person approves the (send|move)|` +
-		`a person approves it (first|before)|once a person approves`)
+	`(?i)a human approves (this|the) call|a human approves the (send|move)|` +
+		`a human approves it (first|before)|once a human approves`)
 
 // conditionallyStaged is the phrasing true at either tier: it says what happens
 // where an installation HAS raised the verb, and promises nothing where it has
@@ -69,7 +69,7 @@ func TestNoToolPromisesAnApprovalItsTierDoesNotRequire(t *testing.T) {
 			qualified = "; it does also carry a conditional clause, which does not undo this"
 		}
 		t.Errorf("%s runs immediately and its description says %q%s — a caller is told a "+
-			"person will catch a mistake that nothing will catch",
+			"contact will catch a mistake that nothing will catch",
 			spec.Name, sentence, qualified)
 	}
 	// A census that stops reaching auto-execute tools reports PASS in the same
@@ -91,7 +91,7 @@ func TestTheConditionalPhrasingIsNotMistakenForAPromise(t *testing.T) {
 		t.Errorf("the conditional form reads as an unconditional promise, so no description "+
 			"can state the truth at both tiers:\n%s", legal)
 	}
-	if banned := "A person approves this call before it runs."; !promisesAHuman.MatchString(banned) {
+	if banned := "A human approves this call before it runs."; !promisesAHuman.MatchString(banned) {
 		t.Errorf("the pattern no longer catches the sentence it exists for:\n%s", banned)
 	}
 }

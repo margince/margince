@@ -80,7 +80,7 @@ func requireWordingForGrant(state ConsentState, wording *string) error {
 	}
 	// The contract's own maxLength, enforced here because nothing generated
 	// does: unchecked, one caller stores a megabyte on a proof row that every
-	// later reader of this person's consent history is served in full, and the
+	// later reader of this contact's consent history is served in full, and the
 	// subject access export reads it back.
 	if len([]rune(*wording)) > maxWordingRunes {
 		return &ValidationError{

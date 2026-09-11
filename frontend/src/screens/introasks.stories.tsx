@@ -19,7 +19,7 @@ import {
 
 type IntroRequest = components["schemas"]["IntroRequest"];
 
-const PERSON = "018f3a1b-0000-7000-8000-000000000010";
+const CONTACT = "018f3a1b-0000-7000-8000-000000000010";
 const REQUESTER = "018f3a1b-0000-7000-8000-000000000031";
 // The reader themselves. Which verbs the rows offer is decided by this id
 // matching one of the two on the ask, so it is read from the session fixture
@@ -29,7 +29,7 @@ const READER = meFixture({}).user.id;
 function ask(over: Partial<IntroRequest>): IntroRequest {
   return {
     id: "018f3a1b-0000-7000-8000-0000000000a1",
-    person_id: PERSON,
+    contact_id: CONTACT,
     requester_user_id: REQUESTER,
     introducer_user_id: READER,
     route_type: "direct",
@@ -50,22 +50,22 @@ function asks(rows: IntroRequest[]) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({
-        person: ["read"],
+        contact: ["read"],
         introduction: ["read", "update"],
       }),
-      [`GET /people/${PERSON}/intro-requests`]: () =>
+      [`GET /contacts/${CONTACT}/intro-requests`]: () =>
         jsonResponse({ data: rows }),
     });
     return (
       <StoryProviders>
-        <IntroAsksPanel personId={PERSON} personName="Dana Buyer" />
+        <IntroAsksPanel contactId={CONTACT} contactName="Dana Buyer" />
       </StoryProviders>
     );
   };
 }
 
 const meta: Meta<typeof IntroAsksPanel> = {
-  title: "Records/Person network/Introductions",
+  title: "Records/Contact network/Introductions",
   component: IntroAsksPanel,
   parameters: { layout: "padded" },
 };

@@ -185,7 +185,7 @@ func (e *AppEnv) BootstrapWorkspace(t *testing.T) {
 	BootstrapWorkspaceSession(t, e, "Fable E2E", "ada@example.com", "Ada Admin")
 }
 
-// SetWorkspaceSeat flips the installation's PEOPLE to a seat type through the
+// SetWorkspaceSeat flips the installation's CONTACTS to a seat type through the
 // owner connection, inside one transaction. Used to drive the read-seat ceiling
 // from a test.
 //

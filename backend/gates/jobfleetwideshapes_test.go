@@ -10,7 +10,7 @@ package gates
 // a dispatcher doing a tenant's work, and a fan-out built around the
 // chokepoints — proven rejected. A fitness function is only worth its blocking power
 // if it never blocks a legitimate author — the one that does gets weakened by
-// the person it stopped, and the weakening is what the next fleet loop walks
+// the contact it stopped, and the weakening is what the next fleet loop walks
 // back in through.
 
 import (

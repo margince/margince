@@ -18,74 +18,74 @@ import (
 //
 // Types whose entity segment is not itself a stream ride their family's
 // stream (events.md §1 routing rule): consent.*/retention.* are
-// person-lifecycle events, offer.*/pipeline.*/stage.* belong to the
+// contact-lifecycle events, offer.*/pipeline.*/stage.* belong to the
 // deal family — each declares its stream home here, and no catalog type
 // may imply a stream §4.1 does not define.
 var catalog = map[string]struct {
 	stream  string
 	version int
 }{
-	"person.created":  {personStreamEntity, 1},
-	"person.updated":  {personStreamEntity, 1},
-	"person.archived": {personStreamEntity, 1},
-	"person.merged":   {personStreamEntity, 1},
-	"person.restored": {personStreamEntity, 1},
-	"consent.changed": {personStreamEntity, 1},
+	"contact.created":  {contactStreamEntity, 1},
+	"contact.updated":  {contactStreamEntity, 1},
+	"contact.archived": {contactStreamEntity, 1},
+	"contact.merged":   {contactStreamEntity, 1},
+	"contact.restored": {contactStreamEntity, 1},
+	"consent.changed":  {contactStreamEntity, 1},
 	// Somebody recorded that we may not write to a subject. Its own type rather
 	// than a consent.changed, because a suppression is not the absence of
 	// consent: it outranks a grant and a later re-grant does not erase it, so a
 	// consumer folding the two would resume mail the subject asked us to stop.
-	"consent.suppressed": {personStreamEntity, 1},
+	"consent.suppressed": {contactStreamEntity, 1},
 	// A stop taken back by somebody who outranked the level that set it. Its own
 	// type because a consumer that saw only the suppression would keep treating
 	// the subject as stopped forever, which is the state this event exists to
 	// end.
-	"consent.suppression_lifted": {personStreamEntity, 1},
+	"consent.suppression_lifted": {contactStreamEntity, 1},
 	// What a contact promised, asked or decided, and a human's correction of
-	// it. Both ride the PERSON stream: a subscriber reacting to what somebody
-	// said wants the person, and the claim id rides the payload for the reader
+	// it. Both ride the CONTACT stream: a subscriber reacting to what somebody
+	// said wants the contact, and the claim id rides the payload for the reader
 	// that needs the row. A correction is published where a moment dismissal is
 	// not, because a correction is shared truth and a dismissal is one screen.
-	"conversation_claim.captured": {personStreamEntity, 1},
-	"conversation_claim.changed":  {personStreamEntity, 1},
+	"conversation_claim.captured": {contactStreamEntity, 1},
+	"conversation_claim.changed":  {contactStreamEntity, 1},
 	// A member recording or correcting their own LinkedIn authorization. It
-	// rides the person stream because the thing it governs is whose network
+	// rides the contact stream because the thing it governs is whose network
 	// gets read, and consent to read a professional network is the same class
 	// of fact as consent.changed beside it.
-	// The sender's own sign-off. It rides the person stream because what it
+	// The sender's own sign-off. It rides the contact stream because what it
 	// governs is how a member is represented on every message they send, which
-	// is a fact about that person rather than about any one mail.
-	"email_signature.changed": {personStreamEntity, 1},
+	// is a fact about that contact rather than about any one mail.
+	"email_signature.changed": {contactStreamEntity, 1},
 	// The language a member reads their interface in, and the name colleagues
-	// see them by. Both ride the person stream for the same reason the sign-off
-	// does: they are facts about that person, not about the installation, which
+	// see them by. Both ride the contact stream for the same reason the sign-off
+	// does: they are facts about that contact, not about the installation, which
 	// names its own language in a setting and publishes nothing per reader.
-	"user_locale.changed":       {personStreamEntity, 1},
-	"user_display_name.changed": {personStreamEntity, 1},
+	"user_locale.changed":       {contactStreamEntity, 1},
+	"user_display_name.changed": {contactStreamEntity, 1},
 	// What a member wants DELIVERED rides the identity stream rather than the
-	// person one its neighbour above uses. A display language is something a
-	// subscriber rendering for this person needs; what lands in their inbox is
+	// contact one its neighbour above uses. A display language is something a
+	// subscriber rendering for this contact needs; what lands in their inbox is
 	// nobody else's business, and the stream is the first place that is said.
 	"user_delivery.changed":    {identityStreamEntity, 1},
-	"linkedin_account.changed": {personStreamEntity, 1},
+	"linkedin_account.changed": {contactStreamEntity, 1},
 	// One import act, not one row: an export is thousands of rows and a
 	// per-row event would bury every other event in the stream, while the
 	// auditable fact is that a member imported their network at all.
-	"linkedin_network.imported": {personStreamEntity, 1},
-	// One decision on one connection. It rides the person stream because the
+	"linkedin_network.imported": {contactStreamEntity, 1},
+	// One decision on one connection. It rides the contact stream because the
 	// decision is ABOUT a contact — and it names neither the contact nor the
 	// connection, because a ghost's identity must not travel through the bus.
-	"linkedin_match.decided": {personStreamEntity, 1},
-	"retention.applied":      {personStreamEntity, 1},
+	"linkedin_match.decided": {contactStreamEntity, 1},
+	"retention.applied":      {contactStreamEntity, 1},
 	// A statutory obligation withheld, released or pinned one activity
-	// (A165/ADR-0114). It rides the person stream beside retention.applied:
+	// (ADR-0114). It rides the contact stream beside retention.applied:
 	// it is the erasure's other outcome, published from the same transaction,
 	// and a subscriber tracking one has to see the other. Its own type rather
 	// than a fourth retention.applied action, because `restrict` obliges the
 	// subscriber to drop a record that still exists — an obligation no
 	// existing action carries, so it must not reach a subscriber that never
 	// opted into it.
-	"retention.restricted": {personStreamEntity, 1},
+	"retention.restricted": {contactStreamEntity, 1},
 
 	"company.created":  {companyStreamEntity, 1},
 	"company.updated":  {companyStreamEntity, 1},
@@ -173,15 +173,15 @@ var catalog = map[string]struct {
 	// object first — the shape `password_link_issued` already takes.
 	//
 	// Its own type rather than an activity.updated: the
-	// message did not change, only what one person (or the workspace) decided
+	// message did not change, only what one contact (or the workspace) decided
 	// about it, and a consumer counting edits to correspondence must not read a
 	// rep clearing their queue as the customer's mail being rewritten.
 	"activity.disposition_recorded": {activityStreamEntity, 1},
 	// A rep set a lapsed CONTACT aside so their own decay lane stops raising
-	// them, or put them back. The entity is the person, which is what the
+	// them, or put them back. The entity is the contact, which is what the
 	// judgement is about — the relationship's silence is a fact about them
 	// rather than about any one message.
-	"relationship_nudge.decided": {personStreamEntity, 1},
+	"relationship_nudge.decided": {contactStreamEntity, 1},
 	// §5.11: a thread-matched inbound is an activity-family fact, emitted
 	// by capture alongside activity.captured (EVT-SEM-14 — idempotent per
 	// reply; a duplicate inbound for the same reply does not re-emit).
@@ -191,7 +191,7 @@ var catalog = map[string]struct {
 	// activity stream the send's own events ride.
 	"comms.delivery_bounced": {activityStreamEntity, 1},
 
-	// A notice is addressed to one person, so its lifecycle rides the
+	// A notice is addressed to one contact, so its lifecycle rides the
 	// identity family's stream: created is the delivery on this transport,
 	// read is the recipient settling it.
 	"notice.created": {identityStreamEntity, 1},
@@ -206,7 +206,7 @@ var catalog = map[string]struct {
 	"weekly_plan.help_requested": {identityStreamEntity, 1},
 
 	// A call rides the identity stream because its entity is the AUTHOR. A
-	// forecast is about a pipeline, but a CALL is an assertion by a person and
+	// forecast is about a pipeline, but a CALL is an assertion by a contact and
 	// is attributable to them — a consumer asking "who said this number" is
 	// asking about a user, not about a deal.
 	"forecast.created":            {identityStreamEntity, 1},
@@ -219,13 +219,13 @@ var catalog = map[string]struct {
 	"forecast.share_revoked": {identityStreamEntity, 1},
 
 	// An introduction request is about a CONTACT — who can open a door to
-	// them, and what came of asking — so it rides the person stream a
+	// them, and what came of asking — so it rides the contact stream a
 	// consumer ranking that contact's open work already reads.
-	"intro_request.created":   {personStreamEntity, 1},
-	"intro_request.decided":   {personStreamEntity, 1},
-	"intro_request.completed": {personStreamEntity, 1},
-	"intro_request.replied":   {personStreamEntity, 1},
-	"intro_request.closed":    {personStreamEntity, 1},
+	"intro_request.created":   {contactStreamEntity, 1},
+	"intro_request.decided":   {contactStreamEntity, 1},
+	"intro_request.completed": {contactStreamEntity, 1},
+	"intro_request.replied":   {contactStreamEntity, 1},
+	"intro_request.closed":    {contactStreamEntity, 1},
 
 	"approval.requested": {approvalStreamEntity, 1},
 	"approval.decided":   {approvalStreamEntity, 1},

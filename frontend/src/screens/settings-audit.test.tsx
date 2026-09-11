@@ -104,7 +104,7 @@ describe("AuditLogCard", () => {
     expect(auditLogUrls(backend)[0]).toContain("limit=20");
 
     await user.type(screen.getByLabelText("Actor"), "agent:sdr");
-    await user.type(screen.getByLabelText("Entity type"), "person");
+    await user.type(screen.getByLabelText("Entity type"), "contact");
 
     // The card debounces what it asks, so the narrowed request exists only once
     // the debounce has elapsed — and that is stepped rather than waited out. On
@@ -115,7 +115,7 @@ describe("AuditLogCard", () => {
     await waitFor(() => {
       const latest = auditLogUrls(backend).at(-1) ?? "";
       expect(latest).toContain("actor=agent%3Asdr");
-      expect(latest).toContain("entity_type=person");
+      expect(latest).toContain("entity_type=contact");
     });
     const latest = auditLogUrls(backend).at(-1) ?? "";
     expect(latest).toContain("limit=20");

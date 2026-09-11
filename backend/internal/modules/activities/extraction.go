@@ -85,14 +85,14 @@ func extractionReport(read ExtractionRead, now time.Time) crmcontracts.Attachmen
 const requestAccessSource = "attachment_access_request"
 
 // requestAccessLinks ties the courtesy note back to the attachment's parent
-// when the activity_link table supports that entity kind (person /
+// when the activity_link table supports that entity kind (contact /
 // company / deal). An activity or lead parent has no activity_link
 // column for its own kind, so the note is written unlinked for those —
 // still findable through the parent's own audit trail, just not surfaced on
 // its timeline.
 func requestAccessLinks(entityType crmcontracts.AttachmentEntityType, entityID ids.UUID) []ActivityLinkInput {
 	switch entityType {
-	case crmcontracts.AttachmentEntityTypePerson, crmcontracts.AttachmentEntityTypeCompany, crmcontracts.AttachmentEntityTypeDeal:
+	case crmcontracts.AttachmentEntityTypeContact, crmcontracts.AttachmentEntityTypeCompany, crmcontracts.AttachmentEntityTypeDeal:
 		return []ActivityLinkInput{{EntityType: string(entityType), EntityID: entityID}}
 	default:
 		return nil

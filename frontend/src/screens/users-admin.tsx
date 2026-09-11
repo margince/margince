@@ -337,7 +337,7 @@ function RoleCell({
 }
 
 // The role a row reports rather than offers: the agent seat's, whose authority
-// is the passport granting it intersected with the person that passport names,
+// is the passport granting it intersected with the contact that passport names,
 // and any member's for a reader who may not change one. `undefined` means the
 // row draws a picker instead.
 function roleAnswer(
@@ -641,7 +641,7 @@ function MemberRow({
       >
         {/* Deactivating the agent seat is a posture an operator is entitled to
             take, so it stays offered — and the generic body (signed out, sessions
-            revoked) describes a person rather than an identity that signs in
+            revoked) describes a contact rather than an identity that signs in
             nowhere. The agent body's job is to say what does NOT stop: scheduled
             extension jobs keep running, because a tick acts as the job it is. */}
         <p className="t-caption">

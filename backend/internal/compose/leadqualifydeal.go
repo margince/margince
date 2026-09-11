@@ -8,12 +8,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// leadDealOpener is the people→deals edge behind qualify-to-deal: the
+// leadDealOpener is the contacts→deals edge behind qualify-to-deal: the
 // promote transaction asks for a deal, and the deals store writes it inside
 // that same transaction (CreateDealTx), so the contact and its opportunity
 // land together or not at all. Everything runs on the caller's transaction —
@@ -24,7 +24,7 @@ type leadDealOpener struct{ deals *deals.Store }
 // OpenDealForLead resolves the pipeline and stage — the caller's choice, a
 // named stage's own pipeline, or the default pipeline's first open stage —
 // and opens the deal.
-func (o leadDealOpener) OpenDealForLead(ctx context.Context, tx pgx.Tx, in people.QualifyDealInput) (ids.UUID, error) {
+func (o leadDealOpener) OpenDealForLead(ctx context.Context, tx pgx.Tx, in contacts.QualifyDealInput) (ids.UUID, error) {
 	pipelineID, stageID, err := deals.BirthStageTx(ctx, tx, in.PipelineID, in.StageID)
 	if err != nil {
 		return ids.Nil, err

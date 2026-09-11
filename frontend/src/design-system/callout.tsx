@@ -94,7 +94,7 @@ function announcementFor(
  * that wants a MOVE rather than reporting state. Two of them on one screen is
  * no emphasis at all. It is deliberately NOT indigo: `--ai` is a claim about
  * provenance, that an agent authored what you are reading, so an emphatic
- * notice a person wrote wearing indigo would tell every reader of that screen
+ * notice a contact wrote wearing indigo would tell every reader of that screen
  * something false about who decided.
  *
  * `live` decides how a screen reader learns about it; `kind` is the same

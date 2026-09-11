@@ -38,17 +38,17 @@ import (
 //
 // Higher than the enrichment floor (0.6) on purpose. A wrong phone number is a
 // typo a reader corrects in passing; a wrong economic buyer sends a rep to the
-// wrong person for a quarter, and the page above it then reports the committee
+// wrong contact for a quarter, and the page above it then reports the committee
 // as complete. The cost of being wrong is what sets the bar, not the model.
 const ConfidenceFloor = 0.75
 
 // Candidate is one contact this read may propose a role for, with the messages
 // it is allowed to read them from.
 type Candidate struct {
-	PersonID string
-	FullName string
-	Title    string
-	// HoldsRole says a person has already answered this question for this
+	ContactID string
+	FullName  string
+	Title     string
+	// HoldsRole says a contact has already answered this question for this
 	// contact. The read may not overwrite them.
 	HoldsRole bool
 	// Messages the contact themselves wrote, newest first. Their own words are
@@ -66,14 +66,14 @@ type Message struct {
 
 // Proposal is one role the model read out of the evidence.
 type Proposal struct {
-	PersonID        string  `json:"person_id"`
+	ContactID       string  `json:"contact_id"`
 	Role            string  `json:"role"`
 	EvidenceSnippet string  `json:"evidence_snippet"`
 	SourceID        string  `json:"source_id"`
 	Confidence      float64 `json:"confidence"`
 }
 
-const systemPrompt = `You read buying roles out of messages a customer's own people wrote.
+const systemPrompt = `You read buying roles out of messages a customer's own contacts wrote.
 
 The roles: champion (carries the deal inside their company), economic_buyer
 (signs for it), blocker (can stop it), influencer (shapes the decision without
@@ -87,7 +87,7 @@ Rules you must not break:
   called, not what they do on this deal. Read what they WROTE.
 - Propose nothing you are unsure of. A deal with no evidence of a role yields
   no proposal for it, which is the correct answer and not a failure.
-- One proposal per person at most.`
+- One proposal per contact at most.`
 
 // Request builds the model call.
 //
@@ -96,14 +96,14 @@ Rules you must not break:
 // somebody outside this company.
 //
 //promptlang:exempt the payload is the customers' own messages, each carrying an evidence_snippet checked verbatim against the source it names — translating one would both change the words and fail that check.
-//promptvoice:exempt the payload is other people's messages under a fence; there is no sentence of ours here to have a voice.
+//promptvoice:exempt the payload is other contacts's messages under a fence; there is no sentence of ours here to have a voice.
 func Request(dealName string, candidates []Candidate) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
 	// The deal's NAME is record data — somebody typed it, and on a shared deal
 	// that somebody may not be us. Interpolated into the instruction region it
 	// would be read in the prompt's own voice, which is the whole attack, so it
-	// is fenced like everything else that came from a person.
+	// is fenced like everything else that came from a contact.
 	prompt.WriteString("Deal (untrusted):\n")
 	prompt.WriteString(fence.Wrap(dealName) + "\n\n")
 	for _, candidate := range candidates {
@@ -113,8 +113,8 @@ func Request(dealName string, candidates []Candidate) model.Request {
 		// prompt's own voice, which is exactly the attack — and the rule above
 		// says a title is not evidence anyway.
 		prompt.WriteString(
-			fence.Wrap(fmt.Sprintf("person_id: %s\nName: %s\nTitle: %s",
-				candidate.PersonID, candidate.FullName, candidate.Title)) + "\n")
+			fence.Wrap(fmt.Sprintf("contact_id: %s\nName: %s\nTitle: %s",
+				candidate.ContactID, candidate.FullName, candidate.Title)) + "\n")
 		for _, message := range candidate.Messages {
 			prompt.WriteString("They wrote (untrusted):\n")
 			prompt.WriteString(fence.WrapAttr("source_id", message.ActivityID,
@@ -122,7 +122,7 @@ func Request(dealName string, candidates []Candidate) model.Request {
 		}
 		prompt.WriteString("\n")
 	}
-	prompt.WriteString(`Return JSON: { "proposals": [ { "person_id", "role", "evidence_snippet", "source_id", "confidence" } ] }`)
+	prompt.WriteString(`Return JSON: { "proposals": [ { "contact_id", "role", "evidence_snippet", "source_id", "confidence" } ] }`)
 
 	return model.Request{
 		System:         systemPrompt + "\n\n" + fence.Rule("untrusted material"),
@@ -139,13 +139,13 @@ func Schema() json.RawMessage {
 		map[string]schema.Node{
 			"proposals": schema.Array(schema.Object(
 				map[string]schema.Node{
-					"person_id":        schema.String(),
+					"contact_id":       schema.String(),
 					"role":             schema.Enum(dealrole.Shown...),
 					"evidence_snippet": schema.String(),
 					"source_id":        schema.String(),
 					"confidence":       schema.Number(),
 				},
-				"person_id", "role", "evidence_snippet", "source_id", "confidence",
+				"contact_id", "role", "evidence_snippet", "source_id", "confidence",
 			)),
 		},
 		"proposals",
@@ -172,14 +172,14 @@ const MinEvidenceWords = 6
 //   - The source must be one this call actually supplied. A source_id from
 //     somewhere else cannot be checked at all.
 //   - The confidence must clear the floor.
-//   - The person must be a candidate, and hold no role yet. A seat somebody
+//   - The contact must be a candidate, and hold no role yet. A seat somebody
 //     typed by hand is a human's answer, and overwriting it with a guess is the
 //     one thing this must never do.
 //
 // A proposal that fails any of them is dropped, silently and without a retry:
 // the honest answer to weak evidence is no answer.
 func Gate(proposals []Proposal, candidates []Candidate) []Proposal {
-	// Every source is bound to the person who WROTE it. Keyed by activity id
+	// Every source is bound to the contact who WROTE it. Keyed by activity id
 	// alone, a proposal could cite one contact's message as evidence about
 	// another — and since both sit in the same prompt, a sender who writes an
 	// instruction into their own email could hand a role to a colleague they
@@ -191,16 +191,16 @@ func Gate(proposals []Proposal, candidates []Candidate) []Proposal {
 	known := map[string]bool{}
 	held := map[string]bool{}
 	for _, candidate := range candidates {
-		known[candidate.PersonID] = true
+		known[candidate.ContactID] = true
 		if candidate.HoldsRole {
-			held[candidate.PersonID] = true
+			held[candidate.ContactID] = true
 		}
 		for _, message := range candidate.Messages {
 			sources[message.ActivityID] = struct {
 				author string
 				body   string
 			}{
-				author: candidate.PersonID,
+				author: candidate.ContactID,
 				body:   message.Subject + "\n" + message.Body,
 			}
 		}
@@ -213,13 +213,13 @@ func Gate(proposals []Proposal, candidates []Candidate) []Proposal {
 	seen := map[string]bool{}
 	kept := make([]Proposal, 0, len(proposals))
 	for _, proposal := range proposals {
-		if seen[proposal.PersonID] {
+		if seen[proposal.ContactID] {
 			continue
 		}
 		if !survives(proposal, known, held, roles, sources) {
 			continue
 		}
-		seen[proposal.PersonID] = true
+		seen[proposal.ContactID] = true
 		kept = append(kept, proposal)
 	}
 	return kept
@@ -238,12 +238,12 @@ func survives(
 		body   string
 	},
 ) bool {
-	if !known[proposal.PersonID] {
+	if !known[proposal.ContactID] {
 		return false
 	}
 	// A seat somebody typed is a human's answer. Overwriting it with a reading
 	// is the one thing this must never do.
-	if held[proposal.PersonID] {
+	if held[proposal.ContactID] {
 		return false
 	}
 	// Outside [0,1] it is not a confidence at all: a model answering 75 for
@@ -254,11 +254,11 @@ func survives(
 	if !roles[proposal.Role] {
 		return false
 	}
-	// The evidence has to be the PERSON'S OWN words. Keyed by activity alone, a
+	// The evidence has to be the CONTACT'S OWN words. Keyed by activity alone, a
 	// sender who writes an instruction into their own email could hand a role to
 	// a colleague they have never spoken for.
 	src, ok := sources[proposal.SourceID]
-	if !ok || src.author != proposal.PersonID {
+	if !ok || src.author != proposal.ContactID {
 		return false
 	}
 	snippet := strings.TrimSpace(proposal.EvidenceSnippet)

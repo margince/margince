@@ -25,16 +25,16 @@ var planTables = map[string][]StoredColumn{
 	"company": columnsOf("id:uuid", "display_name", "owner_id:uuid",
 		"is_anchor:boolean", "address_city", "visibility"),
 	"project":  columnsOf("id:uuid", "name", "owner_id:uuid", "company_id:uuid", "visibility"),
-	"person":   columnsOf("id:uuid", "full_name", "owner_id:uuid", "address_city", "visibility"),
+	"contact":  columnsOf("id:uuid", "full_name", "owner_id:uuid", "address_city", "visibility"),
 	"activity": columnsOf("id:uuid", "subject", "kind", "owner_id:uuid", "visibility"),
 	// The join tables, so a plan that traverses one compiles here rather than
 	// only in the vocabulary. Their columns are the DDL's (core 0007/0131 and
 	// 0008/0038), including the archived_at only one of them has.
-	"relationship": columnsOf("id:uuid", "kind", "person_id:uuid", "company_id:uuid",
+	"relationship": columnsOf("id:uuid", "kind", "contact_id:uuid", "company_id:uuid",
 		"counterparty_company_id:uuid", "deal_id:uuid", "project_id:uuid",
 		"archived_at:timestamp with time zone", "started_at:date", "ended_at:date"),
 	"activity_link": columnsOf("id:uuid", "activity_id:uuid", "entity_type",
-		"person_id:uuid", "company_id:uuid", "deal_id:uuid", "lead_id:uuid"),
+		"contact_id:uuid", "company_id:uuid", "deal_id:uuid", "lead_id:uuid"),
 }
 
 // compilePlanDoc runs a plan document through the REAL decoder and validator
@@ -320,7 +320,7 @@ func TestARecordTypeNoLongerAdmittedCompilesToNoStatement(t *testing.T) {
 		fetch:   plan.Limit + 1,
 	}
 	// The same plan, compiled for a principal who may no longer read deals.
-	sql, admitted, err := compiler.compileStatement(readerFor(entityPerson), plan, binding)
+	sql, admitted, err := compiler.compileStatement(readerFor(entityContact), plan, binding)
 	if err != nil {
 		t.Fatal(err)
 	}

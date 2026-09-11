@@ -8,7 +8,7 @@ import { plainTextOf, safeEditorHTML } from "./richtext";
 // `value` is not always something a rep typed — an AI draft arrives here, and a
 // model's output is untrusted input however friendly its source. The server
 // filters what LEAVES for a recipient; this filters what ENTERS our document,
-// and the two protect different people.
+// and the two protect different contacts.
 describe("what may enter the editor", () => {
   it("keeps the formatting the toolbar can produce", () => {
     const markup =

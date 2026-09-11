@@ -86,14 +86,14 @@ describe("the query client defaults", () => {
   // wired to is proved end to end in screens/liverecord.test.tsx, by driving
   // each record page's own read through this client.
   it("repeats a record read, and nothing else", () => {
-    expect(liveInterval({ queryKey: ["person360", "p-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["contact360", "p-1"] })).toBe(60_000);
     expect(liveInterval({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 
   it("refetches a record on the way back to the tab, and nothing else", () => {
     // "always" and not `true`: `true` refetches only a read already stale, so
     // inside the staleness window above the return would be served the cache.
-    expect(liveOnReturn({ queryKey: ["person360", "p-1"] })).toBe("always");
+    expect(liveOnReturn({ queryKey: ["contact360", "p-1"] })).toBe("always");
     expect(liveOnReturn({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 

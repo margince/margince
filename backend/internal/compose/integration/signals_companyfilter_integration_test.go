@@ -57,15 +57,15 @@ func TestListSignalsByCompanyCoversResolvedAndDirectSubjects(t *testing.T) {
 		(id, kind, source_channel, entity_type, entity_id, resolution_state, severity, summary, detected_at, source, captured_by)
 		VALUES ($1, 'risk', 'derived', 'company', '`+acme.String()+`', 'resolved', 'warn',
 		        'Budget freeze mentioned on the call', now(), 'manual', 'human:x')`)
-	// The resolver's shape: the SUBJECT is a person, and the account it
+	// The resolver's shape: the SUBJECT is a contact, and the account it
 	// belongs to is stamped on resolved_company_id. Matching on the subject pair
 	// alone would miss it; matching on resolved_company_id alone would miss the
 	// direct one above. The filter has to carry both arms.
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	resolved := seedSignalRow(t, owner, `INSERT INTO signal
 		(id, kind, source_channel, entity_type, entity_id, resolved_company_id,
 		 resolution_state, severity, summary, detected_at, source, captured_by)
-		VALUES ($1, 'buying_intent', 'web', 'person', '`+contact.String()+`', '`+acme.String()+`', 'resolved', 'warn',
+		VALUES ($1, 'buying_intent', 'web', 'contact', '`+contact.String()+`', '`+acme.String()+`', 'resolved', 'warn',
 		        'Pricing page visited five times', now(), 'manual', 'human:x')`)
 	// A signal about a different account must not leak into the filter.
 	seedSignalRow(t, owner, `INSERT INTO signal

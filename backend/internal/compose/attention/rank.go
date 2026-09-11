@@ -141,7 +141,7 @@ type ranked struct {
 	// no deal on the wire.
 	//
 	// The scope filters judge a deal-bearing row by its deal's owner, which a
-	// waiting message does not have: the message names a person, not a deal, and
+	// waiting message does not have: the message names a contact, not a deal, and
 	// its ownership is the ownership of the record it is filed under. The lane
 	// resolves that walk, and this is where the answer rides so the SAME filters
 	// can judge it. Zero means the row names nobody, which for a wait is an
@@ -157,18 +157,18 @@ type ranked struct {
 	// would read a confident claim that nobody owes it. So the producers state
 	// this one, and the census fails on a lane that does not.
 	ownerRef ownerRef
-	// person is WHO a waiting row is about, when it names one.
+	// contact is WHO a waiting row is about, when it names one.
 	//
-	// The subject cannot answer this. A wait carrying both a deal and a person
+	// The subject cannot answer this. A wait carrying both a deal and a contact
 	// takes the DEAL as its subject — the deal says more about what the reply
 	// is for — so the contact vanishes from the row even though the lane
 	// resolved them. The decay suppressor needs exactly that contact: without
-	// it a person appears twice, once as unanswered and once as gone quiet, and
+	// it a contact appears twice, once as unanswered and once as gone quiet, and
 	// the pair reads as the page contradicting itself.
 	//
-	// Zero means the wait names no person, which is a real state: a thread can
+	// Zero means the wait names no contact, which is a real state: a thread can
 	// be filed under a company alone.
-	person ids.UUID
+	contact ids.UUID
 	// foldedFrom names the sources of the rows this one stands for, once per
 	// member. A folded group is shown INSTEAD of its members, so a count of
 	// what the reader can see has to attribute it back to them — otherwise

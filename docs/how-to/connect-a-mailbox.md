@@ -1,6 +1,6 @@
 # Connect a mailbox for capture
 
-Connect a mailbox so Margince captures its mail onto the timeline — creating people, companies and
+Connect a mailbox so Margince captures its mail onto the timeline — creating contacts, companies and
 activities through the one dedupe chokepoint. **UI-first**, with the equivalent `curl` alongside for
 scripting. Every connection below is standing, and each path has its own section: **Gmail over OAuth**
 (A), **IMAP with an app-password** (B, the way to reach a Gmail or Outlook mailbox with no OAuth app),
@@ -121,7 +121,7 @@ that appears right after a Google connect:
 1. Pick a **window** — `3m` / `6m` / `12m` (default `6m`). The panel auto-**previews**: it shows the
    estimated message count and estimated AI cost. This is the consent surface and spends nothing.
 2. Click **Start the import**. A live progress bar tracks scanned vs. estimated — moving *within* a page,
-   not only at each page commit — with running counts of captured emails, people created, and **domains
+   not only at each page commit — with running counts of captured emails, contacts created, and **domains
    queued for a company verdict** (the panel labels the third *companies*; capture creates none itself —
    see [mail-history-import.md](../explanation/mail-history-import.md)). **Cancel** keeps everything
    already captured.
@@ -321,13 +321,13 @@ curl -X POST http://localhost:8080/v1/connectors/gcal/connect \
    IMAP included (or `GET /connectors`). IMAP's first messages arrive on the next sweep, not at connect.
 2. **Mail became timeline activities.** Open a captured counterparty's timeline (or `GET /activities`)
    and confirm each message is an email activity, provenance-stamped `connector:<name>`.
-3. **People were auto-created; companies were *asked about*.** A new external counterparty becomes a
-   person through the dedupe chokepoint, and a fuzzy near-match lands in the dedupe review queue rather
+3. **Contacts were auto-created; companies were *asked about*.** A new external counterparty becomes a
+   contact through the dedupe chokepoint, and a fuzzy near-match lands in the dedupe review queue rather
    than duplicating. The **company is not created here.** Capture records an open question against the
    sender's domain (`company_domain_disposition`, verdict `pending`) and a background site read
    answers it: `company` creates the company from what the site states and plants the employment
    edge, `personal` and `provider` refuse one for good, and `no_site` settles it either way. All four
-   mean the same thing for the next message — stop asking. So a freshly connected mailbox shows people
+   mean the same thing for the next message — stop asking. So a freshly connected mailbox shows contacts
    immediately and companies as the crawls land, not in the same tick.
 4. **The credential is never echoed, and disconnect destroys it.** No read surface returns a secret —
    the roster carries only a server-side `credential_ref`, for the IMAP app-password exactly as for an

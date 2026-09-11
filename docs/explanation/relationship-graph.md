@@ -14,16 +14,16 @@ about the first: the graph built from recorded contact.
 ## The question it answers
 
 A rep about to write into a new account wants one thing before they draft: **does anybody here already
-know these people, and how well?** A cold account and a warm one look identical on a company page —
+know these contacts, and how well?** A cold account and a warm one look identical on a company page —
 same fields, same logo, same empty pipeline — and the difference between them is entirely a matter of
 who on the team has a real exchange on file.
 
 Two surfaces answer it, and both read the same `graph_interaction_edge` projection:
 
-- `GET /people/{id}/network` — *who on our team knows this contact*, warmest first
-  (`EdgesForPerson`, one contact).
+- `GET /contacts/{id}/network` — *who on our team knows this contact*, warmest first
+  (`EdgesForContact`, one contact).
 - `GET /deals/{id}/coverage` — *who covers this deal, and what is wrong with how it is covered*
-  (`CoverageFor` → `EdgesForPeople`, every stakeholder at once, which is what ranks the colleague on
+  (`CoverageFor` → `EdgesForContacts`, every stakeholder at once, which is what ranks the colleague on
   our side of each relationship).
 
 One test inside coverage deliberately does **not** use the projection: whether a stakeholder counts as
@@ -50,10 +50,10 @@ captured mail / calendar          hand-logged call or meeting
         │                                   │
         ▼                                   ▼
    activity_participant  ── one row per party per role
-        │   user_id = ours · person_id = a contact · address = never became one
-        │   (people promotes address → person_id at the link chokepoint)
+        │   user_id = ours · contact_id = a contact · address = never became one
+        │   (contacts promotes address → contact_id at the link chokepoint)
         ▼
-   graph_interaction_edge  ── the PROJECTION: one row per (user, person)
+   graph_interaction_edge  ── the PROJECTION: one row per (user, contact)
         │   counts + exact moments; no id, no audit, no event —
         │   throw it away and rebuild at any time
         │   maintained two ways, converging on one fold:
@@ -61,10 +61,10 @@ captured mail / calendar          hand-logged call or meeting
         ▼
    read-time score = recency × frequency × reciprocity  (never stored)
         │
-        ├── GET /people/{id}/network    who on our team knows this contact
-        │      EdgesForPerson — one contact
+        ├── GET /contacts/{id}/network    who on our team knows this contact
+        │      EdgesForContact — one contact
         └── GET /deals/{id}/coverage    who covers this deal, and what's wrong
-               EdgesForPeople — every stakeholder at once
+               EdgesForContacts — every stakeholder at once
                + deals.EngagedStakeholders, which walks activity_link DIRECTLY:
                  "engaged" is about this deal's own conversations
                  (deal health asks the same question with its own inline copy)
@@ -73,18 +73,18 @@ captured mail / calendar          hand-logged call or meeting
 ## Participants — the fact the schema could not previously state
 
 `activity_link` records which **records** an activity concerns. It has no user arm, so nothing anywhere
-recorded which of *our* people was in the conversation. `activity_participant` (ACT-DDL-3, migration
+recorded which of *our* contacts was in the conversation. `activity_participant` (ACT-DDL-3, migration
 `0157`) is a row per party, with three identity arms that are deliberately not interchangeable:
 
 | Arm | What it means |
 |---|---|
 | `user_id` | **Our** side — the arm the interaction edge is keyed on. |
-| `person_id` | A known counterparty, already a contact. |
+| `contact_id` | A known counterparty, already a contact. |
 | `address` | A party who never became a record. Kept, not dropped: an unresolved attendee is a fact about the meeting. |
 
 A row must name somebody (`activity_participant_identity` CHECK), the role set is closed at the
 database (`from`, `to`, `cc`, `attendee`, `organizer`), and a uniqueness index over
-`(activity_id, role, user_id, person_id, address)` — coalescing the NULL arms so the constraint is not
+`(activity_id, role, user_id, contact_id, address)` — coalescing the NULL arms so the constraint is not
 vacuous for address-only rows — makes every writer's insert a free no-op on replay.
 
 ### Why capture must write it in the ingest transaction
@@ -95,7 +95,7 @@ by the time any other module sees the activity, its `captured_by` reads `connect
 behind it is unrecoverable. That is the ratified reason `capture` writes a table `activities` owns —
 `backend/gates/tableownership_test.go` carries it verbatim, and a reasonless or stale waiver fails the gate.
 
-Capture writes the counterparty as an **address**, not a person: the tiered creation gate runs *after*
+Capture writes the counterparty as an **address**, not a contact: the tiered creation gate runs *after*
 that transaction commits, and for a suppressed sender it never runs at all. Direction decides the roles
 and nothing else — our user is `from` on outbound, `to` on inbound — which is exactly what lets the
 fold tell a real exchange from a hundred unanswered sends.
@@ -106,19 +106,19 @@ Four modules touch the table, and each ratification in the ownership gate states
 
 | Module | What it writes | Why it, and not the owner |
 |---|---|---|
-| `activities` | **Owner.** The hand-logged path: the human who logged it plus the people they linked, with the same direction-derived roles capture stamps. | — |
+| `activities` | **Owner.** The hand-logged path: the human who logged it plus the contacts they linked, with the same direction-derived roles capture stamps. | — |
 | `capture` | Both arms of a captured message, in the ingest transaction. | The connector principal is the only place the mailbox owner is known. |
-| `people` | Promotes the address arm to a `person_id` at `linkActivityToPerson`. | That is the one chokepoint every ensure path reaches **and** the one that has already settled the person against a merge — so naming the party is the same write, on the same row, in the same transaction as the link. |
-| `privacy` | Erasure deletes rows whose only identity is the subject, and nulls the subject's arms on rows that also name one of our users. | The address arm exists precisely for a party who never became a record, so it survives the `person_email` purge and would keep an erased address readable and re-matchable. |
+| `contacts` | Promotes the address arm to a `contact_id` at `linkActivityToContact`. | That is the one chokepoint every ensure path reaches **and** the one that has already settled the contact against a merge — so naming the party is the same write, on the same row, in the same transaction as the link. |
+| `privacy` | Erasure deletes rows whose only identity is the subject, and nulls the subject's arms on rows that also name one of our users. | The address arm exists precisely for a party who never became a record, so it survives the `contact_email` purge and would keep an erased address readable and re-matchable. |
 
-One party gets one row: `namePersonAmongParticipants` **updates** the address row rather than adding a
-second, and leaves it alone if a person row for the same `(activity, role)` already exists — that is a
+One party gets one row: `nameContactAmongParticipants` **updates** the address row rather than adding a
+second, and leaves it alone if a contact row for the same `(activity, role)` already exists — that is a
 second address for a party already recorded, not a second party.
 
 ### Recovering history
 
 Every message already in the timeline predates ACT-DDL-3, so a workspace with years of mail would read
-empty — indistinguishable, to the person looking at it, from a broken feature.
+empty — indistinguishable, to the contact looking at it, from a broken feature.
 `BackfillParticipantsBatch` recovers two classes, class 1 winning over class 2:
 
 - **Class 1** — `captured_by` reads `human:<uuid>`. Exact, no inference.
@@ -140,7 +140,7 @@ is silently mis-attributing a meeting.
 
 ## The projection — one fold, two paths onto it
 
-`graph_interaction_edge` (CG-DDL-1, migration `0158`) is one row per `(workspace, user, person)`
+`graph_interaction_edge` (CG-DDL-1, migration `0158`) is one row per `(workspace, user, contact)`
 holding counted facts and exact moments: `last_at`, `last_inbound_at`, `last_outbound_at`, the 90-day
 counts, and the lifetime total. It is a **projection** — it holds no fact of its own, carries no id, no
 version, no `audit_log` row and no `event_outbox` row, and can be thrown away and rebuilt at any time.
@@ -159,8 +159,8 @@ Two paths keep it true, and they converge on the same statement:
 - **Incremental** — the `cg:graph-edge` consumer. `activity.captured` / `.updated` / `.archived` and
   `retention.applied` refold the pairs the activity's participants imply — resolved from the
   participant rows themselves, so a **relink** also refolds the pair the activity *used* to belong to,
-  which is the pair the event could not have named. `person.merged` drops the source's edges and
-  refolds the survivor; `person.archived` / `.restored` / `.updated` / `.created` refold that contact.
+  which is the pair the event could not have named. `contact.merged` drops the source's edges and
+  refolds the survivor; `contact.archived` / `.restored` / `.updated` / `.created` refold that contact.
   `user.deactivated` does nothing at all — reads filter through the live-member join, so a departure
   takes effect without rewriting a row.
 - **Nightly reconcile** — the `graph_edge_reconcile` dispatcher (`24h`) fans out `graph_edge_workspace`,
@@ -192,9 +192,9 @@ const interactionRoles = `('from','to','cc','attendee','organizer')`
 This is a deliberate reversal, recorded in the contract (ADR-0078, founder decision 2026-07-31). The
 market convention is to exclude `cc`, on the argument that being copied is not a relationship. It was
 excluded here first and then reversed, and the reasoning is worth keeping intact: **in the accounts
-this product is built for, the person who is always in copy on the thread is frequently the one who
+this product is built for, the contact who is always in copy on the thread is frequently the one who
 actually knows the customer** — the account lead cc'd on their team's correspondence, the partner
-copied on every exchange. Dropping `cc` did not remove noise so much as remove exactly those people
+copied on every exchange. Dropping `cc` did not remove noise so much as remove exactly those contacts
 from the answer to "who here knows them".
 
 The quality bar sits in the **reciprocity term**, not in a role filter. A colleague who is only ever
@@ -205,7 +205,7 @@ They appear, ranked where they belong, instead of vanishing.
 
 - **Anything outside `email`, `call`, `meeting`** (`relstrength.IsInteractionKind`, rendered into SQL
   from the same list so the four producers cannot drift). A task is *intent* and a note is a record of
-  *thinking*; neither means two people spoke, and counting them would let a rep's own to-do list score
+  *thinking*; neither means two contacts spoke, and counting them would let a rep's own to-do list score
   as a relationship. When the two paths disagreed, a captured note became an interaction while an
   identical hand-logged one did not — the same conversation scoring differently depending on how it
   arrived.
@@ -214,7 +214,7 @@ They appear, ranked where they belong, instead of vanishing.
 - **A seat on a deal.** A stakeholder row is a statement about *who ought to be involved*. Only a
   recorded interaction is evidence of *contact* — which is exactly why a deal can carry five seats and
   still be single-threaded.
-- **An unlinked note.** The hand-logged path is silent for an activity with no person link: that is a
+- **An unlinked note.** The hand-logged path is silent for an activity with no contact link: that is a
   workspace-shared thought, not a conversation with anybody.
 
 ## Warmth is per-user, and `none` is not zero
@@ -226,10 +226,10 @@ addition and are never merged**. A contact can be warm to the company while the 
 has barely met them, and that gap *is* the answer to "who should make the introduction".
 
 **The reader is ranked like anybody else, and is never somebody to ask.** Nothing in the route read
-excludes the person doing the reading, so on a contact they correspond with themselves the warmest way
+excludes the contact doing the reading, so on a contact they correspond with themselves the warmest way
 in *is* them — which is the most useful fact the surface can report and never an introduction to
 request. Both writers refuse it (`introductions.Store.Create` and the account draft in
-`compose/company360`, each with `ErrInvalidArgument`), and both surfaces say so in the second person rather
+`compose/company360`, each with `ErrInvalidArgument`), and both surfaces say so in the second contact rather
 than printing the reader's own name back at them as a third party.
 
 The vocabularies are deliberately different on screen too — the per-user bands are
@@ -242,14 +242,14 @@ identically; the wire type makes `strength` optional and omits it, and the card 
 match.
 
 Ranking cannot be pushed into SQL — the score is a function of `(row, now)`, so the database would have
-to reimplement the formula the `relstrength` leaf exists to keep single. `EdgesForPerson` returns
+to reimplement the formula the `relstrength` leaf exists to keep single. `EdgesForContact` returns
 **last-contact** order; a caller promising "warmest first" over-fetches (100), calls `SortByStrength`,
 and only then caps (10). Capping in SQL would cap by recency, and a one-line reply would evict the
 colleague who has worked the account for a year.
 
 Two gates ride every edge read, and both are load-bearing:
 
-- **The person gate.** `auth.Require("person", read)` plus `auth.EnsureVisibleLive` — not
+- **The contact gate.** `auth.Require("contact", read)` plus `auth.EnsureVisibleLive` — not
   `EnsureVisible`, which returns early for an unbounded caller without probing. Either gap would let a
   known id return a contact's colleagues and interaction counts after the record itself stopped being
   readable.
@@ -301,19 +301,19 @@ all. Telling a rep their delivered business is single-threaded is how a flag sto
 
 | Kind | Identifier | The rule, as coded |
 |---|---|---|
-| `single_threaded_theirs` | **REPORT-PARAM-1**, verbatim | Fewer than two engaged contacts (`reportThreadingFloor = 2`). Their side: the customer is represented by one person. |
+| `single_threaded_theirs` | **REPORT-PARAM-1**, verbatim | Fewer than two engaged contacts (`reportThreadingFloor = 2`). Their side: the customer is represented by one contact. |
 | `single_threaded_ours` | **GRAPH-RISK-1** | One colleague holds ≥ `ourSideDominanceShare` (0.8) of at least `ourSideMinInteractions` (5) 90-day interactions. Genuinely new rather than a re-reading of REPORT-PARAM-1, which is why it carries its own id. |
 | `coverage_gap` | — | Seats on the deal, but no *engaged* champion. Distinct from single-threading: three engaged contacts and no champion among them is a deal nobody inside is arguing for. |
 | `champion_left` | — | The canonical `champion` seat has left the account. |
 | `stakeholder_left` | — | Another seat has left. Two kinds rather than one because they are different sentences to a rep — collapsing them makes the milder case shout and the severe one whisper. |
 | `going_cold` | **REPORT-PARAM-2** | No captured touch for `goingColdDays` (30) days, reporting the actual day count beside it. One threshold ships, not two: the 60-day view is the same finding filtered on `days_since_touch`, and a second kind would let a deal at 61 days appear on one surface and not the other. |
 
-The minimum on GRAPH-RISK-1 matters as much as the share: without it, a deal where one person sent the
+The minimum on GRAPH-RISK-1 matters as much as the share: without it, a deal where one contact sent the
 only two messages that have ever been exchanged would flag as concentrated, when it is simply new.
 
 Two facts the gather deliberately refuses to guess at:
 
-- **Departure needs evidence.** A person counts as departed only when *both* halves hold: an
+- **Departure needs evidence.** A contact counts as departed only when *both* halves hold: an
   employment at this account with an end date that has **passed**, and no live employment there now. An
   **archived** employment is not evidence of leaving — archiving retracts a statement (somebody
   recorded the job by mistake) while an end date records a fact about the world. Announcing a
@@ -328,7 +328,7 @@ Two facts the gather deliberately refuses to guess at:
 ## Every risk carries the ids behind it
 
 A risk without evidence is an opinion, and a flag a human cannot drill into is a red dot nobody can act
-on (REPORT-AC-3). Each finding carries `person_ids` and `user_ids` — the unengaged stakeholder, the
+on (REPORT-AC-3). Each finding carries `contact_ids` and `user_ids` — the unengaged stakeholder, the
 colleague carrying the thread — as **ids rather than names**, so the caller renders them under its own
 row scope.
 
@@ -344,9 +344,9 @@ disagree the moment either changed.
 ## Privacy — dropped in the transaction, not by a consumer
 
 The graph structures exist precisely to hold a party who *never became a record* — that is what the
-address arm of a participant row and a LinkedIn ghost both are. A person-keyed sweep alone leaves the
+address arm of a participant row and a LinkedIn ghost both are. A contact-keyed sweep alone leaves the
 subject named, reachable and re-matchable. So every clause in `privacy/erasure_graph.go` reaches the
-subject by **identifier** as well as by person id, inside the same Art. 17 transaction as the rest of
+subject by **identifier** as well as by contact id, inside the same Art. 17 transaction as the rest of
 the cascade:
 
 - **Participants** — delete rows whose only identity is the subject (a participant row must name
@@ -355,14 +355,14 @@ the cascade:
 - **Ghosts** — delete on *suggestion-grade* evidence, not just a confirmed match. The asymmetry is
   deliberate: matching errs toward caution because a wrong link attaches a stranger to a customer
   record, while deletion errs the other way, because deleting one ghost too many costs a re-import of a
-  file the colleague still has and keeping one too few leaves a named person's data behind after we
+  file the colleague still has and keeping one too few leaves a named contact's data behind after we
   certified it destroyed.
-- **Edges** — `DELETE FROM graph_interaction_edge WHERE person_id = $1`, **here** rather than in the
+- **Edges** — `DELETE FROM graph_interaction_edge WHERE contact_id = $1`, **here** rather than in the
   `cg:graph-edge` consumer.
 
 That last one is the load-bearing lesson, and the ownership gate records it as the ratification for
 `privacy` writing `search`'s table: *an Art. 17 obligation discharged by an event is one that fails
-silently when the bus is behind.* It was in fact wrong — the consumer listened for a `person.erased`
+silently when the bus is behind.* It was in fact wrong — the consumer listened for a `contact.erased`
 event this path has never emitted, so **every erasure left its edges standing** while looking exactly
 like a passing one. The projection holds who corresponded with the subject, how often and how recently.
 
@@ -389,7 +389,7 @@ see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
 - **Calendar attendees are not backfilled.** The historical pass recovers the mailbox owner and the
   linked counterparty; parsing attendees out of stored originals is its own slice.
 - **`CompanyLinkedInReach` is wired to nothing.** The per-colleague, per-account ghost count
-  exists in `people` and is exercised by tests, but no HTTP surface, agent tool or screen reads it
+  exists in `contacts` and is exercised by tests, but no HTTP surface, agent tool or screen reads it
   today. The shipped account-level answer is the member's own
   [`/me/linkedin-reach`](../how-to/import-your-linkedin-network.md).
 
@@ -400,7 +400,7 @@ see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
   the corruption remedy.
 - **The score is computed at read**, never stored — a decayed number is wrong the moment the clock moves.
 - **Every role makes an edge, cc included.** The quality bar is reciprocity, not a role filter.
-- **Anything that returns a record is a read**, and carries the person gate plus `EnsureVisibleLive`.
+- **Anything that returns a record is a read**, and carries the contact gate plus `EnsureVisibleLive`.
 - **A departed colleague disappears from the answer via the live-member join**, not by rewriting rows.
 - **An erasure obligation is discharged in its own transaction**, never by an event.
 
@@ -410,7 +410,7 @@ see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
 |---|---|
 | Participant rows for captured mail (both arms, ingest transaction) | `internal/modules/capture/participant.go` |
 | Participant rows for a hand-logged call/meeting | `internal/modules/activities/participantlog.go` |
-| Address → person promotion at the link chokepoint | `internal/modules/people/participant.go` |
+| Address → contact promotion at the link chokepoint | `internal/modules/contacts/participant.go` |
 | Historical participant recovery (class 1 / 2a / 2b) | `internal/modules/activities/participantbackfill.go`, job in `internal/compose/participantbackfilljob.go` |
 | The interaction projection: fold, prune, rebuild, reads | `internal/modules/search/graphedge.go` |
 | The `cg:graph-edge` consumer + its invalidation set | `internal/modules/search/graphedgegen.go` |
@@ -424,7 +424,7 @@ see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
 | Deactivation deleting a departing member's network | `internal/modules/identity/users.go` |
 | Cross-store ratifications for every table above | `backend/gates/tableownership_test.go` |
 | The tables | `activity_participant` (`migrations/core/0157_*`), `graph_interaction_edge` (`0158_*`), `linkedin_connection` (`0159_*`), `linkedin_account` (`0160_*`) |
-| The REST contract | `backend/api/crm.yaml` (`getPersonNetwork`, `getDealCoverage`) |
+| The REST contract | `backend/api/crm.yaml` (`getContactNetwork`, `getDealCoverage`) |
 | The job contract (cadence, fan-out, batch sizes) | `backend/api/jobs.yaml` (`graph_edge_reconcile`, `participant_backfill`, `linkedin_rematch`) |
 | The two cards | `frontend/src/screens/network.tsx` (rendered from `contacts.tsx` and `deals.tsx`) |
 

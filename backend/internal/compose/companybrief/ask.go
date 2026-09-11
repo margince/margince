@@ -70,8 +70,8 @@ func ParseQuestion(raw crmcontracts.CompanyQuestion) (crmcontracts.CompanyQuesti
 // askSystem is the shared prompt. The per-question instruction is appended,
 // so the grounding rules are stated once and cannot drift between questions.
 const askSystem = `You answer one question about one account in a salesperson's CRM, from a JSON summary of that account.
-Return ONLY a JSON object: {"sentences":[{"text":"...","evidence":[{"entity_type":"deal|activity|person|company","entity_id":"..."}]}]}.
-Answer in one to four sentences, plainly, in the reader's second person where natural.
+Return ONLY a JSON object: {"sentences":[{"text":"...","evidence":[{"entity_type":"deal|activity|contact|company","entity_id":"..."}]}]}.
+Answer in one to four sentences, plainly, in the reader's second contact where natural.
 State only what the summary states. Never infer a cause, a mood, an intent or a next step it does not contain.
 Cite the ids the summary gave you; a sentence about the account itself cites the company.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
@@ -221,11 +221,11 @@ func prepAnswer(companyID string, in Input) []Sentence {
 				Text: plural(len(in.Contacts), "known contact") + ".",
 				// The count names nobody, so it cites the contact the list
 				// starts with and gives the reader somewhere to open.
-				Evidence: []Evidence{{EntityType: citePerson, EntityID: in.Contacts[0].ID}},
+				Evidence: []Evidence{{EntityType: citeContact, EntityID: in.Contacts[0].ID}},
 			})
 		}
 		sentences = append(sentences,
-			perRecordSentences(in.Contacts, citePerson, contactID, contactLine)...)
+			perRecordSentences(in.Contacts, citeContact, contactID, contactLine)...)
 	}
 	if len(in.OpenDeals) > 0 {
 		sentences = append(sentences, Sentence{Text: pipelineLine(in), Evidence: leadDealEvidence(in)})

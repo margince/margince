@@ -76,7 +76,7 @@ type EntityBinding struct {
 
 // FieldBindings is the registry. Every gate derives from this one slice.
 func FieldBindings() []EntityBinding {
-	return []EntityBinding{personBindings, companyBindings, dealBindings, leadBindings, activityBindings}
+	return []EntityBinding{contactBindings, companyBindings, dealBindings, leadBindings, activityBindings}
 }
 
 // BindingsFor resolves one canonical entity's bindings. An entity the
@@ -141,13 +141,13 @@ func mirrorStructuralBindings() []FieldBinding {
 	}
 }
 
-// personBindings disposition every contract Person field. Armed: the coverage
+// contactBindings disposition every contract Contact field. Armed: the coverage
 // gate holds this entity to accounting for every field the contract publishes
 // on it, in both directions.
 //
 //nolint:goconst // the rows are read as data, and each column is its own vocabulary: a wire slot, the mirror's jsonb key and an incumbent property spell "address" alike here by coincidence, so hiding any of them behind one shared name would assert a correspondence the table exists to keep separate
-var personBindings = EntityBinding{
-	Entity: "person",
+var contactBindings = EntityBinding{
+	Entity: "contact",
 	Armed:  true,
 	Bindings: append([]FieldBinding{
 		{
@@ -163,12 +163,12 @@ var personBindings = EntityBinding{
 		{WireSlot: "full_name", CanonicalKey: "full_name", Incumbent: []string{"firstname", "lastname", "email"}, Transform: "full_name", Disposition: DispositionMapped},
 		{WireSlot: "title", CanonicalKey: "title", Incumbent: []string{"jobtitle"}, Disposition: DispositionMapped},
 		{WireSlot: "address", CanonicalKey: "address", Incumbent: []string{"address", "city", "state", "zip", "country"}, Transform: "address_json", Disposition: DispositionMapped},
-		{WireSlot: "emails", CanonicalKey: "person_email", Incumbent: []string{"email"}, Transform: "lowercase", Disposition: DispositionMapped},
+		{WireSlot: "emails", CanonicalKey: "contact_email", Incumbent: []string{"email"}, Transform: "lowercase", Disposition: DispositionMapped},
 		{
 			WireSlot: "primary_email", Disposition: DispositionNativeOnly,
 			Reason: "Which address a contact is reachable at is a DECISION this server makes over the addresses above — live, primary first, then the record's own arrangement — and it is derived on every read rather than stored. A mirror carries the addresses; the choice among them is this product's, made the same way for a mirrored contact as for a native one, so there is nothing for an incumbent to supply.",
 		},
-		{WireSlot: "phones", CanonicalKey: "person_phone", Incumbent: []string{"phone", "mobilephone"}, Disposition: DispositionMapped},
+		{WireSlot: "phones", CanonicalKey: "contact_phone", Incumbent: []string{"phone", "mobilephone"}, Disposition: DispositionMapped},
 		{WireSlot: "created_at", CanonicalKey: "created_at", Incumbent: []string{"createdate"}, Disposition: DispositionMapped},
 		{WireSlot: "updated_at", CanonicalKey: "last_synced_at", Incumbent: []string{"lastmodifieddate"}, Disposition: DispositionMapped},
 
@@ -193,17 +193,17 @@ var personBindings = EntityBinding{
 		},
 		{
 			WireSlot: "employer", Disposition: DispositionNativeOnly,
-			Reason: "Resolved from this installation's own employment edges. `relationship` is not a mirrored entity, so a mirrored person carries no edge for the read to resolve an employer from — and the incumbent's own association would name an incumbent company, not the account this field's uuid slot points at.",
+			Reason: "Resolved from this installation's own employment edges. `relationship` is not a mirrored entity, so a mirrored contact carries no edge for the read to resolve an employer from — and the incumbent's own association would name an incumbent company, not the account this field's uuid slot points at.",
 		},
 		{
 			WireSlot: "converted_from_lead_id", Disposition: DispositionNativeOnly,
-			Reason: "Lead conversion is a native operation; a mirrored person has no native lead to point back to.",
+			Reason: "Lead conversion is a native operation; a mirrored contact has no native lead to point back to.",
 		},
 	}, mirrorStructuralBindings()...),
 }
 
 // companyBindings disposition every contract Company field. Armed,
-// on the same terms personBindings is.
+// on the same terms contactBindings is.
 //
 // Five fields the incumbent could fill are deferred rather than mapped, and
 // each names the reason it is not a one-line addition: one needs a projection

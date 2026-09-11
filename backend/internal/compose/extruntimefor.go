@@ -36,7 +36,7 @@ func runtimeFor(ctx context.Context, unit, version, via string, deps extensionRu
 // user at all: its OnBehalfOf and its UserID are both zero. Mapping it
 // through Caller's ordinary rules
 // would hand a unit precisely the thing Caller.UserID promises never to be —
-// "a synthetic id for the agent" rather than the person accountable for the
+// "a synthetic id for the agent" rather than the contact accountable for the
 // row — and would contradict Runtime.Caller's promise that a tick answers the
 // zero Caller. So the tick says so at construction rather than leaving Caller
 // to guess it from a principal that looks, field by field, like a real agent
@@ -51,7 +51,7 @@ func jobRuntimeFor(ctx context.Context, unit, version, via string, deps extensio
 //
 // It is unattended for a plainer reason than a tick's: a tick at least ran
 // because a schedule the installation configured said so, while a delivery ran
-// because a fact arrived. Neither has a person behind it, and this one's
+// because a fact arrived. Neither has a contact behind it, and this one's
 // principal is the system actor the subscriber binds (see extsubscribe.go),
 // which auth.Require does not check at all — so the unattended flag is what
 // keeps the governed core port shut for a caller nothing else would refuse.

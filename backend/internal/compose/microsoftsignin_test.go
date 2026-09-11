@@ -394,7 +394,7 @@ func TestTheRoutingAuthorityWidensNoFurtherThanTheListDoes(t *testing.T) {
 	}
 }
 
-// A stored Microsoft app signs people in on the directory it is pinned to —
+// A stored Microsoft app signs contacts in on the directory it is pinned to —
 // the admin who pinned it said whose company this is — and the endpoints,
 // the token binding and the exchanger all follow that directory. Pinned to
 // nothing, it names no directory and is withheld rather than run on `common`.

@@ -68,8 +68,8 @@ func publishedActivityKinds(t *testing.T) []string {
 // what makes a NEW kind fail: an unlisted one is neither classified nor
 // deliberately excluded, and nobody has decided which it is.
 var neitherSet = gatekit.Waive(map[string]string{
-	"note": "a record of one person's thinking. Nobody was in the room and nothing was exchanged, so it has neither participants nor warmth — an unlinked note is a workspace-shared thought",
-	"task": "one person's intent. Counting it would let a rep's own to-do list score as a relationship, and stamping participants on it would name people who were never told",
+	"note": "a record of one contact's thinking. Nobody was in the room and nothing was exchanged, so it has neither participants nor warmth — an unlinked note is a workspace-shared thought",
+	"task": "one contact's intent. Counting it would let a rep's own to-do list score as a relationship, and stamping participants on it would name contacts who were never told",
 })
 
 // Every kind the contract publishes is either in the participant set or
@@ -88,12 +88,12 @@ func TestEveryPublishedActivityKindIsClassified(t *testing.T) {
 		if neitherSet.Waived(t, kind) {
 			continue
 		}
-		t.Errorf("activity kind %q is in no relstrength set and in no exclusion — decide whether it is meaningful to ask who was on one (relstrength.participantKinds) and whether it means two people spoke (interactionKinds), and record the answer", kind)
+		t.Errorf("activity kind %q is in no relstrength set and in no exclusion — decide whether it is meaningful to ask who was on one (relstrength.participantKinds) and whether it means two contacts spoke (interactionKinds), and record the answer", kind)
 	}
 }
 
 // THE DIRECTION THE TWO SETS MAY DIFFER IN, and only that direction. A kind may
-// be worth recording the people on without being worth scoring — a group chat
+// be worth recording the contacts on without being worth scoring — a group chat
 // is exactly that — while a kind scored as a relationship with nobody recorded
 // on it would leave the interaction graph unable to say who the relationship is
 // with.
@@ -119,7 +119,7 @@ func TestAMessageHasParticipantsAndIsScoredByTheConversationDay(t *testing.T) {
 		t.Error("a message records no participants — a group chat names everyone who was in it, and this is where that is kept")
 	}
 	if !scoredKind(t, "message") {
-		t.Error("a message does not score as an interaction — two people spoke, which is the membership test the scoring set applies, and an account whose whole relationship runs over a channel reads as having none")
+		t.Error("a message does not score as an interaction — two contacts spoke, which is the membership test the scoring set applies, and an account whose whole relationship runs over a channel reads as having none")
 	}
 	unit := relstrength.InteractionUnitSQL("a")
 	if !strings.Contains(unit, "'message'") || !strings.Contains(unit, "a.thread_key") {

@@ -45,7 +45,7 @@ import (
 // stream position 0, so the first boot replays the whole activity stream into
 // this handler. Without it, every card ever mailed would import at once — and
 // unlike the signature pass, which reconciles nightly, THIS has no second
-// chance to correct itself, because each import writes people. An hour is
+// chance to correct itself, because each import writes contacts. An hour is
 // generous for a live event's delivery lag while excluding replayed backlog.
 const vcardIngestFreshWindow = time.Hour
 

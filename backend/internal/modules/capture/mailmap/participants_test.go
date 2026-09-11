@@ -100,7 +100,7 @@ func TestParseGivesADirectRecipientTheToRoleEvenWhenAlsoCopied(t *testing.T) {
 func TestParseDropsTheFurtherPartiesOfABroadcast(t *testing.T) {
 	var recipients []string
 	for i := range connector.MaxParticipants + 1 {
-		recipients = append(recipients, fmt.Sprintf("person%d@list.example", i))
+		recipients = append(recipients, fmt.Sprintf("contact%d@list.example", i))
 	}
 	raw := crlf(
 		"From: bob@target.com",

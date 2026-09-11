@@ -20,7 +20,7 @@ import { INTL_LOCALE } from "./format";
 /**
  * Order two strings the way THIS READER expects to see them.
  *
- * For anything a person reads as a list of names — people, companies, teams,
+ * For anything a reader reads as a list of names — contacts, companies, teams,
  * labels. A German reader expects `ä` beside `a`; a Vietnamese reader expects
  * the tone-marked vowels in their own order. Both differ from code-unit order,
  * where `Ä` lands after `Z`.

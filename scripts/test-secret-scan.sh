@@ -368,7 +368,7 @@ fi
 # A control file no allowlist covers. Every rule any allowlist targets must be
 # plantable and caught HERE first: without it, "still caught" below could be
 # reporting a plant that never tripped anything.
-CONTROL="backend/internal/modules/people/person.go"
+CONTROL="backend/internal/modules/contacts/contact.go"
 TARGETED="$(for i in $(indices); do field "$i" rule; done | LC_ALL=C sort -u)"
 if grep -qx "$FOREIGN_RULE" <<<"$TARGETED"; then
 	fail "an allowlist now targets $FOREIGN_RULE, which this suite uses as the rule every allowlist is foreign to. Property (a) would stop being tested for it. Pick a different FOREIGN_RULE."

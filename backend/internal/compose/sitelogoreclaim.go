@@ -31,7 +31,7 @@ func (w *siteDeepReadWorker) reclaimParkedLogo(ctx context.Context, readID ids.U
 	if w.blob == nil {
 		return
 	}
-	keys, err := w.people.DiscardSiteReadLogo(ctx, readID)
+	keys, err := w.contacts.DiscardSiteReadLogo(ctx, readID)
 	if err != nil {
 		w.log.WarnContext(ctx, "dropping the logo parked on a read that ended without a company failed",
 			"read", readID.String(), "err", err)
@@ -60,7 +60,7 @@ func (w *siteDeepReadWorker) reclaimParkedLogo(ctx context.Context, readID ids.U
 // same fact.
 //
 // `subject` names what the collection belongs to — the dossier a resolve ran
-// for, or the company a person's own write superseded a mark on. It is a
+// for, or the company a contact's own write superseded a mark on. It is a
 // caller's string rather than a read id because the upload path has no read:
 // the detached-context rule above is the invariant, and a second copy of it
 // spelled for uploads is how one of the two paths quietly loses it.

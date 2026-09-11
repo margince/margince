@@ -70,8 +70,8 @@ export function project360(overrides: Partial<Project360> = {}): Project360 {
       data: [
         {
           relationship_id: "rel-1",
-          person_id: "p-1",
-          person_name: "Anna Weber",
+          contact_id: "p-1",
+          contact_name: "Anna Weber",
           role: "project_lead",
         },
       ],

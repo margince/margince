@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // The dedupe evidence snapshot is stored as free JSON, so nothing about a field
@@ -21,12 +21,12 @@ import (
 // on both sides of a wire.
 //
 // This fails in BOTH directions on purpose. A field the detector writes and the
-// contract omits reaches a person as a database column — the leak that put
+// contract omits reaches a contact as a database column — the leak that put
 // `full_name` and `company` on screen. A field the contract publishes and nothing
 // writes is a word three translations carry for a row that never arrives.
 func TestEveryDedupeEvidenceFieldIsNameableOnTheWire(t *testing.T) {
 	t.Parallel()
-	written := people.DedupeEvidenceFields()
+	written := contacts.DedupeEvidenceFields()
 	published := publishedEvidenceEnum(t, "field")
 
 	for _, field := range written {
@@ -51,7 +51,7 @@ func TestEveryDedupeEvidenceFieldIsNameableOnTheWire(t *testing.T) {
 // exactly what it did.
 func TestEveryDedupeEvidenceSignalIsNameableOnTheWire(t *testing.T) {
 	t.Parallel()
-	written := people.DedupeEvidenceSignals()
+	written := contacts.DedupeEvidenceSignals()
 	published := publishedEvidenceEnum(t, "signal")
 
 	for _, signal := range written {

@@ -156,7 +156,7 @@ var fieldLabels = map[crmcontracts.CompanyProfileFieldField]string{
 	crmcontracts.CompanyProfileFieldFieldHistory:           "History",
 }
 
-// fieldLabel turns a column name into something a person reads, for the
+// fieldLabel turns a column name into something a reader reads, for the
 // RECEIPT a reader opens deliberately having already clicked a citation —
 // unlike a sentence's own label (fieldSentence, above, which skips a field
 // with none rather than guess), a receipt already open needs SOME label for

@@ -59,8 +59,8 @@ describe("the team board on Brief", () => {
     );
   });
 
-  // The row is a door to that person's day. Without the id in the address it
-  // could only reach the Worklist, leaving the reader to pick the same person
+  // The row is a door to that contact's day. Without the id in the address it
+  // could only reach the Worklist, leaving the reader to pick the same contact
   // a second time — a row that answers a question by asking it again.
   it("opens a colleague's own queue by name in the address", async () => {
     stubApi({ "GET /worklist/team": () => jsonResponse(board) });
@@ -73,7 +73,7 @@ describe("the team board on Brief", () => {
     );
   });
 
-  // The unowned pile has no person to open, so the same segment carries the
+  // The unowned pile has no contact to open, so the same segment carries the
   // scope word. Both rows are doors, not one door and one shrug.
   it("opens the unassigned pile by its scope word", async () => {
     stubApi({ "GET /worklist/team": () => jsonResponse(board) });

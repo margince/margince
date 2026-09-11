@@ -17,7 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -28,7 +28,7 @@ import (
 var worksWithPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":                {Read: true, Update: true},
+		"contact":               {Read: true, Update: true},
 		"company":               {Read: true},
 		"relationship":          {Read: true, Create: true},
 		"activity":              {Read: true},
@@ -37,9 +37,9 @@ var worksWithPerms = principal.Permissions{
 	RowScope: principal.RowScopeTeam,
 }
 
-func peerSuggested(nodes []crmcontracts.PersonGraphNode, person ids.UUID) bool {
+func peerSuggested(nodes []crmcontracts.ContactGraphNode, contact ids.UUID) bool {
 	for _, n := range nodes {
-		if n.PersonId != nil && ids.UUID(*n.PersonId) == person && string(n.Group) == "peer" {
+		if n.ContactId != nil && ids.UUID(*n.ContactId) == contact && string(n.Group) == "peer" {
 			return n.SuggestEdge != nil && *n.SuggestEdge
 		}
 	}
@@ -50,22 +50,22 @@ func peerSuggested(nodes []crmcontracts.PersonGraphNode, person ids.UUID) bool {
 // second write is a conflict, not a second fact.
 func TestWorksWithIsOnePairOneRowEitherWayRound(t *testing.T) {
 	e := Setup(t)
-	anna := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	birgit := e.SeedPerson(t, "Birgit Sommer", &e.Rep1)
+	anna := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	birgit := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, worksWithPerms)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 
-	annaID := ids.From[ids.PersonKind](anna)
-	birgitID := ids.From[ids.PersonKind](birgit)
-	if _, err := store.CreateRelationship(rep, people.CreateRelationshipInput{
-		Kind: "works_with", PersonID: &annaID, CounterpartyPersonID: &birgitID, Source: "manual",
+	annaID := ids.From[ids.ContactKind](anna)
+	birgitID := ids.From[ids.ContactKind](birgit)
+	if _, err := store.CreateRelationship(rep, contacts.CreateRelationshipInput{
+		Kind: "works_with", ContactID: &annaID, CounterpartyContactID: &birgitID, Source: "manual",
 	}); err != nil {
 		t.Fatalf("recording the pair: %v", err)
 	}
-	_, err := store.CreateRelationship(rep, people.CreateRelationshipInput{
-		Kind: "works_with", PersonID: &birgitID, CounterpartyPersonID: &annaID, Source: "manual",
+	_, err := store.CreateRelationship(rep, contacts.CreateRelationshipInput{
+		Kind: "works_with", ContactID: &birgitID, CounterpartyContactID: &annaID, Source: "manual",
 	})
-	var conflict *people.RelationshipConflictError
+	var conflict *contacts.RelationshipConflictError
 	if !errors.As(err, &conflict) {
 		t.Fatalf("the reversed pair → %v, want the uniqueness conflict", err)
 	}
@@ -75,8 +75,8 @@ func TestWorksWithIsOnePairOneRowEitherWayRound(t *testing.T) {
 // the moment the edge is recorded — the read tells the truth about the record.
 func TestPeerSuggestionAppearsAndVanishesOnceRecorded(t *testing.T) {
 	e := Setup(t)
-	anchor := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	peer := e.SeedPerson(t, "Birgit Sommer", &e.Rep1)
+	anchor := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	peer := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
 	for _, subject := range []string{"thread one", "thread two", "thread three"} {
 		seedSharedThread(t, e, e.Rep1, anchor, peer, subject, "workspace")
 	}
@@ -90,10 +90,10 @@ func TestPeerSuggestionAppearsAndVanishesOnceRecorded(t *testing.T) {
 		t.Fatalf("no suggestion on the evidenced peer, want suggest_edge=true")
 	}
 
-	anchorID := ids.From[ids.PersonKind](anchor)
-	peerID := ids.From[ids.PersonKind](peer)
-	if _, err := people.NewStore(e.DB()).CreateRelationship(rep, people.CreateRelationshipInput{
-		Kind: "works_with", PersonID: &anchorID, CounterpartyPersonID: &peerID, Source: "manual",
+	anchorID := ids.From[ids.ContactKind](anchor)
+	peerID := ids.From[ids.ContactKind](peer)
+	if _, err := contacts.NewStore(e.DB()).CreateRelationship(rep, contacts.CreateRelationshipInput{
+		Kind: "works_with", ContactID: &anchorID, CounterpartyContactID: &peerID, Source: "manual",
 	}); err != nil {
 		t.Fatalf("recording the pair: %v", err)
 	}
@@ -105,19 +105,19 @@ func TestPeerSuggestionAppearsAndVanishesOnceRecorded(t *testing.T) {
 
 // A caller without the relationship read grant gets no suggestion: "not yet
 // recorded" is a claim about which edges exist, and it is not theirs to hear.
-// The peer itself still renders — the observation is person-gated, not
+// The peer itself still renders — the observation is contact-gated, not
 // relationship-gated.
 func TestPeerSuggestionNeedsTheRelationshipReadGrant(t *testing.T) {
 	e := Setup(t)
-	anchor := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	peer := e.SeedPerson(t, "Birgit Sommer", &e.Rep1)
+	anchor := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	peer := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
 	for _, subject := range []string{"thread one", "thread two", "thread three"} {
 		seedSharedThread(t, e, e.Rep1, anchor, peer, subject, "workspace")
 	}
 
 	noEdgeRead := worksWithPerms
 	noEdgeRead.Objects = map[string]principal.ObjectGrant{
-		"person":                {Read: true},
+		"contact":               {Read: true},
 		"company":               {Read: true},
 		"activity":              {Read: true},
 		"installation_settings": {Read: true},
@@ -129,7 +129,7 @@ func TestPeerSuggestionNeedsTheRelationshipReadGrant(t *testing.T) {
 	}
 	found := false
 	for _, n := range graph.Nodes {
-		if n.PersonId != nil && ids.UUID(*n.PersonId) == peer && string(n.Group) == "peer" {
+		if n.ContactId != nil && ids.UUID(*n.ContactId) == peer && string(n.Group) == "peer" {
 			found = true
 			if n.SuggestEdge != nil && *n.SuggestEdge {
 				t.Errorf("suggest_edge set without the relationship read grant")
@@ -147,18 +147,18 @@ func TestPeerSuggestionNeedsTheRelationshipReadGrant(t *testing.T) {
 // existence to everyone who can read the near end.
 func TestAWorksWithEdgeHidesWithItsFarEnd(t *testing.T) {
 	e := Setup(t)
-	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	hidden := e.SeedPerson(t, "Their Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", hidden, e.Rep3)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	hidden := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", hidden, e.Rep3)
 	owner := OwnerConn(t)
 	for _, pair := range [][2]ids.UUID{{mine, hidden}, {hidden, mine}} {
-		SeedIDRow(t, owner, `INSERT INTO relationship (id, kind, person_id, counterparty_person_id, source, captured_by)
+		SeedIDRow(t, owner, `INSERT INTO relationship (id, kind, contact_id, counterparty_contact_id, source, captured_by)
 			VALUES ($1, 'works_with', '`+pair[0].String()+`', '`+pair[1].String()+`', 'manual', 'human:x')`)
 		rep := e.As(e.Rep1, []ids.UUID{e.Team1}, worksWithPerms)
 		var peers map[ids.UUID]bool
 		err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
 			var err error
-			peers, err = people.NewStore(e.DB()).WorksWithPeers(rep, tx, ids.From[ids.PersonKind](mine))
+			peers, err = contacts.NewStore(e.DB()).WorksWithPeers(rep, tx, ids.From[ids.ContactKind](mine))
 			return err
 		})
 		if err != nil {
@@ -174,32 +174,32 @@ func TestAWorksWithEdgeHidesWithItsFarEnd(t *testing.T) {
 }
 
 // Lifecycle reaches BOTH columns: archiving the counterparty sweeps the edge,
-// and merging a person re-homes their pairs whichever side they sit on — a
+// and merging a contact re-homes their pairs whichever side they sit on — a
 // self-pair or a duplicate is archived rather than doubled.
 func TestWorksWithFollowsArchiveAndMergeOnEitherColumn(t *testing.T) {
 	e := Setup(t)
-	anna := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	birgit := e.SeedPerson(t, "Birgit Sommer", &e.Rep1)
+	anna := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	birgit := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
 	archivist := worksWithPerms
 	archivist.Objects = map[string]principal.ObjectGrant{
-		"person":                {Read: true, Update: true, Delete: true},
+		"contact":               {Read: true, Update: true, Delete: true},
 		"company":               {Read: true},
 		"relationship":          {Read: true, Create: true},
 		"activity":              {Read: true},
 		"installation_settings": {Read: true},
 	}
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, archivist)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 
-	annaID := ids.From[ids.PersonKind](anna)
-	birgitID := ids.From[ids.PersonKind](birgit)
-	if _, err := store.CreateRelationship(rep, people.CreateRelationshipInput{
-		Kind: "works_with", PersonID: &annaID, CounterpartyPersonID: &birgitID, Source: "manual",
+	annaID := ids.From[ids.ContactKind](anna)
+	birgitID := ids.From[ids.ContactKind](birgit)
+	if _, err := store.CreateRelationship(rep, contacts.CreateRelationshipInput{
+		Kind: "works_with", ContactID: &annaID, CounterpartyContactID: &birgitID, Source: "manual",
 	}); err != nil {
 		t.Fatalf("recording the pair: %v", err)
 	}
 	// Archive the COUNTERPARTY — the column the sweep used to miss.
-	if _, err := store.ArchivePerson(rep, birgitID, nil); err != nil {
+	if _, err := store.ArchiveContact(rep, birgitID, nil); err != nil {
 		t.Fatalf("archiving the counterparty: %v", err)
 	}
 	var live int

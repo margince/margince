@@ -20,7 +20,7 @@ export type Evidence = {
   source: string;
   /**
    * WHERE in the source the snippet sits, as 1-based line numbers — a
-   * transcript reading cites them so the person who was in the meeting can go
+   * transcript reading cites them so the contact who was in the meeting can go
    * back to the exact exchange rather than re-reading the whole call. Absent on
    * a source that has no lines to point at (a web page, an email body).
    */
@@ -112,7 +112,7 @@ function recordKind(source: string): string | null {
 //
 // A chip exists to make a claim checkable, and a uuid is checkable by nobody: a
 // record page proved a name with `lead:019fff1e-8439-…` and the panel read as
-// noise to the one person it was written for. The kind is the half of a
+// noise to the one contact it was written for. The kind is the half of a
 // reference that means something on screen, so that is the half that shows —
 // never the row id, which stays on the title attribute for whoever has to trace
 // the row back. Every other source is somebody's words and is shown as written.
@@ -268,17 +268,17 @@ export function ConfidenceMeter({
 }
 
 // Provenance is an agent (`agent:capture`), a connector (`connector:gmail`), a
-// job the installation ran itself (`system:person_auto_enrich`), a human, or a
+// job the installation ran itself (`system:contact_auto_enrich`), a human, or a
 // buyer — the shapes captured_by can take, plus the honest last arm for a row
 // that records none of them. A reader has to be able to tell WHICH KIND of
 // thing produced a value, so each is its own arm: a scheduled sweep announced
 // as an AI agent misdescribes both.
 //
-// `buyer` is the person on the other side of a Deal Room: outside the
+// `buyer` is the contact on the other side of a Deal Room: outside the
 // company, holding no seat and named in no member directory. It is its own
 // arm rather than a `human` one because a reader cannot ask a buyer the way
 // they can ask a colleague, and it is not `unknown` because that arm means
-// nobody recorded a source — here the source IS recorded, and it is a person.
+// nobody recorded a source — here the source IS recorded, and it is a contact.
 // Nothing to name today: a Deal Room participant resolves to no display name on
 // the read path, so the tag says the kind, the way `agent` and `system` do.
 //
@@ -303,7 +303,7 @@ export function ProvenanceTag({
   provenance,
   // How a named human renders. The design system has no record lookups, so a
   // caller that can resolve a user id to a name supplies the element; without
-  // one the tag says a person entered it without claiming which one.
+  // one the tag says a contact entered it without claiming which one.
   renderUser,
 }: Readonly<{
   provenance: Provenance;

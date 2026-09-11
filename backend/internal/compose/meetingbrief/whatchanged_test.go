@@ -16,8 +16,8 @@ func TestWhatChangedListsOnlyWhatHappenedAfterTheReaderLastSpoke(t *testing.T) {
 	in := fullInput()
 	in.LastSpokeAt = ptr(at(5))
 	in.Commitments = []ClaimIn{
-		{PersonName: "Ana Roth", Kind: kindObjection, Body: "the cure period", Status: statusOpen, SourceID: activityID, OccurredAt: ptr(at(7))},
-		{PersonName: "Ana Roth", Kind: kindDecision, Body: "pilot first", Status: "done", SourceID: activityID, OccurredAt: ptr(at(2))},
+		{ContactName: "Ana Roth", Kind: kindObjection, Body: "the cure period", Status: statusOpen, SourceID: activityID, OccurredAt: ptr(at(7))},
+		{ContactName: "Ana Roth", Kind: kindDecision, Body: "pilot first", Status: "done", SourceID: activityID, OccurredAt: ptr(at(2))},
 	}
 	in.Recent = []ActIn{
 		{ID: activityID, Kind: "email", Subject: "Re: redline", Direction: "inbound", At: at(8)},

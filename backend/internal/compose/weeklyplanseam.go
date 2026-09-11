@@ -86,7 +86,7 @@ func (c weeklyPlanCapacity) ForWeek(
 		// A calendar date carried as midnight UTC is the wrong shape for a
 		// range: comparing timestamptz against it measures a week offset by the
 		// installation's UTC offset, and across a DST change a fixed 168 hours
-		// rather than the week people will live.
+		// rather than the week contacts will live.
 		var start, end time.Time
 		if err := tx.QueryRow(ctx, `
 			SELECT ($1::date)::timestamp AT TIME ZONE $2,

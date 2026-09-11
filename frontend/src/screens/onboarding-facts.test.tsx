@@ -1036,7 +1036,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     expect(within(salesLink).queryByText(/^\d+$/)).not.toBeInTheDocument();
   });
 
-  const FOUNDER: components["schemas"]["CompanySiteReadPerson"] = {
+  const FOUNDER: components["schemas"]["CompanySiteReadContact"] = {
     name: "Jamie Fox",
     role: "Co-founder",
     evidence_snippet: "Jamie Fox, co-founder, leads product.",
@@ -1047,7 +1047,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
   // an office or a service line — they belong on the board, in the section
   // nav and the group list, not folded into the tail below it.
   it("promotes contacts found on the site to their own section on the board", () => {
-    renderTriage([], { ...readWith([]), people: [FOUNDER] });
+    renderTriage([], { ...readWith([]), contacts: [FOUNDER] });
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
     expect(
@@ -1067,7 +1067,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     expect(within(section).getByText("Co-founder")).toBeInTheDocument();
   });
 
-  it("says plainly when the read found no people, rather than a zero count", () => {
+  it("says plainly when the read found no contacts, rather than a zero count", () => {
     renderTriage([], readWith([]));
 
     const heading = screen.getByRole("heading", { name: "Contacts", level: 3 });
@@ -1090,9 +1090,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
   // The count beside Contacts or Facts means "this is what I found", never
   // "this needs you" — it must equal the section's own content and must
   // never be mistaken, sighted or not, for an outstanding-work count.
-  it("shows how many people the read found in the nav, as a found quantity rather than outstanding work", () => {
+  it("shows how many contacts the read found in the nav, as a found quantity rather than outstanding work", () => {
     const found = [FOUNDER, { ...FOUNDER, name: "Alex Chen", role: "COO" }];
-    renderTriage([], { ...readWith([]), people: found });
+    renderTriage([], { ...readWith([]), contacts: found });
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
     const contactsLink = within(nav).getByRole("button", {
@@ -1718,7 +1718,7 @@ function readWith(
     profile_fields: [],
     facts: [...facts],
     comparisons: [],
-    people: [],
+    contacts: [],
     warnings: [],
     draft_version: 1,
     proposal_hash: "hash",

@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { RelationshipsTab } from "./relationships";
 import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
-// RelationshipsTab reads GET /relationships?person_id=… (there is no
+// RelationshipsTab reads GET /relationships?contact_id=… (there is no
 // GET /relationships/{id} in the contract — every row is hydrated straight
 // off the list read). The fixture mirrors contacts.test.tsx's employmentRel.
 //
@@ -28,7 +28,7 @@ type Story = StoryObj;
 const employmentRel = {
   id: "rel-1",
   kind: "employment",
-  person_id: "p-1",
+  contact_id: "p-1",
   company_id: "o-1",
   role: "cto",
   is_current_primary: true,
@@ -63,7 +63,7 @@ export const WithRelationships: Story = {
     );
     return (
       <StoryProviders>
-        <RelationshipsTab scope={{ person_id: "p-1" }} />
+        <RelationshipsTab scope={{ contact_id: "p-1" }} />
       </StoryProviders>
     );
   },
@@ -83,7 +83,7 @@ export const Empty: Story = {
     );
     return (
       <StoryProviders>
-        <RelationshipsTab scope={{ person_id: "p-1" }} />
+        <RelationshipsTab scope={{ contact_id: "p-1" }} />
       </StoryProviders>
     );
   },
@@ -107,7 +107,7 @@ export const NoVerbsForThisRole: Story = {
     );
     return (
       <StoryProviders>
-        <RelationshipsTab scope={{ person_id: "p-1" }} />
+        <RelationshipsTab scope={{ contact_id: "p-1" }} />
       </StoryProviders>
     );
   },

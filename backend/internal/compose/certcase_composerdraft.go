@@ -3,7 +3,7 @@
 
 package compose
 
-// The two composer drafting sites: the person page's "Write email" and the
+// The two composer drafting sites: the contact page's "Write email" and the
 // company page's first-touch outbound.
 //
 // Both existed and neither was certified. ADR-0074 requires every shipped site
@@ -27,15 +27,15 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
-	"github.com/margince/margince/backend/internal/compose/persondraft"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The site names, as ai-tasks.yaml declares them.
 const (
-	personDraftSite  = "draft_reply/person"
+	contactDraftSite = "draft_reply/contact"
 	accountDraftSite = "draft_reply/account"
 )
 
@@ -44,31 +44,32 @@ const (
 // was written at all — the rubric measures the prose.
 const composerAnswerWritten = "written"
 
-// personDraftCases serves the person page's composer.
-type personDraftCases struct{}
+// contactDraftCases serves the contact page's composer.
+type contactDraftCases struct{}
 
-func (personDraftCases) Site() aitasks.Site {
+func (contactDraftCases) Site() aitasks.Site {
 	return aitasks.Site{
-		Task:    ai.TaskDraftReply,
-		Variant: "person",
+		Task: ai.TaskDraftReply,
+		//nolint:goconst // a TASK VARIANT, not a record type: it names which drafting site this is.
+		Variant: "contact",
 		Kind:    ai.SiteKindOneShot,
 	}
 }
 
 // Prepare reads the fixture as the drafter's own input, which is the point: a
-// fixture that does not decode into persondraft.Input describes a request this
+// fixture that does not decode into contactdraft.Input describes a request this
 // site cannot send, and it is refused here rather than scored later.
 //
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
-func (personDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
-	var in persondraft.Input
+func (contactDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
+	var in contactdraft.Input
 	if err := json.Unmarshal(fixture, &in); err != nil {
-		return nil, fmt.Errorf("%s: the fixture is not the shape this site takes: %w", personDraftSite, err)
+		return nil, fmt.Errorf("%s: the fixture is not the shape this site takes: %w", contactDraftSite, err)
 	}
-	if err := refuseUnanswerableComposerCase(personDraftSite, expected); err != nil {
+	if err := refuseUnanswerableComposerCase(contactDraftSite, expected); err != nil {
 		return nil, err
 	}
-	return &personDraftCase{in: in}, nil
+	return &contactDraftCase{in: in}, nil
 }
 
 // accountDraftCases serves the company page's first-touch composer.
@@ -108,26 +109,26 @@ func refuseUnanswerableComposerCase(site string, expected json.RawMessage) error
 	return nil
 }
 
-// personDraftCase is one person-composer request ready to be answered.
-type personDraftCase struct{ in persondraft.Input }
+// contactDraftCase is one contact-composer request ready to be answered.
+type contactDraftCase struct{ in contactdraft.Input }
 
 // Run drives the package's own Write, so the case exercises the prompt the
 // product sends rather than a copy of it assembled here.
-func (c *personDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
+func (c *contactDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	recorder := &composerRecorder{completer: completer}
 	// No voice profile: a certification case measures the prompt this site
 	// sends every user, and a profile is one user's own writing rather than a
 	// property of the site.
-	draft, _, err := persondraft.Write(ctx, recorder, c.in, draftvoice.Context{})
-	return composerTrace(personDraftSite, recorder, draft.Body, err)
+	draft, _, err := contactdraft.Write(ctx, recorder, c.in, draftvoice.Context{})
+	return composerTrace(contactDraftSite, recorder, draft.Body, err)
 }
 
 // Evaluate applies the package's own ParseDraft — the same reading the product
 // gives the reply before it serves it — so the record's verdict is measured
 // rather than inferred from the absence of an error in Run.
-func (c *personDraftCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
+func (c *contactDraftCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	return evaluateComposerDraft(trace, func(raw string) error {
-		_, err := persondraft.ParseDraft(raw, c.in)
+		_, err := contactdraft.ParseDraft(raw, c.in)
 		return err
 	})
 }

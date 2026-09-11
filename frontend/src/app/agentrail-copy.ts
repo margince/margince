@@ -30,7 +30,7 @@ export const LABELS = {
   recap: "What it has done",
   justNow: "just now",
   fullLog: "Full log",
-  /** The recap when the feed answered and this person's day holds nothing yet.
+  /** The recap when the feed answered and this contact's day holds nothing yet.
    *  It is bounded to what SETTLED today, so an empty list is a quiet morning
    *  rather than an agent that has never run. */
   nothingToday: "nothing has finished today",
@@ -131,7 +131,7 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
 export const IDLE_ORDER = [
   "waiting",
   // Second: what the scheduled runner finished while nobody was looking is news
-  // rather than a task, so it does not push the queue a person has to answer
+  // rather than a task, so it does not push the queue a contact has to answer
   // down the rotation.
   "finished",
   // Last, and standing rather than daily: an installation on the development
@@ -198,9 +198,9 @@ export const NAMED: Readonly<Record<string, string>> = {
   lead: "Reading %s",
   company: "Reading %s",
   company360: "Reading everything about %s",
-  person: "Reading %s",
-  person360: "Reading everything about %s",
-  personBrief: "Summarising %s",
+  contact: "Reading %s",
+  contact360: "Reading everything about %s",
+  contactBrief: "Summarising %s",
 };
 
 export const SAID: Readonly<Record<string, string>> = {
@@ -219,10 +219,10 @@ export const SAID: Readonly<Record<string, string>> = {
   lead: "Reading a lead",
   leads: "Reading leads",
   overlay: "Reading what it wrote here",
-  people: "Reading contacts",
-  person: "Reading a contact",
-  person360: "Reading everything about this contact",
-  personBrief: "Summarising a contact",
+  contacts: "Reading contacts",
+  contact: "Reading a contact",
+  contact360: "Reading everything about this contact",
+  contactBrief: "Summarising a contact",
   pipelines: "Reading the pipeline",
   // The brief is written on every open, from the reader's own records, and the
   // rail's own line follows on its next poll: this is the sentence for the

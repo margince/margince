@@ -237,11 +237,11 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Activity", "admin@idem-act.test", "Admin")
 
-	var person AnyMap
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
-		"full_name": "Idem Person", "source": "ui",
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person = %d %v", status, person)
+	var contact AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"full_name": "Idem Contact", "source": "ui",
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact = %d %v", status, contact)
 	}
 
 	keyed := map[string]string{"Idempotency-Key": "act-retry-1"}
@@ -249,7 +249,7 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 		"kind":    "note",
 		"subject": "Keyed note",
 		"source":  "ui",
-		"links":   []AnyMap{{"entity_type": "person", "entity_id": person["id"]}},
+		"links":   []AnyMap{{"entity_type": "contact", "entity_id": contact["id"]}},
 	}
 
 	var first, replay AnyMap

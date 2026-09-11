@@ -125,7 +125,7 @@ func (s *Store) TakeSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot) (id
 			"period_end":   in.Period.EndDate.Format(time.DateOnly),
 			colScopeKind:   in.Scope.Kind,
 			"trigger":      in.Trigger,
-			// The counts, not the money. An audit row is read by people
+			// The counts, not the money. An audit row is read by contacts
 			// auditing what the system did, and how many deals a run
 			// considered is the fact that says whether it ran completely.
 			"eligible_count": in.Readings.EligibleCount,

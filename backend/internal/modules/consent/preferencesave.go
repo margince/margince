@@ -8,7 +8,7 @@ package consent
 // The rule that shapes this file: a refused GRANT must never cost the
 // WITHDRAWAL saved beside it. Record admits a suppression against any
 // subject and refuses a claim for an archived one, so a save that simply
-// aborted on the first refusal would drop the opt-out of the person who
+// aborted on the first refusal would drop the opt-out of the contact who
 // most needs it — somebody who has already asked to be forgotten and is
 // now asking to be left alone. An "all or nothing" save is the obvious
 // shape and the wrong one.
@@ -58,7 +58,7 @@ const ReasonCannotGrant = "cannot_grant"
 const fieldPurposeKey = "purpose_key"
 
 // sourcePreferenceCenter marks every consent row this surface writes, so
-// a proof row says which surface the person used.
+// a proof row says which surface the contact used.
 const sourcePreferenceCenter = "preference_center"
 
 // settleTowardWithdrawal collapses a purpose named twice in one save onto
@@ -95,7 +95,7 @@ func settleTowardWithdrawal(choices []PreferenceChoiceInput) []PreferenceChoiceI
 // below does — but it keeps the audit trail reading in a fixed order
 // rather than in whatever order a client happened to serialize its form.
 func (s *Store) PublicSaveChoices(
-	ctx context.Context, personID ids.PersonID, choices []PreferenceChoiceInput,
+	ctx context.Context, contactID ids.ContactID, choices []PreferenceChoiceInput,
 ) ([]ChoiceOutcome, error) {
 	for _, c := range choices {
 		if LockedPurpose(c.PurposeKey) {
@@ -107,7 +107,7 @@ func (s *Store) PublicSaveChoices(
 	}
 	var refused []ChoiceOutcome
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockOneSubjectsConsent(ctx, tx, personID); err != nil {
+		if err := lockOneSubjectsConsent(ctx, tx, contactID); err != nil {
 			return err
 		}
 		refused = nil
@@ -116,7 +116,7 @@ func (s *Store) PublicSaveChoices(
 				if c.State != pass {
 					continue
 				}
-				outcome, applied, err := s.saveChoiceTx(ctx, tx, personID, c)
+				outcome, applied, err := s.saveChoiceTx(ctx, tx, contactID, c)
 				if err != nil {
 					return err
 				}
@@ -140,7 +140,7 @@ func (s *Store) PublicSaveChoices(
 // an error, and a nil outcome beside a nil error would leave the caller
 // guessing which of the two it got.
 func (s *Store) saveChoiceTx(
-	ctx context.Context, tx pgx.Tx, personID ids.PersonID, c PreferenceChoiceInput,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, c PreferenceChoiceInput,
 ) (ChoiceOutcome, bool, error) {
 	purposeID, err := purposeByKeyTx(ctx, tx, c.PurposeKey)
 	if err != nil {
@@ -148,7 +148,7 @@ func (s *Store) saveChoiceTx(
 	}
 	source := sourcePreferenceCenter
 	in := RecordInput{
-		PersonID:   personID,
+		ContactID:  contactID,
 		PurposeID:  purposeID,
 		NewState:   string(c.State),
 		Source:     &source,
@@ -196,14 +196,14 @@ func subjectTakesAGrantTx(ctx context.Context, tx pgx.Tx, sub subject) (bool, er
 }
 
 // lockOneSubjectsConsent serializes multi-purpose consent transactions for one
-// person.
+// contact.
 //
 // Three of them write several purposes in one transaction, and each takes the
 // row lock recordAdmittedTx needs in its OWN order: the withdrawal sweeps go by
 // ascending purpose key, and a granular save goes withdrawals-first so a
 // refused grant cannot cost the suppression saved beside it. A save of {grant a,
 // withdraw b} therefore locks b before a while an unsubscribe-everything locks
-// a before b, and two of those at once on one person deadlock — Postgres aborts
+// a before b, and two of those at once on one contact deadlock — Postgres aborts
 // one, and what the reader sees is a preference change that failed for no
 // reason they can act on.
 //
@@ -211,13 +211,13 @@ func subjectTakesAGrantTx(ctx context.Context, tx pgx.Tx, sub subject) (bool, er
 // the save's order is load-bearing. So the serialization is a lock of its own,
 // taken first and held to commit: inside it, the order stops mattering.
 //
-// Advisory rather than a row lock, because a purpose the person holds NO row
+// Advisory rather than a row lock, because a purpose the contact holds NO row
 // for is exactly the case a row lock cannot cover — and a first grant is that
-// case. The key is the person, so two DIFFERENT subjects never wait for each
+// case. The key is the contact, so two DIFFERENT subjects never wait for each
 // other.
-func lockOneSubjectsConsent(ctx context.Context, tx pgx.Tx, personID ids.PersonID) error {
+func lockOneSubjectsConsent(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
 	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`, personID); err != nil {
+		`SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`, contactID); err != nil {
 		return fmt.Errorf("consent: taking the subject's consent lock: %w", err)
 	}
 	return nil
@@ -233,15 +233,15 @@ func lockOneSubjectsConsent(ctx context.Context, tx pgx.Tx, personID ids.PersonI
 // unsubscribed" representable instead of showing a fresh confirmation
 // for a no-op.
 func (s *Store) PublicWithdrawAll(
-	ctx context.Context, personID ids.PersonID, purposeKeys []string,
+	ctx context.Context, contactID ids.ContactID, purposeKeys []string,
 ) ([]string, error) {
 	var changed []string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockOneSubjectsConsent(ctx, tx, personID); err != nil {
+		if err := lockOneSubjectsConsent(ctx, tx, contactID); err != nil {
 			return err
 		}
 		var err error
-		changed, err = s.withdrawPurposesTx(ctx, tx, personID, purposeKeys)
+		changed, err = s.withdrawPurposesTx(ctx, tx, contactID, purposeKeys)
 		return err
 	})
 	if err != nil {
@@ -268,18 +268,18 @@ func (s *Store) PublicWithdrawAll(
 // A grant that commits AFTER this transaction still stands, and should: it
 // post-dates the press rather than being missed by it.
 func (s *Store) PublicWithdrawEverything(
-	ctx context.Context, personID ids.PersonID,
+	ctx context.Context, contactID ids.ContactID,
 ) ([]string, error) {
 	var changed []string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockOneSubjectsConsent(ctx, tx, personID); err != nil {
+		if err := lockOneSubjectsConsent(ctx, tx, contactID); err != nil {
 			return err
 		}
 		keys, err := withdrawablePurposeKeysTx(ctx, tx)
 		if err != nil {
 			return err
 		}
-		changed, err = s.withdrawPurposesTx(ctx, tx, personID, keys)
+		changed, err = s.withdrawPurposesTx(ctx, tx, contactID, keys)
 		return err
 	})
 	if err != nil {
@@ -315,7 +315,7 @@ func withdrawablePurposeKeysTx(ctx context.Context, tx pgx.Tx) ([]string, error)
 // withdrawPurposesTx records a withdrawal for each key and answers the ones it
 // actually changed.
 func (s *Store) withdrawPurposesTx(
-	ctx context.Context, tx pgx.Tx, personID ids.PersonID, purposeKeys []string,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, purposeKeys []string,
 ) ([]string, error) {
 	var changed []string
 	for _, key := range purposeKeys {
@@ -332,7 +332,7 @@ func (s *Store) withdrawPurposesTx(
 		}
 		source := sourcePreferenceCenter
 		in := RecordInput{
-			PersonID:  personID,
+			ContactID: contactID,
 			PurposeID: purposeID,
 			NewState:  string(StateWithdrawn),
 			Source:    &source,

@@ -11,7 +11,7 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { PersonNetworkPanel } from "./network";
+import { ContactNetworkPanel } from "./network";
 
 // The relationship-graph card. What is worth pinning is not that it renders a
 // list — it is the two readings that would quietly mislead a rep: an unspoken
@@ -60,15 +60,15 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("PersonNetworkPanel", () => {
+describe("ContactNetworkPanel", () => {
   it("keeps the server's warmest-first order instead of re-ranking", async () => {
     // The score is computed at read from a decay formula. A client that sorted
     // these itself would be a second implementation of that formula, and the
     // two would disagree the moment either changed. The fixture is deliberately
     // NOT in interaction-count order, so a client-side sort would show.
     stubRoutes({
-      "/people/p-1/network": {
-        person_id: "p-1",
+      "/contacts/p-1/network": {
+        contact_id: "p-1",
         colleagues: [
           {
             user_id: "u-1",
@@ -89,7 +89,7 @@ describe("PersonNetworkPanel", () => {
         ],
       },
     });
-    render(<PersonNetworkPanel id="p-1" />);
+    render(<ContactNetworkPanel id="p-1" />);
     const rows = await screen.findAllByRole("listitem");
     expect(within(rows[0]).getByText("Anna Weber")).toBeInTheDocument();
     expect(within(rows[1]).getByText("Jonas Bach")).toBeInTheDocument();
@@ -100,8 +100,8 @@ describe("PersonNetworkPanel", () => {
     // spoken" look identical to "we spoke and it went cold", and a rep picks
     // their route in from exactly that difference.
     stubRoutes({
-      "/people/p-1/network": {
-        person_id: "p-1",
+      "/contacts/p-1/network": {
+        contact_id: "p-1",
         colleagues: [
           {
             user_id: "u-1",
@@ -114,7 +114,7 @@ describe("PersonNetworkPanel", () => {
         ],
       },
     });
-    render(<PersonNetworkPanel id="p-1" />);
+    render(<ContactNetworkPanel id="p-1" />);
     expect(await screen.findByText("Anna Weber")).toBeInTheDocument();
     expect(screen.getByText(/no contact/i)).toBeInTheDocument();
     expect(screen.getByText(/no recorded contact/i)).toBeInTheDocument();
@@ -122,9 +122,9 @@ describe("PersonNetworkPanel", () => {
 
   it("says nobody knows them rather than rendering an empty card", async () => {
     stubRoutes({
-      "/people/p-1/network": { person_id: "p-1", colleagues: [] },
+      "/contacts/p-1/network": { contact_id: "p-1", colleagues: [] },
     });
-    render(<PersonNetworkPanel id="p-1" />);
+    render(<ContactNetworkPanel id="p-1" />);
     expect(
       await screen.findByText(/nobody here has been in touch/i),
     ).toBeInTheDocument();

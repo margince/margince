@@ -49,7 +49,7 @@ func unfiledTask(t *testing.T, e *Env, f scopeFixture) {
 	_, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "task", Subject: &subject,
 		Links: []activities.ActivityLinkInput{
-			{EntityType: "person", EntityID: f.person},
+			{EntityType: "contact", EntityID: f.contact},
 			{EntityType: "company", EntityID: f.company},
 		},
 	})
@@ -189,7 +189,7 @@ func TestMeetingBriefTakesARequestedProjectForAnUnattributedMeeting(t *testing.T
 		t.Helper()
 		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 			Kind: "meeting", MeetingStatus: strPtr(status), Subject: &subject, OccurredAt: &at,
-			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: f.person}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: f.contact}},
 		})
 		if err != nil {
 			t.Fatalf("log meeting %q: %v", subject, err)

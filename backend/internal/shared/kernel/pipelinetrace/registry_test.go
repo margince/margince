@@ -15,7 +15,7 @@ func TestEveryStageIsRegistered(t *testing.T) {
 	all := []Stage{
 		StageConnectorFilter, StageIngressGate, StageErasureCheck,
 		StageInternalDrop, StageActivityWrite, StageTierLadder,
-		StagePersonCreate, StageVerdict, StageCompanyTriage,
+		StageContactCreate, StageVerdict, StageCompanyTriage,
 		StageAttentionLabel, StageMaterialEvents, StageClaimExtraction,
 	}
 	for _, stage := range all {

@@ -22,9 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -61,14 +61,14 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default())))
 	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
-	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc, store))
+	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc))
 	// Both halves, like the held message above and for the same reason: the
 	// subject of this card is a row that is already sitting in a state, and a
 	// card whose buttons only dismissed it would report a decision the record
 	// never heard.
 	svc.WithDeclinedEffect(linkedInMatchKind, linkedInMatchDeclineEffect(store))
 	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store))
-	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc, people.NewStore(InstallationDB(pool))))
+	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc, contacts.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck())
 	// A held message is the one kind with BOTH halves registered, because its
 	// subject is already waiting: Accept re-arms it, Reject abandons it, and a
@@ -117,14 +117,14 @@ func expiringApprovalsService(pool *pgxpool.Pool) *approvals.Service {
 
 // coldstartAcceptEffect builds the approvals.ApprovedEffect compose
 // injects for kind "coldstart".
-func coldstartAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
+func coldstartAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		// The single-use redemption IS the idempotency claim: whoever
 		// consumes the approval executes; anyone else finds it consumed.
 		if _, _, err := svc.Redeem(ctx, approvalID, "coldstart", diffHash); err != nil {
 			return err
 		}
-		sourceURL, fields, err := people.UnmarshalColdStartFields(proposedChange)
+		sourceURL, fields, err := contacts.UnmarshalColdStartFields(proposedChange)
 		if err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ func coldstartAcceptEffect(svc *approvals.Service, store *people.Store) approval
 			UserID:     decider.UserID,
 			OnBehalfOf: decider.UserID,
 		})
-		_, err = store.ApplyColdStartProfile(execCtx, people.ApplyColdStartProfileInput{
+		_, err = store.ApplyColdStartProfile(execCtx, contacts.ApplyColdStartProfileInput{
 			SourceURL: sourceURL,
 			Fields:    fields,
 		})

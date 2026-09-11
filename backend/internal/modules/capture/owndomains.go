@@ -91,7 +91,7 @@ func ownableDomain(domain string) bool {
 //
 // An empty set makes NOTHING internal, so every message is captured. That is
 // the honest posture rather than a fallback guess: an installation that has
-// named no domain of its own is making no claim about what its people's mail
+// named no domain of its own is making no claim about what its contacts's mail
 // is, and inventing one from a connected mailbox would be right in some
 // workspaces and wrong in the rest.
 func (d InternalDomains) empty() bool { return len(d.domains) == 0 }

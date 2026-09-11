@@ -172,7 +172,7 @@ func TestRefusedMetricsCarryNoWindow(t *testing.T) {
 //
 // The gate answers from Permissions, and a buyer is minted with none — so an
 // empty struct refuses it by accident rather than by rule, and the first
-// constructor to give a buyer any permissions would hand an external person
+// constructor to give a buyer any permissions would hand an external contact
 // with a room link the seller's team roster. The tier is set to the widest one
 // here precisely so the Permissions arm cannot be what refuses.
 func TestADealRoomBuyerIsRefusedEveryLeadReading(t *testing.T) {
@@ -188,7 +188,7 @@ func TestADealRoomBuyerIsRefusedEveryLeadReading(t *testing.T) {
 			t.Parallel()
 
 			if err := reading.ask(tierService(), buyer); err == nil {
-				t.Fatal("an external person with a Deal Room link was given a lead's " +
+				t.Fatal("an external contact with a Deal Room link was given a lead's " +
 					"reading of the seller's own work")
 			}
 		})

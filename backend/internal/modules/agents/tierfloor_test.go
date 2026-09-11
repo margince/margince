@@ -53,9 +53,9 @@ func TestTheFloorTightensOnlyTheRecordTypeItNames(t *testing.T) {
 			"for a call the contract says a human must see")
 	}
 
-	untouched := r.tightened(tool, green, json.RawMessage(`{"record_type":"person","fields":{}}`))
+	untouched := r.tightened(tool, green, json.RawMessage(`{"record_type":"contact","fields":{}}`))
 	if untouched.Tier != green.Tier {
-		t.Errorf("a person create admitted at tier %v, want the verb's own %v — tightening a pair "+
+		t.Errorf("a contact create admitted at tier %v, want the verb's own %v — tightening a pair "+
 			"the contract never declared would stage work nobody asked to review",
 			untouched.Tier, green.Tier)
 	}
@@ -127,7 +127,7 @@ func TestBothGenericVerbsNameTheRecordTypeOfACall(t *testing.T) {
 func TestAStagedCreateRefusesWhatItsHandlerWouldRefuse(t *testing.T) {
 	tool := createRecord{}
 	if _, err := tool.StageInfo(context.Background(),
-		json.RawMessage(`{"record_type":"person","fields":{"not_a_field":"x"}}`)); err == nil {
+		json.RawMessage(`{"record_type":"contact","fields":{"not_a_field":"x"}}`)); err == nil {
 		t.Error("a create naming a field the contract does not declare staged cleanly; a human " +
 			"would approve it and the retry would then be refused with the approval already spent")
 	}
@@ -168,7 +168,7 @@ func TestAGenericWriteSaysWhatItWouldSet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the wide patch: %v", err)
 	}
-	if line := describeGenericWrite("Update", "person", raw); !strings.Contains(line, "more") {
+	if line := describeGenericWrite("Update", "contact", raw); !strings.Contains(line, "more") {
 		t.Errorf("a %d-field patch rendered %q with no overflow marker, so the inbox line silently "+
 			"drops fields the call would set", len(wide), line)
 	}
@@ -191,7 +191,7 @@ func TestTheRegistryAnswersNothingForAnUnregisteredVerb(t *testing.T) {
 func TestAStagedUpdateRefusesARecordItCannotRead(t *testing.T) {
 	tool := updateRecord{p: unreadableProvider{}}
 	_, err := tool.StageInfo(context.Background(), json.RawMessage(
-		`{"record_type":"person","id":"`+ids.NewV7().String()+`","fields":{"full_name":"X"}}`))
+		`{"record_type":"contact","id":"`+ids.NewV7().String()+`","fields":{"full_name":"X"}}`))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("staging a patch against an unreadable record answered %v, want not-found — "+
 			"otherwise the inbox shows a change against a row the approver cannot see", err)
@@ -202,7 +202,7 @@ func TestAStagedUpdateRefusesARecordItCannotRead(t *testing.T) {
 	// The field check runs before the read, so a patch naming a field the
 	// contract does not declare is refused whether or not its record exists.
 	if _, err := tool.StageInfo(context.Background(), json.RawMessage(
-		`{"record_type":"person","id":"`+ids.NewV7().String()+`","fields":{"not_a_field":"x"}}`)); err == nil {
+		`{"record_type":"contact","id":"`+ids.NewV7().String()+`","fields":{"not_a_field":"x"}}`)); err == nil {
 		t.Error("a patch naming an undeclared field staged cleanly; a human would approve it and " +
 			"the retry would then be refused with the approval already spent")
 	}

@@ -18,7 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// InviteInput admits one named person to a room.
+// InviteInput admits one named contact to a room.
 type InviteInput struct {
 	FullName   string
 	Email      string
@@ -34,9 +34,9 @@ type IssuedInvitation struct {
 	ExpiresAt   time.Time
 }
 
-// InviteParticipant admits a named person and mints their credential.
+// InviteParticipant admits a named contact and mints their credential.
 //
-// Human-only: deciding which outside person may read a deal's material is not a
+// Human-only: deciding which outside contact may read a deal's material is not a
 // judgement an agent makes.
 func (s *Store) InviteParticipant(ctx context.Context, roomID ids.DealRoomID, in InviteInput) (IssuedInvitation, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
@@ -187,7 +187,7 @@ func (s *Store) ResendInvitation(ctx context.Context, roomID ids.DealRoomID, par
 	return out, err
 }
 
-// RevokeParticipant takes a person's access away.
+// RevokeParticipant takes a contact's access away.
 //
 // Available in EVERY room state including closed and archived. Revocation is a
 // security control, and being unable to remove somebody from a room holding your
@@ -236,7 +236,7 @@ func (s *Store) RevokeParticipant(ctx context.Context, roomID ids.DealRoomID, pa
 }
 
 // revokeTx ends access three ways at once, because any one of them left standing
-// would keep the person in: the participant row stops being live, their sessions
+// would keep the contact in: the participant row stops being live, their sessions
 // stop answering, and any credential still in a mailbox stops being exchangeable.
 func revokeTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, participantID ids.DealRoomParticipantID) error {
 	if _, err := tx.Exec(ctx,
@@ -283,7 +283,7 @@ type UpdateParticipantInput struct {
 //
 // Correcting the ADDRESS is only possible while their credential is unconsumed:
 // once somebody has signed in, changing where their link points would hand their
-// access to a different person. It also invalidates the credential already sent,
+// access to a different contact. It also invalidates the credential already sent,
 // because that link is in the OLD mailbox — leaving it live would mean the typo'd
 // address kept working.
 func (s *Store) UpdateParticipant(ctx context.Context, roomID ids.DealRoomID, participantID ids.DealRoomParticipantID, in UpdateParticipantInput) (crmcontracts.DealRoomParticipant, error) {

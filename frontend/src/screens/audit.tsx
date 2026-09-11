@@ -14,8 +14,8 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./audit.css";
 
-// Reusable audit attribution — turns a raw AuditLogEntry into a line a person
-// can read, and specifically into a line that names A PERSON: the wire carries
+// Reusable audit attribution — turns a raw AuditLogEntry into a line a contact
+// can read, and specifically into a line that names A CONTACT: the wire carries
 // opaque ids (`human:<uuid>`, `agent:<passport>`) plus the display names the
 // read path resolves for them. Shared by every audit surface (the settings
 // audit log, the custom-fields change rail) so attribution reads the same
@@ -49,13 +49,13 @@ const ACTOR_ICON: Record<AuditLogEntry["actor_type"], LucideIcon> = {
   agent: Bot,
   system: Cog,
   connector: Plug,
-  // A person, not a machine: a buyer decided this. The icon differs from a
+  // A contact, not a machine: a buyer decided this. The icon differs from a
   // member's so a reader can tell at a glance that the actor sits outside the
   // company and will not be found in the member directory.
   buyer: UserRoundCheck,
 };
 
-// The phrase that says a machine did the typing, qualifying the person who
+// The phrase that says a machine did the typing, qualifying the contact who
 // authorised it. Only the two delegated actor kinds have one: a human needs no
 // qualifier and `system` is not acting for anybody.
 const MACHINE_QUALIFIER: Partial<
@@ -74,7 +74,7 @@ const HUMAN_ACTOR_PREFIX = "human:";
 // actorAttribution decides WHO a row is attributed to, as the label a reader
 // sees and the qualifier under it.
 //
-// The person comes first and the machine second (PD-002). An agent's own
+// The contact comes first and the machine second (PD-002). An agent's own
 // identifier is never the label: attribution exists so somebody can be asked
 // about a change, and a passport uuid cannot be asked anything. `identifier` is
 // the machine's id, carried only when it is the one thing left to show.
@@ -107,7 +107,7 @@ function actorAttribution(
   }
   // A Deal Room participant, named the way a member is. The read path resolves
   // actor_name from deal_room_participant for a buyer, so "who confirmed v5?"
-  // answers with the person rather than with their kind.
+  // answers with the contact rather than with their kind.
   //
   // The kind still stands in when the name is absent, and absent is a real
   // state rather than a gap: a revoked participant, an archived room, or a
@@ -168,7 +168,7 @@ function machineIdentifier(entry: ActorFields): string {
   return entry.actor_id === "" ? entry.actor_type : entry.actor_id;
 }
 
-// ActorTag renders WHO acted, naming the PERSON and saying a machine did the
+// ActorTag renders WHO acted, naming the CONTACT and saying a machine did the
 // typing second (PD-002). A rep working through a passport reads as the rep,
 // qualified "via an agent" — never as the agent with the rep in a footnote.
 // Shared by every audit surface so attribution reads the same everywhere.
@@ -184,7 +184,7 @@ export function ActorTag({
   return (
     <span className="audit-actor">
       <Icon aria-hidden />
-      {/* The person is its own element, not a bare text node: it is the
+      {/* The contact is its own element, not a bare text node: it is the
           primary half of the attribution, and a reader (or a test) should be
           able to address who acted separately from what they acted through. */}
       <span className="audit-actor-name">

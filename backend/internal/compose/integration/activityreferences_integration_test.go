@@ -46,12 +46,12 @@ func namedFor(
 func TestAReceiptCarriesItsSubjectForAReaderWhoMayReadIt(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "Depot slot confirmed", "Facilities signed off this morning."
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -92,12 +92,12 @@ func TestAReceiptCarriesItsSubjectForAReaderWhoMayReadIt(t *testing.T) {
 func TestANonEmailReceiptCarriesNoEmailRow(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject := "Rang about the retrofit"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "call", Subject: &subject,
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -129,12 +129,12 @@ func TestAReceiptKeepsItsRowAndLosesItsWordsOutsideTheAudience(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "Severance terms", "the agreed figure is confidential"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -174,21 +174,21 @@ func TestAReceiptKeepsItsRowAndLosesItsWordsOutsideTheAudience(t *testing.T) {
 func TestASeatWithoutTheActivityGrantNamesNoReceipts(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject := "Depot slot confirmed"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Direction: strPtr("inbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
 	}
-	// Every grant a rep working people holds EXCEPT activity, so what is
-	// tested is a seat that reads people and not their conversations.
+	// Every grant a rep working contacts holds EXCEPT activity, so what is
+	// tested is a seat that reads contacts and not their conversations.
 	ungranted := e.As(e.Rep2, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
-		Objects:  map[string]principal.ObjectGrant{"person": {Read: true}},
+		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
 		RowScope: principal.RowScopeTeam,
 	})
 

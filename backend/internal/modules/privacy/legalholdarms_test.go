@@ -51,21 +51,21 @@ type holdArm string
 func armOf(selector, table string) holdArm { return holdArm(selector + " / " + table) }
 
 // The one arm a selector may lack, with what the omission costs.
-var waivedHoldArms = gatekit.Waive(personArmWaivers(
+var waivedHoldArms = gatekit.Waive(contactArmWaivers(
 	"erasure notTransitivelyHeld", "erasure subjectOnlyActivities", "erasure unlinkedSubjectMail",
 	"erasure unlinkedSubjectChannel", "erasure embeddings delete", "erasure participants delete",
 	"erasure participants blank", "retention participants delete", "retention participants blank",
 ))
 
-// personArmWaivers states the one cost once for every erasure statement built
-// on notTransitivelyHeld: the person arm is not there because it could never
+// contactArmWaivers states the one cost once for every erasure statement built
+// on notTransitivelyHeld: the contact arm is not there because it could never
 // fire, not because it was forgotten.
-func personArmWaivers(selectors ...string) map[holdArm]string {
+func contactArmWaivers(selectors ...string) map[holdArm]string {
 	out := make(map[holdArm]string, len(selectors))
 	for _, selector := range selectors {
-		out[armOf(selector, "person")] = "a person-linked activity shared with another subject " +
+		out[armOf(selector, "contact")] = "a contact-linked activity shared with another subject " +
 			"is already outside every erasure selector, and the erased subject is proven unheld before " +
-			"the cascade runs (ErasePerson's own-hold check); the arm would read a hold that cannot be set"
+			"the cascade runs (EraseContact's own-hold check); the arm would read a hold that cannot be set"
 	}
 	return out
 }
@@ -73,7 +73,7 @@ func personArmWaivers(selectors ...string) map[holdArm]string {
 func TestEveryLegalHoldColumnIsReadByEveryActivityHoldSelector(t *testing.T) {
 	held := tablesCarryingLegalHoldReachableFromActivityLink(t)
 	if len(held) < 4 {
-		t.Fatalf("expected at least person/company/deal/lead to carry legal_hold and an activity_link column, catalog yielded %v", held)
+		t.Fatalf("expected at least contact/company/deal/lead to carry legal_hold and an activity_link column, catalog yielded %v", held)
 	}
 	for name, sql := range activityHoldSelectors() {
 		for _, table := range held {

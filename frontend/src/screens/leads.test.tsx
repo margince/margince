@@ -36,7 +36,7 @@ beforeEach(() => {
 
 // Leads (B-EP09.10a/b, §3.5 segregation): visually SEGREGATED from the
 // contact graph — the ≥60/40–59/<40 score thresholds, eligibility-gated
-// promote, and a lead row navigating to the LEAD detail (never the person
+// promote, and a lead row navigating to the LEAD detail (never the contact
 // screen). Below that: the same P-14/15/16/1 shared-block wiring as contacts
 // (contacts.test.tsx) and companies (companies.test.tsx) — search/sort/
 // pagination + a status filter, the rich create modal (full_name/email/
@@ -163,7 +163,7 @@ describe("promote eligibility gate", () => {
 });
 
 describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
-  it("names the owner on each row, the way the people and company lists do", async () => {
+  it("names the owner on each row, the way the contacts and company lists do", async () => {
     // The column this replaced rendered "typed by a person" for every
     // human-captured row. The Contacts and Companies lists were corrected
     // while this one kept its own copy of the column: same column, same test.
@@ -274,7 +274,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
   });
 
-  it("a lead row navigates to the LEAD detail, not the person screen", async () => {
+  it("a lead row navigates to the LEAD detail, not the contact screen", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) =>
@@ -322,7 +322,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     stubFetch(async (url, method, request) => {
       if (method === "POST" && url.includes("/leads/l-1/promote")) {
         promoteBody = JSON.parse(await request.text());
-        return jsonResponse({ person: anna, merged: false, lead_id: "l-1" });
+        return jsonResponse({ contact: anna, merged: false, lead_id: "l-1" });
       }
       return jsonResponse({
         ...lead,
@@ -358,9 +358,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     stubFetch(async (url, method, request) => {
       if (method === "POST" && url.includes("/leads/l-1/promote")) {
         promoteBody = JSON.parse(await request.text());
-        return jsonResponse({ person: anna, merged: false, lead_id: "l-1" });
+        return jsonResponse({ contact: anna, merged: false, lead_id: "l-1" });
       }
-      if (url.includes("/people/")) {
+      if (url.includes("/contacts/")) {
         return jsonResponse(anna);
       }
       return jsonResponse(lead);
@@ -396,7 +396,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       if (method === "POST" && url.includes("/leads/l-1/promote")) {
         promoteBody = JSON.parse(await request.text());
         return jsonResponse({
-          person: anna,
+          contact: anna,
           merged: false,
           lead_id: "l-1",
           deal_id: "d-1",
@@ -487,7 +487,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
             {
               title: "already promoted",
               code: "already_promoted",
-              details: { promoted_person_id: "p-9" },
+              details: { promoted_contact_id: "p-9" },
             },
             409,
           );
@@ -689,7 +689,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     const promoted = {
       ...lead,
       status: "promoted",
-      promoted_person_id: "p-42",
+      promoted_contact_id: "p-42",
       promoted_at: "2026-06-20T08:00:00Z",
       archived_at: "2026-06-20T08:00:00Z",
     };
@@ -731,13 +731,13 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
 
   it("the promote dialog says what promotion will do before the rep commits", async () => {
     // ADR-0119: merge-into-existing vs create is the difference between
-    // "my prospect is now a person" and "my prospect was already someone we
+    // "my prospect is now a contact" and "my prospect was already someone we
     // knew". The preview runs the same ladder the promotion runs.
     stubFetch(async (url) => {
       if (url.includes("/promote-preview")) {
-        return jsonResponse({ outcome: "merge", person: anna });
+        return jsonResponse({ outcome: "merge", contact: anna });
       }
-      if (url.includes("/people/")) {
+      if (url.includes("/contacts/")) {
         return jsonResponse(anna);
       }
       return jsonResponse(lead);
@@ -750,13 +750,13 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("a withheld merge target is never read as 'create'", async () => {
-    // An absent person on a merge means "outside your row scope", not "no
+    // An absent contact on a merge means "outside your row scope", not "no
     // match": promising a new contact here would be the wrong half to guess.
     stubFetch(async (url) => {
       if (url.includes("/promote-preview")) {
         return jsonResponse({
           outcome: "merge",
-          person_withheld: true,
+          contact_withheld: true,
         });
       }
       return jsonResponse(lead);
@@ -776,7 +776,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     const promoted = {
       ...lead,
       status: "promoted",
-      promoted_person_id: "p-42",
+      promoted_contact_id: "p-42",
       promoted_at: "2026-06-20T08:00:00Z",
       archived_at: "2026-06-20T08:00:00Z",
     };
@@ -787,7 +787,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
         return jsonResponse({
           lead: { ...lead, status: "contacted" },
           unwind: "reversed",
-          person_id: "p-42",
+          contact_id: "p-42",
         });
       }
       if (url.includes("/records/lead/")) {
@@ -831,7 +831,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -870,7 +870,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -895,7 +895,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -928,7 +928,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       const url = String(input);
       if (method === "POST" && url.includes("/promote")) {
         return jsonResponse({
-          person: { id: "p-42", full_name: "Jonas Petersen" },
+          contact: { id: "p-42", full_name: "Jonas Petersen" },
           merged: true,
           lead_id: "l-1",
         });
@@ -992,7 +992,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -1846,7 +1846,7 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
   it("offers the unowned queue and asks the server for it as unassigned=true", async () => {
     // The lead list once carried its own owner chip with only "mine", because
     // listLeads lacked owner_team_id/unassigned. It binds the SAME dial the
-    // person and company lists use now — the fork is gone.
+    // contact and company lists use now — the fork is gone.
     const user = userEvent.setup();
     const { urls } = stubFetchWithMe(async (url) => {
       if (url.includes("/leads")) {
@@ -2345,7 +2345,7 @@ describe("LeadScreen — History tab", () => {
     );
     // The identity header (name) must stay visible on the History tab, not
     // just the overview — it lives above the tab switch, matching
-    // person/company/deal's persistent RecordView header. Named by ROLE
+    // contact/company/deal's persistent RecordView header. Named by ROLE
     // rather than by text: the rail's details grid sits outside the tab
     // switch too and carries the same name in its editable Full name row,
     // which is the page working as intended and not a second header.
@@ -2501,7 +2501,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // STATE-4a: blocked by state rather than permission means visible and
     // disabled with the reason — hiding the control hides the fact the
     // reader needs. (A PROMOTED lead never reaches this page; it redirects
-    // to the person it became.)
+    // to the contact it became.)
     stubFetchWithMe(async () =>
       jsonResponse({
         ...lead,

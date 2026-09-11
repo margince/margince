@@ -18,7 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// The two system sources that are ONE person's: a mailbox belongs to whoever
+// The two system sources that are ONE contact's: a mailbox belongs to whoever
 // connected it, and a notice is addressed to whoever it names. Spelled as
 // constants because both the consequence switch and the ownership switch read
 // them, and a typo in either would silently move a row to the wrong answer.
@@ -36,7 +36,7 @@ func classifyBounce(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	return ranked{
 		item:       row,
 		occurredAt: occurredOf(item, asOf),
-		// The lane is bound to the acting user, so no other person's row could
+		// The lane is bound to the acting user, so no other contact's row could
 		// have come back.
 		ownerRef: ownedByWhoeverIsReading(),
 	}
@@ -56,7 +56,7 @@ func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked
 	return ranked{
 		item:       row,
 		occurredAt: occurredOf(item, asOf),
-		// The lane is bound to the acting user, so no other person's row could
+		// The lane is bound to the acting user, so no other contact's row could
 		// have come back.
 		ownerRef: ownedByWhoeverIsReading(),
 	}
@@ -86,11 +86,11 @@ func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 // systemRowOwner separates the personal system rows from the workspace ones.
 //
 // classifySystem draws five sources and they do not agree about ownership. A
-// notice is addressed to one person and a mailbox belongs to one person: both
+// notice is addressed to one contact and a mailbox belongs to one contact: both
 // lanes read per-user, so the row is the reader's by construction. A failing
 // sync, a broken AI task and a stopped automation are the WORKSPACE's — those
 // services read no user at all, several admins see the same row, and naming
-// whoever opened the page would make one shared failure look like five people's
+// whoever opened the page would make one shared failure look like five contacts's
 // separate problems.
 //
 // Stated here rather than in the classifier's literal so the difference is

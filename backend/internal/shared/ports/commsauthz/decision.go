@@ -153,7 +153,7 @@ type DecisionSet struct {
 //
 // It is a conjunction, and that is a decision rather than an oversight: one
 // denied recipient refuses the message rather than quietly sending a smaller
-// version of it. A rep who wrote to four people and reached three, without
+// version of it. A rep who wrote to four contacts and reached three, without
 // being told which, has been lied to about what happened.
 func (s DecisionSet) Allowed() bool {
 	if len(s.Decisions) == 0 {

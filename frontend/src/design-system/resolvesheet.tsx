@@ -8,7 +8,7 @@ import { DateInput, type ISODate, isISODate } from "./dateinput";
 
 // Answering a finding from the nightly input check.
 //
-// The six outcomes are not interchangeable, and which fields a person must
+// The six outcomes are not interchangeable, and which fields a contact must
 // fill depends on which one they picked. Those rules MIRROR the server's
 // refusals rather than inventing their own: a sheet that let somebody submit
 // what the server will reject spends their attention on a round trip that was
@@ -65,7 +65,7 @@ export function ResolveSheet({
         onChange={setOutcome}
       />
 
-      {/* An answer that HIDES a finding says why. The next person to meet the
+      {/* An answer that HIDES a finding says why. The next contact to meet the
           number is owed the reason it is not flagged, and the two suppressing
           outcomes are the only ones that take it away from them. */}
       {needsReason && (
@@ -160,10 +160,10 @@ function suppresses(outcome: ResolveOutcome | ""): boolean {
   return outcome === "value_correct" || outcome === "not_relevant";
 }
 
-// ResolveOutcome is the six answers a person can give.
+// ResolveOutcome is the six answers a contact can give.
 //
 // `condition_cleared` is deliberately absent: that is the check's own answer,
-// and a person naming it would be saying the condition stopped being true
+// and a contact naming it would be saying the condition stopped being true
 // without anything having looked.
 export type ResolveOutcome =
   | "fixed_record"

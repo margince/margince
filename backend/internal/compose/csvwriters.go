@@ -14,8 +14,8 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -34,7 +34,7 @@ import (
 // mapped fields and updates the ones that differ.
 type csvWriters struct {
 	pool       *pgxpool.Pool
-	people     *people.Store
+	contacts   *contacts.Store
 	identities *migration.RunStore
 	runID      migration.RunID
 	object     string
@@ -78,7 +78,7 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 	}
 	return &csvWriters{
 		pool:        db.Pool(),
-		people:      people.NewStore(db),
+		contacts:    contacts.NewStore(db),
 		tags:        collections.NewStore(db),
 		identities:  migration.NewRunStore(db),
 		runID:       runID,
@@ -125,7 +125,7 @@ func (w *csvWriters) Exists(ctx context.Context, object, externalID string) (boo
 // answer for a writer that lands both together.
 func (w *csvWriters) ReconcileIdentities(context.Context) error { return nil }
 
-// Associate applies the one edge a delimited file can carry — a person's
+// Associate applies the one edge a delimited file can carry — a contact's
 // employer, named by a company column — and discloses anything else.
 //
 // The default arm is kept rather than replaced. An edge shape this writer does
@@ -133,7 +133,7 @@ func (w *csvWriters) ReconcileIdentities(context.Context) error { return nil }
 // would report work that never happened, which is the reason this method existed
 // at all before there was an edge to write.
 func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
-	if a.FromType == migration.ObjectPerson && a.ToType == migration.AssocTargetCompanyName {
+	if a.FromType == migration.ObjectContact && a.ToType == migration.AssocTargetCompanyName {
 		return w.linkEmployer(ctx, a)
 	}
 	return migration.AssocResult{
@@ -237,8 +237,8 @@ func (w *csvWriters) create(ctx context.Context, object string, row migration.Ro
 		return w.createLead(ctx, row)
 	case migration.ObjectCompany:
 		return w.createCompany(ctx, row)
-	case migration.ObjectPerson:
-		return w.createPerson(ctx, row)
+	case migration.ObjectContact:
+		return w.createContact(ctx, row)
 	default:
 		return migration.EnsureResult{}, fmt.Errorf("import: %q is not an importable object", object)
 	}
@@ -260,15 +260,15 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		return migration.EnsureResult{Unchanged: true}, nil
 	}
 	if err := w.apply(ctx, id, changed, current, w.provenanceOf(row.ExternalID)); err != nil {
-		// A corrected file moving an address onto a person who is not its owner
+		// A corrected file moving an address onto a contact who is not its owner
 		// is one bad row, not a failed run: skip it with the reason and let the
 		// rest of the file land. Unhandled, this error aborts the whole
 		// migration, which is the wrong answer to a typo in a spreadsheet.
-		var dup *people.DuplicateEmailError
+		var dup *contacts.DuplicateEmailError
 		if errors.As(err, &dup) {
 			return migration.EnsureResult{Skipped: true, SkipReason: skipReasonDuplicateEmail}, nil
 		}
-		var takenDomain *people.DuplicateDomainError
+		var takenDomain *contacts.DuplicateDomainError
 		if errors.As(err, &takenDomain) {
 			// The company half of the same case: a corrected file moving a domain
 			// onto a company that is not its owner.
@@ -285,23 +285,23 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 func (w *csvWriters) read(ctx context.Context, id ids.UUID) ([]byte, error) {
 	switch w.object {
 	case migration.ObjectLead:
-		lead, err := w.people.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
+		lead, err := w.contacts.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
 		if err != nil {
 			return nil, err
 		}
 		return encodeRecord(lead)
 	case migration.ObjectCompany:
-		company, err := w.people.GetCompany(ctx, ids.From[ids.CompanyKind](id), storekit.LiveOnly)
+		company, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](id), storekit.LiveOnly)
 		if err != nil {
 			return nil, err
 		}
 		return encodeRecord(company)
-	case migration.ObjectPerson:
-		person, err := w.people.GetPerson(ctx, ids.From[ids.PersonKind](id), storekit.LiveOnly)
+	case migration.ObjectContact:
+		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](id), storekit.LiveOnly)
 		if err != nil {
 			return nil, err
 		}
-		return encodeRecord(person)
+		return encodeRecord(contact)
 	default:
 		return nil, fmt.Errorf("import: %q is not an importable object", w.object)
 	}
@@ -309,7 +309,7 @@ func (w *csvWriters) read(ctx context.Context, id ids.UUID) ([]byte, error) {
 
 // encodeRecord renders one stored record as JSON. Generic so no wire type
 // is widened to an empty interface on the way through.
-func encodeRecord[T crmcontracts.Lead | crmcontracts.Company | crmcontracts.Person](record T) ([]byte, error) {
+func encodeRecord[T crmcontracts.Lead | crmcontracts.Company | crmcontracts.Contact](record T) ([]byte, error) {
 	encoded, err := json.Marshal(record)
 	if err != nil {
 		return nil, fmt.Errorf("import: reading the stored record: %w", err)
@@ -318,23 +318,23 @@ func encodeRecord[T crmcontracts.Lead | crmcontracts.Company | crmcontracts.Pers
 }
 
 // apply writes the changed fields. `current` is the stored record's JSON, which
-// the company and person paths need because an address patch is
+// the company and contact paths need because an address patch is
 // all-or-nothing: the store assigns all six address columns whenever an Address
 // is given, so a file carrying only a City would blank the street, postal code
 // and country a human entered. The mapped components are merged onto what is
 // stored, and only then sent.
 //
-// The person path carries a second version of the same hazard. Its emails are
+// The contact path carries a second version of the same hazard. Its emails are
 // child rows and the patch REPLACES them, so a file naming one address would
 // archive every other address a human added by hand. The same rule applies: a
 // file whose columns are whatever the customer exported may not delete what it
 // never mentioned.
 func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]string, current []byte, source string) error {
 	// The update half of the same rule — see land above.
-	ctx = people.WithBulkWrite(ctx)
+	ctx = contacts.WithBulkWrite(ctx)
 	switch w.object {
 	case migration.ObjectLead:
-		_, err := w.people.UpdateLead(ctx, ids.From[ids.LeadKind](id), leadUpdateFrom(changed))
+		_, err := w.contacts.UpdateLead(ctx, ids.From[ids.LeadKind](id), leadUpdateFrom(changed))
 		return err
 	case migration.ObjectCompany:
 		in := companyUpdateFrom(changed)
@@ -354,12 +354,12 @@ func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]
 		if hasDomain {
 			in.Domains = &mergedDomains
 		}
-		_, err = w.people.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
+		_, err = w.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
 		return err
-	case migration.ObjectPerson:
-		in := personUpdateFrom(changed)
+	case migration.ObjectContact:
+		in := contactUpdateFrom(changed)
 		// Emails added by an update carry the same provenance the create path
-		// stamps; without it person_email.source lands empty.
+		// stamps; without it contact_email.source lands empty.
 		in.Source = source
 		merged, given, err := addressMergedOnto(current, in.Address)
 		if err != nil {
@@ -375,7 +375,7 @@ func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]
 		if given {
 			in.Emails = mergedEmails
 		}
-		_, err = w.people.UpdatePerson(ctx, ids.From[ids.PersonKind](id), in)
+		_, err = w.contacts.UpdateContact(ctx, ids.From[ids.ContactKind](id), in)
 		return err
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
@@ -392,7 +392,7 @@ var errImportReplayed = errors.New("import: the record replayed under its natura
 func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
 	in := leadCreateFrom(textFields(row.Fields), csvSourceSystem(), row.ExternalID, w.provenanceOf(row.ExternalID))
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
-		lead, created, err := w.people.CreateLeadTx(ctx, tx, in)
+		lead, created, err := w.contacts.CreateLeadTx(ctx, tx, in)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating lead %s: %w", row.ExternalID, err)
 		}
@@ -414,24 +414,24 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migrati
 // refuse and a different sentence to refuse it with. Folding them together
 // would mean a generic seam that exists to satisfy a linter and nothing else.
 //
-//nolint:dupl // createPerson has the same SHAPE and not the same job: a
+//nolint:dupl // createContact has the same SHAPE and not the same job: a
 func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
 	in := companyCreateFrom(textFields(row.Fields), w.provenanceOf(row.ExternalID))
 	if in.DisplayName == "" {
 		return migration.EnsureResult{Skipped: true, SkipReason: "the mapped display_name is empty, so the row names no company"}, nil
 	}
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
-		company, err := w.people.CreateCompanyTx(ctx, tx, in)
+		company, err := w.contacts.CreateCompanyTx(ctx, tx, in)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating company %s: %w", row.ExternalID, err)
 		}
 		return ids.UUID(company.Id), nil
 	})
-	var dup *people.DuplicateDomainError
+	var dup *contacts.DuplicateDomainError
 	if errors.As(err, &dup) {
 		// A domain names ONE company across the estate, so a row claiming one
 		// another company already holds is refused by the store — the same shape
-		// a person's claimed email has. One bad row is a skip with a reason, not
+		// a contact's claimed email has. One bad row is a skip with a reason, not
 		// a failed run: the rest of the file still lands.
 		return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
 	}
@@ -455,8 +455,8 @@ func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx
 	// Every row this importer writes is one of many under a single approval, so
 	// it carries the marker that says so. What it buys today is one thing: a
 	// standing domain refusal is NOT lifted by a spreadsheet, because approving
-	// a file is not the same act as a person putting one domain on one company.
-	ctx = people.WithBulkWrite(ctx)
+	// a file is not the same act as a contact putting one domain on one company.
+	ctx = contacts.WithBulkWrite(ctx)
 	var id ids.UUID
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error

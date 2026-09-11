@@ -1,0 +1,498 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package contacts
+
+// The regressions for duplicates that actually reached a live workspace, plus
+// the bypasses that let them in. Each test names the shape it prevents rather
+// than the function it calls, because the function is not the point — a future
+// refactor may move it, and the duplicate must stay impossible either way.
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// asLeadOwner is the shared dedupe context plus the two grants promotion
+// needs. It is separate from as() because widening that one would hand lead
+// rights to every test that uses it, and several of them exist to prove a
+// caller WITHOUT a grant is refused.
+func (e *dedupeEnv) asLeadOwner() context.Context {
+	ctx := e.as()
+	actor, _ := principal.Actor(ctx)
+	actor.Permissions.Objects["lead"] = principal.ObjectGrant{
+		Create: true, Read: true, Update: true,
+	}
+	return principal.WithActor(ctx, actor)
+}
+
+// asRowScope is the shared dedupe context narrowed to one row scope, for the
+// cases that turn on what a caller is allowed to see rather than on what they
+// may do.
+func (e *dedupeEnv) asRowScope(scope principal.RowScope) context.Context {
+	ctx := e.as()
+	actor, _ := principal.Actor(ctx)
+	actor.UserID = ids.NewV7()
+	actor.ID = "human:" + actor.UserID.String()
+	actor.Permissions.RowScope = scope
+	return principal.WithActor(ctx, actor)
+}
+
+// companyCandidatesFor counts the review-queue pairs filed for a company,
+// in any disposition.
+func (e *dedupeEnv) companyCandidatesFor(ctx context.Context, t *testing.T, company ids.CompanyID) int {
+	t.Helper()
+	var n int
+	err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM dedupe_candidate
+			 WHERE entity_type = 'company' AND (left_company_id = $1 OR right_company_id = $1)`,
+			company).Scan(&n)
+	})
+	if err != nil {
+		t.Fatalf("count company dedupe candidates: %v", err)
+	}
+	return n
+}
+
+// TestARenamedCompanyIsRescoredAgainstItsNeighbours is the Baqend
+// regression. A company captured from a second domain is named after that
+// domain, so at create time it resembles nothing. The signature sweep later
+// renames it to the company's real name — the first moment the duplicate is
+// visible, and the moment nothing used to look.
+func TestARenamedCompanyIsRescoredAgainstItsNeighbours(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	incumbent, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Baqend", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "baqend.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The same company captured from its product's domain: named "Speedkit",
+	// provisional, and no relation to "Baqend" that any name comparison could
+	// see at this point.
+	twin, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Speedkit", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "speedkit.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	twinID := ids.From[ids.CompanyKind](ids.UUID(twin.Id))
+	if got := e.companyCandidatesFor(ctx, t, twinID); got != 0 {
+		t.Fatalf("dedupe candidates before the rename = %d, want 0 — the two names have nothing in common yet", got)
+	}
+
+	// The signature sweep promotes the name the company's own contacts sign with.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx,
+			`UPDATE company SET name_source = 'domain' WHERE id = $1`, twinID); err != nil {
+			return err
+		}
+		_, err := e.store.PromoteCompanyNameTx(ctx, tx, twinID, "Baqend GmbH", "two employees")
+		return err
+	}); err != nil {
+		t.Fatalf("promote company name: %v", err)
+	}
+
+	if got := e.companyCandidatesFor(ctx, t, twinID); got != 1 {
+		t.Fatalf("dedupe candidates after the rename = %d, want 1 — "+
+			"\"Baqend GmbH\" normalizes onto the live \"Baqend\" and the pair belongs on the queue", got)
+	}
+	// The rename itself stands: detection never blocks the write it observed.
+	after, err := e.store.GetCompany(ctx, twinID, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.DisplayName != "Baqend GmbH" {
+		t.Fatalf("display_name = %q, want the promoted name — the re-check must not undo the rename", after.DisplayName)
+	}
+	if incumbent.Id == twin.Id {
+		t.Fatal("the two companies collapsed into one — fuzzy matching must never merge")
+	}
+}
+
+// TestARenamedCompanyDoesNotRefileAPairTheQueueAnswered keeps the
+// re-check from re-asking. It runs on every rename, and a pair a human
+// dismissed is answered for good.
+func TestARenamedCompanyDoesNotRefileAPairTheQueueAnswered(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Northwind Logistics", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "northwind.test", IsPrimary: true}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	twin, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Provisional Name", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "northwind-eu.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	twinID := ids.From[ids.CompanyKind](ids.UUID(twin.Id))
+
+	rename := func(to string) {
+		t.Helper()
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx,
+				`UPDATE company SET name_source = 'domain' WHERE id = $1`, twinID); err != nil {
+				return err
+			}
+			_, err := e.store.PromoteCompanyNameTx(ctx, tx, twinID, to, "corroborated")
+			return err
+		}); err != nil {
+			t.Fatalf("promote company name to %q: %v", to, err)
+		}
+	}
+	rename("Northwind Logistics GmbH")
+	if got := e.companyCandidatesFor(ctx, t, twinID); got != 1 {
+		t.Fatalf("candidates after the first rename = %d, want 1", got)
+	}
+	// A second rename that still resembles the same incumbent must not file the
+	// pair again — the queue already holds it.
+	rename("Northwind Logistics AG")
+	if got := e.companyCandidatesFor(ctx, t, twinID); got != 1 {
+		t.Fatalf("candidates after a second rename = %d, want 1 — the pair was already filed", got)
+	}
+}
+
+// TestCompanyDedupeReadsTheLegalNameAxis covers the other half of the
+// Baqend shape: two records whose display names differ but whose registered
+// name is identical. Before this the fuzzy tier compared display names only,
+// so the strongest signal on the row was invisible to it.
+func TestCompanyDedupeReadsTheLegalNameAxis(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	legal := "Contoso Handels GmbH"
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Contoso Shop", LegalName: &legal, Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "contoso-shop.test", IsPrimary: true}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// A different marketing name, no shared domain — the two collide only on
+	// the registered entity.
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
+		DisplayName: "Contoso Wholesale",
+		LegalName:   "Contoso Handels GmbH",
+		Domains:     []string{"contoso-wholesale.test"},
+	})
+	if m.Decision != DecisionFuzzyReview {
+		t.Fatalf("decision = %s (confidence %.4f), want fuzzy_review on the legal-name axis", m.Decision, m.Confidence)
+	}
+	if m.Confidence != 1 {
+		t.Fatalf("confidence = %.4f, want 1.0 — the registered names are identical", m.Confidence)
+	}
+	// The queue renders the two values it scored, so they must be the two the
+	// score came from — showing a display-name collision here would put a
+	// comparison nobody made in front of the human deciding the merge.
+	if len(m.Ranked) == 0 {
+		t.Fatal("fuzzy review carried no ranked rival — the queue would have nothing to render")
+	}
+	best := m.Ranked[0]
+	if best.MatchedField != fieldLegalName {
+		t.Fatalf("matched field = %q, want %q", best.MatchedField, fieldLegalName)
+	}
+	if best.CandidateValue != legal || best.IncumbentValue != legal {
+		t.Fatalf("evidence compares %q against %q, want both to be the registered name %q",
+			best.CandidateValue, best.IncumbentValue, legal)
+	}
+}
+
+// TestARaceOnAClaimedAddressStillAnswersTheDuplicateContract covers the narrow
+// window the chokepoint's own guard opened: the manual create probes for a
+// claimed address, then the ladder runs, and an address claimed in between
+// reaches the refusal. It is still the create contract's 409 with the
+// incumbent's id, not an opaque failure because a different guard caught it.
+func TestARaceOnAClaimedAddressStillAnswersTheDuplicateContract(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	incumbent, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Ida Kranz", Source: "manual",
+		Emails: []ContactEmailInput{{Email: "ida@kranz.test", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	incumbentID := ids.From[ids.ContactKind](ids.UUID(incumbent.Id))
+
+	err = e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, cerr := createContact(ctx, tx, ContactResolution{
+			Decision: DecisionExactCollision, MatchedLane: LaneEmail, ContactID: incumbentID,
+		}, ContactSpec{
+			FullName:   "Ida Kranz",
+			Emails:     []ContactEmailInput{{Email: "ida@kranz.test", EmailType: "work", IsPrimary: true}},
+			Source:     "manual",
+			CapturedBy: "human:test",
+		})
+		return cerr
+	})
+	var dup *DuplicateEmailError
+	if !errors.As(err, &dup) {
+		t.Fatalf("refusal = %v, want DuplicateEmailError so the 409 contract holds", err)
+	}
+	if dup.ExistingID != incumbentID {
+		t.Fatalf("conflict names %s, want the incumbent %s", dup.ExistingID, incumbentID)
+	}
+}
+
+// TestTheChokepointRefusalHidesARecordTheCallerCannotRead is the disclosure
+// half of that refusal. PO-F-1 matches across the whole workspace on purpose —
+// a duplicate you cannot see is still a duplicate — so the refusal must not
+// hand back a pointer to a record outside the caller's row scope. Otherwise
+// anyone could confirm, address by chosen address, who exists in someone
+// else's book.
+func TestTheChokepointRefusalHidesARecordTheCallerCannotRead(t *testing.T) {
+	e := setupDedupe(t)
+	owner := e.as()
+	// Owned explicitly AND capture-private: a contact is workspace-readable
+	// identity, so ownership alone hides nothing — visibility='owner' is the
+	// one state that keeps the row out of every other seat's row scope.
+	ownerID := ids.From[ids.UserKind](e.rep)
+	hidden, err := e.store.CreateContact(owner, CreateContactInput{
+		FullName: "Mara Steiner", Source: "manual", OwnerID: &ownerID,
+		Emails: []ContactEmailInput{{Email: "mara@steiner.test", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hiddenID := ids.From[ids.ContactKind](ids.UUID(hidden.Id))
+	if err := e.store.tx(owner, func(tx pgx.Tx) error {
+		_, uerr := tx.Exec(owner, `UPDATE contact SET visibility = 'owner' WHERE id = $1`, hiddenID)
+		return uerr
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// A second rep who may create contacts but sees only their own rows.
+	stranger := e.asRowScope(principal.RowScopeOwn)
+	err = e.store.tx(stranger, func(tx pgx.Tx) error {
+		_, cerr := createContact(stranger, tx, ContactResolution{
+			Decision: DecisionExactCollision, MatchedLane: LaneEmail, ContactID: hiddenID,
+		}, ContactSpec{
+			FullName:   "Mara Steiner",
+			Emails:     []ContactEmailInput{{Email: "mara@steiner.test", EmailType: "work", IsPrimary: true}},
+			Source:     "manual",
+			CapturedBy: "human:stranger",
+		})
+		return cerr
+	})
+	var dup *DuplicateEmailError
+	if !errors.As(err, &dup) {
+		t.Fatalf("refusal = %v, want DuplicateEmailError", err)
+	}
+	// Still refused — the duplicate is real — but with no pointer to a record
+	// this caller was never allowed to read.
+	if !dup.ExistingID.IsZero() {
+		t.Fatalf("refusal disclosed %s to a caller who cannot read it", dup.ExistingID)
+	}
+}
+
+// TestCompanyDedupeExcludesItself guards the re-check's own precondition:
+// an existing row scored against the workspace holds its own name and its own
+// domains, and without self-exclusion it matches itself perfectly and hides
+// every real rival behind that score.
+func TestCompanyDedupeExcludesItself(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	subject, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Umbrella Corp", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "umbrella.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	subjectID := ids.From[ids.CompanyKind](ids.UUID(subject.Id))
+
+	// Without the exclusion this is an exact domain collision with itself.
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
+		DisplayName: "Umbrella Corp",
+		Domains:     []string{"umbrella.test"},
+		ExcludeID:   &subjectID,
+	})
+	if m.Decision != DecisionNoMatch {
+		t.Fatalf("decision = %s, want no_match — the row must not match itself", m.Decision)
+	}
+}
+
+// TestPromotingALeadRunsTheFullContactLadder closes the promotion bypass. The
+// path used to probe contact_email by hand: a lead whose address nobody held
+// created a contact outright, even when the workspace already had that human
+// under a near-identical name.
+func TestPromotingALeadRunsTheFullContactLadder(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.asLeadOwner()
+
+	incumbent, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Jonathan Meier", Source: "manual",
+		Emails: []ContactEmailInput{{Email: "j.meier@acme.test", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A different address, so the exact tier stays silent; the name is what
+	// collides.
+	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{
+		FullName: ptr("Jonathan Meier"),
+		Email:    ptr("jonathan.meier@acme.test"),
+		Source:   "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
+	contact, merged, err := e.store.PromoteLead(ctx, leadID, PromoteLeadInput{Trigger: "human_qualify"})
+	if err != nil {
+		t.Fatalf("promote lead: %v", err)
+	}
+	if merged {
+		t.Fatal("promotion merged on a fuzzy name match — DEDUPE_FUZZY_AUTOMERGE is pinned never")
+	}
+	if contact.Id == incumbent.Id {
+		t.Fatal("promotion landed on the incumbent without an exact key")
+	}
+
+	var candidates int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM dedupe_candidate
+			 WHERE entity_type = 'contact' AND (left_contact_id = $1 OR right_contact_id = $1)`,
+			ids.UUID(contact.Id)).Scan(&candidates)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if candidates != 1 {
+		t.Fatalf("dedupe candidates for the promoted contact = %d, want 1 — "+
+			"a promotion that creates a near-twin must leave the pair on the queue", candidates)
+	}
+}
+
+// TestPromotingALeadStillMergesOnAClaimedAddress pins the behaviour the
+// rewrite had to preserve: an exact email hit merges into the incumbent rather
+// than creating anything.
+func TestPromotingALeadStillMergesOnAClaimedAddress(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.asLeadOwner()
+	incumbent, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Dana Fischer", Source: "manual",
+		Emails: []ContactEmailInput{{Email: "dana@globex.test", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{
+		FullName: ptr("Dana Fischer"), Email: ptr("dana@globex.test"), Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact, merged, err := e.store.PromoteLead(ctx,
+		ids.From[ids.LeadKind](ids.UUID(lead.Id)), PromoteLeadInput{Trigger: "human_qualify"})
+	if err != nil {
+		t.Fatalf("promote lead: %v", err)
+	}
+	if !merged {
+		t.Fatal("promotion did not merge onto the contact already holding the address")
+	}
+	if contact.Id != incumbent.Id {
+		t.Fatalf("merged into %s, want the incumbent %s", contact.Id, incumbent.Id)
+	}
+}
+
+// TestASecondLeadCannotClaimALinkedInProfile closes the key that had a probe
+// nobody called: one profile URL names one human, so the second create is
+// refused with the incumbent's id exactly as a claimed address is.
+func TestASecondLeadCannotClaimALinkedInProfile(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.asLeadOwner()
+	first, _, err := e.store.CreateLead(ctx, CreateLeadInput{
+		FullName:    ptr("Vera Vogel"),
+		Email:       ptr("vera@vogel.test"),
+		LinkedInURL: ptr("https://www.linkedin.com/in/vera-vogel"),
+		Source:      "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A different address, and the same profile written with the other scheme,
+	// an explicit port and a fragment — all noise the key normalizes away.
+	_, _, err = e.store.CreateLead(ctx, CreateLeadInput{
+		FullName:    ptr("V. Vogel"),
+		Email:       ptr("v.vogel@other.test"),
+		LinkedInURL: ptr("http://www.linkedin.com:443/in/vera-vogel#about"),
+		Source:      "manual",
+	})
+	var dup *DuplicateLeadLinkedInError
+	if !errors.As(err, &dup) {
+		t.Fatalf("second create error = %v, want DuplicateLeadLinkedInError", err)
+	}
+	if dup.ExistingID.UUID != ids.UUID(first.Id) {
+		t.Fatalf("conflict names %s, want the incumbent %s", dup.ExistingID, first.Id)
+	}
+}
+
+// TestTheChokepointRefusesToMintOverAnExactCollision is the guard that makes
+// the verdict argument load-bearing rather than decorative. No production
+// caller reaches it — each returns on the exact tier first — so it is asserted
+// directly: a future path that forgets is refused by the chokepoint itself.
+//
+// The row count is taken INSIDE the same transaction as the refused call, not
+// after it: a chokepoint that inserted first and refused second would leave
+// nothing behind once the transaction rolled back, so a count from outside
+// would read zero either way and prove nothing. Read from within, zero means
+// the refusal genuinely preceded the INSERT.
+func TestTheChokepointRefusesToMintOverAnExactCollision(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	var contactRefusal error
+	var contacts int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, contactRefusal = createContact(ctx, tx, ContactResolution{
+			Decision: DecisionExactCollision, MatchedLane: LaneEmail, ContactID: ids.New[ids.ContactKind](),
+		}, ContactSpec{FullName: "Ghost", Source: "manual", CapturedBy: "human:test"})
+		return tx.QueryRow(ctx, `SELECT count(*) FROM contact`).Scan(&contacts)
+	}); err != nil {
+		t.Fatalf("probe the contact chokepoint: %v", err)
+	}
+	if contactRefusal == nil {
+		t.Fatal("createContact minted a contact while the ladder held an exact email collision")
+	}
+	if contacts != 0 {
+		t.Fatalf("the refused create left %d contact rows behind", contacts)
+	}
+
+	var companyRefusal error
+	var companies int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, companyRefusal = createCompany(ctx, tx, CompanyMatch{
+			Decision: DecisionExactCollision, CompanyID: ids.New[ids.CompanyKind](),
+		}, CompanySpec{DisplayName: "Ghost Co", Source: "manual", CapturedBy: "human:test"})
+		return tx.QueryRow(ctx, `SELECT count(*) FROM company`).Scan(&companies)
+	}); err != nil {
+		t.Fatalf("probe the company chokepoint: %v", err)
+	}
+	if companyRefusal == nil {
+		t.Fatal("createCompany minted a company while the ladder held an exact domain collision")
+	}
+	if companies != 0 {
+		t.Fatalf("the refused create left %d company rows behind", companies)
+	}
+}

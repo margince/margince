@@ -90,7 +90,7 @@ const CONFIDENCE: Record<ExtractedField["confidence"], ConfidenceLevel> = {
 //
 // The currency is always there to convert with: a reading omits an amount it
 // could not pair with one, precisely so no figure is ever scaled by a guess.
-// majorUnits renders a stored minor-unit amount as the figure a person types.
+// majorUnits renders a stored minor-unit amount as the figure a human types.
 // Plain digits rather than a formatted amount: this is what goes INTO an input,
 // and a grouped "148,500.00" would come back out as something to re-parse.
 export function majorUnits(minor: string, currency: string): string {

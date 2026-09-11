@@ -223,7 +223,7 @@ func TestEveryDeadCredentialReadsAlikeAndARoomSessionHoldsNoCRMAuthority(t *test
 	}
 
 	// The room session is not a passport: every seat route refuses it.
-	for _, path := range []string{"/v1/deals", "/v1/people", "/v1/companies", "/v1/deal-rooms", "/v1/me"} {
+	for _, path := range []string{"/v1/deals", "/v1/contacts", "/v1/companies", "/v1/deal-rooms", "/v1/me"} {
 		if status := publicCall(t, e, "GET", path, nil, bearer(token), nil); status != http.StatusUnauthorized {
 			t.Fatalf("GET %s with a room session = %d, want 401", path, status)
 		}
@@ -292,7 +292,7 @@ func uploadDealFile(t *testing.T, e *apptest.AppEnv, dealID, filename string, da
 // participant revoked without its invitation being retired, which is the race
 // the participant row lock exists to prevent. The invitation table carries no
 // participant-state column, so without the join every check on the invitation
-// row would read green for a person the seller had already removed, and the
+// row would read green for a contact the seller had already removed, and the
 // buyer would enter a room they were taken out of.
 //
 // The first assertion holds the OUTCOME rather than either mechanism: through

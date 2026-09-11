@@ -39,7 +39,7 @@ import (
 // than returning a fabricated answer.
 //
 // stubIncumbent.objectClass is deliberately the INCUMBENT class (e.g.
-// "contacts"), never the canonical Margince name (e.g. "person") — this
+// "contacts"), never the canonical Margince name (e.g. "contact") — this
 // is exactly the asymmetry a real adapter enforces (hubspot.Adapter.Get
 // rejects any class with no declared mapping) and this stub's Get
 // checks it strictly, so a test seeding/calling this stub with the
@@ -105,7 +105,7 @@ func (s *stubIncumbent) Get(_ context.Context, objectClass, externalID string) (
 
 // canonicalClass/incumbentClass are this file's fixed stand-ins for the
 // real seam's two distinct namespaces — canonical is what the mirror
-// and datasource.EntityRef.Type carry ("person", the Margince entity
+// and datasource.EntityRef.Type carry ("contact", the Margince entity
 // name); incumbent is what Incumbent.Get takes as input ("contacts",
 // HubSpot's own object class, mirroring hubspot.Mapping's real
 // contactsMapping.Source/.Target pair). Using two DIFFERENT strings
@@ -113,7 +113,7 @@ func (s *stubIncumbent) Get(_ context.Context, objectClass, externalID string) (
 // actually exercise FreshnessReader's translation step rather than
 // pass by coincidence.
 const (
-	canonicalClass = "person"
+	canonicalClass = "contact"
 	incumbentClass = "contacts"
 )
 
@@ -265,7 +265,7 @@ func TestFreshnessReaderFailedLiveReadStillSpendsAndDegrades(t *testing.T) {
 // translator-miss path (review F1): a canonical type with no declared
 // incumbent-class mapping must degrade to the mirror exactly like a nil
 // Incumbent would — never fall back to passing the canonical name
-// straight to inc.Get (stubIncumbent.Get would reject "person" against
+// straight to inc.Get (stubIncumbent.Get would reject "contact" against
 // its fixtured "contacts", so a regression here fails loudly) — and,
 // because this is a wiring gap rather than a budget decision, it must
 // NOT emit mirror.budget_degraded.

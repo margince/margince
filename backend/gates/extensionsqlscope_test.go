@@ -39,7 +39,7 @@ package gates
 // The fold has no scopes, and the rules that make that safe are the two the
 // gate would otherwise be wrong under. A name resolves only when every binding
 // of it in the unit folds to the SAME text, so one function's `table :=
-// "person"` is never answered by another function's `table := "ext.…"`; and a
+// "contact"` is never answered by another function's `table := "ext.…"`; and a
 // name bound even once to something unreadable resolves to nothing, so a value
 // the fold could read does not stand in for one it could not. Under both rules
 // the statement reads as computed — a finding — rather than as allowed.
@@ -181,8 +181,8 @@ func judgeTable(ref tableRef, unit, prefix string) string {
 }
 
 // splitQualified reads a possibly-qualified name as (schema, relation), taking
-// the LAST two parts so that a database-qualified `db.public.person` is judged
-// on `public.person`. Quoting is stripped per part, because PostgreSQL quotes
+// the LAST two parts so that a database-qualified `db.public.contact` is judged
+// on `public.contact`. Quoting is stripped per part, because PostgreSQL quotes
 // each identifier separately — `"ext"."ext_notes_note"` is one reference — and
 // the result is lower-cased, which is what an unquoted identifier folds to.
 func splitQualified(name string) (schema, relation string) {
@@ -255,7 +255,7 @@ const maxConstantPasses = 8
 // cannot read (a function call, another package's value), and the name resolves
 // to nothing at all: the SQL spelled through it then reads as computed, which is
 // a finding rather than a silent pass. That rule is what keeps one function's
-// `table := "person"` from being answered by another function's `table :=
+// `table := "contact"` from being answered by another function's `table :=
 // "ext.ext_notes_note"` — the fold is name-keyed across the whole unit and has
 // no scopes of its own.
 func stringConstants(files []*ast.File) map[string]string {
@@ -379,7 +379,7 @@ var sqlStatementShapes = []struct{ opener, companion string }{
 	{"alter", " table "},
 	{"drop", " table "},
 	// TRUNCATE's companion is the optional TABLE word, which makes the bare
-	// `TRUNCATE person` spelling unread. That is the deliberate half of a trade:
+	// `TRUNCATE contact` spelling unread. That is the deliberate half of a trade:
 	// with no companion, every sentence opening with the word is a statement,
 	// and "truncate the note body before sending" refuses a table called `the`
 	// — a false failure with no waiver to answer it, on a statement PostgreSQL
@@ -415,10 +415,10 @@ func looksLikeSQL(text string) bool {
 // the token scan both read the statement rather than its contents.
 //
 // The exception is what a DO block is FOR. Everywhere else a quoted body is a
-// value — `SELECT $$FROM person$$ AS example` names one table, not two — but a
+// value — `SELECT $$FROM contact$$ AS example` names one table, not two — but a
 // DO block's body IS the statement, and stripping it would delete the only
 // place its DML is written. So a DO keeps its body and loses only its comments,
-// which is the difference between reading `DO $$ BEGIN DELETE FROM person; END
+// which is the difference between reading `DO $$ BEGIN DELETE FROM contact; END
 // $$` and reading `DO`.
 func stripNoise(text string) string {
 	if opensDoBlock(text) {
@@ -505,7 +505,7 @@ func tableRefs(sql string) []tableRef {
 // readsRatherThanWrites reports whether the keyword at i introduces a table the
 // statement READS. It is what bounds the CTE exemption, and the bound is
 // PostgreSQL's own: a WITH name can stand wherever a relation is read, and
-// nowhere a statement writes. `WITH person AS (…) UPDATE person SET …` does not
+// nowhere a statement writes. `WITH contact AS (…) UPDATE contact SET …` does not
 // rewrite the CTE — there is no such thing — it rewrites the table, and a gate
 // that exempted the name there would hand a unit a two-token way past itself
 // while its own table, read inside the CTE body, kept the reference count
@@ -544,7 +544,7 @@ var clauseWords = []string{
 }
 
 // listKeywords introduce a comma-separated list of tables rather than one:
-// `FROM ext.ext_notes_note n, person p` is a join with no JOIN in it, and
+// `FROM ext.ext_notes_note n, contact p` is a join with no JOIN in it, and
 // `TRUNCATE TABLE a, b` and `DROP TABLE a, b` name two each.
 var listKeywords = []string{"from", "using", "table", "truncate"}
 
@@ -599,7 +599,7 @@ func tableTargets(tokens []string, i int) []int {
 		// An entry that is not a table — a subquery, a set-returning function —
 		// ends a single position and is STEPPED OVER in a list. Returning here
 		// instead would let one such entry shield every table behind it:
-		// `FROM generate_series(1,1) g, person p` names a core table second.
+		// `FROM generate_series(1,1) g, contact p` names a core table second.
 		if namesATable(tokens, at, keyword) {
 			targets = append(targets, at)
 		} else if !list {
@@ -684,7 +684,7 @@ type cteScope struct {
 // including the MATERIALIZED spellings and a column list (`WITH x(id) AS (…)`).
 //
 // The BODY is recorded, not just the name, because a CTE shadows a real table
-// only where it is in scope: in `WITH person AS (SELECT id FROM person)` the
+// only where it is in scope: in `WITH contact AS (SELECT id FROM contact)` the
 // inner name still reads the core table, and exempting it everywhere would hand
 // a unit a one-line way past this gate. A RECURSIVE WITH is the exception —
 // there the body legitimately names the CTE itself.

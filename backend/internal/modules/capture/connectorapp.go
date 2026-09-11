@@ -10,7 +10,7 @@ package capture
 // It was the process environment (MARGINCE_GMAIL_CLIENT_ID / _CLIENT_SECRET,
 // MARGINCE_GRAPH_CLIENT_ID / _CLIENT_SECRET), which meant setting up capture
 // took shell access to the server and a restart, and there was no way for the
-// person who owns the Google project or the Entra registration to do it
+// contact who owns the Google project or the Entra registration to do it
 // themselves.
 //
 // The SECRET is sealed in the key vault and this row records the ref. The client

@@ -100,7 +100,7 @@ func (i approvalInbox) ReadApproval(ctx context.Context, stagedActionID ids.UUID
 	return stagedActionFrom(a, true), nil
 }
 
-// DecideApproval carries one person's verdict to the engine.
+// DecideApproval carries one contact's verdict to the engine.
 func (i approvalInbox) DecideApproval(ctx context.Context, stagedActionID ids.UUID, approve bool, reason string) (agents.StagedApproval, error) {
 	a, err := i.svc.DecideWire(ctx, ids.From[ids.ApprovalKind](stagedActionID), approve, decisionReason(reason))
 	if err != nil {
@@ -191,7 +191,7 @@ func stagedPayload(change *map[string]any) json.RawMessage {
 }
 
 // stagedEvidence carries what each claim was read out of. Evidence is the half
-// that lets a person check a proposal instead of taking its word.
+// that lets a contact check a proposal instead of taking its word.
 func stagedEvidence(evidence *[]crmcontracts.ApprovalEvidence) []agents.StagedEvidence {
 	if evidence == nil {
 		return nil

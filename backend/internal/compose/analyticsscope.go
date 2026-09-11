@@ -210,7 +210,7 @@ func ownedOrUnowned(col, clause string) string {
 //
 // Membership rows deliberately outlive both — an archived team keeps its rows so
 // a restore brings them back, and deactivating a seat leaves the row alone. A
-// predicate reading team_membership by itself therefore measures people who left,
+// predicate reading team_membership by itself therefore measures contacts who left,
 // which is the defect this replaces: the resolver refuses a departed colleague as
 // a population of their own while their deals went on counting inside their old
 // team's total.
@@ -334,7 +334,7 @@ func resolveOwnerScope(
 		}
 		if !shares {
 			return ResolvedScope{}, fmt.Errorf(
-				"that person is not in one of your teams: %w", apperrors.ErrNotFound)
+				"that contact is not in one of your teams: %w", apperrors.ErrNotFound)
 		}
 	default:
 		return ResolvedScope{}, fmt.Errorf(
@@ -413,10 +413,10 @@ func analyticsUserLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, er
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Deactivated counts as absent, not merely archived: a departed
 		// colleague is no longer a population somebody measures.
-		return "", fmt.Errorf("no such person to measure: %w", apperrors.ErrNotFound)
+		return "", fmt.Errorf("no such contact to measure: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
-		return "", fmt.Errorf("compose: naming the measured person: %w", err)
+		return "", fmt.Errorf("compose: naming the measured contact: %w", err)
 	}
 	return label, nil
 }

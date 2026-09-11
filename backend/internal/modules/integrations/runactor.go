@@ -14,7 +14,7 @@ package integrations
 // The workers that execute a run know a run id — the poll sweep drains many at
 // once — so a principal bound out there can only ever name a vendor it guessed.
 // It guessed the one provider that could exist while `provider_connection`,
-// `provider_run` and `person_provider_claim` each carried a CHECK pinning them
+// `provider_run` and `contact_provider_claim` each carried a CHECK pinning them
 // to a single name. Those checks are gone so a second provider can be
 // connected, and a guess is now a wrong answer: the claim rows derive their
 // provenance from the run's own provider, so the audit log and the evidence on
@@ -31,7 +31,7 @@ import (
 )
 
 // connectorActorPrefix is what a connector's actor id is spelled with, matching
-// the provenance people.WriteProviderClaims writes onto the claim rows. One act
+// the provenance contacts.WriteProviderClaims writes onto the claim rows. One act
 // leaves two rows, and a reader joining them has to see one name.
 const connectorActorPrefix = "connector:"
 

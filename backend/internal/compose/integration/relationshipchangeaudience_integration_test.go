@@ -11,7 +11,7 @@ package integration
 // the rule they exist for — a last-activity timestamp that moves when a private
 // message arrives tells a colleague when it arrived, without showing a word of
 // it. relationship strength is one of the four and applies the clause in five
-// places (people/strength.go). The change DERIVED from that strength applied it
+// places (contacts/strength.go). The change DERIVED from that strength applied it
 // in none, so a message the score itself refused to count still produced
 // "replied after 41 quiet days" with the reply's own timestamp.
 //
@@ -63,10 +63,10 @@ func TestALimitedReplyIsNotDerivedIntoARelationshipChange(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			e := Setup(t)
 			author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-			contact := e.SeedPerson(t, "Ines Wieder", &e.Rep1)
+			contact := e.SeedContact(t, "Ines Wieder", &e.Rep1)
 
 			now := time.Now().UTC()
-			link := []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}}
+			link := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
 
 			// The far side of the silence: an outbound long before the window.
 			// Always workspace-visible, so the only variable is the reply.
@@ -107,13 +107,13 @@ func TestALimitedReplyIsNotDerivedIntoARelationshipChange(t *testing.T) {
 }
 
 // changesFor reads one contact's derived changes as one caller.
-func changesFor(ctx context.Context, t *testing.T, e *Env, person ids.UUID, now time.Time) []relstrength.Change {
+func changesFor(ctx context.Context, t *testing.T, e *Env, contact ids.UUID, now time.Time) []relstrength.Change {
 	t.Helper()
 	var out []relstrength.Change
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		out, err = e.People.PersonRelationshipChangesTx(ctx, tx,
-			ids.From[ids.PersonKind](person), now, nil)
+		out, err = e.Contacts.ContactRelationshipChangesTx(ctx, tx,
+			ids.From[ids.ContactKind](contact), now, nil)
 		return err
 	}); err != nil {
 		t.Fatalf("reading relationship changes: %v", err)
@@ -169,10 +169,10 @@ func TestAHeldMessageDoesNotShortenTheGapAReplyBroke(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			e := Setup(t)
 			author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-			contact := e.SeedPerson(t, "Wenke Dazwischen", &e.Rep1)
+			contact := e.SeedContact(t, "Wenke Dazwischen", &e.Rep1)
 
 			now := time.Now().UTC()
-			link := []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}}
+			link := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
 
 			log := func(subject, direction string, daysAgo int, audience string) {
 				t.Helper()

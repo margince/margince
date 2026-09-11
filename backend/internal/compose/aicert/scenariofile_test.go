@@ -101,7 +101,7 @@ func TestLoadScenarioFileRefusesWhatCannotRun(t *testing.T) {
 
 // Provenance gates what may ENTER the corpus; a scratch scenario an operator is
 // probing with is not entering it, and demanding a stamp for a throwaway would
-// only teach people to type a false one.
+// only teach contacts to type a false one.
 func TestLoadScenarioFileDoesNotDemandCorpusProvenance(t *testing.T) {
 	reg := census(t)
 	path := filepath.Join(t.TempDir(), "scratch.yaml")

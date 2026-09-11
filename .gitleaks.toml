@@ -38,7 +38,7 @@ useDefault = true
 
 # Tests and Storybook stories hold fabricated fixtures — stand-in passports and
 # approval tokens, demo ids, and deliberately malformed URLs. The credentialed
-# URLs in the websearch and person-discovery tests are the clearest case: they
+# URLs in the websearch and contact-discovery tests are the clearest case: they
 # exist so the code under test can refuse them, so the literal HAS to look like
 # a credential for the test to mean anything.
 [[allowlists]]
@@ -50,7 +50,7 @@ paths = [
 ]
 
 # The agent tool registry names the contract operations a tool composes —
-# "getPerson/getCompany/getDeal + listActivities". Slash-joined camelCase
+# "getContact/getCompany/getDeal + listActivities". Slash-joined camelCase
 # reads as high-entropy to the generic detector; it is an operation id, and the
 # gen-agentpolicy drift gate would fail if it were anything else.
 #

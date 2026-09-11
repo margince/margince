@@ -71,7 +71,7 @@ type extensionRuntimeBinding struct {
 	// the file keeper, the merge stager and the counterparty ensurer — three
 	// cross-module adapters — plus the deployment's suppression config. A sink
 	// built here from the pool alone would compile, run, land activities and
-	// silently create no people, which is the failure this field exists to make
+	// silently create no contacts, which is the failure this field exists to make
 	// impossible. Nil on a role that composed no capture, and the port then
 	// refuses by name rather than half-working.
 	captureSink *capture.Sink
@@ -86,7 +86,7 @@ type extensionRuntimeBinding struct {
 // which is the whole point of the signature: newCaptureSink is the one spelling
 // that attaches the file keeper, the merge stager and the counterparty ensurer,
 // and a parameter of type *capture.Sink would let a caller hand over a
-// hand-assembled pipeline that lands activities and silently creates no people.
+// hand-assembled pipeline that lands activities and silently creates no contacts.
 //
 // Separate from BindExtensionRuntime rather than a third parameter on it,
 // because the two answer different questions: every role has a pool and a

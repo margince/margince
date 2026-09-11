@@ -3,21 +3,21 @@
 
 package compose
 
-// The transport for a company mark a person chooses themselves: take the
+// The transport for a company mark a contact chooses themselves: take the
 // upload, re-encode it, store the bytes, point the record at them — and give
 // the field back when they ask for the mark to go.
 //
 // Two slots, four routes, ONE body each way. A company is drawn at two widths
-// and needs a picture for each (people/companylogowrite.go), but nothing about the
+// and needs a picture for each (contacts/companylogowrite.go), but nothing about the
 // transport differs between them: the same formats decode, the same ceiling
 // bounds the body, the same object store takes the bytes. So the slot is an
-// argument rather than a second pair of handlers, and the refusals a person
+// argument rather than a second pair of handlers, and the refusals a contact
 // meets cannot drift between their wordmark and their badge.
 //
 // The bytes are never served as they arrived. Every stored logo is this
 // server's own aspect-preserving PNG re-encode, which is what lets the endpoint that
 // streams them declare one media type for all of them and serve no
-// third-party markup from this origin: an SVG a person uploads is rasterized
+// third-party markup from this origin: an SVG a contact uploads is rasterized
 // here, exactly as one resolved from a website is.
 
 import (
@@ -29,7 +29,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -46,23 +46,23 @@ const companyLogoSpillBytes = 1 << 20
 // screen while avoiding bytes no display uses.
 const companyLogoEdge = 512
 
-// A filename is shown back to a person in the field's history, so it is bounded
+// A filename is shown back to a contact in the field's history, so it is bounded
 // here rather than trusted: browsers send what the file was called, and what a
 // file is called is under the control of whoever made it.
 const companyLogoNameMax = 120
 
 func (h companyHandlers) UploadAnchorCompanyLogo(w http.ResponseWriter, r *http.Request) {
-	h.uploadCompanyMark(w, r, people.LogoWide, "uploadCompanyLogo")
+	h.uploadCompanyMark(w, r, contacts.LogoWide, "uploadCompanyLogo")
 }
 
 // UploadCompanyLogoIcon takes the square badge a collapsed sidebar draws. Same
 // decode, same storage, same precedence — a different slot on the record, which
 // is the whole difference between the two routes.
 func (h companyHandlers) UploadAnchorCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
-	h.uploadCompanyMark(w, r, people.LogoIcon, "uploadCompanyLogoIcon")
+	h.uploadCompanyMark(w, r, contacts.LogoIcon, "uploadCompanyLogoIcon")
 }
 
-func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Request, slot people.LogoSlot, operation string) {
+func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Request, slot contacts.LogoSlot, operation string) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, operation)
 		return
@@ -113,14 +113,14 @@ func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Reques
 }
 
 func (h companyHandlers) DeleteAnchorCompanyLogo(w http.ResponseWriter, r *http.Request) {
-	h.clearCompanyMark(w, r, people.LogoWide, "deleteCompanyLogo")
+	h.clearCompanyMark(w, r, contacts.LogoWide, "deleteCompanyLogo")
 }
 
 func (h companyHandlers) DeleteAnchorCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
-	h.clearCompanyMark(w, r, people.LogoIcon, "deleteCompanyLogoIcon")
+	h.clearCompanyMark(w, r, contacts.LogoIcon, "deleteCompanyLogoIcon")
 }
 
-func (h companyHandlers) clearCompanyMark(w http.ResponseWriter, r *http.Request, slot people.LogoSlot, operation string) {
+func (h companyHandlers) clearCompanyMark(w http.ResponseWriter, r *http.Request, slot contacts.LogoSlot, operation string) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, operation)
 		return
@@ -209,7 +209,7 @@ func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte
 func boundedFilename(name string) string {
 	// Cut by RUNE. A byte cut through a multi-byte character leaves a fragment
 	// that is not text at all, and the name is stored as a string and rendered
-	// back to a person.
+	// back to a contact.
 	runes := []rune(strings.TrimSpace(name))
 	if len(runes) > companyLogoNameMax {
 		return string(runes[:companyLogoNameMax])

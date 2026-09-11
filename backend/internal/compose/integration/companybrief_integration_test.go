@@ -32,8 +32,8 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -66,7 +66,7 @@ func (l *countingLane) Complete(context.Context, model.Request) (model.Response,
 }
 
 func briefService(e *Env, lane companybrief.Completer, routingVersion string) *companybrief.Service {
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	view := company360.NewService(e.Pool, store, e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return briefClock })
 	// The same store serves both halves of the brief: the 360 for how the
@@ -83,7 +83,7 @@ var briefReaderPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"company":  {Read: true},
-		"person":   {Create: true, Read: true},
+		"contact":  {Create: true, Read: true},
 		"deal":     {Create: true, Read: true, Update: true},
 		"activity": {Read: true},
 		"pipeline": {Read: true},
@@ -198,23 +198,23 @@ func TestCompanyBriefIsCachedPerReader(t *testing.T) {
 // deterministic floor so the assertion is about the assembled INPUT rather
 // than about what a model chose to write. A deal is readable by every seat
 // holding the deal grant, so the specimen is a capture-private contact: the
-// one record a person row scope still hides from everybody but its owner.
+// one record a contact row scope still hides from everybody but its owner.
 func TestCompanyBriefDescribesOnlyWhatItsReaderCanSee(t *testing.T) {
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", nil))
 	// Captured privately by Rep3: only Rep3 reads this contact, whatever
 	// row scope anyone else holds.
-	hidden := e.SeedPerson(t, "Private contact", &e.Rep3)
-	personID := ids.From[ids.PersonKind](hidden)
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, CompanyID: &company,
+	hidden := e.SeedContact(t, "Private contact", &e.Rep3)
+	contactID := ids.From[ids.ContactKind](hidden)
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &company,
 		IsCurrentPrimary: boolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatalf("seeding the employment edge: %v", err)
 	}
 	// Made private after the edge exists: the seeding admin is not the
 	// captor and could not link to a private contact.
-	e.MakeCapturePrivate(t, "person", hidden, e.Rep3)
+	e.MakeCapturePrivate(t, "contact", hidden, e.Rep3)
 
 	svc := briefService(e, nil, "")
 
@@ -353,7 +353,7 @@ func TestCompanyBriefHidesAnAccountOutOfRowScope(t *testing.T) {
 	}
 }
 
-// A brief is a reading aid for a person. An agent reading records through a
+// A brief is a reading aid for a contact. An agent reading records through a
 // passport has the records themselves.
 func TestCompanyBriefRefusesAnAgent(t *testing.T) {
 	e := Setup(t)

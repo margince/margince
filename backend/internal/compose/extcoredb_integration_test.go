@@ -98,8 +98,8 @@ func setupCore(t *testing.T) coreEnv {
 		t.Fatalf("seeding the caller: %v", err)
 	}
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO person (id, owner_id, full_name, source, captured_by)
-		VALUES ($1, $2, 'Subject Person', 'manual', 'human:x')`, e.subject, e.user); err != nil {
+		INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+		VALUES ($1, $2, 'Subject Contact', 'manual', 'human:x')`, e.subject, e.user); err != nil {
 		t.Fatalf("seeding the subject: %v", err)
 	}
 
@@ -133,7 +133,7 @@ func (e coreEnv) invocation() context.Context {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},
-				"person":   {Create: true, Read: true, Update: true},
+				"contact":  {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -155,7 +155,7 @@ func (e coreEnv) aNote(subject ids.UUID) crm.CreateActivityRequest {
 	body := "filed by the unit"
 	return crm.CreateActivityRequest{
 		Kind: crm.CreateActivityRequestKindNote, Body: &body, Source: "extension:" + coreUnit,
-	}.LinkTo(crm.CreateActivityRequestLinksEntityTypePerson, subject.String())
+	}.LinkTo(crm.CreateActivityRequestLinksEntityTypeContact, subject.String())
 }
 
 // file runs one filing through the served entry point and answers what the port
@@ -207,7 +207,7 @@ func TestAUnitsFilingLandsTheActivityItsAuditRowAndItsEvent(t *testing.T) {
 	// The LINK as well as the row: a filing whose subject did not survive is a
 	// note attached to nobody, which reads as filed and is not.
 	if n := e.count(t, `SELECT count(*) FROM activity_link
-		WHERE activity_id = $1 AND entity_type = 'person' AND person_id = $2`,
+		WHERE activity_id = $1 AND entity_type = 'contact' AND contact_id = $2`,
 		filed.Id, e.subject); n != 1 {
 		t.Errorf("%d link(s) from %s to the subject, want 1", n, filed.Id)
 	}

@@ -44,12 +44,12 @@ func citing(id ids.UUID) []crmcontracts.CompanyBriefSentence {
 func TestACitedMessageCarriesItsRowForAReaderWhoMayReadIt(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Frédéric Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Frédéric Buyer", &e.Rep1)
 
 	subject, body := "Translation fallback decision", "Which locale wins when the string is missing?"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -86,12 +86,12 @@ func TestACitedMessageCarriesNoRowForAReaderOutsideItsAudience(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Frédéric Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Frédéric Buyer", &e.Rep1)
 
 	subject, body := "Severance terms", "the agreed figure is confidential"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -136,23 +136,23 @@ func TestACitedMessageCarriesNoRowForAReaderOutsideItsAudience(t *testing.T) {
 func TestASeatWithoutTheActivityGrantGetsNoRows(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Frédéric Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Frédéric Buyer", &e.Rep1)
 
 	subject, body := "Translation fallback decision", "Which locale wins?"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
 	}
-	// Every grant the lifecycle needs EXCEPT activity:read. The person grant
-	// stays, so a seat that reads people and not their mail is what is tested
+	// Every grant the lifecycle needs EXCEPT activity:read. The contact grant
+	// stays, so a seat that reads contacts and not their mail is what is tested
 	// rather than a seat that reads nothing.
 	ungranted := e.As(e.Rep2, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"person": {Read: true},
+			"contact": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	})
@@ -173,12 +173,12 @@ func TestASeatWithoutTheActivityGrantGetsNoRows(t *testing.T) {
 func TestACitedNoteCarriesNoEmailRow(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Frédéric Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Frédéric Buyer", &e.Rep1)
 
 	subject := "Rang them about the fallback"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "note", Subject: &subject,
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)

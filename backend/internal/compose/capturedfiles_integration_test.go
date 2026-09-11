@@ -36,7 +36,7 @@ import (
 )
 
 // captureSeatID is the seat every captureWorkspace fixture grants its mailbox
-// as. Fixed rather than fresh so a test can read back as the person whose
+// as. Fixed rather than fresh so a test can read back as the contact whose
 // mailbox captured the message — which is who a held message is held FOR.
 var captureSeatID = ids.NewV7()
 
@@ -102,7 +102,7 @@ func asConnectorFor(ctx context.Context, id string, seat ids.UUID) context.Conte
 			RoleKeys: []string{"capture"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true},
-				"person":   {Create: true},
+				"contact":  {Create: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

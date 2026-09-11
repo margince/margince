@@ -202,7 +202,7 @@ func TestThePromptsRoleExamplesComeFromTheOneList(t *testing.T) {
 func TestEveryCreatingKindNeedsTheHigherFloor(t *testing.T) {
 	t.Parallel()
 	creating := map[string]bool{
-		capture.KindPerson:  true,
+		capture.KindContact: true,
 		capture.KindAdvisor: true,
 	}
 	for kind := range verdictKinds {
@@ -244,8 +244,8 @@ func TestTheCreateFloorIsEnforcedWhereTheRecordIsMade(t *testing.T) {
 		conf float64
 		want bool
 	}{
-		{capture.KindPerson, 0.86, true},
-		{capture.KindPerson, 0.84, false},
+		{capture.KindContact, 0.86, true},
+		{capture.KindContact, 0.84, false},
 		{capture.KindAdvisor, 0.86, true},
 		{capture.KindAdvisor, 0.84, false},
 		// Every other kind keeps the ordinary floor: refusing a contact is the

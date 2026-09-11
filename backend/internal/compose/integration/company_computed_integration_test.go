@@ -58,7 +58,7 @@ func directOpenPipelineReadPriced(
 	ctx context.Context, t *testing.T, e *Env, companyID ids.UUID,
 ) (minor *int64, count, priced int, found bool) {
 	t.Helper()
-	// The same day the reader binds (people.rollupAsOf): the rollup is asked for
+	// The same day the reader binds (contacts.rollupAsOf): the rollup is asked for
 	// a date, and a test that let the database pick its own CURRENT_DATE would
 	// be reading a rollup at a date the product never asks for — a whole day
 	// apart at midnight in the database's zone, which is the divergence binding
@@ -186,7 +186,7 @@ func TestCompanyComputed_GatedVisible_RealValueMatchesDirectViewRead(t *testing.
 		t.Fatalf("test fixture: direct view read = %v/%d/%v, want 350000/2/true", wantMinor, wantCount, found)
 	}
 
-	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	company, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +222,7 @@ func TestCompanyComputed_NoOpenDeals_FloorsToZero(t *testing.T) {
 		t.Fatal("test fixture: expected NO view row for a company with no open deals")
 	}
 
-	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	company, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +263,7 @@ func TestCompanyComputed_SomeDealsUnpriceable_RefusesTheShortTotal(t *testing.T)
 		}
 	}
 
-	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	company, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -300,7 +300,7 @@ func TestCompanyComputed_OpenDealsInTheBaseCurrency_ReportTheirTotal(t *testing.
 		}
 	}
 
-	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	company, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -354,7 +354,7 @@ func TestCompanyComputed_OpenDealsWithNoUsableRate_AwaitingFX(t *testing.T) {
 		t.Fatalf("test fixture: open_deal_count = %d, want 2", count)
 	}
 
-	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	company, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -407,7 +407,7 @@ func TestCompanyComputed_UngatedPrincipal_ComputedFieldsKeyAbsentFromWire(t *tes
 	companyID := e.SeedCompany(t, "Gated Company", nil)
 	ctx := e.As(e.Rep1, nil, computedFieldNoGrantPerms)
 
-	company, err := e.People.GetCompany(ctx, companyIDOf(companyID), storekit.IncludeArchived)
+	company, err := e.Contacts.GetCompany(ctx, companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -488,7 +488,7 @@ func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *t
 	}
 
 	// The read that used to fail outright.
-	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	company, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
 		t.Fatalf("the company could not be read at all: %v — one deal the view cannot represent "+
 			"must refuse one figure, never the record", err)
@@ -548,7 +548,7 @@ func TestCompanyComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *testi
 		}
 	}
 
-	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	company, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
 		t.Fatalf("the company could not be read at all: %v — a total nobody can represent must "+
 			"refuse the figure, never the record", err)

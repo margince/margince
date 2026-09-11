@@ -30,7 +30,7 @@ import (
 func TestPurgeRecordRemovesMirrorAssociationAndVisibility(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
-	const objectClass = "person"
+	const objectClass = "contact"
 	const externalID = "555001"
 
 	if err := store.Ingest(ctx, Record{
@@ -91,7 +91,7 @@ func TestPurgeRecordRemovesMirrorAssociationAndVisibility(t *testing.T) {
 func TestReconcileDeletionsPurgesMirroredRecordAndEmits(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	ms := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
-	const objectClass = "person"
+	const objectClass = "contact"
 	const externalID = "777001"
 	deletedAt := time.Date(2026, 7, 2, 8, 0, 0, 0, time.UTC)
 
@@ -155,7 +155,7 @@ func TestPurgeRecordRejectsANonNumericExternalID(t *testing.T) {
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
 
 	if _, err := store.PurgeRecord(ctx, Deletion{
-		ObjectClass: "person", ExternalID: "not-a-number",
+		ObjectClass: "contact", ExternalID: "not-a-number",
 		DeletedAt: time.Date(2026, 7, 2, 8, 0, 0, 0, time.UTC),
 	}); err == nil {
 		t.Fatal("PurgeRecord: want an error for a non-numeric external id, got nil")
@@ -169,7 +169,7 @@ func TestPurgeRecordRejectsANonNumericExternalID(t *testing.T) {
 func TestReconcileDeletionsForUnmirroredRecordIsANoOp(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	ms := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
-	const objectClass = "person"
+	const objectClass = "contact"
 	const externalID = "777404"
 	deletedAt := time.Date(2026, 7, 2, 8, 0, 0, 0, time.UTC)
 

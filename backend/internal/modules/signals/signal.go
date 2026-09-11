@@ -35,7 +35,7 @@ type CreateSignalInput struct {
 	SourceChannel string
 	RawRef        *string
 	// note: entity_type + entity_id are the polymorphic subject seam (deal
-	// | company | person), so the id stays untyped — it is validated
+	// | company | contact), so the id stays untyped — it is validated
 	// against signalEntityTables and the link-target probe, not a kind.
 	EntityType *string
 	EntityID   *ids.UUID
@@ -157,7 +157,7 @@ func deriveSignalDefaults(in CreateSignalInput) (signalDefaults, error) {
 
 // detectedPayload is the events.md §5.11 signal.detected shape. The
 // entity_type/entity_id fields it carries are the signal's SUBJECT (deal |
-// company | person) — payload data, present only when the signal was
+// company | contact) — payload data, present only when the signal was
 // created already resolved — distinct from the envelope's own entity ref,
 // which is always the signal itself (contract x-entity-type: signal).
 func detectedPayload(sig crmcontracts.Signal) crmcontracts.PublicEventSignalDetected {
@@ -402,7 +402,7 @@ func (s *Store) ArchiveSignal(ctx context.Context, id ids.SignalID) (crmcontract
 func signalColumns(alias string) string {
 	cols := []string{
 		"id", "kind", "source_channel", "raw_ref", "entity_type", "entity_id",
-		"resolution_state", "resolution_confidence::float8", "resolved_company_id", "resolved_person_id",
+		"resolution_state", "resolution_confidence::float8", "resolved_company_id", "resolved_contact_id",
 		"severity", "summary", "evidence", "status", "detected_at", "source", "captured_by",
 		"version", "created_at", "updated_at", "archived_at",
 	}
@@ -429,14 +429,14 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, error) {
 	var id ids.UUID
 	var kind, sourceChannel, resolutionState, severity, status string
 	var entityType *string
-	var entityID, resolvedCompanyID, resolvedPersonID *ids.UUID
+	var entityID, resolvedCompanyID, resolvedContactID *ids.UUID
 	var confidence *float64
 	var evidenceJSON []byte
 	var capturedBy string
 	var version int64
 
 	err := row.Scan(&id, &kind, &sourceChannel, &sig.RawRef, &entityType, &entityID,
-		&resolutionState, &confidence, &resolvedCompanyID, &resolvedPersonID,
+		&resolutionState, &confidence, &resolvedCompanyID, &resolvedContactID,
 		&severity, &sig.Summary, &evidenceJSON, &status, &sig.DetectedAt, &sig.Source, &capturedBy,
 		&version, &sig.CreatedAt, &sig.UpdatedAt, &sig.ArchivedAt)
 	if err != nil {
@@ -457,7 +457,7 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, error) {
 	}
 	sig.EntityId = uuidPtr(entityID)
 	sig.ResolvedCompanyId = uuidPtr(resolvedCompanyID)
-	sig.ResolvedPersonId = uuidPtr(resolvedPersonID)
+	sig.ResolvedContactId = uuidPtr(resolvedContactID)
 	if confidence != nil {
 		converted := float32(*confidence)
 		sig.ResolutionConfidence = &converted

@@ -114,7 +114,7 @@ func (a *assembly) readSuggestions() error {
 // The order the rules run in IS the priority the cap applies, so it is a product
 // decision rather than a consequence of how the blocks are arranged:
 //
-//  1. no_reply — a person is waiting on us. Nothing else on the card is someone
+//  1. no_reply — a contact is waiting on us. Nothing else on the card is someone
 //     else's time.
 //  2. stalled_deal, longest idle first — money that has stopped moving.
 //  3. no_next_step — a gap in the plan, which the two above usually imply
@@ -275,7 +275,7 @@ func staleThread(
 	// which is a question about elapsed time. The figure PRINTED below is a
 	// day count a reader compares against dates on their screen, so it is
 	// counted the way they count: shared/kernel/elapsed, same as every other
-	// day count a person reads.
+	// day count a reader reads.
 	waitedDays := elapsed.Days(newest.At, now)
 	if waited < noReplyDays*24*time.Hour {
 		return nil

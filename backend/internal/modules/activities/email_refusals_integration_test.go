@@ -90,10 +90,10 @@ func TestSendEmailDerivesNoUnsubscribeHeadersForATransactionalPurpose(t *testing
 	}
 }
 
-// A preference token is a bearer credential over ONE person's consent record —
+// A preference token is a bearer credential over ONE contact's consent record —
 // it reads their state, withdraws, and grants — and a single rendered message
 // carries a single token to every addressee. Sending that message to a second
-// person hands them the first recipient's credential, so the send is refused
+// contact hands them the first recipient's credential, so the send is refused
 // before anything is staged.
 func TestSendEmailRefusesAMultiAddresseeSendThatCarriesAnUnsubscribeToken(t *testing.T) {
 	e := setupSend(t)
@@ -101,7 +101,7 @@ func TestSendEmailRefusesAMultiAddresseeSendThatCarriesAnUnsubscribeToken(t *tes
 	stager := &recordingStager{}
 	linker := stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true}
 
-	// sendInput addresses buyer@ and cc's boss@ — two people, one token.
+	// sendInput addresses buyer@ and cc's boss@ — two contacts, one token.
 	_, err := e.store(linker).SendEmail(
 		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("marketing_email"), stubConsentGate{}, stager)
 	var refusal *SharedUnsubscribeTokenError
@@ -231,7 +231,7 @@ func TestSendEmailRefusesWhenTheMailboxHoldsNoSendGrant(t *testing.T) {
 func TestSendEmailRefusesAnAnchorOutsideTheCallersRowScope(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
-	e.linkToPersonOwnedBy(t, anchor, e.other)
+	e.linkToContactOwnedBy(t, anchor, e.other)
 	stager := &recordingStager{}
 
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
@@ -253,7 +253,7 @@ func TestSendEmailRefusesAnAnchorOutsideTheCallersRowScope(t *testing.T) {
 func TestSendEmailAnswersAnUnauthorizedCallerBeforeTheWiringGuards(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
-	e.linkToPersonOwnedBy(t, anchor, e.other)
+	e.linkToContactOwnedBy(t, anchor, e.other)
 
 	// Composed with NO delivery machinery: the wiring guard would fire on this
 	// call if it ran first.
@@ -302,8 +302,8 @@ func TestSendEmailRefusesAnAuthorizedSendWithNoDeliveryMachinery(t *testing.T) {
 
 // The sender's OWN authority answers before the recipients' consent does. A
 // user who holds no send grant gets the refusal they can act on — "reconnect
-// your mailbox" — rather than a verdict about whether the people they addressed
-// consented, which is a fact about those people they did not earn the right to
+// your mailbox" — rather than a verdict about whether the contacts they addressed
+// consented, which is a fact about those contacts they did not earn the right to
 // observe by attempting a send they cannot make.
 func TestSendEmailAnswersTheMailboxRefusalBeforeTheConsentGate(t *testing.T) {
 	e := setupSend(t)

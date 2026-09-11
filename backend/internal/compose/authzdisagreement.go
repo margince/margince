@@ -82,7 +82,7 @@ func (w *authzDisagreementWorker) Work(ctx context.Context, _ *river.Job[AuthzDi
 		return jobs.FaultContext(ctx, fmt.Errorf("comms_authz_disagreement: resolving the installation: %w", err))
 	}
 	// The system principal, because this is the installation asking about its
-	// own rollout rather than a seat asking about a person. Nothing the reading
+	// own rollout rather than a seat asking about a contact. Nothing the reading
 	// returns names a subject: no address, no consent state, only how two rules
 	// have compared.
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())

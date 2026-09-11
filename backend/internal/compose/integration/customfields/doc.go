@@ -24,7 +24,7 @@
 //     They carry two fixture families — Setup + SchemaPool + integration
 //     .CustomFieldAdminPerms for the service suites, and schemaWiredEnv +
 //     createCustomField + the RFC 7807 problem shape for the wire ones.
-//   - In the parent: the suites that drive a RECORD store — people, deals — whose
+//   - In the parent: the suites that drive a RECORD store — contacts, deals — whose
 //     rows happen to carry cf_ values. They share setupCFV, assertCF and the
 //     cfvFixture type, none of which is reachable from here.
 //

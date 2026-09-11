@@ -27,7 +27,7 @@ import (
 // authored". So this file reads the operation's own parameters; it never
 // carries a filter name of its own.
 var listOperations = []struct{ recordType, operationID string }{
-	{"person", "listPeople"},
+	{"contact", "listContacts"},
 	{"company", "listCompanies"},
 	{"deal", "listDeals"},
 	{"lead", "listLeads"},

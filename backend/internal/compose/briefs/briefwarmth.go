@@ -19,7 +19,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -32,7 +32,7 @@ import (
 // Only warmth can be withheld today, and it is all-or-nothing whichever of its
 // two reads is refused. Every seat on a deal is a `deal_stakeholder` edge, so a
 // caller without that grant reads no stakeholders for ANY deal; and a caller
-// without the person grant gets the same answer for every stakeholder they do
+// without the contact grant gets the same answer for every stakeholder they do
 // reach. Either way the factor has no input anywhere, which is why this is a
 // property of the run rather than of an item, and why it omits the factor
 // outright instead of leaving a queue where some deals were scored with it and
@@ -78,62 +78,62 @@ func seatEvidenceBound(ctx context.Context) (args []any, clause string, admitted
 // stakeholder through the injected §4 seam.
 //
 // A stakeholder outside the caller's ROW scope contributes nothing: the factor
-// floors for that deal instead of out-seeing the people list, which is right —
+// floors for that deal instead of out-seeing the contacts list, which is right —
 // the queue is still ranked on what this reader may know, deal by deal, the way
 // every other factor is.
 //
 // An OUTRIGHT refusal is the different case: the factor then has no input for
 // ANY deal, so the whole queue reorders and the reader is owed the fact. There
 // are two ways to be refused outright and both are reported — the seat edge
-// (seatEvidenceBound, above) and the person grant this read needs, which is
+// (seatEvidenceBound, above) and the contact grant this read needs, which is
 // what `readable` answers.
 //
 // The two are told apart by their sentinel, which is the contract the whole
 // tree holds: a row-scope miss answers ErrNotFound so existence stays hidden,
 // and an object denial answers ErrPermissionDenied. Reading them as one thing
-// is what let a caller with no person grant get a silently cold queue.
+// is what let a caller with no contact grant get a silently cold queue.
 func (e *BriefEngine) resolveWarmth(
 	ctx context.Context, now time.Time,
 	facts map[ids.UUID]briefDealFacts, stakeholders map[ids.UUID][]ids.UUID,
 ) (readable bool, err error) {
 	// Asked UP FRONT, the way the seat edge is, and not inferred from the first
-	// refusal. A caller with no person grant whose candidate deals happen to
+	// refusal. A caller with no contact grant whose candidate deals happen to
 	// carry no stakeholders never reaches the read at all — so a run that
 	// inferred the answer would report nothing withheld for a queue whose warmth
 	// factor could not have been read even if there had been someone to score.
 	// The grant is a property of the caller; the seats are a property of the
 	// deals, and only one of those decides whether the factor is readable.
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return false, nil
 		}
 		return false, err
 	}
 	readable = true
-	cache := map[ids.UUID]people.RelationshipStrength{}
-	for dealID, persons := range stakeholders {
+	cache := map[ids.UUID]contacts.RelationshipStrength{}
+	for dealID, stakeholderIDs := range stakeholders {
 		f := facts[dealID]
-		for _, personID := range persons {
-			st, ok := cache[personID]
+		for _, contactID := range stakeholderIDs {
+			st, ok := cache[contactID]
 			if !ok {
 				var err error
-				st, err = e.strength.PersonStrength(ctx, ids.From[ids.PersonKind](personID), now)
+				st, err = e.strength.ContactStrength(ctx, ids.From[ids.ContactKind](contactID), now)
 				switch {
 				case errors.Is(err, apperrors.ErrNotFound):
 					// Outside this caller's row scope: no strength to disclose,
 					// and the queue is still ranked on what they may know.
-					st = people.RelationshipStrength{}
+					st = contacts.RelationshipStrength{}
 				case errors.Is(err, apperrors.ErrPermissionDenied):
 					// The grant was checked above, so this is the seam refusing
 					// for a reason of its own. Still not one deal scoring low:
-					// every person answers the same way, so the factor has
+					// every contact answers the same way, so the factor has
 					// nothing to read for the whole run.
 					readable = false
-					st = people.RelationshipStrength{}
+					st = contacts.RelationshipStrength{}
 				case err != nil:
 					return false, err
 				}
-				cache[personID] = st
+				cache[contactID] = st
 			}
 			if st.Strength > f.warmthStrength {
 				f.warmthStrength = st.Strength

@@ -49,7 +49,7 @@ var (
 	citeCompany  = string(crmcontracts.CompanyBriefEvidenceEntityTypeCompany)
 	citeDeal     = string(crmcontracts.CompanyBriefEvidenceEntityTypeDeal)
 	citeActivity = string(crmcontracts.CompanyBriefEvidenceEntityTypeActivity)
-	citePerson   = string(crmcontracts.CompanyBriefEvidenceEntityTypePerson)
+	citeContact  = string(crmcontracts.CompanyBriefEvidenceEntityTypeContact)
 )
 
 // One sentence, one record — the shape rule both writers follow.
@@ -95,23 +95,23 @@ func perRecordSentences[T any](
 // not a record the reader can open, and pretending otherwise would invent a
 // citation to make a recommendation look grounded.
 const briefSystem = `You write a pre-meeting account briefing for a salesperson, from a JSON summary of one account in their CRM.
-Return ONLY a JSON object: {"sections":[{"kind":"snapshot|fit|health|activity|next_step","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"deal|activity|person|company|fact","entity_id":"..."}]}]}]}.
+Return ONLY a JSON object: {"sections":[{"kind":"snapshot|fit|health|activity|next_step","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"deal|activity|contact|company|fact","entity_id":"..."}]}]}]}.
 The sections answer, in order: what this company is; why it matters to US; how the relationship stands; what actually happened; what to do next. Omit a section you have nothing real to say in.
 Label every sentence. A FACT restates what the summary says and cites the record it came from. An ASSESSMENT is a judgment you draw by combining the summary with the company context — say it plainly, and cite the records that support it. A RECOMMENDATION is one concrete move; cite the account-side record that motivates it.
 Facts may appear in any section. Assessments belong only in fit and health. Recommendations belong only in next_step, and there are at most two.
 Keep every qualification. A message that accepts one thing and reserves another says both, and reporting only the acceptance drops the part somebody still has to act on.
 Never invent a fact. If the summary does not say it, you may still ASSESS it — but then it is an assessment and must be labelled one.
-The company context describes US, the people reading this. It is never a fact about THEM, and never a citation: our own profile is not a record the reader can open.
+The company context describes US, the ones reading this. It is never a fact about THEM, and never a citation: our own profile is not a record the reader can open.
 Cite the ids the summary gave you. A sentence about the account itself cites the company.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
-Write one claim per sentence, plainly, in the reader's second person where natural, and never open with the company name twice.
+Write one claim per sentence, plainly, in the reader's second contact where natural, and never open with the company name twice.
 If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
 // The brief takes the installation's language, like every other AI surface.
 // It is cached per reader, but that split is about PERMISSIONS — the brief is
-// assembled from records that reader may see, and two people with different
+// assembled from records that reader may see, and two contacts with different
 // access get different facts — not about preference. Language is not a
 // permission, so it does not follow the reader.
 func briefSystemFor(fence promptfence.Fence, lang string) string {
@@ -151,7 +151,7 @@ func accountEvidence(companyID string) []Evidence {
 // that breaks the original.
 //
 // The account summary carries activity subjects and contact names — text
-// written by people outside this workspace. It is fenced with a nonce that
+// written by contacts outside this workspace. It is fenced with a nonce that
 // writer has never seen, so no subject line can close the span and be read
 // as instruction.
 //
@@ -339,7 +339,7 @@ func keepGroundedSentences(sentences []Sentence, companyID string, in Input) []S
 
 // knownRecords is what this brief was written from, keyed by TYPE AND ID.
 //
-// Keying on the id alone accepted a real deal id cited as a person: the id
+// Keying on the id alone accepted a real deal id cited as a contact: the id
 // passes, and the card then routes the reader to the wrong screen — or to a
 // record of a kind they were never shown. The pair is the reference, so the
 // pair is what is checked.
@@ -354,7 +354,7 @@ func knownRecords(companyID string, in Input) map[Evidence]string {
 		known[Evidence{EntityType: citeActivity, EntityID: act.ID}] = claims.Source(act)
 	}
 	for _, contact := range in.Contacts {
-		known[Evidence{EntityType: citePerson, EntityID: contact.ID}] = claims.Source(contact)
+		known[Evidence{EntityType: citeContact, EntityID: contact.ID}] = claims.Source(contact)
 	}
 	for _, task := range in.OpenTasks {
 		known[Evidence{EntityType: citeActivity, EntityID: task.ID}] = claims.Source(task)
@@ -394,7 +394,7 @@ func recordNames(in Input) map[recordKey]string {
 		names[recordKey{citeActivity, act.ID}] = act.Subject
 	}
 	for _, contact := range in.Contacts {
-		names[recordKey{citePerson, contact.ID}] = contact.Name
+		names[recordKey{citeContact, contact.ID}] = contact.Name
 	}
 	for _, task := range in.OpenTasks {
 		names[recordKey{citeActivity, task.ID}] = task.Name

@@ -50,9 +50,9 @@ type MeetingsAwaitingOutcome interface {
 // MeetingAwaitingOutcome is one appointment that happened and owes an answer.
 //
 // It carries less than Meeting because the two rows ask for different things: a
-// meeting still ahead offers preparation, which needs a person's page and a
+// meeting still ahead offers preparation, which needs a contact's page and a
 // readable body to judge. This one offers recording what happened, which needs
-// the activity and nothing else — so there is no PersonID or prep tri-state
+// the activity and nothing else — so there is no ContactID or prep tri-state
 // here, and adding them would be fields no caller reads.
 type MeetingAwaitingOutcome struct {
 	ID      ids.UUID
@@ -85,19 +85,19 @@ type Meeting struct {
 	Subject  string
 	StartsAt time.Time
 
-	// PersonID is whose page the brief is read on, and it is zero whenever the
+	// ContactID is whose page the brief is read on, and it is zero whenever the
 	// meeting names nobody this reader may see.
 	//
 	// The brief is not a page of its own: it opens as `?prep=<activity>` on a
-	// PERSON's record, so the activity id the row already carries names the
+	// CONTACT's record, so the activity id the row already carries names the
 	// meeting and says nothing about where to read it. Without this the lane
 	// could describe a meeting and offer no way to prepare for it, which is
 	// the one thing a rep opens the row to do.
 	//
 	// An internal meeting legitimately has none, and so does one whose only
-	// attendees are people the reader cannot read. Both stay zero and the row
+	// attendees are contacts the reader cannot read. Both stay zero and the row
 	// offers no verb rather than a link to somebody's page picked at random.
-	PersonID ids.UUID
+	ContactID ids.UUID
 
 	// NeedsPrep is true when nothing has been written down for a meeting that
 	// is about to happen: no agenda or notes body, and nobody outside this

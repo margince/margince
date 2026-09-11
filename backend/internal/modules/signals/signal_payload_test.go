@@ -144,7 +144,7 @@ func TestDetectedPayload_WithSubject(t *testing.T) {
 }
 
 // TestResolvedPayload_Dropped proves the zero-candidate (dropped) shape: no
-// resolved_company_id/resolved_person_id, no matched_on/match_confidence.
+// resolved_company_id/resolved_contact_id, no matched_on/match_confidence.
 func TestResolvedPayload_Dropped(t *testing.T) {
 	sig := crmcontracts.Signal{
 		Id:              signalPayloadTestSignalID,
@@ -167,8 +167,8 @@ func TestResolvedPayload_Dropped(t *testing.T) {
 	if payload.ResolvedCompanyId != nil {
 		t.Errorf("expected nil, got %v", payload.ResolvedCompanyId)
 	}
-	if payload.ResolvedPersonId != nil {
-		t.Errorf("expected nil, got %v", payload.ResolvedPersonId)
+	if payload.ResolvedContactId != nil {
+		t.Errorf("expected nil, got %v", payload.ResolvedContactId)
 	}
 	if payload.MatchedOn != nil {
 		t.Errorf("expected nil, got %v", payload.MatchedOn)

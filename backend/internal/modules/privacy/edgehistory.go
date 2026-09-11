@@ -8,8 +8,8 @@ package privacy
 //
 // A relationship is seven kinds in ONE table with FIVE endpoint columns, and a
 // record's history is the history of the edges it currently occupies an end of.
-// Which column holds the anchor follows from the anchor's KIND — a person id can
-// only be person_id, a company id is company_id or
+// Which column holds the anchor follows from the anchor's KIND — a contact id can
+// only be contact_id, a company id is company_id or
 // counterparty_company_id — so the lookup is a set of sargable equality branches,
 // never a disjunction: the read this widens rides an ordered index walk to LIMIT
 // on idx_audit_entity, and an OR makes the planner materialise both sides and
@@ -54,8 +54,8 @@ const EdgeEntityType = "relationship"
 const entityTypeCompany = "company"
 
 var edgeEndpoints = []edgeEndpoint{
-	{column: "person_id", entityType: "person", labelColumn: "full_name"},
-	{column: "counterparty_person_id", entityType: "person", labelColumn: "full_name"},
+	{column: "contact_id", entityType: "contact", labelColumn: "full_name"},
+	{column: "counterparty_contact_id", entityType: "contact", labelColumn: "full_name"},
 	{column: "company_id", entityType: entityTypeCompany, labelColumn: "display_name"},
 	{column: "counterparty_company_id", entityType: entityTypeCompany, labelColumn: "display_name"},
 	{column: "deal_id", entityType: "deal", labelColumn: "name"},
@@ -122,7 +122,7 @@ func edgeAnchorsFor(entityType string) []edgeEndpoint {
 //   - ERASURE. The scrub tombstone is computed per (entity_type, entity_id), so
 //     the anchor's own boundary says nothing about the other end — and an
 //     employment image holds the role and the dates of BOTH records. Left
-//     unfiltered, erasing a person would leave their employment readable on the
+//     unfiltered, erasing a contact would leave their employment readable on the
 //     company forever, after the erasure was certified. The whole edge goes, not
 //     the rows before the tombstone: every row of that edge is as much about the
 //     erased end as about the anchor, so there is no position in it that stops

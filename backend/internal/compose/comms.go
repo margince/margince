@@ -55,7 +55,7 @@ type commsAdapter struct {
 	// is instead of passing for a reading of the host's calendar
 	// (calendarBacking, schedulingseam.go).
 	calendars calendarBacking
-	// own answers whether an addressee is one of the workspace's own people.
+	// own answers whether an addressee is one of the workspace's own contacts.
 	// The activities store excludes participants with a seat; a colleague
 	// without one is only recognisable by domain, and that set is capture's.
 	own *capture.OwnDomainStore
@@ -143,7 +143,7 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 // It returns text and writes no timeline row, which is the same answer the HTTP
 // draft endpoint gives — the one the web app's own draft button calls. That
 // agreement is the feature: the same act should not mean two different things
-// depending on whether a person did it through the app or through an agent.
+// depending on whether a contact did it through the app or through an agent.
 // Drafting proposes words; sending is the separate consent-gated act, and a
 // draft that filed itself would put messages nobody sent on the record a rep
 // goes to for what actually happened with a customer.

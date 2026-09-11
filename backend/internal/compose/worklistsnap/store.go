@@ -69,7 +69,7 @@ const Life = 4 * time.Hour
 //
 // A snapshot outlives the page that minted it and nothing but expiry removes
 // one, so a rep who refreshes twenty times in a morning would otherwise leave
-// twenty rows behind. Three is past what a person can be walking at once: two
+// twenty rows behind. Three is past what a contact can be walking at once: two
 // tabs and the one they forgot.
 const KeptPerReader = 3
 

@@ -147,7 +147,7 @@ func (e *SearchEnv) SeedID(t *testing.T, sql string, args ...any) ids.UUID {
 // principal here is refused before any row-scope rule is reached, which is a
 // fixture that cannot ask the question its suite exists to ask.
 var searchObjects = []string{
-	objPerson, objCompany, objDeal, "lead", objActivity, objRelationship, objInstallSettings,
+	objContact, objCompany, objDeal, "lead", objActivity, objRelationship, objInstallSettings,
 	// The catalog types. Without the grant a principal here is refused before
 	// any row-scope rule is reached, so every product and offer-template hit
 	// would vanish from the assertions that count what a search returns —

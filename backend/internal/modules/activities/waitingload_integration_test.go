@@ -5,14 +5,14 @@
 
 package activities
 
-// WHO owes the reply, and how many promises each person has missed — against a
+// WHO owes the reply, and how many promises each contact has missed — against a
 // real database, because both answers are produced by SQL and neither can be
 // checked any other way.
 //
 // The ownership walk is four LEFT JOINs and a COALESCE over four aggregates
 // inside a statement that already groups. Nothing in the unit lane executes it:
 // a wrong join, an arm reading the ungated link table, or a precedence in the
-// wrong order all compile, and the store simply returns a different person.
+// wrong order all compile, and the store simply returns a different contact.
 
 import (
 	"context"
@@ -91,7 +91,7 @@ func (e *loadEnv) as() context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"manager"},
 			Objects: map[string]principal.ObjectGrant{
-				"activity": {Read: true}, "person": {Read: true},
+				"activity": {Read: true}, "contact": {Read: true},
 				"deal": {Read: true}, "company": {Read: true},
 				"lead": {Read: true},
 			},
@@ -149,34 +149,34 @@ func (e *loadEnv) seedWait(t *testing.T, subject string, link string, target ids
 // A wait is attributed to the owner of the record it is filed under.
 //
 // The whole ownership walk fails silently if it is wrong: the query still
-// returns the message, still returns one row, and simply names the wrong person
+// returns the message, still returns one row, and simply names the wrong contact
 // — so the board blames a colleague for somebody else's customer.
 func TestAWaitIsAttributedToTheOwnerOfItsRecord(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.other)
-	activity := e.seedWait(t, "Question about pricing", "person_id", person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.other)
+	activity := e.seedWait(t, "Question about pricing", "contact_id", contact)
 
 	if got := e.waitFor(t, activity); got.OwnerID != e.other {
-		t.Fatalf("the wait was attributed to %v, wanted the person's owner %v",
+		t.Fatalf("the wait was attributed to %v, wanted the contact's owner %v",
 			got.OwnerID, e.other)
 	}
 }
 
-// A DEAL on the thread outranks the person on it.
+// A DEAL on the thread outranks the contact on it.
 //
 // The precedence is a COALESCE over four arms in one order, and getting it
-// backwards is invisible without this: both owners are real people, both
+// backwards is invisible without this: both owners are real contacts, both
 // answers are one row, and the board simply credits the account owner with a
 // conversation the deal owner is answerable for.
-func TestADealOnTheThreadOutranksThePersonOnIt(t *testing.T) {
+func TestADealOnTheThreadOutranksTheContactOnIt(t *testing.T) {
 	e := setupLoad(t)
-	person, deal, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	contact, deal, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by)
 		VALUES ($1, 'Customer GmbH', $2, 'seed', 'system')`, company, e.rep)
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	pipeline, stage := ids.NewV7(), ids.NewV7()
 	// Named for its own id: pipeline_name_unique is installation-wide and the
 	// lane template is shared across this package, so a fixed name collides with
@@ -188,13 +188,13 @@ func TestADealOnTheThreadOutranksThePersonOnIt(t *testing.T) {
 		VALUES ($1, 'Zeta renewal', 'open', $2, $3, $4, $5, 'seed', 'system')`,
 		deal, e.other, company, pipeline, stage)
 
-	activity := e.seedWait(t, "Contract question", "person_id", person)
+	activity := e.seedWait(t, "Contract question", "contact_id", contact)
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
 		VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), activity, deal)
 
 	if got := e.waitFor(t, activity); got.OwnerID != e.other {
 		t.Fatalf("the wait was attributed to %v, wanted the DEAL owner %v — the deal "+
-			"outranks the person the thread is also filed under",
+			"outranks the contact the thread is also filed under",
 			got.OwnerID, e.other)
 	}
 }
@@ -202,10 +202,10 @@ func TestADealOnTheThreadOutranksThePersonOnIt(t *testing.T) {
 // A wait on a record nobody owns names nobody, rather than picking somebody.
 func TestAWaitOnAnUnownedRecordNamesNobody(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, source, captured_by)
-		VALUES ($1, 'Unowned Buyer', 'seed', 'system')`, person)
-	activity := e.seedWait(t, "Question about pricing", "person_id", person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Unowned Buyer', 'seed', 'system')`, contact)
+	activity := e.seedWait(t, "Question about pricing", "contact_id", contact)
 
 	if got := e.waitFor(t, activity); !got.OwnerID.IsZero() {
 		t.Fatalf("a wait on a record nobody owns was attributed to %v", got.OwnerID)
@@ -265,7 +265,7 @@ func TestOverdueTasksAreCountedPerAssignee(t *testing.T) {
 // A message may be filed under two deals — uq_activity_link keys on (activity,
 // type, id), so a second deal link is a legal row. The record id and the owner
 // were picked by two independent orderings, so a message could report deal D1
-// and bill its wait to whoever owned D2. Both figures are real people and real
+// and bill its wait to whoever owned D2. Both figures are real contacts and real
 // deals, the row count is unchanged, and nothing but this says which pairing is
 // right.
 //

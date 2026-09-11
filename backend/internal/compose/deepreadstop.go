@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -40,42 +40,42 @@ const siteReadRetryAfter = 6 * time.Hour
 func diagnoseCrawlFailure(cause error) (code, detail string) {
 	switch {
 	case cause == nil:
-		return people.SiteReadFailureInternal, "The read failed without recording a cause."
+		return contacts.SiteReadFailureInternal, "The read failed without recording a cause."
 	case errors.Is(cause, webread.ErrRobotsDisallowed):
-		return people.SiteReadFailureRobots, "The site's robots.txt asks this crawler not to read the page."
+		return contacts.SiteReadFailureRobots, "The site's robots.txt asks this crawler not to read the page."
 	}
 	var status *webread.StatusError
 	if errors.As(cause, &status) {
 		if status.Retryable() {
 			if status.Status == http.StatusForbidden || status.Status == http.StatusTooManyRequests {
-				return people.SiteReadFailureBotBlocked, fmt.Sprintf(
+				return contacts.SiteReadFailureBotBlocked, fmt.Sprintf(
 					"The site answered %d — bot protection or rate limiting refused the read. Another attempt is scheduled.",
 					status.Status)
 			}
-			return people.SiteReadFailureServerError, fmt.Sprintf(
+			return contacts.SiteReadFailureServerError, fmt.Sprintf(
 				"The site answered %d. Another attempt is scheduled.", status.Status)
 		}
-		return people.SiteReadFailureClientError, fmt.Sprintf("The site answered %d for its own front page.", status.Status)
+		return contacts.SiteReadFailureClientError, fmt.Sprintf("The site answered %d for its own front page.", status.Status)
 	}
 	var netErr net.Error
 	if errors.As(cause, &netErr) && netErr.Timeout() || errors.Is(cause, context.DeadlineExceeded) {
-		return people.SiteReadFailureTimeout, "The site did not answer in time. Another attempt is scheduled."
+		return contacts.SiteReadFailureTimeout, "The site did not answer in time. Another attempt is scheduled."
 	}
 	var certErr *tls.CertificateVerificationError
 	var hostErr x509.HostnameError
 	var authErr x509.UnknownAuthorityError
 	if errors.As(cause, &certErr) || errors.As(cause, &hostErr) || errors.As(cause, &authErr) {
-		return people.SiteReadFailureTLS, "The site's HTTPS certificate could not be verified, so it was not read."
+		return contacts.SiteReadFailureTLS, "The site's HTTPS certificate could not be verified, so it was not read."
 	}
 	var dnsErr *net.DNSError
 	if errors.As(cause, &dnsErr) {
-		return people.SiteReadFailureDNS, "The domain name does not resolve to a server."
+		return contacts.SiteReadFailureDNS, "The domain name does not resolve to a server."
 	}
 	// Nothing recognized it, so it is not evidence about the SITE. Most callers
 	// of fail() are our own machinery — the settings store, a proposal hash, a
 	// finding write — and blaming those on the company's website would file our
 	// bug under their domain and settle it as permanently unreadable.
-	return people.SiteReadFailureInternal, "The read failed inside this system rather than at the site."
+	return contacts.SiteReadFailureInternal, "The read failed inside this system rather than at the site."
 }
 
 // autoEnrichMaxPages is the page ceiling every AUTOMATIC read runs under
@@ -117,7 +117,7 @@ func (w *siteDeepReadWorker) autoEnrichEnabled(ctx context.Context) (bool, error
 func (w *siteDeepReadWorker) abandon(ctx context.Context, readID ids.UUID, reason string) error {
 	tctx, cancel := terminalCtx(ctx)
 	defer cancel()
-	if err := w.people.FinishSiteRead(tctx, readID, people.FinishSiteReadInput{Status: "cancelled"}); err != nil {
+	if err := w.contacts.FinishSiteRead(tctx, readID, contacts.FinishSiteReadInput{Status: "cancelled"}); err != nil {
 		return fmt.Errorf("site deep read %s: recording the cancellation: %w", readID, err)
 	}
 	w.log.InfoContext(ctx, "site deep read cancelled before spending", "read", readID.String(), "reason", reason)
@@ -132,8 +132,8 @@ func (w *siteDeepReadWorker) fail(ctx context.Context, readID ids.UUID, cause er
 	tctx, cancel := terminalCtx(ctx)
 	defer cancel()
 	code, detail := diagnoseCrawlFailure(cause)
-	failure := people.FinishSiteReadInput{Status: "failed", StatusCode: code, StatusDetail: detail}
-	if people.SiteReadFailureCodes[code] {
+	failure := contacts.FinishSiteReadInput{Status: "failed", StatusCode: code, StatusDetail: detail}
+	if contacts.SiteReadFailureCodes[code] {
 		// A cause that commonly clears on its own names its own next attempt,
 		// which BeginSiteRead's failed-and-due arm re-claims. Without it a single
 		// 403 from an edge's bot protection settles a live company's site for
@@ -146,7 +146,7 @@ func (w *siteDeepReadWorker) fail(ctx context.Context, readID ids.UUID, cause er
 	// backoff (domaintriage.go), and it is what brings a domain back around. The
 	// retry time here is what stops that second visit from being refused by a
 	// dossier that already called itself finished.
-	if err := w.people.FinishSiteRead(tctx, readID, failure); err != nil {
+	if err := w.contacts.FinishSiteRead(tctx, readID, failure); err != nil {
 		return errors.Join(cause, fmt.Errorf("recording the failure on the dossier: %w", err))
 	}
 	// The dossier is terminal now, and a failed read is one no confirmation

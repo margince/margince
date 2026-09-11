@@ -161,7 +161,7 @@ const (
 	// job tick, and the zero value, so an unset Caller reads as the least
 	// authority rather than as a human.
 	CallerSystem CallerType = ""
-	// CallerHuman is a person acting through a session.
+	// CallerHuman is a contact acting through a session.
 	CallerHuman CallerType = "human"
 	// CallerAgent is an agent acting under a Passport, always on some human's
 	// authority — OnBehalfOf names them.
@@ -183,12 +183,12 @@ type Caller struct {
 	//
 	// For an agent or a connector this is the HUMAN whose authority the call
 	// carries, not a synthetic id for the agent: a unit stamping authorship
-	// wants the person accountable for the row, and "agent ≤ human" already
+	// wants the contact accountable for the row, and "agent ≤ human" already
 	// holds that agent's scopes to that human's.
 	UserID string
 
 	// IsAgent reports whether an agent or connector produced this call rather
-	// than a person acting directly. A unit that must not be driven by an
+	// than a contact acting directly. A unit that must not be driven by an
 	// agent checks this; a unit that only wants authorship uses UserID and
 	// ignores it.
 	IsAgent bool

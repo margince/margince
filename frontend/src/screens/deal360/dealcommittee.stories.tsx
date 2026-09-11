@@ -39,20 +39,20 @@ const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
   deal_id: DEAL_ID,
   stakeholders: [
     {
-      person_id: "01a03000-0000-7000-8000-0000000000b1",
-      person_name: "Dana Weiss",
+      contact_id: "01a03000-0000-7000-8000-0000000000b1",
+      contact_name: "Dana Weiss",
       role: "champion",
       engaged: true,
     },
     {
-      person_id: "01a03000-0000-7000-8000-0000000000b2",
-      person_name: "Tomas Berg",
+      contact_id: "01a03000-0000-7000-8000-0000000000b2",
+      contact_name: "Tomas Berg",
       role: "economic_buyer",
       engaged: true,
     },
     {
-      person_id: "01a03000-0000-7000-8000-0000000000b3",
-      person_name: "Ines Kraft",
+      contact_id: "01a03000-0000-7000-8000-0000000000b3",
+      contact_name: "Ines Kraft",
       role: "evaluator",
       engaged: false,
     },
@@ -90,14 +90,14 @@ export const SingleThreaded: Story = {
     coverage: coverage({
       stakeholders: [
         {
-          person_id: "01a03000-0000-7000-8000-0000000000b1",
-          person_name: "Dana Weiss",
+          contact_id: "01a03000-0000-7000-8000-0000000000b1",
+          contact_name: "Dana Weiss",
           role: "champion",
           engaged: true,
         },
         {
-          person_id: "01a03000-0000-7000-8000-0000000000b3",
-          person_name: "Ines Kraft",
+          contact_id: "01a03000-0000-7000-8000-0000000000b3",
+          contact_name: "Ines Kraft",
           role: "evaluator",
           engaged: false,
         },
@@ -105,8 +105,8 @@ export const SingleThreaded: Story = {
       risks: [
         {
           kind: "single_threaded_theirs",
-          summary: "Only one person here is talking to us.",
-          person_ids: ["01a03000-0000-7000-8000-0000000000b1"],
+          summary: "Only one contact here is talking to us.",
+          contact_ids: ["01a03000-0000-7000-8000-0000000000b1"],
         },
       ],
     }),
@@ -118,21 +118,21 @@ export const SingleThreaded: Story = {
 
 /**
  * A seat the reader may not name. The seat still counts toward coverage — how
- * many people carry a deal is not the fact being withheld, only who they are.
+ * many contacts carry a deal is not the fact being withheld, only who they are.
  */
 export const SeatWithoutAName: Story = {
   args: {
     coverage: coverage({
       stakeholders: [
         {
-          person_id: "01a03000-0000-7000-8000-0000000000b1",
-          person_name: "Dana Weiss",
+          contact_id: "01a03000-0000-7000-8000-0000000000b1",
+          contact_name: "Dana Weiss",
           role: "champion",
           engaged: true,
         },
         {
-          person_id: "01a03000-0000-7000-8000-0000000000b9",
-          person_name: null,
+          contact_id: "01a03000-0000-7000-8000-0000000000b9",
+          contact_name: null,
           role: "evaluator",
           engaged: false,
         },

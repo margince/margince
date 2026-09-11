@@ -100,7 +100,7 @@ export function leadBand({
  * along with its reason.
  *
  * No reason field, unlike the demote beside it. The demote asks for one
- * because it unwinds a person and a reader of that trail needs to know why;
+ * because it unwinds a contact and a reader of that trail needs to know why;
  * reopening restores a status the trail already holds, and there is nothing a
  * caller could say that the server does not read for itself.
  */

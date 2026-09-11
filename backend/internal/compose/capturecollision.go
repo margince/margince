@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -69,18 +69,18 @@ type capturedLead struct {
 // captureCollisionAcceptEffect folds the captured fields onto the lead they
 // collided with.
 //
-// Which fields actually change is the people module's decision, not this
+// Which fields actually change is the contacts module's decision, not this
 // seam's: `FillEmptyLeadFieldsTx` locks the row and compares against it inside
 // the same transaction it writes. Deciding it here would mean reading the lead
 // first and patching after, and an edit landing between the two would let a
-// captured value overwrite a value a person had just typed.
+// captured value overwrite a value a contact had just typed.
 //
 // The write runs under the DECIDING HUMAN's own principal. Swapping in a system
 // principal would bypass object RBAC and unbound row scope — so an ownership
 // change landing between the decision's authority check and this write would be
-// ignored, and the effect would write where the person no longer may. Machine
+// ignored, and the effect would write where the contact no longer may. Machine
 // provenance belongs on the audit row, not in the authorization principal.
-func captureCollisionAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
+func captureCollisionAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		var captured capturedLead
 		if err := json.Unmarshal(proposedChange, &captured); err != nil {
@@ -108,7 +108,7 @@ func captureCollisionAcceptEffect(svc *approvals.Service, store *people.Store) a
 			return err
 		}
 		return svc.RedeemAndApply(ctx, approvalID, captureCollisionKind, diffHash, func(tx pgx.Tx) error {
-			return store.FillEmptyLeadFieldsTx(ctx, tx, ids.From[ids.LeadKind](entityID), people.CapturedLeadFields{
+			return store.FillEmptyLeadFieldsTx(ctx, tx, ids.From[ids.LeadKind](entityID), contacts.CapturedLeadFields{
 				FullName:    captured.FullName,
 				Email:       captured.Email,
 				CompanyName: captured.CompanyName,

@@ -36,5 +36,5 @@ expect:
     citation UI and the outcome are the same ones a real answer carries. The
     prompt tells the model not to say the passages are insufficient, so a reply
     that explains its own abstention in a claim is also wrong. This is the
-    shape a first document set has, which makes it the shape a person is most
+    shape a first document set has, which makes it the shape a contact is most
     likely to meet the refusal in.

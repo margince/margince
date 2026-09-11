@@ -22,7 +22,7 @@ import { ConversationWorkbench, WorkbenchEntranceScope } from "./workbench";
 //
 // The signed-in chip at the rail's foot is the one that has bitten before: an
 // unrouted session probe reads as a MALFORMED session, not as an absent one,
-// and the foot then draws an anonymous chip in a story that claims a person.
+// and the foot then draws an anonymous chip in a story that claims a contact.
 // Every story here routes the probe explicitly and says which answer it means.
 
 const state: ConversationState = {
@@ -66,7 +66,7 @@ export default meta;
 type Story = StoryObj<typeof Shell>;
 
 // The ordinary case: the session resolved and carries a display name, so the
-// rail's foot names the person and keys their chip's tint on their address —
+// rail's foot names the contact and keys their chip's tint on their address —
 // the stable identity, so a later rename does not move them to a new colour.
 export const SignedIn: Story = {
   render: () => <Shell session={meRoute({})} />,
@@ -97,7 +97,7 @@ export const NameFromAddress: Story = {
 };
 
 // The probe has not landed yet. The rail is fully usable meanwhile — steps,
-// status, runtime, and the theme control at the foot — and the person row is
+// status, runtime, and the theme control at the foot — and the contact row is
 // simply absent rather than drawn as an anonymous stand-in for nobody.
 export const IdentityUnresolved: Story = {
   render: () => (

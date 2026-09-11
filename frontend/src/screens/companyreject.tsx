@@ -17,7 +17,7 @@ type Company = components["schemas"]["Company"];
 //
 // It is a separate verb from Archive because archiving alone does not settle
 // it. The record came from mail, so the next message on the same domain mints
-// it again and the person who archived it learns nothing about why it is back.
+// it again and the contact who archived it learns nothing about why it is back.
 //
 // One call, deliberately. The first attempt at this was two — block the domain,
 // then archive — and it could not be atomic: a rep who held the update grant

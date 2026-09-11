@@ -81,7 +81,7 @@ func (d *Dispatcher) gateSendAuthority(ctx context.Context, del Delivery, grante
 // human approved.
 //
 // The reason names the channel and the files, because "this could not be sent"
-// with no subject leaves a person guessing which of the two to fix.
+// with no subject leaves a contact guessing which of the two to fix.
 func (d *Dispatcher) gateAttachmentCarriage(ctx context.Context, del Delivery, seam sendSeam) (Outcome, time.Duration, error) {
 	if len(del.Attachments) == 0 {
 		return outcomeUndecided, 0, nil
@@ -130,7 +130,7 @@ func AggregateCarriageBound(carriage connector.Carriage) int64 { return aggregat
 
 // carriageRefusal is why this message may not go out as staged, or "" when it
 // may. ONE function so the four refusals read together and none can be added
-// without a reason a person can act on.
+// without a reason a contact can act on.
 //
 // A zero bound means "no limit beyond the contract's own", never "zero allowed"
 // — the only field that says nothing may go is Carries. A connector that
@@ -184,7 +184,7 @@ func carriageRefusal(del Delivery, carriage connector.Carriage) string {
 	return ""
 }
 
-// humanBytes renders a size bound the way the person who has to act on it reads
+// humanBytes renders a size bound the way the contact who has to act on it reads
 // sizes.
 //
 // It rounds DOWN to one decimal, deliberately: a bound reported as larger than
@@ -203,7 +203,7 @@ func humanBytes(size int64) string {
 	}
 }
 
-// attachmentNames is the staged filenames, for a reason a person can act on:
+// attachmentNames is the staged filenames, for a reason a contact can act on:
 // "this could not be sent" with no subject leaves them guessing which file.
 //
 // QUOTED, like the size branch already quotes its one name. A filename is
@@ -294,9 +294,9 @@ func (d *Dispatcher) gateSeat(ctx context.Context, del Delivery) (Outcome, time.
 // message was refused anyway, in a branch no rollout mode could soften. Removing
 // it is what makes the rollout mean anything.
 //
-// Nothing the legacy gate asked is now unasked. It read person_consent for the
+// Nothing the legacy gate asked is now unasked. It read contact_consent for the
 // same recipient list this call passes; AuthorizeTransmit reads that through
-// VerdictForPerson AND reads communication_suppression, which the old gate never
+// VerdictForContact AND reads communication_suppression, which the old gate never
 // looked at. It refused an empty recipient list; AuthorizeTransmit refuses one
 // too, and an empty decision set is not an allow.
 func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (commsauthz.TransmitTicket, Outcome, time.Duration, error) {

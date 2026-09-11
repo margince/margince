@@ -69,12 +69,12 @@ func redactScheduledSends(ctx context.Context, tx pgx.Tx, reason string, emails 
 	}
 	// CASE-INSENSITIVELY, because the payload keeps the address the SENDER
 	// TYPED and the erasure list carries the address as it was stored. A rep
-	// who wrote Subject@example.com to a person recorded as
+	// who wrote Subject@example.com to a contact recorded as
 	// subject@example.com would otherwise leave that message behind — holding
 	// their name, their address and the words meant for them — after the
 	// installation had certified their data destroyed. The domain half is
 	// case-insensitive by RFC and every mailbox in practice treats the local
-	// half that way too, which is why person_email is matched on lower()
+	// half that way too, which is why contact_email is matched on lower()
 	// everywhere else in this engine.
 	//
 	// The payload keeps To, Cc and Bcc in one merged recipients list, so one
@@ -114,7 +114,7 @@ func redactScheduledSends(ctx context.Context, tx pgx.Tx, reason string, emails 
 	if err != nil {
 		return fmt.Errorf("redacting the scheduled messages addressed to the subject: %w", err)
 	}
-	return tombstoneCollateralScrubs(ctx, tx, "scheduled_send", scrubbed, reason, causePersonErasure)
+	return tombstoneCollateralScrubs(ctx, tx, "scheduled_send", scrubbed, reason, causeContactErasure)
 }
 
 // loweredAddresses folds the erasure's address list for the comparison above.

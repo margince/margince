@@ -22,7 +22,7 @@ type TechnicalEnrichLane = components["schemas"]["TechnicalEnrichLane"];
  * where it runs.
  *
  * Partitioned by FIELD and never by source, which looks equivalent and is not:
- * a person correcting a machine-read value rewrites the row's source to
+ * a contact correcting a machine-read value rewrites the row's source to
  * `human`, and a source-partitioned card would drop exactly the rows somebody
  * cared enough to fix.
  */

@@ -7,7 +7,7 @@ package integration
 
 // An agent seat holds no queue, so no task may be aimed at one.
 //
-// The seat is an Agent Runner identity, not a person: it opens no Worklist, and
+// The seat is an Agent Runner identity, not a contact: it opens no Worklist, and
 // the task lane is read per human. Work assigned to it therefore leaves every
 // queue at once — it reads as delegated and is in fact abandoned, which is the
 // worst of the three states a task can be in because nothing shows it.
@@ -81,9 +81,9 @@ func TestATaskCannotBeReassignedToAnAgentSeat(t *testing.T) {
 	}
 }
 
-// The admission case, over the same fixture: a PERSON still takes the work.
+// The admission case, over the same fixture: a CONTACT still takes the work.
 // Without it every assertion above would pass on a door that refused everyone.
-func TestATaskStillReachesAPerson(t *testing.T) {
+func TestATaskStillReachesAContact(t *testing.T) {
 	e := Setup(t)
 	subject := "Book the call"
 	due := time.Now().Add(24 * time.Hour)
@@ -93,9 +93,9 @@ func TestATaskStillReachesAPerson(t *testing.T) {
 		Kind: "task", Subject: &subject, DueAt: &due, AssigneeID: &mine, Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("logging a task for a person: %v", err)
+		t.Fatalf("logging a task for a contact: %v", err)
 	}
 	if task.AssigneeId == nil || ids.UUID(*task.AssigneeId) != e.Rep1 {
-		t.Errorf("assignee = %v, want the person it was written for", task.AssigneeId)
+		t.Errorf("assignee = %v, want the contact it was written for", task.AssigneeId)
 	}
 }

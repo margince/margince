@@ -46,7 +46,7 @@ const authorizationModesObject = "installation_settings"
 // reasoning had the failure backwards: a category nobody remembered to add
 // shipped not binding and nothing said so, which is a silent hole in the exact
 // shape of the category somebody forgot. Refusing the incomplete map moves the
-// discovery to the save, where a person is present to read it.
+// discovery to the save, where a contact is present to read it.
 //
 // The shipped default names every category that exists today, at `enforce`.
 // Observe was the rollout, not the destination: it ran so the disagreement
