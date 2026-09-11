@@ -56,8 +56,11 @@ func (s *Store) CreateContract(ctx context.Context, in CreateContractInput) (crm
 
 	var out crmcontracts.Contract
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = createContractTx(ctx, tx, in, by, s.today())
+		today, err := s.today(ctx, tx)
+		if err != nil {
+			return err
+		}
+		out, err = createContractTx(ctx, tx, in, by, today)
 		return err
 	})
 	return out, err
@@ -129,9 +132,13 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 
 	var out crmcontracts.Contract
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		today, err := s.today(ctx, tx)
+		if err != nil {
+			return err
+		}
 		// The patch is a write, so the row must first be visible as a read —
 		// otherwise a caller learns a contract exists by patching it.
-		existing, err := writableContract(ctx, tx, id, s.today())
+		existing, err := writableContract(ctx, tx, id, today)
 		if err != nil {
 			return err
 		}
@@ -161,7 +168,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract update"); err != nil {
 			return err
 		}
-		out, err = readContractForCaller(ctx, tx, id, s.today())
+		out, err = readContractForCaller(ctx, tx, id, today)
 		return err
 	})
 	return out, err
@@ -211,7 +218,11 @@ func (s *Store) ArchiveContract(ctx context.Context, id ids.ContractID) error {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		existing, err := writableContract(ctx, tx, id, s.today())
+		today, err := s.today(ctx, tx)
+		if err != nil {
+			return err
+		}
+		existing, err := writableContract(ctx, tx, id, today)
 		if err != nil {
 			return err
 		}

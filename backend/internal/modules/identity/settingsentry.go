@@ -338,6 +338,20 @@ func TimezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.RequireTx(ctx, tx, Timezone)
 }
 
+// TimezoneAppliedTx resolves the installation's zone for an INTERNAL date
+// derivation — a "today" computed while executing an operation the caller is
+// already authorized for — WITHOUT the installation_settings.read gate.
+//
+// ApplyTx, not the gated TimezoneOf: deriving which calendar day it is is
+// infrastructure, not the settings-management surface the object gate protects.
+// A contract writer holds `contract`, not `installation_settings`, and the zone
+// is disclosed by every date it is ever shown anyway — WorkingHoursOf reads it
+// the same way for the same reason. An unset zone reads as the registered UTC
+// default rather than erroring, so a fresh installation still writes.
+func TimezoneAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
+	return settings.ApplyTx(ctx, tx, Timezone)
+}
+
 // NameOf resolves the installation's display name inside a transaction the
 // caller already holds.
 //

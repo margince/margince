@@ -87,7 +87,20 @@ type Store struct {
 	// contract by its frozen rate, so a NULL one is a contract the guard
 	// cannot see and an installation can restate underneath.
 	freezeRate FreezeRateFunc
+	// timezone resolves the IANA zone the store's "today" is computed in, read
+	// from the installation inside the caller's tx. REQUIRED, and injected for
+	// the reason freezeRate is: the zone is a setting another module owns, and
+	// contracts takes a seam rather than that module. Without it, the
+	// under-contract reading would judge a date column against UTC's midnight
+	// rather than the installation's, so a contract's first and last day would
+	// begin hours early or late for anyone not on UTC.
+	timezone TimezoneFunc
 }
+
+// TimezoneFunc answers the installation's IANA timezone name inside a
+// transaction the caller already holds — the zone a calendar "today" is derived
+// in. Bound in the composition root to the setting the identity module owns.
+type TimezoneFunc func(ctx context.Context, tx pgx.Tx) (string, error)
 
 // FreezeRateFunc answers what one currency converts to the installation's base
 // at, as of an INSTANT, inside a transaction the caller already holds. The
@@ -99,17 +112,29 @@ type Store struct {
 type FreezeRateFunc func(ctx context.Context, tx pgx.Tx, currency string, asOf time.Time) (string, time.Time, error)
 
 // NewStore builds the contract store.
-func NewStore(db *database.DB, freezeRate FreezeRateFunc) *Store {
-	return &Store{db: db, clock: time.Now, freezeRate: freezeRate}
+func NewStore(db *database.DB, freezeRate FreezeRateFunc, timezone TimezoneFunc) *Store {
+	return &Store{db: db, clock: time.Now, freezeRate: freezeRate, timezone: timezone}
 }
 
 func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.db.Tx(ctx, fn)
 }
 
-// today is the date the derived reading is computed against.
-func (s *Store) today() time.Time {
-	return s.clock().UTC().Truncate(24 * time.Hour)
+// today is the calendar day the under-contract reading is computed against, in
+// the installation's zone rather than UTC: a contract's start and end are DATE
+// columns, and "in force today" has to mean the reader's today, not a boundary
+// hours away. The clock is injected so a date-boundary test stays deterministic;
+// the zone is read inside the caller's tx.
+func (s *Store) today(ctx context.Context, tx pgx.Tx) (time.Time, error) {
+	tzName, err := s.timezone(ctx, tx)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("resolve the installation's timezone: %w", err)
+	}
+	loc, err := time.LoadLocation(tzName)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("the installation's timezone %q: %w", tzName, err)
+	}
+	return storekit.WorkspaceDay(s.clock(), loc), nil
 }
 
 // contractColumns is the select list every read shares, in the order
@@ -226,8 +251,11 @@ func (s *Store) GetContract(ctx context.Context, id ids.ContractID) (crmcontract
 	}
 	var out crmcontracts.Contract
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = readContractForCaller(ctx, tx, id, s.today())
+		today, err := s.today(ctx, tx)
+		if err != nil {
+			return err
+		}
+		out, err = readContractForCaller(ctx, tx, id, today)
 		return err
 	})
 	return out, err

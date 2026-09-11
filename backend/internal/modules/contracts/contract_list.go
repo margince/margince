@@ -47,8 +47,11 @@ func (s *Store) ListOrganizationContracts(ctx context.Context, in ListContractsI
 		if err := auth.EnsureLinkTarget(ctx, tx, organizationTable, in.OrganizationID.UUID); err != nil {
 			return err
 		}
-		var err error
-		out, err = listContractsTx(ctx, tx, in, s.today())
+		today, err := s.today(ctx, tx)
+		if err != nil {
+			return err
+		}
+		out, err = listContractsTx(ctx, tx, in, today)
 		return err
 	})
 	return out, err
@@ -144,9 +147,13 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	if err := auth.EnsureLinkTarget(ctx, tx, projectTable, projectID.UUID); err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
+	today, err := s.today(ctx, tx)
+	if err != nil {
+		return crmcontracts.ContractListResponse{}, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	asOfPos := arg(s.today())
+	asOfPos := arg(today)
 	where := []string{storekit.SQLf("project_id = $%d", arg(projectID)), "archived_at IS NULL"}
 	scope, err := VisibleClause(ctx, "", arg)
 	if err != nil {
