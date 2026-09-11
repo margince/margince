@@ -31,8 +31,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// companyIDColumn is the reference every scope clause narrows a record by.
-const companyIDColumn = "company_id"
+// The activity_link columns, one per record kind it can point at. Named
+// because both walks over that table — the visible one here and the writable
+// one beside it — spell the same five, and two lists of literals are two
+// chances to spell one of them wrong.
+const (
+	personIDColumn  = "person_id"
+	companyIDColumn = "company_id"
+	dealIDColumn    = "deal_id"
+	leadIDColumn    = "lead_id"
+	projectIDColumn = "project_id"
+)
 
 // LinkTargetVisibleClause answers, for ONE activity_link row, whether the
 // record it points at is visible under the caller's row scope. An empty
@@ -84,11 +93,11 @@ var linkTargetTables = []string{tablePerson, tableCompany, tableDeal, tableLead,
 func linkTargetVisible(p principal.Principal, alias string, arg func(any) int) string {
 	arms := make([]string, 0, len(linkTargetTables))
 	for _, t := range []struct{ column, table, probe string }{
-		{"person_id", tablePerson, "sp"},
+		{personIDColumn, tablePerson, "sp"},
 		{companyIDColumn, tableCompany, "so"},
-		{"deal_id", tableDeal, "sd"},
-		{"lead_id", tableLead, "sl"},
-		{"project_id", tableProject, "spr"},
+		{dealIDColumn, tableDeal, "sd"},
+		{leadIDColumn, tableLead, "sl"},
+		{projectIDColumn, tableProject, "spr"},
 	} {
 		arms = append(arms, linkTargetArm(alias, t.column, t.table, t.probe,
 			VisiblePredicate(p, t.table, arg)(t.probe)))

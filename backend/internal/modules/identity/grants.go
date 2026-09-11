@@ -281,6 +281,22 @@ func grantImage(g grantRow) map[string]any {
 // AC states. The read seats inside it are still refused every write at
 // their own admission, so no authority leaks — the grant is just less
 // useful to them than to their colleagues.
+//
+// WHOEVER SHIPS A SEAT-CHANGE ENDPOINT OWES THE OTHER HALF. This guard runs at
+// grant creation and nowhere else, so a member downgraded to a read seat keeps
+// every write grant they were given while they held a full one. That is the
+// rule and the stored data disagreeing, and the fix belongs in the seat
+// write's own transaction: revoke the subject's write grants there, audited
+// like any other grant change, so the data matches the rule at every instant.
+// A downgrade quietly parking authority is how somebody gets it back on an
+// upgrade nobody re-examined.
+//
+// Until then it is inert rather than wrong: platform/auth's write-authority
+// predicate drops its record_grant arm for a read-seat principal, so the
+// standing grant confers nothing at the place authority is actually read. That
+// is the second guard, it holds whatever the row says, and it is not a reason
+// to skip the revocation — data that states the opposite of the rule is a
+// defect the next reader inherits.
 func refuseWriteGrantToReadSeat(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {
 	if in.Access != string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite) || in.SubjectType == "team" {
 		return nil
