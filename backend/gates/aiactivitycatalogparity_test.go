@@ -115,8 +115,8 @@ func producedKinds() []string {
 	return out
 }
 
-// namesRowsMayStillCarry is every task that USED to announce under its own name
-// and no longer does.
+// namesRowsMayStillCarry reads the registry for tasks that used to announce
+// under their own name and no longer do.
 //
 // Derived from the registry rather than listed, because the registry is where
 // the retirement is decided: a task moved to SourceNoOccurrence is one whose
