@@ -17,6 +17,7 @@
 # being logged.
 resource "aws_s3_bucket" "alb_logs" {
   bucket = "${var.name_prefix}-alb-logs"
+  tags   = { Name = "${var.name_prefix}-alb-logs", Component = "observability" }
 }
 
 resource "aws_s3_bucket_ownership_controls" "alb_logs" {
@@ -202,6 +203,8 @@ resource "aws_lb_listener" "http_redirect" {
       status_code = "HTTP_301"
     }
   }
+
+  tags = { Name = "${var.name_prefix}-http-redirect", Component = "edge" }
 }
 
 resource "aws_lb_listener" "https" {
@@ -215,6 +218,8 @@ resource "aws_lb_listener" "https" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.web.arn
   }
+
+  tags = { Name = "${var.name_prefix}-https", Component = "edge" }
 }
 
 resource "aws_lb_listener_rule" "api_v1_and_ops" {
@@ -231,6 +236,8 @@ resource "aws_lb_listener_rule" "api_v1_and_ops" {
       values = ["/v1*", "/healthz", "/readyz", "/metrics"]
     }
   }
+
+  tags = { Name = "${var.name_prefix}-api-v1-and-ops", Component = "edge" }
 }
 
 resource "aws_lb_listener_rule" "api_webhooks" {
@@ -247,6 +254,8 @@ resource "aws_lb_listener_rule" "api_webhooks" {
       values = ["/webhooks/gmail", "/webhooks/graph", "/webhooks/hubspot"]
     }
   }
+
+  tags = { Name = "${var.name_prefix}-api-webhooks", Component = "edge" }
 }
 
 resource "aws_lb_listener_rule" "api_mcp_oauth" {
@@ -269,6 +278,8 @@ resource "aws_lb_listener_rule" "api_mcp_oauth" {
       ]
     }
   }
+
+  tags = { Name = "${var.name_prefix}-api-mcp-oauth", Component = "edge" }
 }
 
 # ---- WAF: the ALB is this stack's one public entry point --------------------

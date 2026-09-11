@@ -47,6 +47,7 @@ data "aws_iam_policy_document" "vpc_flow_logs_assume" {
 
 resource "aws_iam_role" "vpc_flow_logs" {
   name               = "${var.name_prefix}-vpc-flow-logs"
+  description        = "Assumed by vpc-flow-logs.amazonaws.com to deliver this VPC's flow log records to CloudWatch Logs."
   assume_role_policy = data.aws_iam_policy_document.vpc_flow_logs_assume.json
   tags               = { Name = "${var.name_prefix}-vpc-flow-logs", Component = "security" }
 }
@@ -153,6 +154,7 @@ resource "aws_route_table_association" "private" {
 
 resource "aws_security_group" "alb" {
   name_prefix = "${var.name_prefix}-alb-"
+  description = "Public ALB — HTTPS/HTTP ingress from the internet, egress to ECS targets only."
   vpc_id      = aws_vpc.this.id
   tags        = { Name = "${var.name_prefix}-alb", Component = "network" }
 
@@ -191,6 +193,7 @@ resource "aws_security_group" "alb" {
 
 resource "aws_security_group" "ecs_tasks" {
   name_prefix = "${var.name_prefix}-ecs-"
+  description = "api/worker/web tasks — ingress from the ALB only, egress to in-VPC services plus the specific external ports the app genuinely calls out on."
   vpc_id      = aws_vpc.this.id
   tags        = { Name = "${var.name_prefix}-ecs-tasks", Component = "network" }
 
@@ -257,6 +260,7 @@ resource "aws_security_group" "ecs_tasks" {
 
 resource "aws_security_group" "db" {
   name_prefix = "${var.name_prefix}-db-"
+  description = "RDS Postgres — ingress from ECS tasks on 5432 only, no egress (RDS never originates outbound traffic)."
   vpc_id      = aws_vpc.this.id
   tags        = { Name = "${var.name_prefix}-db", Component = "database" }
 
@@ -280,6 +284,7 @@ resource "aws_security_group" "db" {
 
 resource "aws_security_group" "redis" {
   name_prefix = "${var.name_prefix}-redis-"
+  description = "ElastiCache (Valkey) — ingress from ECS tasks on 6379 only, no egress (ElastiCache never originates outbound traffic)."
   vpc_id      = aws_vpc.this.id
   tags        = { Name = "${var.name_prefix}-redis", Component = "cache" }
 
@@ -299,6 +304,7 @@ resource "aws_security_group" "redis" {
 
 resource "aws_security_group" "efs" {
   name_prefix = "${var.name_prefix}-efs-"
+  description = "EFS config volume mount targets — ingress from ECS tasks on 2049 (NFS) only, no egress."
   vpc_id      = aws_vpc.this.id
   tags        = { Name = "${var.name_prefix}-efs", Component = "storage" }
 
@@ -325,4 +331,5 @@ resource "aws_db_subnet_group" "this" {
 resource "aws_elasticache_subnet_group" "this" {
   name       = "${var.name_prefix}-redis"
   subnet_ids = aws_subnet.private[*].id
+  tags       = { Name = "${var.name_prefix}-redis", Component = "cache" }
 }

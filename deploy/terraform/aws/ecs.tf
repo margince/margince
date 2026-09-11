@@ -425,6 +425,7 @@ resource "aws_appautoscaling_target" "api" {
   scalable_dimension = "ecs:service:DesiredCount"
   min_capacity       = var.api_desired_count
   max_capacity       = var.api_autoscaling_max_count
+  tags               = { Name = "${var.name_prefix}-api", Component = "compute-api" }
 }
 
 resource "aws_appautoscaling_policy" "api_cpu" {
@@ -450,6 +451,7 @@ resource "aws_appautoscaling_target" "worker" {
   scalable_dimension = "ecs:service:DesiredCount"
   min_capacity       = var.worker_desired_count
   max_capacity       = var.worker_autoscaling_max_count
+  tags               = { Name = "${var.name_prefix}-worker", Component = "compute-worker" }
 }
 
 resource "aws_appautoscaling_policy" "worker_cpu" {

@@ -106,6 +106,7 @@ data "aws_iam_policy_document" "rds_enhanced_monitoring_assume" {
 
 resource "aws_iam_role" "rds_enhanced_monitoring" {
   name               = "${var.name_prefix}-rds-enhanced-monitoring"
+  description        = "Assumed by monitoring.rds.amazonaws.com to publish this instance's OS-level Enhanced Monitoring metrics."
   assume_role_policy = data.aws_iam_policy_document.rds_enhanced_monitoring_assume.json
   tags               = { Name = "${var.name_prefix}-rds-enhanced-monitoring", Component = "security" }
 }

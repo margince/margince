@@ -53,6 +53,7 @@ resource "aws_vpc_endpoint" "s3" {
 
 resource "aws_security_group" "vpc_endpoints" {
   name_prefix = "${var.name_prefix}-vpce-"
+  description = "Interface VPC endpoints (ECR/Secrets Manager/KMS/CloudWatch Logs) — ingress from ECS tasks on 443 only, no egress."
   vpc_id      = aws_vpc.this.id
   tags        = { Name = "${var.name_prefix}-vpce", Component = "network" }
 

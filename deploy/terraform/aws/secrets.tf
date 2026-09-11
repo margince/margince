@@ -37,9 +37,10 @@ locals {
 }
 
 resource "aws_secretsmanager_secret" "owner_dsn" {
-  name       = "${var.name_prefix}/margince-owner-dsn"
-  kms_key_id = aws_kms_key.data.arn
-  tags       = { Component = "secrets" }
+  name        = "${var.name_prefix}/margince-owner-dsn"
+  description = "MARGINCE_OWNER_DSN — margince_owner (DDL/migrations) connection string."
+  kms_key_id  = aws_kms_key.data.arn
+  tags        = { Name = "${var.name_prefix}-owner-dsn", Component = "secrets" }
 }
 resource "aws_secretsmanager_secret_version" "owner_dsn" {
   secret_id     = aws_secretsmanager_secret.owner_dsn.id
@@ -47,9 +48,10 @@ resource "aws_secretsmanager_secret_version" "owner_dsn" {
 }
 
 resource "aws_secretsmanager_secret" "app_dsn" {
-  name       = "${var.name_prefix}/margince-dsn"
-  kms_key_id = aws_kms_key.data.arn
-  tags       = { Component = "secrets" }
+  name        = "${var.name_prefix}/margince-dsn"
+  description = "MARGINCE_DSN — margince_app (runtime DML) connection string."
+  kms_key_id  = aws_kms_key.data.arn
+  tags        = { Name = "${var.name_prefix}-app-dsn", Component = "secrets" }
 }
 resource "aws_secretsmanager_secret_version" "app_dsn" {
   secret_id     = aws_secretsmanager_secret.app_dsn.id
@@ -57,9 +59,10 @@ resource "aws_secretsmanager_secret_version" "app_dsn" {
 }
 
 resource "aws_secretsmanager_secret" "redis_password" {
-  name       = "${var.name_prefix}/margince-redis-password"
-  kms_key_id = aws_kms_key.data.arn
-  tags       = { Component = "secrets" }
+  name        = "${var.name_prefix}/margince-redis-password"
+  description = "MARGINCE_REDIS_PASSWORD — ElastiCache AUTH token."
+  kms_key_id  = aws_kms_key.data.arn
+  tags        = { Name = "${var.name_prefix}-redis-password", Component = "secrets" }
 }
 resource "aws_secretsmanager_secret_version" "redis_password" {
   secret_id     = aws_secretsmanager_secret.redis_password.id
@@ -67,9 +70,10 @@ resource "aws_secretsmanager_secret_version" "redis_password" {
 }
 
 resource "aws_secretsmanager_secret" "keyvault_root_key" {
-  name       = "${var.name_prefix}/margince-keyvault-root-key"
-  kms_key_id = aws_kms_key.data.arn
-  tags       = { Component = "secrets" }
+  name        = "${var.name_prefix}/margince-keyvault-root-key"
+  description = "MARGINCE_KEYVAULT_ROOT_KEY — root key for the app's own encrypted-field keyvault."
+  kms_key_id  = aws_kms_key.data.arn
+  tags        = { Name = "${var.name_prefix}-keyvault-root-key", Component = "secrets" }
 }
 resource "aws_secretsmanager_secret_version" "keyvault_root_key" {
   secret_id     = aws_secretsmanager_secret.keyvault_root_key.id
@@ -77,9 +81,10 @@ resource "aws_secretsmanager_secret_version" "keyvault_root_key" {
 }
 
 resource "aws_secretsmanager_secret" "webhook_key" {
-  name       = "${var.name_prefix}/margince-webhook-key"
-  kms_key_id = aws_kms_key.data.arn
-  tags       = { Component = "secrets" }
+  name        = "${var.name_prefix}/margince-webhook-key"
+  description = "MARGINCE_WEBHOOK_KEY — HMAC key verifying inbound webhook signatures."
+  kms_key_id  = aws_kms_key.data.arn
+  tags        = { Name = "${var.name_prefix}-webhook-key", Component = "secrets" }
 }
 resource "aws_secretsmanager_secret_version" "webhook_key" {
   secret_id     = aws_secretsmanager_secret.webhook_key.id
@@ -87,9 +92,10 @@ resource "aws_secretsmanager_secret_version" "webhook_key" {
 }
 
 resource "aws_secretsmanager_secret" "connector_state_key" {
-  name       = "${var.name_prefix}/margince-connector-state-key"
-  kms_key_id = aws_kms_key.data.arn
-  tags       = { Component = "secrets" }
+  name        = "${var.name_prefix}/margince-connector-state-key"
+  description = "MARGINCE_CONNECTOR_STATE_KEY — encrypts stored OAuth connector state."
+  kms_key_id  = aws_kms_key.data.arn
+  tags        = { Name = "${var.name_prefix}-connector-state-key", Component = "secrets" }
 }
 resource "aws_secretsmanager_secret_version" "connector_state_key" {
   secret_id     = aws_secretsmanager_secret.connector_state_key.id
@@ -97,9 +103,10 @@ resource "aws_secretsmanager_secret_version" "connector_state_key" {
 }
 
 resource "aws_secretsmanager_secret" "admin_password" {
-  name       = "${var.name_prefix}/margince-admin-password"
-  kms_key_id = aws_kms_key.data.arn
-  tags       = { Component = "secrets" }
+  name        = "${var.name_prefix}/margince-admin-password"
+  description = "MARGINCE_ADMIN_PASSWORD — first-boot bootstrap admin password; rotate/remove per docs/deployment.md once the organization exists."
+  kms_key_id  = aws_kms_key.data.arn
+  tags        = { Name = "${var.name_prefix}-admin-password", Component = "secrets" }
 }
 resource "aws_secretsmanager_secret_version" "admin_password" {
   secret_id     = aws_secretsmanager_secret.admin_password.id
@@ -110,9 +117,10 @@ resource "aws_secretsmanager_secret_version" "admin_password" {
 # to point at; an empty string is a valid MARGINCE_LICENSE (runs unlicensed —
 # only a production role without MARGINCE_ENV set refuses to boot on that).
 resource "aws_secretsmanager_secret" "license" {
-  name       = "${var.name_prefix}/margince-license"
-  kms_key_id = aws_kms_key.data.arn
-  tags       = { Component = "secrets" }
+  name        = "${var.name_prefix}/margince-license"
+  description = "MARGINCE_LICENSE — empty runs unlicensed; a production role refuses to boot on that."
+  kms_key_id  = aws_kms_key.data.arn
+  tags        = { Name = "${var.name_prefix}-license", Component = "secrets" }
 }
 resource "aws_secretsmanager_secret_version" "license" {
   secret_id     = aws_secretsmanager_secret.license.id
@@ -120,9 +128,10 @@ resource "aws_secretsmanager_secret_version" "license" {
 }
 
 resource "aws_secretsmanager_secret" "blobstore_access_key" {
-  name       = "${var.name_prefix}/margince-blobstore-access-key"
-  kms_key_id = aws_kms_key.data.arn
-  tags       = { Component = "secrets" }
+  name        = "${var.name_prefix}/margince-blobstore-access-key"
+  description = "MARGINCE_BLOBSTORE_ACCESS_KEY — the blobstore IAM user's access key ID."
+  kms_key_id  = aws_kms_key.data.arn
+  tags        = { Name = "${var.name_prefix}-blobstore-access-key", Component = "secrets" }
 }
 resource "aws_secretsmanager_secret_version" "blobstore_access_key" {
   secret_id     = aws_secretsmanager_secret.blobstore_access_key.id
@@ -130,9 +139,10 @@ resource "aws_secretsmanager_secret_version" "blobstore_access_key" {
 }
 
 resource "aws_secretsmanager_secret" "blobstore_secret_key" {
-  name       = "${var.name_prefix}/margince-blobstore-secret-key"
-  kms_key_id = aws_kms_key.data.arn
-  tags       = { Component = "secrets" }
+  name        = "${var.name_prefix}/margince-blobstore-secret-key"
+  description = "MARGINCE_BLOBSTORE_SECRET_KEY — the blobstore IAM user's secret access key."
+  kms_key_id  = aws_kms_key.data.arn
+  tags        = { Name = "${var.name_prefix}-blobstore-secret-key", Component = "secrets" }
 }
 resource "aws_secretsmanager_secret_version" "blobstore_secret_key" {
   secret_id     = aws_secretsmanager_secret.blobstore_secret_key.id

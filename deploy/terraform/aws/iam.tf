@@ -53,6 +53,7 @@ data "aws_iam_policy_document" "ecs_assume" {
 
 resource "aws_iam_role" "execution" {
   name               = "${var.name_prefix}-ecs-execution"
+  description        = "ECS execution role for api/worker — pulls their ECR images, reads their Secrets Manager secrets, writes their CloudWatch Logs."
   assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
   tags               = { Name = "${var.name_prefix}-ecs-execution", Component = "security" }
 }
@@ -150,6 +151,7 @@ resource "aws_iam_role_policy" "execution_extra" {
 
 resource "aws_iam_role" "execution_web" {
   name               = "${var.name_prefix}-ecs-execution-web"
+  description        = "ECS execution role for web — pulls its ECR image and writes its CloudWatch Logs only, no Secrets Manager access."
   assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
   tags               = { Name = "${var.name_prefix}-ecs-execution-web", Component = "security" }
 }
@@ -209,12 +211,14 @@ resource "aws_iam_role_policy" "execution_web_extra" {
 
 resource "aws_iam_role" "task_api" {
   name               = "${var.name_prefix}-ecs-task-api"
+  description        = "Task role for api's own container — grants elasticfilesystem:ClientMount on the config volume, nothing else."
   assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
   tags               = { Name = "${var.name_prefix}-ecs-task-api", Component = "security" }
 }
 
 resource "aws_iam_role" "task_worker" {
   name               = "${var.name_prefix}-ecs-task-worker"
+  description        = "Task role for worker's own container — grants elasticfilesystem:ClientMount on the config volume, nothing else."
   assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
   tags               = { Name = "${var.name_prefix}-ecs-task-worker", Component = "security" }
 }
@@ -224,6 +228,7 @@ resource "aws_iam_role" "task_worker" {
 # "add something eventually".
 resource "aws_iam_role" "task_web" {
   name               = "${var.name_prefix}-ecs-task-web"
+  description        = "Task role for web's own container — deliberately empty, web calls no AWS API on its own behalf."
   assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
   tags               = { Name = "${var.name_prefix}-ecs-task-web", Component = "security" }
 }
