@@ -255,7 +255,8 @@ export const ColleaguesMailbox: Story = {
 
 // The default-deny consent gate (A22/ADR-0011): a filled, confirmed send comes
 // back 409 consent_not_granted, so the modal stays open with the pointed
-// "Review consent" copy instead of a raw server error.
+// "Review consent" copy instead of a raw server error, and the action the
+// server says this rep may take.
 export const ConsentBlocked: Story = {
   render: composeStory({
     "POST /activities/act-1/send-email": () =>
@@ -264,6 +265,38 @@ export const ConsentBlocked: Story = {
           code: "consent_not_granted",
           title: "Conflict",
           detail: "suppressed",
+          // WHAT THE SERVER ACTUALLY ANSWERS. Without the details this story
+          // showed only the explanation, and the action beside it — the whole
+          // point of the refusal now — was never rendered in Storybook.
+          details: {
+            review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
+            available_actions: ["request_decision"],
+          },
+        },
+        409,
+      ),
+  }),
+  play: async () => {
+    await fillAndSend();
+  },
+};
+
+// A SERVER NEWER THAN THIS CLIENT names an action whose label this build does
+// not have. The action is dropped rather than rendered as a raw wire enum — and
+// what the rep keeps is the reference, which is the whole reason dropping it is
+// safe. Without this story that fallback was never looked at.
+export const ConsentBlockedUnknownAction: Story = {
+  render: composeStory({
+    "POST /activities/act-1/send-email": () =>
+      jsonResponse(
+        {
+          code: "consent_not_granted",
+          title: "Conflict",
+          detail: "suppressed",
+          details: {
+            review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0002",
+            available_actions: ["send_anyway_somehow"],
+          },
         },
         409,
       ),

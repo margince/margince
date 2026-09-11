@@ -1425,7 +1425,8 @@ export const de = {
   "approval.kind.update_record": "Datensatz ändern",
   "approval.kind.create_record": "Datensatz anlegen",
   "approval.kind.send_email": "E-Mail senden",
-  "approval.kind.communication_review": "Über eine abgelehnte E-Mail entscheiden",
+  "approval.kind.communication_review":
+    "Über eine abgelehnte E-Mail entscheiden",
   "approval.kind.held_draft": "Entworfene E-Mail prüfen",
   "approval.kind.book_meeting": "Termin buchen",
   "approval.kind.volume_release": "Einen Agenten weiterarbeiten lassen",
@@ -3569,6 +3570,13 @@ export const de = {
   "compose.consentBlockedTitle": "Versand blockiert — keine Einwilligung",
   "compose.consentBlocked":
     "Ein Empfänger hat für diesen Zweck nicht eingewilligt, daher wurde der Versand unterdrückt (Standard-Ablehnung).",
+  "compose.reviewReference": "Prüfung",
+  "compose.reviewRequest": "Jemanden um Entscheidung bitten",
+  "compose.reviewRequesting": "Wird angefragt…",
+  "compose.reviewRequested":
+    "Angefragt. Jemand mit der Berechtigung entscheidet; die Nachricht bleibt bis dahin hier.",
+  "compose.reviewRequestFailed":
+    "Die Anfrage war nicht möglich. Versuchen Sie es erneut oder öffnen Sie die Prüfung oben.",
   "compose.consentGoto": "Einwilligung prüfen",
   "compose.draftUnavailable":
     "KI-Entwurf ist nicht verfügbar (das Modell ist nicht konfiguriert). Sie können die E-Mail weiterhin selbst schreiben.",

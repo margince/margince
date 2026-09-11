@@ -86,6 +86,8 @@ import {
 } from "./projectrecord";
 import { SCHEDULED_SCREEN } from "./scheduledsends";
 import { SendMark, SendPermission } from "./sendpermission";
+import { SendRefusal } from "./sendrefusal";
+import { sendReviewOf } from "./sendreview";
 import { useSendPermission } from "./usesendpermission";
 import { useVoiceProfile } from "./voice-profile";
 import "./compose.css";
@@ -791,6 +793,10 @@ function composedLinks(
 // not understand would put words in the server's mouth.
 export type Refusal = "consent" | "mailbox" | "sharedUnsubscribe" | null;
 
+// Re-exported from where it now lives, so this file stays the one name a
+// reader looks up for the composer's refusal vocabulary.
+export { SendRefusal };
+
 // The consent gate is a sentinel-mapped 409 and names itself at the top level;
 // the two pre-flight refusals are 422s, where the top-level code is only ever
 // "validation_error" and the rule that fired is the field + code pair the
@@ -808,54 +814,6 @@ export function refusalOf(error: unknown): Refusal {
     if (field === "recipients" && code === "shared_unsubscribe_token") {
       return "sharedUnsubscribe";
     }
-  }
-  return null;
-}
-
-// Each refusal states the condition and where it is resolved. The consent gate
-// is the default-deny suppression (A22/ADR-0011) this surface exists to make
-// visible. A mailbox connected before this product could send holds a read-only
-// grant and the provider will not widen one in place, so reconnecting is the
-// whole fix. And a message carrying an unsubscribe link carries ONE recipient's
-// consent credential, so it may only ever have one addressee.
-export function SendRefusal({
-  refusal,
-  personId,
-}: Readonly<{ refusal: Refusal; personId?: string }>) {
-  const t = useT();
-  if (refusal === "consent") {
-    return (
-      <div className="compose-refusal" role="alert">
-        <p className="t-body">
-          <strong>{t("compose.consentBlockedTitle")}</strong>
-        </p>
-        <p className="t-body" style={{ color: "var(--dangerText)" }}>
-          {t("compose.consentBlocked")}
-        </p>
-        {personId && (
-          <a href={`#/contacts/${personId}`} className="link-button">
-            {t("compose.consentGoto")}
-          </a>
-        )}
-      </div>
-    );
-  }
-  if (refusal === "mailbox") {
-    return (
-      <div className="compose-refusal" role="alert">
-        <p className="t-body">{t("compose.mailboxNotSendCapable")}</p>
-        <a href="#/settings/connections" className="link-button">
-          {t("compose.mailboxNotSendCapableGoto")}
-        </a>
-      </div>
-    );
-  }
-  if (refusal === "sharedUnsubscribe") {
-    return (
-      <div className="compose-refusal" role="alert">
-        <p className="t-body">{t("compose.sharedUnsubscribeToken")}</p>
-      </div>
-    );
   }
   return null;
 }
@@ -2179,6 +2137,10 @@ export function ComposeModal({
   // form open under copy naming the rep's next move, and the raw server detail
   // must not appear alongside it.
   const refusal = refusalOf(send.error);
+  // The work the refusal left behind, read from the same error. Null for every
+  // refusal that is not about consent — a disconnected mailbox holds no message
+  // for anybody to decide about.
+  const sendReview = sendReviewOf(send.error);
   const sendError =
     send.isError && refusal === null ? problemMessageOf(send.error, t) : null;
   // What travels on the wire. The ONE place the claim is decided, so the mail
@@ -2664,7 +2626,11 @@ export function ComposeModal({
                 {discardControl.error}
               </p>
             )}
-            <SendRefusal refusal={refusal} personId={personId} />
+            <SendRefusal
+              refusal={refusal}
+              personId={personId}
+              review={sendReview}
+            />
             <p className="t-caption">
               {t(
                 isChannelReply

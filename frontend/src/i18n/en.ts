@@ -3657,6 +3657,13 @@ export const en = {
   "compose.consentBlockedTitle": "Send blocked — no consent",
   "compose.consentBlocked":
     "A recipient has not granted consent for this purpose, so the send was suppressed (default-deny).",
+  "compose.reviewReference": "Review",
+  "compose.reviewRequest": "Ask someone to decide",
+  "compose.reviewRequesting": "Asking…",
+  "compose.reviewRequested":
+    "Asked. Somebody who may send this will decide, and the message stays here until they do.",
+  "compose.reviewRequestFailed":
+    "The request could not be made. Try again, or open the review from the refusal above.",
   "compose.consentGoto": "Review consent",
   "compose.draftUnavailable":
     "AI drafting is unavailable (the model is not configured). You can still write the email yourself.",

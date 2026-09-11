@@ -8,7 +8,6 @@ import { WON_REASON_LABELS, WON_REASONS } from "./winreason";
 // so this file stays the one place a reader looks for approval-kind vocabulary.
 export { KIND_LABEL };
 
-
 // What a reader may CHANGE before accepting, per kind.
 //
 // The inline editor's default is every string field of the proposed_change,
