@@ -5590,6 +5590,116 @@ export interface paths {
         patch: operations["updateAcquisitionSource"];
         trace?: never;
     };
+    "/record-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List responsibility roles, active and retired, in display order.
+         * @description The administered vocabulary of responsibilities a person or team can hold on a
+         *     company, deal or project. A role names what someone is accountable for and grants
+         *     no access: visibility stays with ownership and record grants. Retired roles are
+         *     returned so an assignment still carrying one renders its label.
+         */
+        get: operations["listRecordRoles"];
+        put?: never;
+        /** Add a responsibility role. */
+        post: operations["createRecordRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/record-roles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Relabel, reorder, re-scope or retire a responsibility role.
+         * @description Retirement is `active: false`, and there is no delete: a role an assignment has
+         *     ever carried must stay resolvable. Narrowing which record types or assignee kinds
+         *     the role applies to is refused while a live assignment depends on what would be
+         *     removed, so a running assignment can never be silently invalidated.
+         */
+        patch: operations["updateRecordRole"];
+        trace?: never;
+    };
+    "/records/{record_type}/{record_id}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["AssignmentRecordType"];
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Who is responsible for this record, by role.
+         * @description Answers with the live assignments on one company, deal or project, ordered by role
+         *     then subject name. Requires ordinary read access to the record itself; the answer
+         *     is 404 for a record this caller cannot see, so the list never reveals a record's
+         *     existence.
+         */
+        get: operations["listRecordAssignments"];
+        put?: never;
+        /**
+         * Make a person or team responsible for this record.
+         * @description Requires write access to the record itself, which is what makes this safe to
+         *     expose beside it. The assignment grants the subject no access of its own.
+         */
+        post: operations["createRecordAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assignments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * End a responsibility, keeping it in history.
+         * @description Archives the assignment rather than deleting it, so who was responsible when
+         *     stays answerable. The live-uniqueness rule frees the role for a successor.
+         */
+        delete: operations["archiveRecordAssignment"];
+        options?: never;
+        head?: never;
+        /**
+         * Hand a responsibility to someone else, or change its role.
+         * @description Atomic reassignment in place. The record the assignment hangs on never changes;
+         *     authority is the write access on that record, resolved from the stored row.
+         */
+        patch: operations["updateRecordAssignment"];
+        trace?: never;
+    };
     "/lead-disqualify-reasons": {
         parameters: {
             query?: never;
@@ -25295,6 +25405,110 @@ export interface components {
             sort_order?: number;
             active?: boolean;
         };
+        /** @description One administered responsibility a person or team can hold on a record. The role says WHAT someone is responsible for; it grants no access of its own. */
+        RecordRole: {
+            /** Format: uuid */
+            id: string;
+            /** @description The stable identifier. Lowercase, never changes once created — relabelling edits `label`, so a report keyed on the role survives the rename. */
+            key: string;
+            /** @description What readers see. */
+            label: string;
+            /** @description Which record kinds this role may be held on. */
+            record_types: components["schemas"]["AssignmentRecordType"][];
+            /** @description Whether a user, a team, or either may hold this role. */
+            assignee_kinds: components["schemas"]["AssignmentSubjectKind"][];
+            /** @description Display order in pickers and settings. */
+            sort_order: number;
+            /** @description False is retired: existing assignments keep rendering their label, but the role is refused for a new assignment. */
+            active: boolean;
+            /** @description Seeded with the installation. Fully editable; it simply cannot be removed. */
+            readonly system: boolean;
+            /** Format: int64 */
+            readonly version: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description The kind of record an assignment hangs on.
+         * @enum {string}
+         */
+        AssignmentRecordType: "company" | "deal" | "project";
+        /**
+         * @description Whether the responsible party is one person or a whole team.
+         * @enum {string}
+         */
+        AssignmentSubjectKind: "user" | "team";
+        RecordRoleListResponse: {
+            data: components["schemas"]["RecordRole"][];
+        };
+        CreateRecordRoleRequest: {
+            /** @description Derived from the label when omitted. */
+            key?: string;
+            label: string;
+            record_types: components["schemas"]["AssignmentRecordType"][];
+            assignee_kinds: components["schemas"]["AssignmentSubjectKind"][];
+            sort_order?: number;
+        };
+        /** @description Every field optional; an omitted one is left alone. Narrowing `record_types` or `assignee_kinds` is refused while a live assignment depends on what would be removed — retire the role and add its replacement instead. */
+        UpdateRecordRoleRequest: {
+            label?: string;
+            record_types?: components["schemas"]["AssignmentRecordType"][];
+            assignee_kinds?: components["schemas"]["AssignmentSubjectKind"][];
+            sort_order?: number;
+            active?: boolean;
+        };
+        /** @description One responsibility held on one record. It records WHO is responsible, never who may see the record: visibility stays with ownership and record grants, and adding an assignment changes nobody's access. */
+        RecordAssignment: {
+            /** Format: uuid */
+            id: string;
+            record_type: components["schemas"]["AssignmentRecordType"];
+            /** Format: uuid */
+            record_id: string;
+            subject_kind: components["schemas"]["AssignmentSubjectKind"];
+            /**
+             * Format: uuid
+             * @description The assigned user or team, per `subject_kind`.
+             */
+            subject_id: string;
+            /** @description Resolved server-side so the row renders without a second lookup. */
+            readonly subject_name: string;
+            /** @description True when the assigned user is deactivated. The assignment stays and keeps its label, so history stays readable; it simply reads as needing a successor. */
+            readonly subject_inactive: boolean;
+            /** Format: uuid */
+            role_id: string;
+            readonly role_key: string;
+            readonly role_label: string;
+            /** @description False when the role has since been retired. The assignment remains valid. */
+            readonly role_active: boolean;
+            /** @description What wrote this assignment. */
+            readonly source?: string;
+            /** Format: int64 */
+            readonly version: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        RecordAssignmentListResponse: {
+            data: components["schemas"]["RecordAssignment"][];
+        };
+        CreateRecordAssignmentRequest: {
+            subject_kind: components["schemas"]["AssignmentSubjectKind"];
+            /** Format: uuid */
+            subject_id: string;
+            /** Format: uuid */
+            role_id: string;
+        };
+        /** @description Reassign in place: the record never moves, so only the responsible party and the role may change. Omitted fields are left alone. */
+        UpdateRecordAssignmentRequest: {
+            subject_kind?: components["schemas"]["AssignmentSubjectKind"];
+            /** Format: uuid */
+            subject_id?: string;
+            /** Format: uuid */
+            role_id?: string;
+        };
         /** @description One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees. */
         LeadSource: {
             /** Format: uuid */
@@ -43798,6 +44012,268 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AcquisitionSource"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listRecordRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The role list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordRoleListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createRecordRole: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRecordRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created role. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordRole"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateRecordRole: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRecordRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordRole"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listRecordAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["AssignmentRecordType"];
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record's assignments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordAssignmentListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createRecordAssignment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                record_type: components["schemas"]["AssignmentRecordType"];
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRecordAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Created assignment. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordAssignment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveRecordAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateRecordAssignment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRecordAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated assignment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordAssignment"];
                 };
             };
             403: components["responses"]["Forbidden"];

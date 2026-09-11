@@ -19,14 +19,12 @@ import {
 } from "../design-system/recordtimeline";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import { ArchiveAction } from "./archive";
 import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
 import { NewDealAction } from "./companyactions";
 import { EditAction } from "./edit";
-import { EntityRef, OwnerName } from "./entityref";
 import { useOpenEmail } from "./openemail";
 import { ProjectCompanies } from "./projectcompanies";
 import { AssignProjectOwnerAction } from "./projectowner";
@@ -54,6 +52,7 @@ import {
   ProjectDocumentsCard,
   StakeholdersCard,
 } from "./projectsections";
+import { ProjectSubtitle } from "./projectsubtitle";
 import { ProjectTabs } from "./projecttabs";
 import {
   ChronologyFilter,
@@ -63,6 +62,7 @@ import {
   useRecordChronology,
 } from "./recordchronology";
 import { RecordEmailVerb } from "./recordemail";
+import { RecordTeam } from "./recordteam";
 import { ShareAction } from "./share";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import { TimelineActions } from "./timelineactions";
@@ -159,6 +159,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
               companies={project.companies}
               readOnly={readOnly}
             />
+            <RecordTeam recordType="project" recordId={project.id} />
             <StakeholdersCard
               view={view}
               projectId={project.id}
@@ -263,50 +264,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         />
       )}
     </RecordView>
-  );
-}
-
-/** The company and the owner, under the name. */
-function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const project = view.project;
-  const company = view.company;
-  const companyState = sectionState(
-    view,
-    "company",
-    Boolean(company),
-    company ? 1 : 0,
-  );
-  return (
-    <span className="project-subtitle">
-      {companyState === "withheld" ? (
-        // The grant refused the company: say so rather than leave the name
-        // out, which would read as a project with no company.
-        <span data-testid="project-company-withheld">
-          {t("state.withheld")}
-        </span>
-      ) : (
-        <EntityRef
-          kind="company"
-          id={project.company_id}
-          name={company?.name}
-        />
-      )}
-      <span aria-hidden="true">·</span>
-      <OwnerName ownerId={project.owner_id} unowned={t("list.unowned")} />
-      {project.target_end_date && (
-        <>
-          <span aria-hidden="true">·</span>
-          <span>
-            {t("project.targetEndShort", {
-              date: formatDate(project.target_end_date, locale, recordZone),
-            })}
-          </span>
-        </>
-      )}
-    </span>
   );
 }
 

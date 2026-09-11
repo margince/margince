@@ -105,6 +105,7 @@ describe("the scope each page declares", () => {
     stageautomation: "workspace",
     leads: "workspace",
     acquisition: "workspace",
+    recordroles: "workspace",
     fields: "workspace",
     tags: "workspace",
     products: "workspace",
@@ -217,6 +218,10 @@ describe("what each page lets a reader change", () => {
       "all(full-seat, any(any(custom_field:update, custom_field:create), custom_field:delete))",
     // No delete arm: a source is retired through its switch, never removed.
     acquisition:
+      "all(full-seat, any(any(custom_field:update, custom_field:create)))",
+    // No delete arm either: a role is retired through its switch, because an
+    // assignment that carried it has to stay resolvable.
+    recordroles:
       "all(full-seat, any(any(custom_field:update, custom_field:create)))",
     fields:
       "all(full-seat, any(any(custom_field:update, custom_field:create)))",
@@ -936,6 +941,9 @@ describe("what the rail carries and what it leaves behind", () => {
       // The acquisition-source catalog, gated on custom_field like the lead
       // vocabulary beside it: a rep reads the channels and changes none.
       "acquisition",
+      // The responsibility-role vocabulary, gated the same way: a rep reads
+      // the roles and changes none.
+      "recordroles",
       "fields",
       "tags",
       "knowledge",
