@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Mail, MessageSquare, PenLine } from "lucide-react";
+import { Mail, MessageSquare, Send } from "lucide-react";
 
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
@@ -163,12 +163,16 @@ export type TransportAction = {
 // and a button reading `Email` that lands on a chooser promised a transport it
 // then asked about. With none it cannot name one either; the caller disables it,
 // and the neutral verb is what a disabled control says while it explains why.
+//
+// The neutral glyph is a paper plane and never a pencil: the record header draws
+// this verb icon-only beside the record's Edit, and two pencil squares are one
+// verb drawn twice.
 export function primaryTransportAction(
   transports: readonly Transport[],
   t: ReturnType<typeof useT>,
 ): TransportAction {
   if (transports.length !== 1) {
-    return { label: t("person.action.write"), icon: PenLine };
+    return { label: t("person.action.write"), icon: Send };
   }
   const only = transports[0];
   if (only.id === "email") {

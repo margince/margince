@@ -1,13 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  CalendarDays,
-  CheckSquare,
-  FileText,
-  Phone,
-  Search,
-} from "lucide-react";
+import { CalendarDays, CheckSquare, FileText, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId } from "react";
 import type { components } from "../api/schema";
@@ -17,6 +11,8 @@ import { Button, OverflowMenu } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useT } from "../i18n";
 import { useMe } from "./common";
+import type { ObjectCustomFields } from "./customfields.form";
+import { PersonEditMergeArchive } from "./personeditmergearchive";
 import { personTabRoute } from "./persontab";
 import type { Transport } from "./persontransports";
 import { primaryTransportAction, useTransports } from "./persontransports";
@@ -24,7 +20,7 @@ import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 
 // The header's verbs on the person record page (personpage.tsx): writing,
-// calling, meeting, logging, and the research/full-history/share menu.
+// calling, meeting, logging, and the menu that holds everything else.
 
 type Person360 = components["schemas"]["Person360"];
 
@@ -57,6 +53,7 @@ function writeRefusal(
 export function PersonActions({
   view,
   personId,
+  cf,
   overlay,
   onWrite,
   onResearch,
@@ -66,6 +63,9 @@ export function PersonActions({
 }: Readonly<{
   view: Person360;
   personId: string;
+  // Read at screen level and handed down so the custom-field schema request
+  // runs BESIDE the person's. See PersonEditMergeArchive's own prop.
+  cf: ObjectCustomFields;
   // LogActivityAction itself renders nothing in overlay — a mirrored
   // workspace has no activity write of its own, the same fact
   // PersonEmailPanel already states for the record's email box — so a
@@ -76,9 +76,9 @@ export function PersonActions({
   onLogActivity: () => void;
   onAddTask: () => void;
   // The page's one sentence about why this contact takes no changes, while
-  // it does not. Only Share writes the RECORD here — a grant is asserted
-  // through the person's own write gate — so it is the one verb refused by
-  // it; logging and mail are activity writes with gates of their own.
+  // it does not. The verbs that write the RECORD — edit, merge, archive and
+  // the grant Share asserts — are the ones refused by it; logging and mail
+  // are activity writes with gates of their own.
   refusedReasonId?: string;
 }>): ReactNode {
   const t = useT();
@@ -170,30 +170,43 @@ export function PersonActions({
           </Button>
         </>
       )}
-      {/* A real menu. This was a button labelled "More actions" that navigated
-          to the timeline tab — the same place the Call button went — so the one
-          control on the header promising there was more behind it delivered a
-          tab instead, and the promise was the only thing it did. Research moves
-          in here because a magnifier reads as "search" and this verb is not
-          search, and the timeline gets the honest name the product already uses
-          for it everywhere else. */}
+      {/* Every secondary verb, behind one control. A header that put edit,
+          merge and archive beside the daily verbs made the destructive one as
+          easy to reach as the routine one, and read as a toolbar rather than
+          as a record with something to do. Each row keeps its WORDS and no
+          glyph: a list of named actions with one picture in it is a list with
+          one row a reader has to decode.
+
+          Research is here because a magnifier reads as "search" and this verb
+          is not search, and the timeline gets the honest name the product
+          already uses for it everywhere else. */}
       <OverflowMenu label={t("record.moreActions")}>
-        <Button small onClick={onResearch}>
-          <Search size={15} aria-hidden="true" /> {t("person.action.research")}
-        </Button>
-        <Button
-          small
-          onClick={() => navigate(personTabRoute(personId, "timeline"))}
-        >
-          {t("record.fullHistory")}
-        </Button>
-        {/* Companies, deals, leads and projects all carry this. A contact did
-            not, so the one record type most likely to be private to one seat
-            was the one with no way to hand it to a colleague. */}
-        <ShareAction
-          recordType="person"
-          recordId={personId}
+        <PersonEditMergeArchive
+          person={view.person}
+          cf={cf}
           disabledReasonId={refusedReasonId}
+          overlay={overlay}
+          beforeArchive={
+            <>
+              {/* Companies, deals, leads and projects all carry this. A contact
+                  did not, so the one record type most likely to be private to
+                  one seat was the one with no way to hand it to a colleague. */}
+              <ShareAction
+                recordType="person"
+                recordId={personId}
+                disabledReasonId={refusedReasonId}
+              />
+              <Button
+                small
+                onClick={() => navigate(personTabRoute(personId, "timeline"))}
+              >
+                {t("record.fullHistory")}
+              </Button>
+              <Button small onClick={onResearch}>
+                {t("person.action.research")}
+              </Button>
+            </>
+          }
         />
       </OverflowMenu>
     </>

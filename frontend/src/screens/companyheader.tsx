@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { CheckSquare, FileText } from "lucide-react";
 import { type ReactElement, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -151,9 +152,14 @@ export function CompanyPrimaryActions({
         onOpen={onComposerOpen}
         disabledReasonId={archived}
       />
+      {/* Icon AND words, the shape personactions.tsx draws the same two verbs
+          in: a strip of label-only buttons reads as a list of links, and
+          neither glyph says the verb on its own — a tick box is the mark for
+          COMPLETING a task, not for filing one. The button sizes them. */}
       <LogActivityAction
         entityType="organization"
         entityId={org.id}
+        triggerIcon={<FileText aria-hidden="true" />}
         disabled={logPending}
         disabledReasonId={logRefused}
       />
@@ -162,6 +168,7 @@ export function CompanyPrimaryActions({
         entityId={org.id}
         askedKind="task"
         triggerLabel="log.addTask"
+        triggerIcon={<CheckSquare aria-hidden="true" />}
         disabled={logPending}
         disabledReasonId={logRefused}
       />
@@ -751,15 +758,6 @@ export function CompanyActionBadges({
             })}
           />
         )}
-        {/* The way in to the partner programme for an account that has none.
-            The tab only shows once there IS one, so without this the first
-            partner row would be unreachable — this is the same form, asked
-            for rather than offered. */}
-        {!overlay && !(org.relationship_types ?? []).includes("partner") && (
-          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
-            {t("org.partnerSetUp")}
-          </Button>
-        )}
         {/* A record grant probes the native row via auth.EnsureLinkTarget,
             which a mirrored record has no row for — sharing stays hidden
             in overlay regardless of record type (see deals.tsx's
@@ -782,6 +780,17 @@ export function CompanyActionBadges({
             onClick={onOpenHistory}
           >
             {t("record.fullHistory")}
+          </Button>
+        )}
+        {/* The way in to the partner programme for an account that has none.
+            The tab only shows once there IS one, so without this the first
+            partner row would be unreachable — this is the same form, asked
+            for rather than offered. Below Full history rather than beside
+            Merge: every row above is a verb EVERY record carries, in the order
+            they all carry them, and every row below is this account's own. */}
+        {!overlay && !(org.relationship_types ?? []).includes("partner") && (
+          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
+            {t("org.partnerSetUp")}
           </Button>
         )}
         {/* The account's own waiting decisions. It reads as a count in the
@@ -827,16 +836,6 @@ export function CompanyActionBadges({
     </>
   );
 }
-
-// CompanyDescription is the one-line "what this company does" under the
-// title — READ-ONLY here (plan §4.1's editable line moved to the rail's
-// Details grid, companyraildetails.tsx's DescriptionRow, which is where a
-// reader goes to fill fields in). A second editable control on the same
-// field, wired to a second PATCH, is the duplicate-control defect the
-// lifecycle row was fixed for; this is the same fix one field over. Absent
-// entirely rather than shown empty: an unwritten description with no
-// pressable to start it here would be a dead end pointing nowhere at the
-// field that actually writes it.
 
 // The scheme is noise in a chip: every one of these is https, and "https://"
 // costs eight characters of a row that has little space to fit it in. A URL

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Check, PenLine, RefreshCw, Send, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -30,10 +31,9 @@ import {
 } from "./common";
 import { searchProductCandidates } from "./products";
 
-// The offer 360: header, read-only totals, and a draft-only header edit.
-// buyer_org_id needs the shared RecordPicker and template_id is a
-// server-sourced select, neither of which the field-driven EditAction /
-// CreateField machinery has a slot for — so the edit surface is its own.
+// The offer 360: header, read-only totals, and a draft-only header edit whose
+// surface is its own because buyer_org_id needs the shared RecordPicker and
+// template_id a server-sourced select — EditAction/CreateField fits neither.
 
 type Offer = components["schemas"]["Offer"];
 type OfferTemplate = components["schemas"]["OfferTemplate"];
@@ -883,7 +883,7 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         data-testid="send-offer"
         onClick={() => setOpen(true)}
       >
-        {t("offer.send")}
+        <Send aria-hidden /> {t("offer.send")}
       </Button>
       <ConfirmModal
         open={open}
@@ -955,7 +955,7 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         data-testid="accept-offer"
         onClick={() => setOpen(true)}
       >
-        {t("offer.accept")}
+        <Check aria-hidden /> {t("offer.accept")}
       </Button>
       <ConfirmModal
         open={open}
@@ -1026,7 +1026,7 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         data-testid="reject-offer"
         onClick={() => setOpen(true)}
       >
-        {t("offer.reject")}
+        <X aria-hidden /> {t("offer.reject")}
       </Button>
       <ConfirmModal
         open={open}
@@ -1099,7 +1099,7 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         disabled={mutation.isPending}
         onClick={() => mutation.mutate()}
       >
-        {t("offer.regenerate")}
+        <RefreshCw aria-hidden /> {t("offer.regenerate")}
       </Button>
       {errorMessage && (
         <p
@@ -1354,7 +1354,7 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                       navigate({ screen: "deals", id: offer.deal_id })
                     }
                   >
-                    {t("offer.backToDeal")}
+                    <ArrowLeft aria-hidden /> {t("offer.backToDeal")}
                   </Button>
                   {offer.status === "draft" && (
                     <Button
@@ -1362,7 +1362,7 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                       data-testid="edit-offer-header"
                       onClick={() => setEditing(true)}
                     >
-                      {t("offer.edit")}
+                      <PenLine aria-hidden /> {t("offer.edit")}
                     </Button>
                   )}
                   {offer.status === "draft" && (

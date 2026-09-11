@@ -364,7 +364,7 @@ describe("the header's writing verb", () => {
       expect((await leadVerb("Write")).disabled).toBe(false);
     });
     const lead = await leadVerb("Write");
-    expect(lead.querySelector(".lucide-pen-line")).toBeTruthy();
+    expect(lead.querySelector(".lucide-send")).toBeTruthy();
     expect(lead.querySelector(".lucide-mail")).toBeNull();
     expect(lead.querySelector(".lucide-message-square")).toBeNull();
 

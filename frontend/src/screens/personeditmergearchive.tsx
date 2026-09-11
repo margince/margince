@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -21,6 +22,10 @@ import { invalidateRecord } from "./recordwritekeys";
 // the PATCH/merge/archive config rather than two, so a change to what a
 // person edit form carries cannot fix one page's form and silently leave
 // the other stale.
+//
+// Every verb here is WORDED: both callers draw them as rows of an
+// OverflowMenu, where a bare pencil would be the one row of the list that
+// names nothing.
 
 type Person = components["schemas"]["Person"];
 
@@ -51,6 +56,7 @@ export function PersonEditMergeArchive({
   cf,
   disabledReasonId,
   overlay,
+  beforeArchive,
 }: Readonly<{
   person: Person;
   // Read at screen level and handed down, so the schema request runs BESIDE the
@@ -64,6 +70,11 @@ export function PersonEditMergeArchive({
   // so the reason is the caller's to decide, not this component's.
   disabledReasonId?: string;
   overlay: boolean;
+  // The caller's own menu rows, drawn between Merge and Archive. The position
+  // is the whole prop: Archive is destructive and goes last in any menu, so a
+  // caller appending its rows after this fragment would seat them past the one
+  // item that has to stay at the end.
+  beforeArchive?: ReactNode;
 }>) {
   const t = useT();
   const id = person.id;
@@ -78,6 +89,7 @@ export function PersonEditMergeArchive({
   return (
     <>
       <EditAction<Person>
+        labelled
         disabledReasonId={disabledReasonId}
         label={t("record.edit")}
         savedMessage={(saved) =>
@@ -172,6 +184,7 @@ export function PersonEditMergeArchive({
           })}
         />
       )}
+      {beforeArchive}
       <ArchiveAction
         disabledReasonId={disabledReasonId}
         label={t("record.archive")}

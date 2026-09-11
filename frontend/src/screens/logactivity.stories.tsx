@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { LogActivity } from "./logactivity";
+import { CheckSquare, FileText } from "lucide-react";
+import { LogActivity, LogActivityAction } from "./logactivity";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The log-an-activity form embedded in every 360 (person/company/deal/lead).
@@ -94,6 +95,36 @@ export const OpenedOnATask: Story = {
     return (
       <StoryProviders>
         <LogActivity entityType="person" entityId="p1" askedKind="task" />
+      </StoryProviders>
+    );
+  },
+};
+
+// The same form reached from a record header, where it is a TRIGGER rather
+// than a panel: two of them side by side, each naming its own verb and each
+// leading with the glyph the contact header already gives it. The words stay —
+// a page and a tick box do not say "write down what happened" and "file a task"
+// on their own, and a reader would have to hover to tell the pair apart. The
+// button sizes the glyph, so neither call site names a size.
+export const HeaderTriggers: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": admin() });
+    return (
+      <StoryProviders>
+        <div style={{ display: "flex", gap: "var(--gapActions)" }}>
+          <LogActivityAction
+            entityType="organization"
+            entityId="o1"
+            triggerIcon={<FileText aria-hidden="true" />}
+          />
+          <LogActivityAction
+            entityType="organization"
+            entityId="o1"
+            askedKind="task"
+            triggerLabel="log.addTask"
+            triggerIcon={<CheckSquare aria-hidden="true" />}
+          />
+        </div>
       </StoryProviders>
     );
   },

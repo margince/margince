@@ -23,6 +23,7 @@ import { Mail } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
+import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -76,11 +77,22 @@ function useWaitingReply(
 }
 
 /**
- * EmailVerb is the ONE way a record header offers writing: the mail glyph and
- * the word, as an ordinary verb among the header's others. Every record page
+ * EmailVerb is the ONE way a record header offers writing. Every record page
  * draws it, so a reader moving from a company to the contact on it finds the
- * same button in the same place. A page whose composer can open on another
+ * same control in the same place. A page whose composer can open on another
  * transport hands in the label and glyph it resolved; the default is mail.
+ *
+ * It is SQUARE, because an envelope is one of the handful of verbs a reader
+ * already knows from the glyph — the same reason Call and Meetings are squares
+ * beside it. The header's remaining verbs either keep their words outside the
+ * menu or move into it; a row where Write alone wore a label would put the
+ * page's most frequent action at the weight of its rarest.
+ *
+ * `label` is therefore the NAME rather than visible text: `IconAction` speaks
+ * it through `aria-label` and shows it on hover, so a transport-specific verb
+ * ("Send a WhatsApp") still reaches both readers. The refusals pass straight
+ * through — a header with nothing to write to says why on hover and under the
+ * control, rather than offering a square that does nothing.
  */
 export function EmailVerb({
   label,
@@ -90,6 +102,7 @@ export function EmailVerb({
   reason,
   reasonId,
 }: Readonly<{
+  /** The verb, translated — spoken as the name and shown as the tip. */
   label?: string;
   icon?: ReactNode;
   onClick: () => void;
@@ -99,15 +112,14 @@ export function EmailVerb({
 }>) {
   const t = useT();
   return (
-    <Button
+    <IconAction
+      label={label ?? t("person.action.email")}
+      icon={icon ?? <Mail size={15} aria-hidden="true" />}
       disabled={disabled}
       reason={reason}
       reasonId={reasonId}
       onClick={onClick}
-    >
-      {icon ?? <Mail size={15} aria-hidden="true" />}{" "}
-      {label ?? t("person.action.email")}
-    </Button>
+    />
   );
 }
 

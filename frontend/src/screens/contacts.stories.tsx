@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import { ContactsScreen, PersonScreen } from "./contacts";
 import {
@@ -209,20 +210,46 @@ export const ContactsListArchivedRow: Story = {
 // ContactsScreen for the list and PersonPageV2 for the record, never this
 // component. Left in place rather than expanded or deleted so a future
 // reader does not mistake it for a live surface.
+function personOverviewRoutes() {
+  installFetchStub({
+    "GET /me": meRoute({ person: ["read", "update"] }),
+    "GET /people/p-1": () => jsonResponse(anna),
+    "GET /people/p-1/strength": () => jsonResponse(dormantStrength),
+    "GET /activities": () => jsonResponse({ data: [] }),
+    "GET /records/person/p-1/context": () =>
+      jsonResponse({ anchor: { type: "person", id: "p-1" }, sections: [] }),
+  });
+}
+
 export const PersonOverview: Story = {
   render: () => {
-    installFetchStub({
-      "GET /me": meRoute({ person: ["read", "update"] }),
-      "GET /people/p-1": () => jsonResponse(anna),
-      "GET /people/p-1/strength": () => jsonResponse(dormantStrength),
-      "GET /activities": () => jsonResponse({ data: [] }),
-      "GET /records/person/p-1/context": () =>
-        jsonResponse({ anchor: { type: "person", id: "p-1" }, sections: [] }),
-    });
+    personOverviewRoutes();
     return (
       <StoryProviders>
         <PersonScreen id="p-1" />
       </StoryProviders>
     );
+  },
+};
+
+// Edit, merge, share and archive are rows of the header's one menu here too,
+// the same division the contact page carries — the badges beside the name say
+// what the record IS, and the ellipsis holds what may be done to it.
+export const PersonOverviewMenu: Story = {
+  render: () => {
+    personOverviewRoutes();
+    return (
+      <StoryProviders>
+        <PersonScreen id="p-1" />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    // The panel portals to the body, so it is reached through `screen` and
+    // never through a canvas-scoped query.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await screen.findByTestId("edit-record");
   },
 };
