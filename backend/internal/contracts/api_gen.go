@@ -17031,40 +17031,40 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	GetWorklistParamsFilterAll               GetWorklistParamsFilter = "all"
-	GetWorklistParamsFilterChangedSinceBrief GetWorklistParamsFilter = "changed_since_brief"
-	GetWorklistParamsFilterCustomerWaiting   GetWorklistParamsFilter = "customer_waiting"
-	GetWorklistParamsFilterDealsAtRisk       GetWorklistParamsFilter = "deals_at_risk"
-	GetWorklistParamsFilterDecisions         GetWorklistParamsFilter = "decisions"
-	GetWorklistParamsFilterExceptDecisions   GetWorklistParamsFilter = "except_decisions"
-	GetWorklistParamsFilterLeads             GetWorklistParamsFilter = "leads"
-	GetWorklistParamsFilterMeetings          GetWorklistParamsFilter = "meetings"
-	GetWorklistParamsFilterSystem            GetWorklistParamsFilter = "system"
-	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
+	All               GetWorklistParamsFilter = "all"
+	ChangedSinceBrief GetWorklistParamsFilter = "changed_since_brief"
+	CustomerWaiting   GetWorklistParamsFilter = "customer_waiting"
+	DealsAtRisk       GetWorklistParamsFilter = "deals_at_risk"
+	Decisions         GetWorklistParamsFilter = "decisions"
+	ExceptDecisions   GetWorklistParamsFilter = "except_decisions"
+	Leads             GetWorklistParamsFilter = "leads"
+	Meetings          GetWorklistParamsFilter = "meetings"
+	System            GetWorklistParamsFilter = "system"
+	Tasks             GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case GetWorklistParamsFilterAll:
+	case All:
 		return true
-	case GetWorklistParamsFilterChangedSinceBrief:
+	case ChangedSinceBrief:
 		return true
-	case GetWorklistParamsFilterCustomerWaiting:
+	case CustomerWaiting:
 		return true
-	case GetWorklistParamsFilterDealsAtRisk:
+	case DealsAtRisk:
 		return true
-	case GetWorklistParamsFilterDecisions:
+	case Decisions:
 		return true
-	case GetWorklistParamsFilterExceptDecisions:
+	case ExceptDecisions:
 		return true
-	case GetWorklistParamsFilterLeads:
+	case Leads:
 		return true
-	case GetWorklistParamsFilterMeetings:
+	case Meetings:
 		return true
-	case GetWorklistParamsFilterSystem:
+	case System:
 		return true
-	case GetWorklistParamsFilterTasks:
+	case Tasks:
 		return true
 	default:
 		return false
