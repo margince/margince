@@ -70,6 +70,18 @@ export const view: Person360 = {
   profile_fields: [],
 };
 
+// What the caller may do unless a spec says otherwise. Logging needs
+// `activity.create`, which the store behind the form requires, so a spec that
+// logs must hold it here or it passes under an authorization production
+// refuses.
+//
+// One fixed grant set, named at module scope beside the view above rather than
+// rebuilt inline on every mount.
+const callerGrants: Parameters<typeof meRoute>[0] = {
+  person: ["read", "update"],
+  activity: ["create"],
+};
+
 export function mount(
   tab: (typeof PERSON_TABS)[number],
   page: Person360 = view,
@@ -77,13 +89,7 @@ export function mount(
   // Routes a test adds for the write it makes; the reads every mount needs
   // stay here.
   extraRoutes: RouteMap = {},
-  // What the caller may do. Logging needs `activity.create`, which the store
-  // behind the form requires, so a spec that logs must hold it here or it
-  // passes under an authorization production refuses.
-  allow: Parameters<typeof meRoute>[0] = {
-    person: ["read", "update"],
-    activity: ["create"],
-  },
+  allow: Parameters<typeof meRoute>[0] = callerGrants,
 ) {
   installFetchStub({
     "GET /me": meRoute(allow, { seat: "full" }),

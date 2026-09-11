@@ -128,18 +128,23 @@ const stagedApproval = {
   evidence: [],
 };
 
+// The caller the page asks about by default. It holds no grant at all, which is
+// the reading the frames below document; a frame about an AVAILABLE verb has to
+// name the grant that verb reads, or the page draws a refusal.
+//
+// A fixture like the records above it, so it is named with them rather than
+// written inline as a parameter default.
+const ungrantedCaller = {
+  user: { id: "u-9", display_name: "Me" },
+  roles: ["rep"],
+  teams: [],
+};
+
 function installDealStub(
   offers: unknown[],
   record: unknown = deal,
   approvals: unknown[] = [],
-  // The caller the page asks about. The default holds no grant at all, which
-  // is the reading the frames below document; a frame about an AVAILABLE verb
-  // has to name the grant that verb reads, or the page draws a refusal.
-  me: unknown = {
-    user: { id: "u-9", display_name: "Me" },
-    roles: ["rep"],
-    teams: [],
-  },
+  me: unknown = ungrantedCaller,
 ) {
   installFetchStub({
     "GET /deals/d1": () => jsonResponse(record),
