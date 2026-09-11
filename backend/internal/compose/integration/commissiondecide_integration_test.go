@@ -52,6 +52,10 @@ func TestTwoConcurrentVoidsOfOnePaymentWriteOneReversal(t *testing.T) {
 	if _, err := hold.Exec(ctx, `SELECT 1 FROM commission_entry WHERE id = $1 FOR UPDATE`, entry); err != nil {
 		t.Fatal(err)
 	}
+	var holder int32
+	if err := hold.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
+		t.Fatal(err)
+	}
 
 	// Neither void sends If-Match — the optional header is exactly what leaves
 	// the row lock as the only guard.
@@ -64,7 +68,7 @@ func TestTwoConcurrentVoidsOfOnePaymentWriteOneReversal(t *testing.T) {
 				commissions.DecideInput{Decision: commissions.DecisionVoid, Reason: &reason})
 		})
 	}
-	awaitLockWaiters(t, 2)
+	awaitLockWaiters(t, holder, 2)
 	if err := hold.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -98,10 +102,13 @@ func TestTwoConcurrentVoidsOfOnePaymentWriteOneReversal(t *testing.T) {
 	}
 }
 
-// awaitLockWaiters returns once n sessions are blocked on a lock over the
-// commission ledger. The bound only turns a void that never reached the lock
-// into a failure that says so, instead of a test that hangs.
-func awaitLockWaiters(t *testing.T, n int) {
+// awaitLockWaiters returns once n sessions are queued behind the holder's lock —
+// THAT backend's, so no unrelated session can stand in for a void. The queue is
+// followed rather than read one level deep: a row lock queues its waiters, so
+// the second void waits behind the first rather than on the holder directly.
+// The bound only turns a void that never reached the lock into a failure that
+// says so, instead of a test that hangs.
+func awaitLockWaiters(t *testing.T, holder int32, n int) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -109,9 +116,12 @@ func awaitLockWaiters(t *testing.T, n int) {
 	for {
 		var waiting int
 		if err := watcher.QueryRow(ctx, `
-			SELECT count(*) FROM pg_stat_activity
-			 WHERE datname = current_database() AND wait_event_type = 'Lock'
-			   AND query LIKE '%commission_entry%'`).Scan(&waiting); err != nil {
+			WITH RECURSIVE queued AS (
+				SELECT pid FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))
+				UNION
+				SELECT a.pid FROM pg_stat_activity a
+				  JOIN queued q ON q.pid = ANY(pg_blocking_pids(a.pid)))
+			SELECT count(*) FROM queued`, holder).Scan(&waiting); err != nil {
 			t.Fatalf("waiting for %d sessions to block on the entry's lock: %v", n, err)
 		}
 		if waiting >= n {

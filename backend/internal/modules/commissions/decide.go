@@ -78,16 +78,6 @@ func (s *Store) Decide(ctx context.Context, id ids.CommissionEntryID, in DecideI
 }
 
 func decideTx(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID, in DecideInput, by string) (crmcontracts.CommissionEntry, error) {
-	// The row lock comes BEFORE the read the transition is decided from. Without
-	// it two concurrent decisions both read `paid`, both pass the lifecycle check
-	// below, and each then writes its own reversal — two clawbacks for one entry,
-	// or two payout events for one payment. Under the lock the second decision
-	// reads the first one's result and is refused as the illegal transition it
-	// now is. An id that does not exist answers ErrNotFound here, which is the
-	// same answer the scoped read gives an id the caller may not see.
-	if _, err := storekit.LockRow(ctx, tx, "commission_entry", id.UUID, storekit.NoArchiveColumn); err != nil {
-		return crmcontracts.CommissionEntry{}, err
-	}
 	// Read under the caller's scope first: a row they cannot see must read as
 	// not-found rather than as a refusal that confirms it exists.
 	//
@@ -96,15 +86,7 @@ func decideTx(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID, in Decid
 	// default read refuses one — so gating the write without widening the read
 	// would leave the void answering not-found before any probe ran.
 	void := in.Decision == DecisionVoid
-	var (
-		current crmcontracts.CommissionEntry
-		err     error
-	)
-	if void {
-		current, err = readRetractableEntry(ctx, tx, id)
-	} else {
-		current, err = readEntry(ctx, tx, id)
-	}
+	current, err := readForDecision(ctx, tx, id, void)
 	if err != nil {
 		return crmcontracts.CommissionEntry{}, err
 	}
@@ -121,6 +103,19 @@ func decideTx(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID, in Decid
 		err = WritableEntriesForDeal(ctx, tx, deal)
 	}
 	if err != nil {
+		return crmcontracts.CommissionEntry{}, err
+	}
+
+	// Only now, with the row shown to be the caller's to decide, is it locked —
+	// and the status the transition is decided from is read again UNDER that
+	// lock. Decided from the first read, two concurrent decisions both see
+	// `paid`, both pass the lifecycle check below, and each writes its own
+	// reversal. Under the lock the second one reads the first one's result and
+	// is refused as the illegal transition it now is.
+	if _, err := storekit.LockRow(ctx, tx, "commission_entry", id.UUID, storekit.NoArchiveColumn); err != nil {
+		return crmcontracts.CommissionEntry{}, err
+	}
+	if current, err = readForDecision(ctx, tx, id, void); err != nil {
 		return crmcontracts.CommissionEntry{}, err
 	}
 
@@ -170,6 +165,14 @@ func decideTx(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID, in Decid
 	}
 	// The same scope the read at the top took: a void's own answer must not be
 	// the not-found its subject would read as through the default clause.
+	return readForDecision(ctx, tx, id, void)
+}
+
+// readForDecision reads the entry under the scope its decision takes: a void
+// reaches an entry on an archived deal, every other decision does not. Direct
+// calls rather than a chosen function value, for the reason readRetractableEntry
+// gives — the censuses read the call graph.
+func readForDecision(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID, void bool) (crmcontracts.CommissionEntry, error) {
 	if void {
 		return readRetractableEntry(ctx, tx, id)
 	}
