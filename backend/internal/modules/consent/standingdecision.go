@@ -7,7 +7,7 @@ package consent
 // make another.
 //
 // One review carries one decision — the unique key says so — which is right:
-// two people deciding one message independently is the thing that must not
+// two colleagues deciding one message independently is the thing that must not
 // happen. But it means a decision nobody can spend BLOCKS the review, and the
 // caller has to be told which case they are in or they press the same button
 // forever.
