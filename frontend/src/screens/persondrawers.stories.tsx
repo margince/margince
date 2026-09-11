@@ -99,3 +99,55 @@ export const NotConnected: Story = {
     return drawer();
   },
 };
+
+/** The run is in flight: a provider was asked and has not yet answered, so the
+ *  drawer says it is reading rather than showing an empty result. */
+export const Loading: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read"] }),
+      // A request that never settles holds the query in its loading state.
+      "POST /people/p-1/research": () => new Promise<Response>(() => {}),
+    });
+    return drawer();
+  },
+};
+
+// A long run: enough staged claims, some with long bodies, that the drawer body
+// must scroll under a pinned head and foot. This is the overflow case — the
+// footer's Save must stay reachable however many claims a run returns.
+const longClaims = Array.from({ length: 9 }, (_, index) => ({
+  ordinal: index + 1,
+  body:
+    index % 3 === 0
+      ? "Leads the procurement function across the DACH region, with sign-off on fleet contracts above six figures and a seat on the sustainability steering group that sets the electrification targets."
+      : `Cited fact ${index + 1} about the contact, read from a public source.`,
+  confidence: index % 2 === 0 ? "high" : "medium",
+  sources: [
+    {
+      label: `Source ${index + 1}`,
+      url: `https://example.com/source-${index + 1}`,
+      quote: `Verbatim passage ${index + 1} the claim was read from.`,
+    },
+  ],
+}));
+
+/** Many staged claims, some long: the body scrolls under a pinned head and foot
+ *  so the Save action never leaves the viewport. */
+export const ManyClaims: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read"] }),
+      "POST /people/p-1/research": () =>
+        jsonResponse({
+          person_id: "p-1",
+          state: "ready",
+          provider_name: "Clearbit",
+          generated_at: "2026-08-18T09:00:00Z",
+          sources_read: 12,
+          claims: longClaims,
+        }),
+    });
+    return drawer();
+  },
+};

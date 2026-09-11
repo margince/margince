@@ -195,4 +195,22 @@ describe("the research drawer mapping claims to profile fields", () => {
     await waitFor(() => expect(closed).toBe(true));
     expect(saved).toHaveLength(1);
   });
+
+  it("closes on Escape, discarding the staged claims like every dialog", async () => {
+    // The drawer is a Modal, so Escape is its way out — a reader who opened it
+    // to look and decided not to save leaves the record untouched by pressing
+    // Escape, and no claim is posted on the way.
+    const user = userEvent.setup();
+    const saved: unknown[] = [];
+    let closed = false;
+    mountReady(saved, () => {
+      closed = true;
+    });
+
+    await screen.findByText(acmeClaim.body);
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(closed).toBe(true));
+    expect(saved).toHaveLength(0);
+  });
 });
