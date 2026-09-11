@@ -46,7 +46,7 @@ type UpdateAssignmentInput struct {
 	RoleID      *ids.UUID
 }
 
-// CreateAssignment makes a person or team responsible for a record.
+// CreateAssignment makes a colleague or team responsible for a record.
 func (s *Store) CreateAssignment(
 	ctx context.Context, in CreateAssignmentInput,
 ) (crmcontracts.RecordAssignment, error) {

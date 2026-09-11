@@ -18831,7 +18831,7 @@ type AssignLeadsResult struct {
 // AssignmentRecordType The kind of record an assignment hangs on.
 type AssignmentRecordType string
 
-// AssignmentSubjectKind Whether the responsible party is one person or a whole team.
+// AssignmentSubjectKind Whether the responsible party is one colleague or a whole team.
 type AssignmentSubjectKind string
 
 // AssistantConfiguredModel defines model for AssistantConfiguredModel.
@@ -25861,7 +25861,7 @@ type CreateRecordAssignmentRequest struct {
 	RoleId    openapi_types.UUID `json:"role_id"`
 	SubjectId openapi_types.UUID `json:"subject_id"`
 
-	// SubjectKind Whether the responsible party is one person or a whole team.
+	// SubjectKind Whether the responsible party is one colleague or a whole team.
 	SubjectKind AssignmentSubjectKind `json:"subject_kind"`
 }
 
@@ -32552,7 +32552,7 @@ type RecordAssignment struct {
 	// SubjectInactive True when the assigned user is deactivated. The assignment stays and keeps its label, so history stays readable; it simply reads as needing a successor.
 	SubjectInactive *bool `json:"subject_inactive,omitempty"`
 
-	// SubjectKind Whether the responsible party is one person or a whole team.
+	// SubjectKind Whether the responsible party is one colleague or a whole team.
 	SubjectKind AssignmentSubjectKind `json:"subject_kind"`
 
 	// SubjectName Resolved server-side so the row renders without a second lookup.
@@ -32736,7 +32736,7 @@ type RecordQualifyingEventRequest struct {
 // answer to a question the data already settles.
 type RecordQualifyingEventRequestKind string
 
-// RecordRole One administered responsibility a person or team can hold on a record. The role says WHAT someone is responsible for; it grants no access of its own.
+// RecordRole One administered responsibility a colleague or team can hold on a record. The role says WHAT someone is responsible for; it grants no access of its own.
 type RecordRole struct {
 	// Active False is retired: existing assignments keep rendering their label, but the role is refused for a new assignment.
 	Active bool `json:"active"`
@@ -36261,7 +36261,7 @@ type UpdateRecordAssignmentRequest struct {
 	RoleId    *openapi_types.UUID `json:"role_id,omitempty"`
 	SubjectId *openapi_types.UUID `json:"subject_id,omitempty"`
 
-	// SubjectKind Whether the responsible party is one person or a whole team.
+	// SubjectKind Whether the responsible party is one colleague or a whole team.
 	SubjectKind *AssignmentSubjectKind `json:"subject_kind,omitempty"`
 }
 
@@ -54198,7 +54198,7 @@ type ServerInterface interface {
 	// Who is responsible for this record, by role.
 	// (GET /records/{record_type}/{record_id}/assignments)
 	ListRecordAssignments(w http.ResponseWriter, r *http.Request, recordType AssignmentRecordType, recordId openapi_types.UUID)
-	// Make a person or team responsible for this record.
+	// Make a colleague or team responsible for this record.
 	// (POST /records/{record_type}/{record_id}/assignments)
 	CreateRecordAssignment(w http.ResponseWriter, r *http.Request, recordType AssignmentRecordType, recordId openapi_types.UUID, params CreateRecordAssignmentParams)
 	// List relationships (employment, deal_stakeholder, or partner edges).
@@ -57666,7 +57666,7 @@ func (_ Unimplemented) ListRecordAssignments(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Make a person or team responsible for this record.
+// Make a colleague or team responsible for this record.
 // (POST /records/{record_type}/{record_id}/assignments)
 func (_ Unimplemented) CreateRecordAssignment(w http.ResponseWriter, r *http.Request, recordType AssignmentRecordType, recordId openapi_types.UUID, params CreateRecordAssignmentParams) {
 	w.WriteHeader(http.StatusNotImplemented)

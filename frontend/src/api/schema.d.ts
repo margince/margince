@@ -5599,7 +5599,7 @@ export interface paths {
         };
         /**
          * List responsibility roles, active and retired, in display order.
-         * @description The administered vocabulary of responsibilities a person or team can hold on a
+         * @description The administered vocabulary of responsibilities a colleague or team can hold on a
          *     company, deal or project. A role names what someone is accountable for and grants
          *     no access: visibility stays with ownership and record grants. Retired roles are
          *     returned so an assignment still carrying one renders its label.
@@ -5660,7 +5660,7 @@ export interface paths {
         get: operations["listRecordAssignments"];
         put?: never;
         /**
-         * Make a person or team responsible for this record.
+         * Make a colleague or team responsible for this record.
          * @description Requires write access to the record itself, which is what makes this safe to
          *     expose beside it. The assignment grants the subject no access of its own.
          */
@@ -25405,7 +25405,7 @@ export interface components {
             sort_order?: number;
             active?: boolean;
         };
-        /** @description One administered responsibility a person or team can hold on a record. The role says WHAT someone is responsible for; it grants no access of its own. */
+        /** @description One administered responsibility a colleague or team can hold on a record. The role says WHAT someone is responsible for; it grants no access of its own. */
         RecordRole: {
             /** Format: uuid */
             id: string;
@@ -25436,7 +25436,7 @@ export interface components {
          */
         AssignmentRecordType: "company" | "deal" | "project";
         /**
-         * @description Whether the responsible party is one person or a whole team.
+         * @description Whether the responsible party is one colleague or a whole team.
          * @enum {string}
          */
         AssignmentSubjectKind: "user" | "team";

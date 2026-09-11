@@ -13,7 +13,7 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // Who is responsible for a record.
 //
 // The states worth seeing are the degraded ones. A retired role and a
-// deactivated person both keep their label here, because the row is history by
+// deactivated colleague both keep their label here, because the row is history by
 // then and a name that vanished would read as a bug rather than as a
 // responsibility waiting for a successor. The empty state has to say what puts
 // something there, or a reader takes it for a broken panel.
@@ -70,7 +70,7 @@ function Served({
   );
 }
 
-/** An ordinary record: two people and a team, each under its own role. */
+/** An ordinary record: two colleagues and a team, each under its own role. */
 export const Staffed: Story = {
   render: () => (
     <Served
@@ -101,10 +101,10 @@ export const Staffed: Story = {
 };
 
 /**
- * The two rows that must keep rendering: a role somebody retired, and a person
+ * The two rows that must keep rendering: a role somebody retired, and a colleague
  * who has left. Both stay readable, and both say why they need attention.
  */
-export const RetiredRoleAndInactivePerson: Story = {
+export const RetiredRoleAndInactiveColleague: Story = {
   render: () => (
     <Served
       rows={[
