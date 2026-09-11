@@ -23,11 +23,14 @@ image_tag = "2026.09.01"
 
 # aws_region               = "eu-central-1"
 # name_prefix              = "margince"
+# environment              = "production"  # stamped as the Environment tag on every resource
 # vpc_cidr                 = "10.20.0.0/16"
 # az_count                 = 2
 # cpu_architecture         = "ARM64"  # or "X86_64" if your own build only pushes amd64, see variables.tf
 # api_desired_count        = 2
 # worker_desired_count     = 1
+# api_autoscaling_max_count    = 4
+# worker_autoscaling_max_count = 3
 # web_desired_count        = 2
 # api_cpu                  = 512
 # api_memory               = 1024

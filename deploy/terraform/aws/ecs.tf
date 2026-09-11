@@ -12,6 +12,7 @@ resource "aws_ecr_repository" "api" {
     encryption_type = "KMS"
     kms_key         = aws_kms_key.data.arn
   }
+  tags = { Name = "${var.name_prefix}-api", Component = "container-registry" }
 }
 
 resource "aws_ecr_repository" "worker" {
@@ -22,6 +23,7 @@ resource "aws_ecr_repository" "worker" {
     encryption_type = "KMS"
     kms_key         = aws_kms_key.data.arn
   }
+  tags = { Name = "${var.name_prefix}-worker", Component = "container-registry" }
 }
 
 resource "aws_ecr_repository" "web" {
@@ -32,6 +34,7 @@ resource "aws_ecr_repository" "web" {
     encryption_type = "KMS"
     kms_key         = aws_kms_key.data.arn
   }
+  tags = { Name = "${var.name_prefix}-web", Component = "container-registry" }
 }
 
 # IMMUTABLE tags mean every push accumulates rather than overwrites — an
@@ -71,6 +74,28 @@ resource "aws_ecr_lifecycle_policy" "web" {
   policy     = local.untagged_expiry_policy
 }
 
+# Registry-level, not repository-level, and scoped to only THIS stack's
+# repos: aws_ecr_registry_scanning_configuration is a singleton per
+# account+region — applying an unscoped rule here would silently start
+# billing and scanning every OTHER repo in the account too, not just the
+# three this stack owns. Enhanced scanning (continuous, Inspector-backed)
+# supersedes each repo's own scan_on_push for any repo the filter below
+# matches — it re-scans on every new CVE disclosure, not only at push time,
+# which scan_on_push alone never catches for an image already sitting in the
+# repo. This is a metered feature (Inspector charges per image scanned) on
+# top of the basic scanning this stack shipped with — see deploy/terraform/aws/README.md.
+resource "aws_ecr_registry_scanning_configuration" "this" {
+  scan_type = "ENHANCED"
+
+  rule {
+    scan_frequency = "CONTINUOUS_SCAN"
+    repository_filter {
+      filter      = "${var.name_prefix}/*"
+      filter_type = "WILDCARD"
+    }
+  }
+}
+
 resource "aws_ecs_cluster" "this" {
   name = "${var.name_prefix}-cluster"
 
@@ -78,6 +103,8 @@ resource "aws_ecs_cluster" "this" {
     name  = "containerInsights"
     value = "enabled"
   }
+
+  tags = { Name = "${var.name_prefix}-cluster", Component = "compute" }
 }
 
 locals {
@@ -126,7 +153,7 @@ resource "aws_ecs_task_definition" "api" {
   cpu                      = var.api_cpu
   memory                   = var.api_memory
   execution_role_arn       = aws_iam_role.execution.arn
-  task_role_arn            = aws_iam_role.task.arn
+  task_role_arn            = aws_iam_role.task_api.arn
 
   runtime_platform {
     cpu_architecture        = var.cpu_architecture
@@ -145,12 +172,21 @@ resource "aws_ecs_task_definition" "api" {
     }
   }
 
+  tags = { Name = "${var.name_prefix}-api", Component = "compute-api" }
+
   container_definitions = jsonencode([
     {
-      name         = "api"
-      image        = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
-      essential    = true
-      portMappings = [{ containerPort = 8080, protocol = "tcp" }]
+      name      = "api"
+      image     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
+      essential = true
+      # The image already runs as a non-root user (Dockerfile's `USER app`);
+      # this drops every Linux capability the root user itself would have
+      # had, on top of that — a statically-linked Go binary with no cgo needs
+      # none of them, and Fargate's own restrictions (no privileged, no
+      # capability additions beyond CAP_SYS_PTRACE) mean this can only narrow
+      # further, never conflict with something the platform already grants.
+      linuxParameters = { capabilities = { drop = ["ALL"] } }
+      portMappings    = [{ containerPort = 8080, protocol = "tcp" }]
       # Fargate default is 30s; the api's own shutdown is graceful (it stops
       # its listener LAST, per docs/reference/configuration.md), so it is
       # worth more than the default to let in-flight requests actually drain
@@ -182,7 +218,7 @@ resource "aws_ecs_task_definition" "worker" {
   cpu                      = var.worker_cpu
   memory                   = var.worker_memory
   execution_role_arn       = aws_iam_role.execution.arn
-  task_role_arn            = aws_iam_role.task.arn
+  task_role_arn            = aws_iam_role.task_worker.arn
 
   runtime_platform {
     cpu_architecture        = var.cpu_architecture
@@ -201,11 +237,15 @@ resource "aws_ecs_task_definition" "worker" {
     }
   }
 
+  tags = { Name = "${var.name_prefix}-worker", Component = "compute-worker" }
+
   container_definitions = jsonencode([
     {
       name      = "worker"
       image     = "${aws_ecr_repository.worker.repository_url}:${var.image_tag}"
       essential = true
+      # Same reasoning as api's own linuxParameters.
+      linuxParameters = { capabilities = { drop = ["ALL"] } }
       # Same reasoning as api's — graceful shutdown (in-flight subscriber
       # handlers finish their ack before exit, per configuration.md) is worth
       # more time than Fargate's 30s default.
@@ -247,19 +287,26 @@ resource "aws_ecs_task_definition" "web" {
   # execution_web, not execution: web reads no secrets, so it gets no path to
   # any (see iam.tf).
   execution_role_arn = aws_iam_role.execution_web.arn
-  task_role_arn      = aws_iam_role.task.arn
+  task_role_arn      = aws_iam_role.task_web.arn
 
   runtime_platform {
     cpu_architecture        = var.cpu_architecture
     operating_system_family = "LINUX"
   }
 
+  tags = { Name = "${var.name_prefix}-web", Component = "compute-web" }
+
   container_definitions = jsonencode([
     {
-      name         = "web"
-      image        = "${aws_ecr_repository.web.repository_url}:${var.image_tag}"
-      essential    = true
-      portMappings = [{ containerPort = 8080, protocol = "tcp" }]
+      name      = "web"
+      image     = "${aws_ecr_repository.web.repository_url}:${var.image_tag}"
+      essential = true
+      # Same reasoning as api's own linuxParameters — nginx-unprivileged
+      # (Dockerfile's `web` stage) already needs none of the capabilities
+      # this drops: port 8080 is unprivileged, and the base image is built
+      # to run without CAP_NET_BIND_SERVICE or any other addition.
+      linuxParameters = { capabilities = { drop = ["ALL"] } }
+      portMappings    = [{ containerPort = 8080, protocol = "tcp" }]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -302,7 +349,16 @@ resource "aws_ecs_service" "api" {
   }
   health_check_grace_period_seconds = 60
 
+  tags = { Name = "${var.name_prefix}-api", Component = "compute-api" }
+
   depends_on = [aws_lb_listener.https]
+
+  # desired_count is the FLOOR the appautoscaling_target below scales from,
+  # not the steady-state value — without this, every apply would fight the
+  # autoscaler back down to api_desired_count the moment it had scaled out.
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
 }
 
 resource "aws_ecs_service" "worker" {
@@ -323,6 +379,72 @@ resource "aws_ecs_service" "worker" {
   deployment_circuit_breaker {
     enable   = true
     rollback = true
+  }
+
+  tags = { Name = "${var.name_prefix}-worker", Component = "compute-worker" }
+
+  # Same reasoning as aws_ecs_service.api's own ignore_changes.
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+}
+
+# ---- Application Auto Scaling -------------------------------------------------
+# desired_count above is each service's FLOOR, not its steady-state size —
+# without a scaling policy it is also the ceiling, which means a traffic
+# spike (api) or a queue backlog (worker) has nowhere to go but slower
+# responses and growing lag. Target tracking on CPU rather than a custom
+# metric: this stack has no queue-depth metric of its own to track yet, and
+# CPU is the honest floor every workload here already emits for free.
+resource "aws_appautoscaling_target" "api" {
+  service_namespace  = "ecs"
+  resource_id        = "service/${aws_ecs_cluster.this.name}/${aws_ecs_service.api.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  min_capacity       = var.api_desired_count
+  max_capacity       = var.api_autoscaling_max_count
+}
+
+resource "aws_appautoscaling_policy" "api_cpu" {
+  name               = "${var.name_prefix}-api-cpu"
+  policy_type        = "TargetTrackingScaling"
+  service_namespace  = aws_appautoscaling_target.api.service_namespace
+  resource_id        = aws_appautoscaling_target.api.resource_id
+  scalable_dimension = aws_appautoscaling_target.api.scalable_dimension
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value       = 70
+    scale_in_cooldown  = 300
+    scale_out_cooldown = 60
+  }
+}
+
+resource "aws_appautoscaling_target" "worker" {
+  service_namespace  = "ecs"
+  resource_id        = "service/${aws_ecs_cluster.this.name}/${aws_ecs_service.worker.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  min_capacity       = var.worker_desired_count
+  max_capacity       = var.worker_autoscaling_max_count
+}
+
+resource "aws_appautoscaling_policy" "worker_cpu" {
+  name               = "${var.name_prefix}-worker-cpu"
+  policy_type        = "TargetTrackingScaling"
+  service_namespace  = aws_appautoscaling_target.worker.service_namespace
+  resource_id        = aws_appautoscaling_target.worker.resource_id
+  scalable_dimension = aws_appautoscaling_target.worker.scalable_dimension
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value      = 70
+    scale_in_cooldown = 300
+    # Worker backlog (event relay consumers) builds up faster than api
+    # request queueing does under the same CPU pressure — scale out sooner.
+    scale_out_cooldown = 30
   }
 }
 
@@ -350,6 +472,8 @@ resource "aws_ecs_service" "web" {
     rollback = true
   }
   health_check_grace_period_seconds = 60
+
+  tags = { Name = "${var.name_prefix}-web", Component = "compute-web" }
 
   depends_on = [aws_lb_listener.https]
 }

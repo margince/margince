@@ -10,6 +10,73 @@ resource "aws_vpc" "this" {
   tags = { Name = "${var.name_prefix}-vpc" }
 }
 
+# ---- VPC Flow Logs -----------------------------------------------------------
+# Every security group in this file (alb/ecs_tasks/db/redis/efs/vpc_endpoints)
+# is a set of claims about what traffic is allowed — nothing in this stack
+# records what traffic actually FLOWED, accepted or rejected, until this.
+# Without it, "was this SG rule ever hit" or "what tried to reach the db SG
+# and got refused" during an incident has no answer at all.
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name              = "/vpc-flow-logs/${var.name_prefix}"
+  retention_in_days = var.log_retention_days
+  tags              = { Name = "${var.name_prefix}-vpc-flow-logs", Component = "observability" }
+}
+
+data "aws_iam_policy_document" "vpc_flow_logs_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["vpc-flow-logs.amazonaws.com"]
+    }
+    # Same confused-deputy reasoning as iam.tf's ecs_assume: a bare service
+    # principal trusts vpc-flow-logs.amazonaws.com everywhere, not just this
+    # account's own flow logs delivering to this role.
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = ["arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:vpc-flow-log/*"]
+    }
+  }
+}
+
+resource "aws_iam_role" "vpc_flow_logs" {
+  name               = "${var.name_prefix}-vpc-flow-logs"
+  assume_role_policy = data.aws_iam_policy_document.vpc_flow_logs_assume.json
+  tags               = { Name = "${var.name_prefix}-vpc-flow-logs", Component = "security" }
+}
+
+data "aws_iam_policy_document" "vpc_flow_logs_delivery" {
+  statement {
+    sid     = "WriteFlowLogs"
+    actions = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups", "logs:DescribeLogStreams"]
+    resources = [
+      aws_cloudwatch_log_group.vpc_flow_logs.arn,
+      "${aws_cloudwatch_log_group.vpc_flow_logs.arn}:*",
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "vpc_flow_logs_delivery" {
+  name   = "${var.name_prefix}-vpc-flow-logs-delivery"
+  role   = aws_iam_role.vpc_flow_logs.id
+  policy = data.aws_iam_policy_document.vpc_flow_logs_delivery.json
+}
+
+resource "aws_flow_log" "this" {
+  vpc_id               = aws_vpc.this.id
+  traffic_type         = "ALL"
+  log_destination_type = "cloud-watch-logs"
+  log_destination      = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  iam_role_arn         = aws_iam_role.vpc_flow_logs.arn
+  tags                 = { Name = "${var.name_prefix}-vpc-flow-log", Component = "observability" }
+}
+
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
   tags   = { Name = "${var.name_prefix}-igw" }
@@ -87,6 +154,7 @@ resource "aws_route_table_association" "private" {
 resource "aws_security_group" "alb" {
   name_prefix = "${var.name_prefix}-alb-"
   vpc_id      = aws_vpc.this.id
+  tags        = { Name = "${var.name_prefix}-alb", Component = "network" }
 
   ingress {
     description = "HTTPS from the internet"
@@ -124,6 +192,7 @@ resource "aws_security_group" "alb" {
 resource "aws_security_group" "ecs_tasks" {
   name_prefix = "${var.name_prefix}-ecs-"
   vpc_id      = aws_vpc.this.id
+  tags        = { Name = "${var.name_prefix}-ecs-tasks", Component = "network" }
 
   ingress {
     description     = "ALB to api/web containers"
@@ -189,6 +258,7 @@ resource "aws_security_group" "ecs_tasks" {
 resource "aws_security_group" "db" {
   name_prefix = "${var.name_prefix}-db-"
   vpc_id      = aws_vpc.this.id
+  tags        = { Name = "${var.name_prefix}-db", Component = "database" }
 
   ingress {
     description     = "Postgres from ECS tasks"
@@ -211,6 +281,7 @@ resource "aws_security_group" "db" {
 resource "aws_security_group" "redis" {
   name_prefix = "${var.name_prefix}-redis-"
   vpc_id      = aws_vpc.this.id
+  tags        = { Name = "${var.name_prefix}-redis", Component = "cache" }
 
   ingress {
     description     = "Redis from ECS tasks"
@@ -229,6 +300,7 @@ resource "aws_security_group" "redis" {
 resource "aws_security_group" "efs" {
   name_prefix = "${var.name_prefix}-efs-"
   vpc_id      = aws_vpc.this.id
+  tags        = { Name = "${var.name_prefix}-efs", Component = "storage" }
 
   ingress {
     description     = "NFS from ECS tasks"
@@ -247,6 +319,7 @@ resource "aws_security_group" "efs" {
 resource "aws_db_subnet_group" "this" {
   name       = "${var.name_prefix}-db"
   subnet_ids = aws_subnet.private[*].id
+  tags       = { Name = "${var.name_prefix}-db", Component = "database" }
 }
 
 resource "aws_elasticache_subnet_group" "this" {

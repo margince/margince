@@ -7,7 +7,30 @@ resource "aws_efs_file_system" "config" {
   encrypted      = true
   kms_key_id     = aws_kms_key.data.arn
 
-  tags = { Name = "${var.name_prefix}-config" }
+  tags = { Name = "${var.name_prefix}-config", Component = "storage" }
+
+  # EFS has no AWS-native deletion_protection the way RDS does (rds.tf) — this
+  # is the Terraform-level guard against an accidental `terraform destroy`
+  # wiping the operator-provisioned margince.yaml (README step 4). The backup
+  # policy above covers recovery either way; this stops the accident before
+  # it needs recovering from.
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# AWS Backup coverage for this file system — new EFS file systems default to
+# no backup plan, which would make the operator-provisioned margince.yaml
+# (this stack's README documents the one-time `cp` onto the access point)
+# unrecoverable from anything but redoing that step by hand. Same recovery
+# reasoning RDS/ElastiCache already get (rds.tf's backup_retention_period,
+# elasticache.tf's snapshot_retention_limit) — daily automatic backups via
+# the account's default AWS Backup plan.
+resource "aws_efs_backup_policy" "config" {
+  file_system_id = aws_efs_file_system.config.id
+  backup_policy {
+    status = "ENABLED"
+  }
 }
 
 resource "aws_efs_mount_target" "config" {
@@ -58,5 +81,5 @@ resource "aws_efs_access_point" "config" {
     }
   }
 
-  tags = { Name = "${var.name_prefix}-config" }
+  tags = { Name = "${var.name_prefix}-config", Component = "storage" }
 }

@@ -15,11 +15,13 @@ resource "aws_vpc_endpoint" "s3" {
   service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = aws_route_table.private[*].id
+  tags              = { Name = "${var.name_prefix}-s3", Component = "network" }
 }
 
 resource "aws_security_group" "vpc_endpoints" {
   name_prefix = "${var.name_prefix}-vpce-"
   vpc_id      = aws_vpc.this.id
+  tags        = { Name = "${var.name_prefix}-vpce", Component = "network" }
 
   ingress {
     description     = "HTTPS from ECS tasks"
@@ -57,4 +59,5 @@ resource "aws_vpc_endpoint" "interface" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
+  tags                = { Name = "${var.name_prefix}-${each.value}", Component = "network" }
 }

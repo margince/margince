@@ -10,6 +10,17 @@ variable "name_prefix" {
   default     = "margince"
 }
 
+variable "environment" {
+  description = <<-EOT
+    Stamped onto every resource's Environment tag (provider default_tags,
+    versions.tf) — the dimension a cost/operations tool groups this stack's
+    spend and automation by when the same name_prefix is reused across more
+    than one environment (a staging copy of "margince", say).
+  EOT
+  type        = string
+  default     = "production"
+}
+
 variable "vpc_cidr" {
   description = "CIDR block for the VPC this stack creates."
   type        = string
@@ -90,6 +101,18 @@ variable "api_desired_count" {
 variable "worker_desired_count" {
   type    = number
   default = 1
+}
+
+variable "api_autoscaling_max_count" {
+  description = "Ceiling for api's CPU-based Application Auto Scaling target (ecs.tf) — api_desired_count is the floor."
+  type        = number
+  default     = 4
+}
+
+variable "worker_autoscaling_max_count" {
+  description = "Ceiling for worker's CPU-based Application Auto Scaling target (ecs.tf) — worker_desired_count is the floor."
+  type        = number
+  default     = 3
 }
 
 variable "web_desired_count" {

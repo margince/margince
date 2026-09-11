@@ -41,11 +41,13 @@ resource list, the security posture, and how to use it.
 
 ## What this does NOT cover
 
-Autoscaling policies beyond a fixed desired count, multi-region/HA, a WAF in
-front of the routing layer, and disaster recovery / backup-restore runbooks
-are out of scope — each is a real decision (retention window, RPO/RTO, which
-regions) that belongs to the operator standing this up, not a default this
-reference should pick for them.
+Autoscaling policies beyond a fixed desired count, multi-region/HA, and
+disaster recovery / backup-restore runbooks are out of scope — each is a real
+decision (retention window, RPO/RTO, which regions) that belongs to the
+operator standing this up, not a default this reference should pick for them.
+(The AWS stack's own baseline WAF rules — see [`aws/README.md`](aws/README.md)
+— are a floor every deployment gets, not a substitute for tuning rules to an
+operator's own traffic.)
 
 ## Using the stack
 

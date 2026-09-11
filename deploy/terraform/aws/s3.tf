@@ -8,6 +8,16 @@
 
 resource "aws_s3_bucket" "blobstore" {
   bucket = "${var.name_prefix}-blobstore"
+  tags   = { Name = "${var.name_prefix}-blobstore", Component = "storage" }
+
+  # S3 already refuses to delete a non-empty bucket, and versioning (below)
+  # means "non-empty" includes every noncurrent version too — but this is the
+  # CRM's one attachment store, and prevent_destroy stops the mistake at
+  # `terraform plan` rather than relying on that API-level refusal as the
+  # only backstop.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # BucketOwnerEnforced disables ACLs entirely — every access decision runs
@@ -75,6 +85,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "blobstore" {
       noncurrent_days = 90
     }
   }
+}
+
+# Every other layer in this stack (ALB, VPC flow, WAF, RDS, ElastiCache) now
+# has a request-level or connection-level audit trail (network.tf, elasticache.tf,
+# rds.tf, alb.tf) — without this, the one thing that actually holds customer
+# attachments had none. Delivered into alb.tf's aws_s3_bucket.alb_logs under
+# its own "s3/" prefix, per that bucket's own bucket policy statement.
+resource "aws_s3_bucket_logging" "blobstore" {
+  bucket        = aws_s3_bucket.blobstore.id
+  target_bucket = aws_s3_bucket.alb_logs.id
+  target_prefix = "s3/"
 }
 
 resource "aws_s3_bucket_versioning" "blobstore" {
@@ -149,6 +170,7 @@ resource "aws_s3_bucket_policy" "blobstore_tls_only" {
 
 resource "aws_iam_user" "blobstore" {
   name = "${var.name_prefix}-blobstore"
+  tags = { Name = "${var.name_prefix}-blobstore", Component = "security" }
 }
 
 resource "aws_iam_access_key" "blobstore" {

@@ -19,6 +19,7 @@ resource "aws_kms_key" "data" {
   description             = "${var.name_prefix} — CMK for RDS/ElastiCache/S3/EFS/Secrets Manager/ECR at rest"
   enable_key_rotation     = true
   deletion_window_in_days = 30
+  tags                    = { Name = "${var.name_prefix}-data", Component = "security" }
 }
 
 resource "aws_kms_alias" "data" {

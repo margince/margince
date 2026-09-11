@@ -42,6 +42,19 @@ output "kms_key_arn" {
   value = aws_kms_key.data.arn
 }
 
+output "alerts_topic_arn" {
+  description = "Subscribe your own alert destination — alarms.tf's own comment has the aws sns subscribe command."
+  value       = aws_sns_topic.alerts.arn
+}
+
+output "waf_web_acl_arn" {
+  value = aws_wafv2_web_acl.alb.arn
+}
+
+output "alb_access_log_bucket" {
+  value = aws_s3_bucket.alb_logs.bucket
+}
+
 output "secret_arns" {
   description = "Secrets Manager ARNs (not values) for every credential this stack seals."
   value = {
