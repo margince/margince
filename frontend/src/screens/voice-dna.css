@@ -87,7 +87,7 @@
 }
 
 .vdna-notice-warn {
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 /* The speaker question sits above the composer: until it is answered the file

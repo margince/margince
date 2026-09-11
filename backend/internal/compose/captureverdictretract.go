@@ -26,27 +26,47 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// retractSendersContacts withdraws the capture-only records of a sender a
-// noise verdict just covered, on the verdict's own transaction — a row cannot
-// read `noise` while the contact it disowns survives a failed second write.
+// The two bounds a caller can put on whose records a verdict may withdraw.
 //
-// The caller has already established the sender is NOT one the workspace
+// retractEveryOwners is for an answer about the ADDRESS: a newsletter is noise
+// in every mailbox it reaches, so a colleague's copy of the record goes too.
+// retractOwnersOnly is for an answer about one SEAT — the owner's own keep_out,
+// and the `personal` kind, which says this mailbox's correspondence with the
+// address is private. Neither says anything about a colleague who genuinely
+// does business with them, and archiving a colleague's contact on one seat's
+// private conversation would be this feature causing the harm it exists to
+// prevent.
+//
+// TestAKeepOutRetractsOnlyTheDecidersOwnContact holds the narrow bound. It
+// cannot be held twice over: `uq_person_email_dedupe` makes an address unique
+// across live records, so a second seat's copy of one address is a state this
+// installation cannot reach — the bound matters for the OTHER shapes a
+// colleague's record takes, which is why it is a constant rather than a
+// comment.
+const (
+	retractEveryOwners = false
+	retractOwnersOnly  = true
+)
+
+// retractSendersContacts withdraws the machine-made records of a sender a
+// verdict just covered, on the verdict's own transaction — a row cannot read
+// `noise` while the contact it disowns survives a failed second write.
+//
+// The NOISE caller has already established the sender is not one the workspace
 // corresponds with; an address it has provably written to keeps its record
-// whatever the classifier called one message.
+// whatever the classifier called one message. The `personal` caller draws no
+// such bound, for the reason its arm gives.
 //
-// ownerSaidSo narrows it further. A `keep out` is a statement about the
-// decider's own mailbox, so it may retract only the record minted for THEM —
-// a colleague who captured the same address keeps theirs, exactly as their
-// mail keeps arriving.
+// ownersOnly narrows it to one seat, per the constants above.
 func (e *CounterpartyVerdictEngine) retractSendersContacts(
-	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, ownerSaidSo bool,
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, ownersOnly bool,
 ) error {
 	holders, err := e.people.CaptureOnlyHoldersOfAddressTx(ctx, tx, row.Email)
 	if err != nil {
 		return err
 	}
 	for _, h := range holders {
-		if ownerSaidSo && h.OwnerID != row.OwnerID {
+		if ownersOnly && h.OwnerID != row.OwnerID {
 			continue
 		}
 		retracted, err := e.people.RetractCaptureOnlyPersonTx(ctx, tx, h.PersonID, h.OwnerID)
@@ -54,7 +74,7 @@ func (e *CounterpartyVerdictEngine) retractSendersContacts(
 			return err
 		}
 		if retracted {
-			e.log.InfoContext(ctx, "counterparty verdict: retracted the contact a noise sender had been given",
+			e.log.InfoContext(ctx, "counterparty verdict: withdrew the contact a disowned sender had been given",
 				"person", h.PersonID.String())
 		}
 	}
@@ -92,13 +112,20 @@ func (w *linkReconcileWorker) retractNoiseJudgedContacts(ctx context.Context) (i
 			// The scan committed before this transaction opened, so both the
 			// answer that selected the contact and the correspondence bound
 			// are re-read here, where the archive can still be called off.
-			stands, err := w.pending.NoiseJudgedStandsTx(ctx, tx, c.Email, c.OwnerID)
-			if err != nil || !stands {
+			standing, err := w.pending.NoiseJudgedStandsTx(ctx, tx, c.Email, c.OwnerID)
+			if err != nil || !standing.Stands {
 				return err
 			}
-			corresponds, err := w.pending.CorrespondsWith(ctx, tx, c.Email)
-			if err != nil || corresponds {
-				return err
+			// Correspondence is the bound that can change after a NOISE
+			// answer, and only after one. A `personal` verdict is about whose
+			// life the mail belongs to, and a later reply from the owner is
+			// what that correspondence looks like rather than evidence
+			// against it.
+			if standing.Kind != capture.KindPersonal {
+				corresponds, err := w.pending.CorrespondsWith(ctx, tx, c.Email)
+				if err != nil || corresponds {
+					return err
+				}
 			}
 			done, err := w.store.RetractCaptureOnlyPersonTx(ctx, tx, c.PersonID, c.OwnerID)
 			if err != nil {

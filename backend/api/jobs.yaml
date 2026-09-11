@@ -181,6 +181,13 @@ queues:
     reason: >-
       A batch of agent runs, each entitled to the full RunWallClock — the
       longest pass in the tree.
+  capture_part_slim:
+    max_workers: 1
+    reason: >-
+      One object read per part plus an encode of those octets, for a bounded
+      batch — outbound-bound work that would hold a default worker for as long
+      as the object store takes to answer.
+
   privacy_retention:
     max_workers: 2
     reason: >-
@@ -1184,6 +1191,16 @@ kinds:
   # cap. The dispatcher enumerated EVERY workspace including archived ones,
   # because archiving does not un-store the subject data inside one — that
   # obligation is the pass's own now rather than the enumeration's.
+  capture_part_slim:
+    role: worker
+    go_type: CapturePartSlimArgs
+    queue: capture_part_slim
+    timeout: 15m
+    opts_owner: caller
+    cadence: 5m
+    registration: {when: [Blobstore], absent: registers_nothing}
+    args: {}
+
   privacy_retention:
     role: worker
     go_type: PrivacyRetentionArgs

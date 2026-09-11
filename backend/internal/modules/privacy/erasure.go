@@ -330,7 +330,7 @@ func anonymizeSubjectRows(
 	if err := scrubSubjectFromGraph(ctx, tx, personID, emails, identities, subjectName, linkedInHandles); err != nil {
 		return nil, err
 	}
-	if err := deleteConsentCapabilities(ctx, tx, personID); err != nil {
+	if err := deleteConsentCapabilities(ctx, tx, personID, emails); err != nil {
 		return nil, err
 	}
 	// Why this contact existed. It names one person, records what they did or

@@ -44,7 +44,7 @@
 /* The row's own failure sentence. A class rather than an inline style, so the
    danger tone is named in a stylesheet like every other colour in the tree. */
 .connector-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* Two badges answering one row — the status, and the send refusal that can ride

@@ -9223,6 +9223,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/communication-reviews/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * What a refused send was refused for, and for whom.
+         * @description A send the engine refused leaves a review behind, and the refusal answers its reference. This
+         *     is how a rep opens it: what was refused, which recipient it was refused for, and the reason
+         *     each one carries.
+         *
+         *     SCOPED TO THE INITIATOR. The row names the recipients of somebody's message and the reason
+         *     each was refused, which is a fact about those people — so this serves the person who pressed
+         *     Send and nobody else. A review belonging to somebody else answers 404 rather than 403,
+         *     because "forbidden" would confirm the id exists and that is itself a disclosure about a
+         *     message the caller may not see.
+         *
+         *     Human-only. An agent that could read these would enumerate one seat's refused correspondence.
+         */
+        get: operations["getCommunicationReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/data-subject-requests/{id}": {
         parameters: {
             query?: never;
@@ -26664,7 +26696,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "authentication_policy" | "oauth_application" | "seat_usage";
+        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -29119,6 +29151,43 @@ export interface components {
         TeamListResponse: {
             data: components["schemas"]["Team"][];
             page: components["schemas"]["PageInfo"];
+        };
+        /**
+         * @description One recipient's half of a refusal, as the engine gave it. The ADDRESS is here because a
+         *     reason code without one says a message was refused and not who for, which is the question
+         *     the rep is actually asking — and it is why an erasure clears this list.
+         */
+        RefusedRecipient: {
+            address: string;
+            /** @enum {string} */
+            subject_kind?: "person" | "lead";
+            /** Format: uuid */
+            subject_id?: string;
+            reason_code: string;
+            category?: string;
+        };
+        /**
+         * @description What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
+         *     given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
+         *     what the consent rows say today.
+         */
+        CommunicationReview: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
+             *     and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
+             *     answer — an objection, a dead address — where offering a context form would invite a rep
+             *     to argue with a withdrawal.
+             * @enum {string}
+             */
+            state: "needs_context" | "needs_repair" | "resolved" | "superseded" | "cancelled";
+            /** @enum {string} */
+            kind: "single";
+            /** @description The strongest reason across the recipients, so a queue can order without opening the snapshot. */
+            reason_code: string;
+            /** @description What was refused, per recipient. Empty once an erasure has cleared the subject from it. */
+            refusals: components["schemas"]["RefusedRecipient"][];
         };
         /** @description A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5). */
         DataSubjectRequest: {
@@ -47797,6 +47866,29 @@ export interface operations {
                     "application/json": components["schemas"]["DataSubjectRequest"];
                 };
             };
+        };
+    };
+    getCommunicationReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The review. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationReview"];
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     updateDataSubjectRequest: {

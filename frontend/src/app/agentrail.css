@@ -1046,7 +1046,7 @@
   font-weight: var(--fw-medium);
 }
 .arwarn {
-  color: var(--warn);
+  color: var(--warnText);
   font-weight: var(--fw-medium);
 }
 .arconn {

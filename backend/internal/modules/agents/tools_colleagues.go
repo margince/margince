@@ -23,6 +23,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -83,5 +84,58 @@ func (t listColleagues) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if colleagues == nil {
 		colleagues = []Colleague{}
 	}
-	return json.Marshal(ListColleaguesResult{Colleagues: colleagues, Truncated: truncated})
+	out := ListColleaguesResult{Colleagues: colleagues, Truncated: truncated}
+	if len(colleagues) == 0 && strings.TrimSpace(args.Q) != "" {
+		// TrimSpace because the roster read trims before deciding whether a
+		// narrowing was asked for at all; two spellings of "the caller narrowed"
+		// would disagree on `q` of "   ".
+		attachEveryColleague(ctx, t.list, &out)
+	}
+	return json.Marshal(out)
+}
+
+// CodeRosterUnreadable says the fallback roster could not be read, so an absent
+// `all_colleagues` is unknown rather than empty.
+const CodeRosterUnreadable = "colleague_roster_unreadable"
+
+// CodeNameMatchedNoColleague says the narrowing matched nobody and names what
+// the answer carries instead.
+const CodeNameMatchedNoColleague = "name_matched_no_colleague"
+
+// attachEveryColleague hands over the set the narrowing was matched against,
+// and says in the envelope what happened — the channel a degraded answer uses
+// here already (CodeSemanticRankingDegraded, CodeDuplicateCheckFailed), which
+// costs nothing until the miss and keeps the standing tool copy short.
+//
+// It returns nothing and cannot fail the call, for the reason reportDuplicates
+// gives: the question that was asked has already been answered correctly, and
+// throwing that away because a courtesy read failed hands the caller a tool
+// failure where it had a true answer.
+func attachEveryColleague(ctx context.Context, list ColleagueLister, out *ListColleaguesResult) {
+	everyone, truncated, err := list(ctx, "")
+	if err != nil {
+		noteWarning(ctx, CodeRosterUnreadable,
+			"Nobody here is spelled that way. The rest of the roster could not be read to show "+
+				"you who is, so treat this as unknown rather than as an empty workspace.")
+		return
+	}
+	if everyone == nil {
+		everyone = []Colleague{}
+	}
+	out.AllColleagues, out.AllColleaguesTruncated = &everyone, truncated
+	if len(everyone) == 0 {
+		noteWarning(ctx, CodeNameMatchedNoColleague,
+			"This workspace has no colleagues who can receive work.")
+		return
+	}
+	if truncated {
+		noteWarning(ctx, CodeNameMatchedNoColleague,
+			"Nobody here is spelled that way. `all_colleagues` is a CAPPED page of the roster, "+
+				"not all of it, so do not conclude from it that the person has no seat — narrow "+
+				"differently, on a surname or an email fragment.")
+		return
+	}
+	noteWarning(ctx, CodeNameMatchedNoColleague,
+		"Nobody here is spelled that way. `all_colleagues` is everyone who can receive work; "+
+			"pick from it, or tell the user the person has no seat.")
 }

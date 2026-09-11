@@ -402,7 +402,13 @@ func (e *CounterpartyVerdictEngine) apply(
 			if corresponds {
 				return nil
 			}
-			return e.retractSendersContacts(ctx, tx, row, ownerSaidSo)
+			// An owner's own keep_out claims only their record; a machine's
+			// noise answer is about the address and reaches every seat's.
+			ownersOnly := retractEveryOwners
+			if ownerSaidSo {
+				ownersOnly = retractOwnersOnly
+			}
+			return e.retractSendersContacts(ctx, tx, row, ownersOnly)
 		case capture.KindAdvisor:
 			// A genuine contact who is the OWNER's. The record is made — a
 			// founder's lawyer is somebody they correspond with — and stays
@@ -411,16 +417,24 @@ func (e *CounterpartyVerdictEngine) apply(
 			triageDomain, err = e.createOwnerScopedCounterparty(ctx, tx, row)
 			return err
 		case capture.KindPersonal:
-			// No record at all: a family member is not a counterparty of the
-			// business. The mail itself is not destroyed here — the purge that
-			// does that is its own change, with an undo window in front of it —
-			// so this withholds the record and leaves the thread to the
+			// No record, and none kept: a family member is not a counterparty
+			// of the business, and one minted before this answer arrived is
+			// withdrawn now. The mail itself is not destroyed here — the purge
+			// that does that is its own change, with an undo window in front of
+			// it — so this withdraws the record and leaves the thread to the
 			// mailbox owner.
+			//
+			// UNBOUNDED BY CORRESPONDENCE, unlike the noise arm above. That
+			// bound protects a business counterparty from one misclassified
+			// message; here the owner writing back is what a private
+			// correspondence LOOKS like, so reading it as evidence of business
+			// kept every record this kind is about — a founder's clinic among
+			// them.
 			//
 			// hideNoise is deliberately NOT called. Its scope excludes every
 			// address the workspace has written to, which is every address this
 			// kind is ever about, so it would be a no-op that read like a hide.
-			return nil
+			return e.retractSendersContacts(ctx, tx, row, retractOwnersOnly)
 		}
 		return fmt.Errorf("verdict: no effect defined for sender kind %q", kind)
 	})

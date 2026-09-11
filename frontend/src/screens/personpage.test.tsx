@@ -385,25 +385,32 @@ describe("the header's writing verb", () => {
     expect(lead.getAttribute("aria-describedby")).toBeTruthy();
   });
 
-  it("refuses under the consent verdict on its own reason", async () => {
+  // WRITING IS ALWAYS AVAILABLE. A contact who stopped the newsletter can still
+  // be sent their invoice, and which purpose applies is a question about the
+  // MESSAGE — which this page does not have. Disabling the verb answered it
+  // anyway, and answered it wrong: a rep with a lawful service message to send
+  // was told the product would not let them write at all, with no way to see
+  // that only marketing was refused.
+  it("opens the composer even where no purpose currently permits writing", async () => {
     mount("overview", view, [mailBlocked]);
 
-    expect(await screen.findByText(CONSENT_REFUSED)).toBeTruthy();
     const lead = await leadVerb("Email");
-    expect(lead.disabled).toBe(true);
-    // The verb still names the transport it would have opened: what changed is
-    // whether it may be pressed, not what pressing it would do.
+    await waitFor(() => {
+      expect(lead.disabled).toBe(false);
+    });
+    expect(screen.queryByText(CONSENT_REFUSED)).toBeNull();
+    // The verb still names the transport it opens.
     expect(lead.querySelector(".lucide-mail")).toBeTruthy();
   });
 
-  it("keeps the two refusals apart when both apply", async () => {
-    // A rep told the wrong one goes looking in the wrong record. Reachability
-    // is the sentence to show, because it is the half that no consent decision
-    // can lift.
+  it("still refuses when there is nowhere to write to", async () => {
+    // Reachability is the half no consent decision can lift: with no transport
+    // the composer has nothing to send on, whatever the verdict says.
     mount("overview", unreachable, [mailBlocked]);
 
     expect(await screen.findByText(NO_TRANSPORT)).toBeTruthy();
-    expect(screen.queryByText(CONSENT_REFUSED)).toBeNull();
+    const lead = await leadVerb("Write");
+    expect(lead.disabled).toBe(true);
   });
 });
 
@@ -1014,5 +1021,36 @@ describe("the consent rail names the purpose behind each answer", () => {
     // The correspondence row is the allowed one; the newsletter row is not.
     const rows = screen.getAllByText(/Allowed|Unknown/);
     expect(rows.length).toBeGreaterThan(1);
+  });
+
+  // A REFUSAL A REP CANNOT EXPLAIN IS NOT USABLE. The rail showed the reason
+  // for correspondence alone, so a subject who asked us to stop marketing got a
+  // blocked row with nothing under it saying why — the one fact a rep needs
+  // before they pick up the phone about it.
+  it("says why a marketing purpose is blocked, not only a correspondence one", async () => {
+    const objected: PersonConsentGuardEntry = {
+      purpose_key: "newsletter",
+      purpose_label: "Newsletter",
+      purpose_class: "marketing",
+      channel: "email",
+      verdict: "blocked",
+      reason: "they asked us to stop on 12 July",
+    };
+    mount("overview", view, [objected, correspondence]);
+
+    expect(
+      await screen.findByText("they asked us to stop on 12 July"),
+    ).not.toBeNull();
+  });
+
+  // And the correspondence reason still shows. Without this the fix above
+  // could be "show the last reason", which would take the row a reply rides
+  // out with it.
+  it("still says why correspondence is allowed", async () => {
+    mount("overview", view, [newsletter, correspondence]);
+
+    expect(
+      await screen.findByText("she wrote to you on 1 June"),
+    ).not.toBeNull();
   });
 });

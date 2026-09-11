@@ -380,15 +380,12 @@ export function PersonPageV2({
 
   const person = view.data.person;
   const firstName = person.full_name.split(" ")[0];
-  // Consent is decided per PURPOSE, so the guard carries one email entry per
-  // purpose. The hero button asks a wider question than any single entry —
-  // "is there anything we may write to them about" — and reading only the
-  // first entry answered it with whichever purpose sorted first, disabling the
-  // button on a contact the product would happily let you mail transactionally.
-  // Which purpose applies is then the composer's own question.
-  const emailAllowed = (guard.data?.entries ?? []).some(
-    (entry) => entry.channel === "email" && entry.verdict === "allowed",
-  );
+  // The guard is the RAIL'S, not the hero button's. It answers one verdict per
+  // purpose, and the button used to refuse when none of them was `allowed` —
+  // which asked a question this page cannot answer, because whether a message
+  // may go depends on what the message IS. A contact who stopped the newsletter
+  // can still be sent their invoice, and telling their rep the product would
+  // not let them write at all is how a lawful message goes out some other way.
 
   // The action loop. Every surface the contract can name routes to
   // `runPersonMomentAction`, a standalone function rather than a closure here
@@ -453,8 +450,6 @@ export function PersonPageV2({
           actions={
             <PersonActions
               view={view.data}
-              consentAllows={emailAllowed}
-              consentKnown={guard.data !== undefined}
               personId={id}
               overlay={overlay}
               onWrite={() => openComposer("")}

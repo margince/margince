@@ -51,16 +51,7 @@ type forecastReadings struct {
 func (t forecastReadings) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_readings", Title: "Read the forecast", Version: toolVersionV1,
-		Description: "What a period is expected to close, in four readings. " +
-			"`won` counts deals by the day they ACTUALLY closed, not the day they were " +
-			"expected to. `evidence` is committed pipeline whose close date somebody " +
-			"confirmed; a provisional date stays in `open` and out of `evidence`. " +
-			"`coverage_note` says what the totals do not cover, and it is absent only when " +
-			"they cover every eligible deal — so quoting a total without it reports a " +
-			"partial pipeline as a complete one. `eligible_count`, `priced_count` and " +
-			"`fx_missing_count` are the counts it is written from. " +
-			"Quote `as_of`, `timezone` and `base_currency` with the number: a total placed " +
-			"in the reader's own zone is a different total.",
+		Description:   forecastReadingsCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getForecast",
 		InputSchema: schema(`{"type":"object","properties":{
@@ -151,20 +142,7 @@ type forecastMovement struct {
 func (t forecastMovement) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_movement", Title: "What moved the forecast", Version: toolVersionV1,
-		Description: "The difference between two forecast snapshots, classified into named " +
-			"causes. Opening plus every bucket equals closing, exactly — so the buckets " +
-			"are a complete account of the change and not a selection from it. " +
-			"A deal appears in exactly ONE bucket: one that both slipped and was repriced " +
-			"has moved for one reason as far as a reader is concerned, which is that it " +
-			"left. " +
-			"Two buckets are about the machinery rather than the business, and quoting " +
-			"them as sales movement is the mistake this classification exists to prevent. " +
-			"`definition` means the two snapshots were computed under different rules, and " +
-			"then the WHOLE difference is in that bucket. `model` means a probability the " +
-			"product re-scored. " +
-			"`reopened_or_archived` carries a deal that left the population entirely — " +
-			"archived, or no longer visible to this caller — with its whole prior " +
-			"contribution, so no money disappears without a row that says where it went.",
+		Description:   forecastMovementCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getForecastMovement",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
@@ -229,20 +207,8 @@ type forecastInputChecks struct {
 func (t forecastInputChecks) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_input_checks", Title: "What the forecast's inputs were checked against",
-		Version: toolVersionV1,
-		Description: "What last night's input check found, and how much of the pipeline it " +
-			"reached. A forecast is only as good as its inputs, and the failures are " +
-			"mundane: a close date that went by, an amount that disagrees with the offer " +
-			"that was sent, a deal nobody has heard from in ninety days. " +
-			"Read `readiness` before quoting any forecast figure. `checks_incomplete` is " +
-			"NOT a worse `needs_review` — one says the pipeline has problems, the other " +
-			"says we could not look, and reporting the first when the second is true tells " +
-			"somebody their pipeline is sound when nobody read the mailbox. " +
-			"`sources` says why: each carries the state the run reached, and only a " +
-			"`checked` source has a date. An absent or unread source means the run could " +
-			"not confirm anything from it, which is different from finding nothing there. " +
-			"`eligible_deals` is how much there was to check — compared against an earlier " +
-			"run it shows a pass that covered less of the pipeline.",
+		Version:       toolVersionV1,
+		Description:   forecastInputChecksCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getForecastAssurance",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
@@ -299,15 +265,8 @@ type listInputChecks struct {
 func (t listInputChecks) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "list_input_checks", Title: "What the forecast's inputs still need",
-		Version: toolVersionV1,
-		Description: "The open findings from the nightly input check, most material first. " +
-			"Read them before quoting a forecast figure: a close date that went by, or an " +
-			"amount that disagrees with the offer that was sent, makes a total wrong " +
-			"without making the arithmetic wrong. " +
-			"Scoped to what this caller can open, with no count of what was withheld — a " +
-			"count of what somebody may not read is itself a statement about how much " +
-			"there is. `affected_minor` absent means the money at stake cannot be said, " +
-			"not that nothing is at stake.",
+		Version:       toolVersionV1,
+		Description:   listInputChecksCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "listInputChecks",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
@@ -366,12 +325,7 @@ type dataCoverage struct {
 func (t dataCoverage) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "data_coverage", Title: "How current the sources are", Version: toolVersionV1,
-		Description: "Which connectors the nightly check could read, and how far back each " +
-			"reaches. Needs the data_coverage grant, which operators hold and sellers do " +
-			"not — a refusal here is a seat boundary, not a missing run. " +
-			"Only a `checked` source carries a date. On any other state nothing was read, " +
-			"and a quiet week is indistinguishable from a broken connector until somebody " +
-			"looks.",
+		Description:   dataCoverageCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getDataCoverage",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),

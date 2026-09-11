@@ -2,6 +2,7 @@ import { ShieldAlert, ShieldQuestion } from "lucide-react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CommunicationStatus } from "../design-system/communicationstatus";
 import { useT } from "../i18n";
 
 // What the engine decided about this message, said where the rep is writing it.
@@ -43,7 +44,11 @@ type Recipient = components["schemas"]["SendAuthorizationPreviewRecipient"];
  * render — and so a second surface adopting this component cannot reach a
  * fourth answer by branching on the preview itself.
  */
-export type SendPermissionState = "allowed" | "unproven" | "refused";
+export type SendPermissionState =
+  | "allowed"
+  | "unproven"
+  | "refused"
+  | "checking";
 
 /**
  * The recipient whose answer decides the message, and the state it puts the
@@ -55,10 +60,23 @@ export type SendPermissionState = "allowed" | "unproven" | "refused";
  * and helped once. An absolute refusal outranks an unproven one because it is
  * the one the rep cannot act on.
  */
-export function decidingRecipient(preview: Preview | undefined): {
+export function decidingRecipient(
+  preview: Preview | undefined,
+  asking = false,
+): {
   state: SendPermissionState;
   recipient?: Recipient;
 } {
+  // AN ANSWER THAT HAS NOT ARRIVED IS NOT AN ANSWER. An absent preview used to
+  // read as "allowed", so three situations reached one state: nobody asked, the
+  // asking is in flight, and the answer came back clean. Only the last is
+  // permission, and a rep who pressed Send in the second met the refusal at the
+  // button — the failure this whole surface exists to end.
+  //
+  // An UNASKED question stays quiet rather than warning. A surface with no
+  // recipient yet has nothing to ask about, and a warning there would tell a
+  // rep something is wrong with a message they have not written.
+  if (asking) return { state: "checking" };
   if (!preview) return { state: "allowed" };
 
   let overrulable: Recipient | undefined;
@@ -94,9 +112,17 @@ export function decidingRecipient(preview: Preview | undefined): {
 export function SendPermission({
   preview,
   unanswered = false,
+  asking = false,
   onOverride,
 }: Readonly<{
   preview: Preview | undefined;
+  /**
+   * The question is in flight. Drawn rather than left silent, because silence
+   * here is what a permitted send looks like: the composer said nothing while
+   * it waited and nothing when it was told yes, so a rep read the first as the
+   * second.
+   */
+  asking?: boolean;
   /**
    * The question did not arrive: the preview failed rather than answered. Said
    * out loud, because a surface that fell silent here would look exactly like
@@ -112,12 +138,20 @@ export function SendPermission({
   onOverride?: () => void;
 }>) {
   const t = useT();
-  const { state, recipient } = decidingRecipient(preview);
+  const { state, recipient } = decidingRecipient(preview, asking);
 
   if (unanswered) {
     return (
       <p className="t-caption" role="status">
         {t("sendPermission.unanswered")}
+      </p>
+    );
+  }
+
+  if (state === "checking") {
+    return (
+      <p className="t-caption" role="status">
+        {t("sendPermission.checking")}
       </p>
     );
   }
@@ -197,4 +231,52 @@ function reasonKey(recipient: Recipient | undefined) {
     default:
       return "sendPermission.reason.other" as const;
   }
+}
+
+/**
+ * SendMark is the quiet half of the answer: a mark that says the engine has
+ * looked and found nothing wrong.
+ *
+ * SendPermission draws a Callout for the states a rep has to act on and
+ * NOTHING for the state they do not. That silence was deliberate — the
+ * overwhelming majority of sends are allowed and none should cost attention —
+ * but it is also what the composer showed while it was still asking, and before
+ * anybody had asked at all. Three situations, one blank space, and no way to
+ * tell "checked and fine" from "not asked yet".
+ *
+ * So the allowed state gets a mark and the other two keep their Callout: this
+ * renders beside the Send button, where the decision is made, and the Callout
+ * stays in the body where an explanation belongs. A rep who never looks at the
+ * mark loses nothing, which is the test a quiet signal has to pass.
+ *
+ * It draws NOTHING when there is no question yet. A mark over an empty form
+ * would claim an answer about a message nobody has addressed.
+ */
+export function SendMark({
+  preview,
+  asking = false,
+  unanswered = false,
+}: Readonly<{
+  preview: Preview | undefined;
+  asking?: boolean;
+  unanswered?: boolean;
+}>) {
+  const t = useT();
+  const { state } = decidingRecipient(preview, asking);
+  // The refused and unproven states are the Callout's, not the mark's: a
+  // sentence a rep has to read does not belong in a glyph beside a button.
+  if (unanswered || (state === "allowed" && !preview)) return null;
+  if (state !== "allowed" && state !== "checking") return null;
+  const label =
+    state === "checking"
+      ? t("sendPermission.checking")
+      : t("sendPermission.ready");
+  return (
+    <CommunicationStatus
+      state={state === "checking" ? "checking" : "ready"}
+      scope="current_message"
+      label={label}
+      name={`${t("sendPermission.markName")}: ${label}`}
+    />
+  );
 }

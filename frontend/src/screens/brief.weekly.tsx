@@ -20,6 +20,7 @@ import {
 } from "../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { openAnalyticsSection } from "./analytics.address";
 import {
   useWeeklyReview,
   useWeeklyReviewIndex,
@@ -384,6 +385,7 @@ function WeeklyBody({
         locale={locale}
         horizon={horizon}
         onHorizon={setHorizon}
+        onOpenForecast={() => openAnalyticsSection("forecast")}
       />
       {/* How well the week went, after where it was landing and before the
           outcome strip's tallies. Absent blocks draw nothing at all — the

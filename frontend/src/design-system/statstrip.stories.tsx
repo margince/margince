@@ -7,8 +7,14 @@ import { StatStrip } from "./statstrip";
 
 // The readings row in the states a record page actually puts it in: a full row,
 // a short one, and a row carrying verdicts rather than figures. What each story
-// is really checking is that the row reads ACROSS — one plate, one type scale,
-// rules and no gaps.
+// is really checking is that the row reads ACROSS — equal slots, one type scale
+// and air between them.
+//
+// The scale is the TILE's (atoms.css), not this component's: a slot here draws
+// exactly like a free-standing card, which is why none of these stories passes
+// a size or a variant. The strip used to carry a figure size of its own and a
+// `hero` flag carried a third for the Brief; one reading in three spellings is
+// the defect, and the row's own job is only how many slots and where it folds.
 const meta: Meta<typeof StatStrip> = {
   title: "Design System/StatStrip",
   component: StatStrip,
@@ -28,7 +34,7 @@ export const SixSlots: Story = {
       <StatCard label="Reciprocity" value="1 in · 0 out" />
       <StatCard label="Open deal" value="None" />
       <StatCard label="Next meeting" value="None" />
-      <StatCard label="Consent" value="Allowed" tone="good" dot />
+      <StatCard label="Consent" value="Allowed" tone="good" />
     </StatStrip>
   ),
 };
@@ -45,7 +51,7 @@ export const FewerSlots: Story = {
         detail="offline_demo"
       />
       <StatCard label="Payment behaviour" value="typically 4 days early" />
-      <StatCard label="Health" value="Watch" tone="warn" dot />
+      <StatCard label="Health" value="Watch" tone="warn" onOpen={() => {}} />
     </StatStrip>
   ),
 };
@@ -61,7 +67,7 @@ export const SourcedAndAlerting: Story = {
         value="€1.2m"
         source={<Badge>offline_demo</Badge>}
       />
-      <StatCard label="Overdue" value="€48k" tone="danger" dot alert />
+      <StatCard label="Overdue" value="€48k" tone="danger" alert />
       <StatCard label="Coverage" value="1 colleague" />
     </StatStrip>
   ),
@@ -82,19 +88,14 @@ export const FoldsWithoutAnOrphan: Story = {
         <StatCard label="The ask" value="€95k" />
         <StatCard label="The date" value="14 Mar" />
         <StatCard label="The room" value="3 of 5 roles" />
-        <StatCard
-          label="The momentum"
-          value="Stalled 11 days"
-          tone="warn"
-          dot
-        />
+        <StatCard label="The momentum" value="Stalled 11 days" tone="warn" />
       </StatStrip>
       <StatStrip>
         <StatCard label="Budget" value="€240k" />
         <StatCard label="Spent" value="€181k" />
         <StatCard label="Remaining" value="€59k" />
         <StatCard label="Burn" value="€12k / wk" />
-        <StatCard label="Runway" value="5 weeks" tone="warn" dot />
+        <StatCard label="Runway" value="5 weeks" tone="warn" />
       </StatStrip>
     </div>
   ),

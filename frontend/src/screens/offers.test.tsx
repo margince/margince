@@ -604,7 +604,7 @@ describe("render PDF action (OP-12)", () => {
     expect(unavailable).toBeTruthy();
     // Calm, informational copy — not the red error-banner path every other
     // action's mutation.isError branch renders.
-    expect(unavailable.style.color).not.toBe("var(--danger)");
+    expect(unavailable.style.color).not.toBe("var(--dangerText)");
     expect(screen.queryByText("blobstore not wired")).toBeNull();
     expect(screen.queryByTestId("pdf-link")).toBeNull();
   });

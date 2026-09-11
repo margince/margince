@@ -239,7 +239,7 @@ function TranscriptReadPanel({
   }
   if (reportQuery.isError) {
     return (
-      <p className="t-caption" style={{ color: "var(--danger)" }}>
+      <p className="t-caption" style={{ color: "var(--dangerText)" }}>
         {problemMessageOf(reportQuery.error, t)}
       </p>
     );
@@ -363,12 +363,12 @@ export function TranscriptReadCard({
           not KNOW whether this transcript has been read. Saying so beats an
           empty card, which reads as a confident "not yet". */}
       {latest.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(latest.error, t)}
         </p>
       )}
       {start.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(start.error, t)}
         </p>
       )}

@@ -173,4 +173,13 @@ func TestAStagedAnswerSaysTheRestOfTheTaskIsNotBlocked(t *testing.T) {
 		t.Errorf("the answer does not say what is still doable, so a caller defers work the "+
 			"approval never blocked:\n%s", said)
 	}
+	// Doing the rest and REPORTING the rest are separate instructions, and an
+	// answer carrying only the first produces exactly what two measured runs
+	// produced: a duplicate merged, a dead company archived, and a final answer
+	// that mentions neither because it is written about the one thing that
+	// stopped.
+	if !strings.Contains(said, "report what you DID") {
+		t.Errorf("the answer does not ask for what already happened, so a caller reports the "+
+			"approval and silently drops the writes it completed:\n%s", said)
+	}
 }

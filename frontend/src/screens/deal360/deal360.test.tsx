@@ -7,14 +7,15 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { DealIdentityLine } from "../dealidentity";
 import { DealPulse } from "./dealpulse";
 import { DealSeats } from "./dealseats";
-import { DealStrip } from "./dealstrip";
+import { DEAL_OFFERS_ANCHOR, DealStrip } from "./dealstrip";
 
 // What the deal page owes a reader before they read anything.
 //
@@ -235,6 +236,53 @@ describe("the readings say what is wrong, with the figure behind it", () => {
       screen.getByText(/may not read who is on this deal/),
     ).toBeInTheDocument();
     expect(screen.queryByText(/No stakeholder is recorded/)).toBeNull();
+  });
+
+  // The money reading's way out. Its receipt lists the offers; the door goes to
+  // the offers CARD, which is on the same tab one screen down — so it is a
+  // scroll rather than a route, and the id is the strip's own so the two cannot
+  // drift apart.
+  it("reveals the offers card from the money reading", async () => {
+    const offers = document.createElement("div");
+    offers.id = DEAL_OFFERS_ANCHOR;
+    document.body.append(offers);
+    // jsdom implements no scrolling at all, so the page's own element is what
+    // records the call.
+    const scrolled = vi.fn();
+    offers.scrollIntoView = scrolled;
+
+    show(<DealStrip deal={deal()} coverageWithheld={false} />);
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "Open",
+        description: en["deal.strip.money"],
+      }),
+    );
+
+    expect(scrolled).toHaveBeenCalledTimes(1);
+    offers.remove();
+  });
+
+  // A deal nobody has priced keeps the door, because the offers card is where
+  // the price gets written — the reading whose figure is missing is the one
+  // whose reader most needs it.
+  it("keeps the money door on a deal nobody has priced", () => {
+    show(
+      <DealStrip
+        deal={deal({ amount_minor: undefined, currency: undefined })}
+        coverageWithheld={false}
+      />,
+    );
+
+    expect(
+      screen.getByText(en["deal.strip.money.unpriced"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Open",
+        description: en["deal.strip.money"],
+      }),
+    ).toBeInTheDocument();
   });
 
   it("names the offer's state and never a date it was sent", () => {

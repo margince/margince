@@ -101,7 +101,7 @@ export function ClientSurfaceScreen() {
         {lookup.isError && (
           <p
             className="t-caption"
-            style={{ color: "var(--danger)", marginTop: "var(--space-3)" }}
+            style={{ color: "var(--dangerText)", marginTop: "var(--space-3)" }}
           >
             {problemMessageOf(lookup.error, t)}
           </p>

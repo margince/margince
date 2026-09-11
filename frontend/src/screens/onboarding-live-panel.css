@@ -53,7 +53,7 @@
 }
 
 .ob-live-card[data-done="true"] .ob-live-card-glyph {
-  color: var(--success);
+  color: var(--successText);
 }
 
 .ob-live-card-title {
@@ -146,11 +146,11 @@
 }
 
 .ob-live-coverage[data-kind="fail"] .ob-live-coverage-label {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 .ob-live-coverage[data-kind="warn"] .ob-live-coverage-label {
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 /* What was missed, in the reader's vocabulary. It leads the row; the URL below

@@ -43,6 +43,7 @@ DECLARE
     'audit_log',
     'auth_token',
     'channel_provider',
+    'communication_instruction',
     'currency_minor_digits',
     'embed_store_binding',
     'consent_text_version',
@@ -107,6 +108,24 @@ BEGIN
   -- the activity it substantiates.
   DELETE FROM activity_retention_evidence are
    WHERE NOT EXISTS (SELECT 1 FROM activity a WHERE a.id = are.activity_id);
+
+  -- communication_instruction is the SAME shape one column over: preserved
+  -- above because its own trigger refuses every direct DELETE unconditionally
+  -- ("a communication instruction is the record of a decision and is never
+  -- deleted") — but that trigger is suppressed by replica mode exactly like
+  -- activity_retention_evidence's own, and so is communication_review's
+  -- ON DELETE CASCADE into it. Without this statement, sweeping
+  -- communication_review above would leave every instruction behind, now
+  -- naming a review that no longer exists — silently, since replica mode
+  -- means neither the FK nor the trigger would raise to say so.
+  --
+  -- The in-product reset has no equivalent answer: it runs as the
+  -- application role, which cannot disable the trigger, so the same cascade
+  -- there aborts the whole reset instead of orphaning anything — tracked as
+  -- margince#5287, a product decision this script is not the place to make
+  -- on its own.
+  DELETE FROM communication_instruction ci
+   WHERE NOT EXISTS (SELECT 1 FROM communication_review cr WHERE cr.id = ci.review_id);
 
   -- event_outbox is preserved the same way: "not a target" of the generic
   -- sweep, never "kept" outright. Clearing it here removes only the DATABASE

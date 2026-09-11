@@ -13276,6 +13276,35 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+  /communication-reviews/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Communication]
+      operationId: getCommunicationReview
+      security: [ { cookieAuth: [] } ]   # human session only — the row names other people's addresses
+      x-agent-access: human-only
+      summary: What a refused send was refused for, and for whom.
+      description: |
+        A send the engine refused leaves a review behind, and the refusal answers its reference. This
+        is how a rep opens it: what was refused, which recipient it was refused for, and the reason
+        each one carries.
+
+        SCOPED TO THE INITIATOR. The row names the recipients of somebody's message and the reason
+        each was refused, which is a fact about those people — so this serves the person who pressed
+        Send and nobody else. A review belonging to somebody else answers 404 rather than 403,
+        because "forbidden" would confirm the id exists and that is itself a disclosure about a
+        message the caller may not see.
+
+        Human-only. An agent that could read these would enumerate one seat's refused correspondence.
+      responses:
+        '200':
+          description: The review.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunicationReview' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /data-subject-requests/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -36394,8 +36423,8 @@ components:
          retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health,
-         extension_access, system_reset, ai_diagnostics, consent_config, authentication_policy,
-         oauth_application, seat_usage]
+         extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
+         authentication_policy, oauth_application, seat_usage]
 
     RbacAction:
       type: string
@@ -39463,6 +39492,46 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/Team' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+
+    RefusedRecipient:
+      type: object
+      description: |
+        One recipient's half of a refusal, as the engine gave it. The ADDRESS is here because a
+        reason code without one says a message was refused and not who for, which is the question
+        the rep is actually asking — and it is why an erasure clears this list.
+      required: [address, reason_code]
+      properties:
+        address: { type: string }
+        subject_kind: { type: string, enum: [person, lead] }
+        subject_id: { type: string, format: uuid }
+        reason_code: { type: string }
+        category: { type: string }
+
+    CommunicationReview:
+      type: object
+      description: |
+        What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
+        given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
+        what the consent rows say today.
+      required: [id, state, kind, reason_code, refusals]
+      properties:
+        id: { type: string, format: uuid }
+        state:
+          type: string
+          enum: [needs_context, needs_repair, resolved, superseded, cancelled]
+          description: |
+            What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
+            and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
+            answer — an objection, a dead address — where offering a context form would invite a rep
+            to argue with a withdrawal.
+        kind: { type: string, enum: [single] }
+        reason_code:
+          type: string
+          description: The strongest reason across the recipients, so a queue can order without opening the snapshot.
+        refusals:
+          type: array
+          description: What was refused, per recipient. Empty once an erasure has cleared the subject from it.
+          items: { $ref: '#/components/schemas/RefusedRecipient' }
 
     DataSubjectRequest:
       type: object

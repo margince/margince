@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"unicode/utf8"
 
@@ -17,10 +18,20 @@ import (
 )
 
 // storeRawCapture appends the provider's original bytes under the natural
-// key. Raw capture is EVIDENCE: append-once, never rewritten. A replay
+// key. Raw capture is EVIDENCE: append-once, and rewritten by exactly two
+// sweeps, both of which NARROW what it holds rather than replace it. A replay
 // carrying different bytes for the same natural key keeps the original —
 // silently replacing provenance would gut lineage and forensic replay. A
 // record that arrived with no original stores nothing.
+//
+// The two sanctioned rewrites. Retention's erase (privacy/retention.go) takes
+// the whole payload once the activity's window closes. The part sweep
+// (partslimstore.go) takes a stored attachment's OCTETS once it can prove them
+// durable in the object store, leaving a stanza naming the object, its length
+// and its digest — so what the column still promises afterwards is the message
+// verbatim and its attachments by reference, and partslim.RestoreStoredParts
+// rebuilds the provider's exact bytes or refuses to hand any back. What it no
+// longer promises is that the column ALONE holds them.
 //
 // For mail that key is transport-independent, so the FIRST connector to deliver
 // a message supplies the bytes on file and a second connector's copy of the
@@ -121,3 +132,81 @@ func jsonEscapesNUL(raw []byte) bool {
 		at = found + len("u0000")
 	}
 }
+
+// DecodeStoredOriginal unwraps what storeRawCapture put in raw_capture.payload,
+// and is the exact inverse of rawCapturePayload above.
+//
+// It lives here rather than at each reader because the three spellings are this
+// file's own invention: a JSON payload (a calendar event resource) stored as
+// itself, text (an RFC822 message) as a JSON *string*, and bytes jsonb cannot
+// hold as text in a base64 envelope naming its own encoding. A reader keeping
+// its own copy of that list is a second answer to what the column means, and
+// the copy is what falls behind when a fourth spelling arrives.
+//
+// The envelope is checked before the string case because it IS a JSON object,
+// and it is checked by its DECLARED encoding rather than by shape, so a
+// provider payload that happens to carry those two keys cannot be mistaken for
+// one.
+func DecodeStoredOriginal(payload []byte) ([]byte, error) {
+	if len(payload) == 0 {
+		return nil, errors.New("capture: the stored original is empty")
+	}
+	if envelope, isEnvelope := readBase64Envelope(payload); isEnvelope {
+		raw, err := base64.StdEncoding.DecodeString(envelope.Data)
+		if err != nil {
+			return nil, fmt.Errorf("capture: decoding the stored original: %w", err)
+		}
+		return raw, nil
+	}
+	if !bytes.HasPrefix(bytes.TrimSpace(payload), []byte(`"`)) {
+		return payload, nil
+	}
+	var text string
+	if err := json.Unmarshal(payload, &text); err != nil {
+		return nil, fmt.Errorf("capture: unwrapping the stored original: %w", err)
+	}
+	return []byte(text), nil
+}
+
+// readBase64Envelope reports whether payload is one of THIS file's envelopes
+// rather than a provider object that merely looks like one.
+//
+// The shape is checked, not just the declared encoding. rawCapturePayload
+// stores a valid JSON object unchanged, so a provider resource carrying its own
+// top-level "encoding": "base64" would otherwise be read as an envelope: the
+// decoder would ignore its other fields and hand back the contents of a "data"
+// key that means something else, or nothing at all when there is no such key.
+// Participant replay would then re-read the wrong bytes, or record a readable
+// message as unreadable.
+//
+// Exactly two keys, both present, and the encoding this file writes. Anything
+// else is a provider payload and is returned as itself.
+func readBase64Envelope(payload []byte) (rawCaptureEnvelope, bool) {
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &keys); err != nil {
+		return rawCaptureEnvelope{}, false
+	}
+	if len(keys) != 2 {
+		return rawCaptureEnvelope{}, false
+	}
+	if _, named := keys["encoding"]; !named {
+		return rawCaptureEnvelope{}, false
+	}
+	if _, named := keys["data"]; !named {
+		return rawCaptureEnvelope{}, false
+	}
+	var envelope rawCaptureEnvelope
+	if err := json.Unmarshal(payload, &envelope); err != nil {
+		return rawCaptureEnvelope{}, false
+	}
+	if envelope.Encoding != RawCaptureBase64Encoding {
+		return rawCaptureEnvelope{}, false
+	}
+	return envelope, true
+}
+
+// EncodeStoredOriginal is rawCapturePayload under a name another package can
+// reach. The part sweep needs it: what it writes back has to be spelled the way
+// the sink would have spelled it, or the next reader decodes something the
+// column does not hold.
+func EncodeStoredOriginal(raw []byte) ([]byte, error) { return rawCapturePayload(raw) }

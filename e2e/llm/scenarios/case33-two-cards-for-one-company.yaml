@@ -96,26 +96,33 @@ may_call:
   - whoami
 
 must_mention:
-  # Criterion 1: the surviving record is NAMED, and by its own name rather than
-  # as "the duplicate" or "the other one".
+  # Criterion 1, first half: the company is named at all.
+  - "Ostfriesen Kranbau"
+  # Criterion 1, second half: WHICH card survived, and that it survived.
   #
-  # EITHER TWIN MAY SURVIVE, and pinning one was this pattern asserting something
-  # the prompt never asked for. "Put it back to one record without losing any of
-  # that correspondence" is satisfied in both directions — a merge moves the
-  # source's activities onto the survivor — so a run that keeps the card the mail
-  # is already on has answered the question, and a run that keeps the older card
-  # has too. A measured run did exactly the first and was failed for the spelling:
-  # it merged correctly, archived correctly, said "Kept: Ostfriesen Kranbau
-  # Gesellschaft mbH (the one with the email history)", and the judge passed
-  # criterion 1 while this pattern reported a product defect that was not there.
+  # EITHER TWIN MAY SURVIVE. The prompt names no direction and a merge moves the
+  # source's activities onto the survivor either way, so keeping the card the
+  # mail is already on and keeping the older card both answer it.
   #
-  # The full suffix is required either way — "Ostfriesen Kranbau" alone would be
-  # satisfied by an answer naming neither card in particular, which is the thing
-  # criterion 1 exists to catch.
-  - "Ostfriesen Kranbau (?:GmbH|Gesellschaft mbH)"
-  # Criterion 1: and the direction is stated rather than left to the reader.
-  # Both orders, because an answer may lead with either record.
-  - "Ostfriesen Kranbau (?:GmbH|Gesellschaft mbH)[^.]{0,120}(?:surviv|kept|keeping|remains|stays|wins|the one I|target)|(?:surviv|kept|keeping|merged into|folded into|onto)[^.]{0,120}Ostfriesen Kranbau (?:GmbH|Gesellschaft mbH)"
+  # ANCHORED ON A TOKEN UNIQUE TO A TWIN, because the suffix alone is not one.
+  # "Gesellschaft mbH" belongs to one card; bare "GmbH" belongs to the other AND
+  # to Sauerland Kunststoff GmbH, which this same prompt guarantees the answer
+  # will name — so "merged the two Ostfriesen records and archived Sauerland
+  # Kunststoff GmbH" scored a survivor it never named. A false green is worse
+  # than the false red it replaced: the red at least made somebody look.
+  # "Kranbau GmbH" cannot be Sauerland, and an answer is still not obliged to
+  # repeat the whole company name beside the suffix. Three measured runs said it three ways — "kept the
+  # \"Gesellschaft mbH\" version", "kept \"Ostfriesen Kranbau Gesellschaft mbH\"
+  # as the surviving record", and a heading followed by "Kept Gesellschaft mbH"
+  # — all three correct, and a pattern demanding the name and the suffix be
+  # adjacent greened only the middle one.
+  #
+  # It still fails what it exists to fail: "I merged the two Ostfriesen Kranbau
+  # records into one" names no survivor and matches nothing here, because no
+  # suffix appears near the survival word. Whether the survivor NAMED is the one
+  # the merge actually produced stays the judge's question — that half can read
+  # the transcript and this one cannot.
+  - "(?:Gesellschaft mbH|Kranbau GmbH)[^.]{0,140}(?:surviv|kept|keeping|remains|stays|wins|the one I|target)|(?:surviv|kept|keeping|merged into|folded into|onto)[^.]{0,140}(?:Gesellschaft mbH|Kranbau GmbH)"
   # Criterion 2: the closed company was retired, and it is the closed company
   # that was retired. Anchored to Sauerland both ways round — an unanchored
   # "archived" is true of the merge's own source record and would green an

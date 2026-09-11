@@ -501,7 +501,7 @@
    rail repeats them because the rail is where the press happened. */
 .ob-stage-note {
   margin: 0;
-  color: var(--danger);
+  color: var(--dangerText);
   font-size: var(--fs-sm);
 }
 .ob-stage-hint {

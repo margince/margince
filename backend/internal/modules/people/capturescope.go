@@ -31,10 +31,12 @@ import (
 // promoteIfWorkspaceScoped moves an owner-scoped person to the workspace when a
 // workspace-scoped ensure reaches them.
 //
-// One direction only. A record already the workspace's is never narrowed back
-// by a later owner-scoped ensure: the sink runs on every message from that
-// sender, so narrowing here would un-publish a contact somebody promoted the
-// next time they wrote.
+// One direction only THROUGH THIS DOOR. A record already the workspace's is
+// never narrowed back by a later owner-scoped ensure: the sink runs on every
+// message from that sender, so narrowing here would un-publish a contact
+// somebody promoted the next time they wrote. The other direction is a
+// different decision, taken where a verdict has judged the whole
+// correspondence private — see RetractCaptureOnlyPersonTx.
 //
 // The guard is on the ROW's visibility rather than on what the caller believes:
 // the UPDATE matches nothing when the row is already workspace, so a second
@@ -47,41 +49,62 @@ func promoteIfWorkspaceScoped(ctx context.Context, tx pgx.Tx, id ids.PersonID, o
 	if ownerScoped {
 		// Nothing to do, and saying so here saves a statement per captured
 		// message from the sink — which is the caller that runs on every one.
-		// It is not what makes this safe: the UPDATE below writes owner to
-		// workspace and has no spelling that goes the other way, so an
-		// owner-scoped caller reaching it would still narrow nothing.
+		// It is not what makes this safe: shiftVisibilityTx is pinned to the
+		// direction its caller names, so an owner-scoped caller reaching it
+		// would still narrow nothing.
 		return nil
 	}
-	// The visibility pin is the concurrency guard, checked through RowsAffected:
-	// the statement matches only a row still owner-scoped, so a second pass over
-	// the same person moves nothing and reports zero rather than writing again.
+	return shiftVisibilityTx(ctx, tx, id, visibilityOwner, visibilityWorkspace)
+}
+
+// shiftVisibilityTx moves one person between visibilities and lands the write
+// shape for it, pinned to the direction the caller names.
+//
+// One spelling, two callers going opposite ways: the promotion above, and the
+// narrowing a personal verdict performs before it archives. They are the same
+// write — a disclosure-relevant change of who may read a contact — and two
+// copies of it would drift until one of them stopped auditing.
+//
+// The `from` pin is the concurrency guard, checked through RowsAffected: the
+// statement matches only a row still on the visibility the caller believed, so
+// a second pass over the same person moves nothing and reports false rather
+// than writing again. It is also what makes the direction safe — passing the
+// arguments the other way round matches no row rather than reversing a
+// decision somebody else made.
+//
+// A no-op is not reported, because neither caller has anything to do with the
+// difference: the promotion runs on every captured message from a sender and
+// the withdrawal runs after its own eligibility check, so "already there" is
+// the ordinary case for both and not news to either.
+func shiftVisibilityTx(ctx context.Context, tx pgx.Tx, id ids.PersonID, from, to string) error {
 	tag, err := tx.Exec(ctx, `
 		UPDATE person SET visibility = $2
 		 WHERE id = $1 AND visibility = $3 AND archived_at IS NULL`,
-		id, visibilityWorkspace, visibilityOwner)
+		id, to, from)
 	if err != nil {
-		return fmt.Errorf("people: promoting a judged counterparty to the workspace: %w", err)
+		return fmt.Errorf("people: moving a contact to %s visibility: %w", to, err)
 	}
 	if tag.RowsAffected() == 0 {
-		// Already the workspace's, or archived. Both are answers, not faults,
-		// and neither is a change to record: an audit row about a write that
-		// moved nothing puts a lie in the compliance trail.
+		// Already there, or archived. Both are answers, not faults, and neither
+		// is a change to record: an audit row about a write that moved nothing
+		// puts a lie in the compliance trail.
 		return nil
 	}
-	// A contact stops being one person's and becomes everybody's, which is the
-	// most disclosure-relevant write this module makes and the one that was
-	// leaving no trace. "Which contacts were published, when, and on whose
+	// A contact stops being one person's and becomes everybody's, or stops
+	// being everybody's and becomes one person's again. That is the most
+	// disclosure-relevant write this module makes and the one that was leaving
+	// no trace. "Which contacts were published or withdrawn, when, and on whose
 	// authority" is answered from audit_log or it is not answered at all.
 	//
-	// The before-image is what the guard above already proved: the row was
-	// owner-scoped, or the UPDATE would have matched nothing.
+	// The before-image is what the guard above already proved: the row was on
+	// `from`, or the UPDATE would have matched nothing.
 	auditID, err := storekit.Audit(ctx, tx, "update", entityPerson, id.UUID,
-		map[string]any{fieldVisibility: visibilityOwner},
-		map[string]any{fieldVisibility: visibilityWorkspace})
+		map[string]any{fieldVisibility: from},
+		map[string]any{fieldVisibility: to})
 	if err != nil {
-		return fmt.Errorf("people: recording a captured contact's promotion: %w", err)
+		return fmt.Errorf("people: recording a contact's change of visibility: %w", err)
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventPersonUpdated{
-		ChangedFields: map[string]any{fieldVisibility: visibilityWorkspace},
+		ChangedFields: map[string]any{fieldVisibility: to},
 	})
 }

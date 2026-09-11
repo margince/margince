@@ -291,7 +291,7 @@ function EditOfferHeaderModal({
       {errorMessage && (
         <p
           className="t-caption"
-          style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
+          style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
         >
           {errorMessage}
         </p>
@@ -827,7 +827,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         {errorMessage && (
           <p
             className="t-caption"
-            style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
+            style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
           >
             {errorMessage}
           </p>
@@ -1104,7 +1104,7 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       {errorMessage && (
         <p
           className="t-caption"
-          style={{ color: "var(--danger)", marginTop: 4 }}
+          style={{ color: "var(--dangerText)", marginTop: "var(--space-1)" }}
         >
           {errorMessage}
         </p>
@@ -1300,7 +1300,7 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
             </p>
           )}
           {errorMessage && (
-            <p className="t-caption" style={{ color: "var(--danger)" }}>
+            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
               {errorMessage}
             </p>
           )}

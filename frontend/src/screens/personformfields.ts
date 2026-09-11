@@ -147,6 +147,8 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         },
       ],
       primaryKey: "is_primary",
+      typeKey: "email_type",
+      typeDefault: "work", // matches asEmailType's own fallback
     },
     {
       key: "phones",
@@ -168,6 +170,8 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         },
       ],
       primaryKey: "is_primary",
+      typeKey: "phone_type",
+      typeDefault: "work", // matches asPhoneType's own fallback
     },
   ];
 }

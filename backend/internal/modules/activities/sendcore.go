@@ -39,7 +39,10 @@ func (s *Store) SendEmail(ctx context.Context, origin SendOrigin, in SendEmailIn
 		sent, err = s.SendPreparedTx(ctx, tx, origin, prepared, stager)
 		return err
 	}); err != nil {
-		return crmcontracts.Activity{}, err
+		// AFTER the transaction has unwound, so a refusal that must be recorded
+		// is recorded on a connection this call is no longer holding. See
+		// RefusalRecorder for why the moment matters.
+		return crmcontracts.Activity{}, recordRefusal(ctx, stager, err)
 	}
 	return sent, nil
 }

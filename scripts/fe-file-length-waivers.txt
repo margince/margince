@@ -18,7 +18,7 @@
 1209 frontend/src/design-system/atoms.stories.tsx
 2003 frontend/src/design-system/atoms.tsx
 507 frontend/src/design-system/briefitem.tsx
-2175 frontend/src/design-system/composed.tsx
+2182 frontend/src/design-system/composed.tsx
 1161 frontend/src/design-system/conformance.test.ts
 983 frontend/src/design-system/decisioncard.tsx
 981 frontend/src/design-system/decisiondeck.tsx
@@ -34,8 +34,8 @@
 682 frontend/src/format/format.ts
 591 frontend/src/screens/adddocument.tsx
 982 frontend/src/screens/ai-routing.tsx
-1453 frontend/src/screens/analytics.test.tsx
-1946 frontend/src/screens/analytics.tsx
+1302 frontend/src/screens/analytics.test.tsx
+1913 frontend/src/screens/analytics.tsx
 663 frontend/src/screens/approvalkind.ts
 1081 frontend/src/screens/auth.tsx
 1037 frontend/src/screens/automations.test.tsx
@@ -58,7 +58,7 @@
 737 frontend/src/screens/companytoday.tsx
 533 frontend/src/screens/companywork.tsx
 3331 frontend/src/screens/compose.test.tsx
-3726 frontend/src/screens/compose.tsx
+2797 frontend/src/screens/compose.tsx
 547 frontend/src/screens/connected-agents.tsx
 1278 frontend/src/screens/connectors.tsx
 1428 frontend/src/screens/contacts.test.tsx
@@ -111,10 +111,10 @@
 1184 frontend/src/screens/personpage.tsx
 1208 frontend/src/screens/personprovider.test.tsx
 941 frontend/src/screens/personprovider.tsx
-1575 frontend/src/screens/personrail.tsx
+1430 frontend/src/screens/personrail.tsx
 1200 frontend/src/screens/privacy.test.tsx
 1245 frontend/src/screens/privacy.tsx
-571 frontend/src/screens/project360.tsx
+573 frontend/src/screens/project360.tsx
 514 frontend/src/screens/projectsections.tsx
 592 frontend/src/screens/rates.tsx
 661 frontend/src/screens/record360/citations.tsx
