@@ -1,16 +1,24 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import {
   PersonDealsTab,
   PersonMeetingsTab,
   PersonTimelineTab,
 } from "./persontabs";
+import { stubWithSession } from "./story-utils";
 
 type Person360 = components["schemas"]["Person360"];
 // The 360 carries its OWN spelling of an activity row — the section's element
@@ -49,6 +57,19 @@ function activity(
 // second assertion reads the first render's DOM.
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
+});
+
+// The session probe, routed with no object grants: the ordinary native seat
+// this tab is drawn for. Unrouted it is refused, a refused session reads as a
+// malformed one, and the tab draws the branch a denied grant produces — which
+// a case wins alone and loses under load, on a different name each run.
+//
+// The stub's fallback answers an empty page, which is also what a narrowed
+// read gets here: a kind dial that is a SERVER parameter makes the list its
+// own request rather than the 360's seeded page.
+beforeEach(() => {
+  stubWithSession({}, {});
 });
 
 function withProviders(node: ReactNode) {
@@ -165,9 +186,82 @@ describe("the timeline tab", () => {
     expect(screen.queryByLabelText("Activity kind")).toBeNull();
   });
 
+  // The record's chronology holds the exchanges and the record's own edits, and
+  // between the whole and one kind sits the reading a reader most often comes
+  // for: the conversations. It is the same chronicle cut, not a second
+  // rendering — the account page has offered it since it shipped, and a contact
+  // is where a conversation actually happens.
+  it("offers the conversations cut and draws only what somebody can answer", async () => {
+    const user = userEvent.setup();
+    withProviders(<PersonTimelineTab personId="p-1" view={view} />);
+
+    await user.click(screen.getByRole("button", { name: "Conversations" }));
+
+    // Waited on the settled cut rather than asserted straight after the press:
+    // the mail is on screen under BOTH cuts, so what says the cut took is the
+    // meeting leaving.
+    await waitFor(() =>
+      // A meeting is an event, not an exchange. It stays on the cuts that are
+      // about the record's whole chronology.
+      expect(screen.queryByText("Depot walkthrough")).toBeNull(),
+    );
+    expect(screen.getByText("Fleet renewal")).toBeTruthy();
+  });
+
+  // The dial narrows the cut it stands under. Offering Meetings inside a cut
+  // that keeps only mail and messages names a value whose only possible answer
+  // is an empty list — on a record whose mail is right there under the pill.
+  it("offers the conversations cut only the kinds it can draw", async () => {
+    const user = userEvent.setup();
+    withProviders(<PersonTimelineTab personId="p-1" view={view} />);
+
+    await user.click(screen.getByRole("button", { name: "Conversations" }));
+    await user.click(screen.getByLabelText("Activity kind"));
+
+    const listbox = await screen.findByRole("listbox");
+    const offered = within(listbox)
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(offered).toEqual(["All kinds", "Email", "Messages"]);
+  });
+
+  // The kind is a SERVER parameter and the cut is a client-side narrowing, so
+  // the two can contradict each other. Opening the cut narrows what the reader
+  // asked for rather than leaving the server answering about meetings while
+  // every row it returns is thrown away.
+  it("drops a kind the conversations cut cannot draw as it opens", async () => {
+    const user = userEvent.setup();
+    withProviders(<PersonTimelineTab personId="p-1" view={view} />);
+
+    await pickOption(user, screen.getByLabelText("Activity kind"), "Meetings");
+    await user.click(screen.getByRole("button", { name: "Conversations" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Activity kind").textContent).toContain(
+        "All kinds",
+      ),
+    );
+  });
+
   it("says the section is withheld rather than drawing it empty", () => {
     withProviders(<PersonTimelineTab personId="p-1" view={withheld} />);
     expect(screen.queryByText(/Nothing has been logged/)).toBeNull();
+    expect(
+      screen.getByText("Hidden — your role cannot read this"),
+    ).toBeTruthy();
+  });
+
+  // The same obligation on the new cut, which reads that same withheld
+  // section: "no conversations with them yet" about a section the reader's
+  // grant does not reach is the page telling them a relationship never
+  // happened.
+  it("says so on the conversations cut too, rather than reporting none", async () => {
+    const user = userEvent.setup();
+    withProviders(<PersonTimelineTab personId="p-1" view={withheld} />);
+
+    await user.click(screen.getByRole("button", { name: "Conversations" }));
+
+    expect(screen.queryByText(/No conversations with them yet/)).toBeNull();
     expect(
       screen.getByText("Hidden — your role cannot read this"),
     ).toBeTruthy();

@@ -32,7 +32,6 @@ import { RecordTabs } from "../design-system/recordtabs";
 import {
   hasTimelineFilters,
   useRecordTimeline,
-  useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
@@ -129,10 +128,9 @@ import {
   ChronologyFilter,
   ChronologyFooter,
   chronologyNotice,
-  useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
-import { ConversationList } from "./recordconversations";
+import { ConversationList, useChronologyCut } from "./recordconversations";
 import {
   createdColumn,
   lastActivityColumn,
@@ -1238,8 +1236,9 @@ function useChronologySlots({
     records("person", id) ??
     records("deal", id) ??
     records("organization", id);
-  const [filter, setFilter] = useChronologyFilter(org.id);
-  const [filters, setFilters] = useTimelineFilters(org.id);
+  const { filter, filters, setFilters, openCut, kinds } = useChronologyCut(
+    org.id,
+  );
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("organization", org.id, {
@@ -1284,7 +1283,10 @@ function useChronologySlots({
   // An evidence mark asks "where did this value come from" — the answer is
   // the record's change history, so the mark turns the timeline to Changes
   // rather than opening a screen of its own.
-  const showChanges = () => setFilter("changes");
+  // Through the same opener a pill press goes through: a cut opened from the
+  // side of the page and one opened from the pills is the same act, and a
+  // second way in is a second set of rules about what opening a cut does.
+  const showChanges = () => openCut("changes");
 
   if (!active) {
     return {
@@ -1317,13 +1319,13 @@ function useChronologySlots({
       timelineGroups: groupChronology(history.entries, timeline.hasNextPage),
       timelineHeader: (
         <>
-          <ChronologyFilter
-            filter={filter}
-            conversations
-            onFilter={setFilter}
-          />
+          <ChronologyFilter filter={filter} conversations onFilter={openCut} />
           {filter !== "changes" && (
-            <TimelineFilterBar value={filters} onChange={setFilters} />
+            <TimelineFilterBar
+              value={filters}
+              kinds={kinds}
+              onChange={setFilters}
+            />
           )}
         </>
       ),

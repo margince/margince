@@ -4,8 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
+import { ACTIVITY_KINDS } from "../design-system/recordtimeline";
 import { LocaleProvider } from "../i18n";
-import { ConversationList } from "./recordconversations";
+import {
+  CONVERSATION_FILTER_KINDS,
+  ConversationList,
+  conversationFilters,
+  conversationGroups,
+} from "./recordconversations";
 
 // What this cut is FOR, as assertions: only the exchanges a reader can answer
 // — email and message — become rows here, each one carrying whose move it is,
@@ -296,5 +302,42 @@ describe("a record with no conversations", () => {
     draw([]);
 
     expect(screen.getByText("No conversations with them yet.")).toBeTruthy();
+  });
+});
+
+// The dial that narrows this cut, and the cut itself, are one answer asked
+// twice: a kind the dial offers whose rows the cut throws away is an empty
+// list the reader cannot explain, and a kind the cut keeps that the dial never
+// offers is a reading they cannot reach.
+describe("the kinds the cut can be narrowed by", () => {
+  // Derived from the activity list's own vocabulary rather than a list spelled
+  // here: a transport added to ACTIVITY_KINDS is asked about by this test the
+  // day it lands, which is the whole point of deriving the dial the same way.
+  it("offers exactly the kinds whose rows survive the cut", () => {
+    for (const kind of ACTIVITY_KINDS) {
+      const survives =
+        conversationGroups([group(kind, [entry(kind)])]).length === 1;
+      expect([kind, CONVERSATION_FILTER_KINDS.includes(kind)]).toEqual([
+        kind,
+        survives,
+      ]);
+    }
+  });
+
+  it("keeps a narrowing the cut can honour", () => {
+    expect(conversationFilters({ kind: "email", q: "renewal" })).toEqual({
+      kind: "email",
+      q: "renewal",
+    });
+  });
+
+  it("drops one it cannot, and nothing else the reader asked for", () => {
+    expect(
+      conversationFilters({ kind: "meeting", q: "depot", after: "2026-07-01" }),
+    ).toEqual({ kind: undefined, q: "depot", after: "2026-07-01" });
+  });
+
+  it("leaves an unnarrowed read alone", () => {
+    expect(conversationFilters({})).toEqual({});
   });
 });

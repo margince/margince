@@ -8333,6 +8333,7 @@ export const en = {
   "person.loops.atLeast": "at least {count}",
 
   "person.memory.title": "Conversation memory",
+  "person.memory.viewAll": "View all activity",
   "person.memory.empty": "Nothing captured on this channel yet.",
   "person.memory.all": "All",
   "person.memory.email": "Email",

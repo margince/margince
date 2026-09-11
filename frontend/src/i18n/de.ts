@@ -8235,6 +8235,7 @@ export const de = {
   "person.loops.atLeast": "mindestens {count}",
 
   "person.memory.title": "Gesprächsgedächtnis",
+  "person.memory.viewAll": "Alle Aktivitäten ansehen",
   "person.memory.empty": "Auf diesem Kanal wurde noch nichts erfasst.",
   "person.memory.all": "Alle",
   "person.memory.email": "E-Mail",

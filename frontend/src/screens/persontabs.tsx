@@ -9,31 +9,25 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
   hasTimelineFilters,
-  type RecordTimeline,
   useRecordTimeline,
-  useTimelineFilters,
 } from "../design-system/recordtimeline";
-import {
-  type SectionState,
-  SurfaceState,
-  sectionState,
-} from "../design-system/surfacestate";
+import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useViewerId } from "./common";
 import { RecordHistoryTab } from "./history";
 import { PersonCommercialCard, readableRole } from "./personcards";
+import { timelineState } from "./persontimelinestate";
 import {
   CHRONOLOGY_EMPTY_KEYS,
   ChronologyFilter,
   ChronologyFooter,
   hasChronologyFooter,
-  type RecordChronology,
-  type TimelineFilter,
-  useChronologyFilter,
+  readsExchangesOnly,
   useRecordChronology,
 } from "./recordchronology";
+import { ConversationList, useChronologyCut } from "./recordconversations";
 import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import "./person360.css";
@@ -82,8 +76,13 @@ export function PersonTimelineTab({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
-  const [filter, setFilter] = useChronologyFilter(personId);
-  const [filters, setFilters] = useTimelineFilters(personId);
+  const { filter, filters, setFilters, openCut, kinds } =
+    useChronologyCut(personId);
+  // Every cut renders through the ONE chronicle, off the same groups: the
+  // Conversations list is the same rows cut to the exchanges somebody can
+  // answer, never a second rendering of what another cut already shows.
+  const List =
+    filter === "conversations" ? ConversationList : GroupedTimelineList;
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("person", personId, {
@@ -137,9 +136,13 @@ export function PersonTimelineTab({
             single band cannot hold — and the two rows of controls read as one
             block here rather than as a head that grew. */}
         <div className="timeline-header">
-          <ChronologyFilter filter={filter} onFilter={setFilter} />
+          <ChronologyFilter filter={filter} conversations onFilter={openCut} />
           {filter !== "changes" && (
-            <TimelineFilterBar value={filters} onChange={setFilters} />
+            <TimelineFilterBar
+              value={filters}
+              kinds={kinds}
+              onChange={setFilters}
+            />
           )}
         </div>
         {/* The Changes view IS the record's history: one reading of what
@@ -178,8 +181,11 @@ export function PersonTimelineTab({
                 ? t("person.timeline.empty")
                 : t(CHRONOLOGY_EMPTY_KEYS[filter])
             }
+            // Retrying the CHANGE feed, on the cuts that read one: a cut that
+            // never asked it a question would offer a retry for a read that is
+            // not the one that came up short.
             detail={
-              filter === "activities"
+              readsExchangesOnly(filter)
                 ? undefined
                 : { onRetry: chronology.changes.refetch }
             }
@@ -193,7 +199,7 @@ export function PersonTimelineTab({
             {chronology.changesUnread && (
               <p className="t-caption">{t("state.failed")}</p>
             )}
-            <GroupedTimelineList
+            <List
               groups={groupChronology(chronology.entries, timeline.hasNextPage)}
               zone={recordZone}
             />
@@ -202,75 +208,6 @@ export function PersonTimelineTab({
       </PanelBody>
     </Panel>
   );
-}
-
-/**
- * timelineState reads the state of whichever feed the FILTER is actually
- * showing. The two halves fail independently: a 360 that withheld its
- * activities says nothing about the change feed, and reporting the Changes
- * view as withheld on that basis would hide rows that loaded perfectly well.
- */
-function timelineState(
-  view: Person360 | undefined,
-  filter: TimelineFilter,
-  chronology: RecordChronology,
-  timeline: RecordTimeline,
-  narrowed: boolean,
-  loading: boolean,
-): SectionState {
-  if (filter === "activities") {
-    // A narrowed read is the list's own, not the 360's section: it has its
-    // own wait and its own failure, and a grant that withheld the section
-    // withholds the list the same way through the server's 403.
-    const base = narrowed
-      ? narrowedState(timeline)
-      : sectionState(
-          view,
-          "activities",
-          Boolean(view?.activities),
-          timeline.activities.length,
-          loading,
-        );
-    return base === "ready" && chronology.truncated ? "partial" : base;
-  }
-  // The whole chronology holds the activities half, so a grant that withheld
-  // that section withholds part of THIS cut too — and a withheld half drawn as
-  // an empty list is the one thing a section may never do. Answered BEFORE the
-  // changes read lands, because the withholding is already known: waiting on a
-  // second feed to say what the first one already said draws a skeleton over a
-  // boundary the reader could have been told about at once. Once change rows
-  // arrive it is partial rather than withheld — some of the record is here, and
-  // the rest is missing rather than absent.
-  if (
-    filter === "all" &&
-    view &&
-    (view.sections_omitted ?? []).includes("activities")
-  ) {
-    return chronology.entries.length === 0 ? "withheld" : "partial";
-  }
-  if (chronology.loading) {
-    return "loading";
-  }
-  if (chronology.failed) {
-    return "failed";
-  }
-  // A capped list that says nothing reads as the whole history — a reader
-  // looking at the oldest of 25 rows would take it for the day the
-  // relationship began. True on the combined cut as much as on the narrow one.
-  if (chronology.truncated) {
-    return "partial";
-  }
-  return chronology.entries.length === 0 ? "empty" : "ready";
-}
-
-function narrowedState(timeline: RecordTimeline): SectionState {
-  if (timeline.isPending) {
-    return "loading";
-  }
-  if (timeline.isError) {
-    return "failed";
-  }
-  return timeline.activities.length === 0 ? "empty" : "ready";
 }
 
 // --- Deals ------------------------------------------------------------------
