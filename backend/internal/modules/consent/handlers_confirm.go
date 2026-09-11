@@ -17,10 +17,18 @@ import (
 )
 
 // GetConfirmDetails implements (GET /public/confirm/{token}): one contact's own
-// view of what is held about them. Resolving stamps the link as opened, which is
-// the middle of the ask-to-click chain the proof row later refers to.
+// view of what is held about them.
+//
+// Resolving records a FETCH always and an OPENING only when the request does
+// not announce itself as a machine. The opening is the middle of the
+// ask-to-click chain the proof row later refers to, and a scanner prefetching
+// the link must not write it — see linkfetch.go.
+//
+// The request is read HERE because this is where one exists. The store is given
+// the answer rather than the headers, so the rule lives in one place and every
+// other surface that ever resolves a token has to state which it is.
 func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string) {
-	ref, err := h.store.ResolveConfirmToken(r.Context(), token)
+	ref, err := h.store.ResolveConfirmToken(r.Context(), token, WhatFetchedThis(r))
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
