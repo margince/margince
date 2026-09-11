@@ -280,130 +280,15 @@ ALTER FUNCTION organization_no_ancestor_cycle() RENAME TO company_no_ancestor_cy
 ALTER FUNCTION organization_refuse_anchor_retirement() RENAME TO company_refuse_anchor_retirement;
 
 
--- activity_link.entity_type
-ALTER TABLE activity_link DROP CONSTRAINT activity_link_entity_type_check;
-ALTER TABLE activity_link DROP CONSTRAINT activity_link_shape;
-UPDATE activity_link SET entity_type = 'company' WHERE entity_type = 'organization';
-ALTER TABLE activity_link ADD CONSTRAINT activity_link_entity_type_check
-  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'project'));
-ALTER TABLE activity_link ADD CONSTRAINT activity_link_shape
-  CHECK (((entity_type = 'person') AND (person_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company') AND (company_id IS NOT NULL) AND (person_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal') AND (deal_id IS NOT NULL) AND (person_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead') AND (lead_id IS NOT NULL) AND (person_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project') AND (project_id IS NOT NULL) AND (person_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL)));
-
--- ai_feedback.subject_type
-ALTER TABLE ai_feedback DROP CONSTRAINT ai_feedback_subject_type_check;
-UPDATE ai_feedback SET subject_type = 'company' WHERE subject_type = 'organization';
-ALTER TABLE ai_feedback ADD CONSTRAINT ai_feedback_subject_type_check
-  CHECK (subject_type IN ('company', 'person', 'deal', 'lead'));
-
--- attachment.entity_type
-ALTER TABLE attachment DROP CONSTRAINT attachment_entity_type_check;
-UPDATE attachment SET entity_type = 'company' WHERE entity_type = 'organization';
-ALTER TABLE attachment ADD CONSTRAINT attachment_entity_type_check
-  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'));
-
--- capture_backfill_creation.kind
-ALTER TABLE capture_backfill_creation DROP CONSTRAINT capture_backfill_creation_kind;
-UPDATE capture_backfill_creation SET kind = 'company_queued' WHERE kind = 'organization_queued';
-ALTER TABLE capture_backfill_creation ADD CONSTRAINT capture_backfill_creation_kind
-  CHECK (kind IN ('person', 'company_queued'));
-
--- capture_pending_counterparty.kind
-ALTER TABLE capture_pending_counterparty DROP CONSTRAINT capture_pending_counterparty_kind_check;
-UPDATE capture_pending_counterparty SET kind = 'company_sender' WHERE kind = 'organization_sender';
-ALTER TABLE capture_pending_counterparty ADD CONSTRAINT capture_pending_counterparty_kind_check
-  CHECK ((kind IS NULL) OR kind IN ('person', 'role_mailbox', 'company_sender', 'newsletter', 'transactional', 'spam', 'personal', 'advisor'));
-
--- custom_field.object
-ALTER TABLE custom_field DROP CONSTRAINT custom_field_object_check;
-UPDATE custom_field SET object = 'company' WHERE object = 'organization';
-ALTER TABLE custom_field ADD CONSTRAINT custom_field_object_check
-  CHECK (object IN ('person', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'));
-
--- dedupe_candidate.entity_type
-ALTER TABLE dedupe_candidate DROP CONSTRAINT dedupe_candidate_entity_type_check;
-ALTER TABLE dedupe_candidate DROP CONSTRAINT dedupe_candidate_shape;
-UPDATE dedupe_candidate SET entity_type = 'company' WHERE entity_type = 'organization';
-ALTER TABLE dedupe_candidate ADD CONSTRAINT dedupe_candidate_entity_type_check
-  CHECK (entity_type IN ('person', 'company', 'lead'));
-ALTER TABLE dedupe_candidate ADD CONSTRAINT dedupe_candidate_shape
-  CHECK (((entity_type = 'person') AND (left_person_id IS NOT NULL) AND (right_person_id IS NOT NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'company') AND (left_company_id IS NOT NULL) AND (right_company_id IS NOT NULL) AND (left_person_id IS NULL) AND (right_person_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'lead') AND (left_lead_id IS NOT NULL) AND (right_lead_id IS NOT NULL) AND (left_person_id IS NULL) AND (right_person_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL)));
-
--- embedding.entity_type
-ALTER TABLE embedding DROP CONSTRAINT embedding_entity_type_check;
-UPDATE embedding SET entity_type = 'company' WHERE entity_type = 'organization';
-ALTER TABLE embedding ADD CONSTRAINT embedding_entity_type_check
-  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'));
-
--- field_provenance.object_type
-ALTER TABLE field_provenance DROP CONSTRAINT field_provenance_object_type_check;
-UPDATE field_provenance SET object_type = 'company' WHERE object_type = 'organization';
-ALTER TABLE field_provenance ADD CONSTRAINT field_provenance_object_type_check
-  CHECK (object_type IN ('person', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'));
-
--- list.entity_type
-ALTER TABLE list DROP CONSTRAINT list_entity_type_check;
-UPDATE list SET entity_type = 'company' WHERE entity_type = 'organization';
-ALTER TABLE list ADD CONSTRAINT list_entity_type_check
-  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'project'));
-
--- list_member.entity_type
-ALTER TABLE list_member DROP CONSTRAINT list_member_entity_type_check;
-UPDATE list_member SET entity_type = 'company' WHERE entity_type = 'organization';
-ALTER TABLE list_member ADD CONSTRAINT list_member_entity_type_check
-  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'project'));
-
--- person_profile_field.field
-ALTER TABLE person_profile_field DROP CONSTRAINT person_profile_field_field_check;
-UPDATE person_profile_field SET field = 'company_name' WHERE field = 'org_name';
-ALTER TABLE person_profile_field ADD CONSTRAINT person_profile_field_field_check
-  CHECK (field IN ('title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website'));
-
--- record_grant.record_type
-ALTER TABLE record_grant DROP CONSTRAINT record_grant_record_type_check;
-UPDATE record_grant SET record_type = 'company' WHERE record_type = 'organization';
-ALTER TABLE record_grant ADD CONSTRAINT record_grant_record_type_check
-  CHECK (record_type IN ('person', 'company', 'deal', 'lead', 'project'));
-
--- saved_view.resource
-ALTER TABLE saved_view DROP CONSTRAINT saved_view_resource_check;
-UPDATE saved_view SET resource = 'companies' WHERE resource = 'organizations';
-ALTER TABLE saved_view ADD CONSTRAINT saved_view_resource_check
-  CHECK (resource IN ('people', 'companies', 'deals', 'activities', 'leads', 'partners', 'projects'));
-
--- signal.entity_type
-ALTER TABLE signal DROP CONSTRAINT signal_entity_type_check;
-UPDATE signal SET entity_type = 'company' WHERE entity_type = 'organization';
-ALTER TABLE signal ADD CONSTRAINT signal_entity_type_check
-  CHECK ((entity_type IS NULL) OR entity_type IN ('deal', 'company', 'person', 'project'));
-
--- site_read.target_kind
-ALTER TABLE site_read DROP CONSTRAINT site_read_target_kind_check;
-ALTER TABLE site_read DROP CONSTRAINT site_read_target_shape;
-UPDATE site_read SET target_kind = 'company' WHERE target_kind = 'organization';
-ALTER TABLE site_read ADD CONSTRAINT site_read_target_kind_check
-  CHECK (target_kind IN ('onboarding', 'company', 'domain_triage'));
-ALTER TABLE site_read ADD CONSTRAINT site_read_target_shape
-  CHECK (((target_kind = 'onboarding') AND ((company_id IS NULL) OR ((company_id IS NOT NULL) AND (confirmed_at IS NOT NULL)))) OR ((target_kind = 'company') AND (company_id IS NOT NULL)) OR ((target_kind = 'domain_triage') AND ((company_id IS NULL) OR ((company_id IS NOT NULL) AND (confirmed_at IS NOT NULL)))));
-
--- taggable.entity_type
-ALTER TABLE taggable DROP CONSTRAINT taggable_entity_type_check;
-UPDATE taggable SET entity_type = 'company' WHERE entity_type = 'organization';
-ALTER TABLE taggable ADD CONSTRAINT taggable_entity_type_check
-  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'project'));
-
--- user_record_view.entity_type
-ALTER TABLE user_record_view DROP CONSTRAINT user_record_view_entity_type_check;
-UPDATE user_record_view SET entity_type = 'company' WHERE entity_type = 'organization';
-ALTER TABLE user_record_view ADD CONSTRAINT user_record_view_entity_type_check
-  CHECK (entity_type IN ('company', 'person'));
-
--- weekly_plan_commitment.linked_record_type
-ALTER TABLE weekly_plan_commitment DROP CONSTRAINT weekly_plan_commitment_link_type_check;
-UPDATE weekly_plan_commitment SET linked_record_type = 'company' WHERE linked_record_type = 'organization';
-ALTER TABLE weekly_plan_commitment ADD CONSTRAINT weekly_plan_commitment_link_type_check
-  CHECK ((linked_record_type IS NULL) OR linked_record_type IN ('deal', 'lead', 'person', 'company', 'project'));
-
--- 8. the function bodies, which name the tables and columns above
+-- 7. the function bodies, which name the tables and columns above.
+--
+-- BEFORE the data updates below, not after. A rename moves a column, but a
+-- PL/pgSQL body is stored as text and keeps whatever it said: after section 2
+-- renamed activity_link.organization_id, trg_activity_link_last_activity still
+-- read OLD.organization_id. The first UPDATE in section 9 fires that trigger,
+-- so with the bodies rewritten later the migration failed with
+-- 'record "old" has no field "organization_id"' -- but only on a database
+-- holding rows, because an empty UPDATE never fires a trigger.
 
 CREATE OR REPLACE FUNCTION activity_link_refuses_a_company_meeting()
 RETURNS trigger
@@ -612,7 +497,7 @@ BEGIN
 END;
 $$;
 
--- 9. the functions that take arguments.
+-- 8. the functions that take arguments.
 --
 -- CREATE OR REPLACE cannot rename a function, an argument or a RETURNS
 -- TABLE column, so these are dropped and rewritten rather than replaced.
@@ -809,6 +694,132 @@ $fn$;;
 GRANT EXECUTE ON FUNCTION company_open_pipeline_rollup(date) TO margince_app;
 COMMENT ON FUNCTION company_open_pipeline_rollup(date) IS
   'Open pipeline per company in the installation base currency, as of the date the CALLER names. Open deals hold no frozen rate — that happens on close — so each foreign-currency deal converts at the latest fx_rate on or before as_of, across both currencies'' minor-unit scales (currency_minor_digits). The date is a parameter rather than CURRENT_DATE because two readers of one response must not select two different rates: the caller binds it from the same clock every other derived figure reads. A deal with no usable rate, or whose converted amount does not fit a bigint, contributes nothing and is still counted in open_deal_count, so a partial sum is detectable rather than silently short. The total itself answers NULL when it does not fit either.';
+
+-- 9. where the word is a stored VALUE, once every function that
+-- reads these tables spells the new column names.
+
+-- activity_link.entity_type
+ALTER TABLE activity_link DROP CONSTRAINT activity_link_entity_type_check;
+ALTER TABLE activity_link DROP CONSTRAINT activity_link_shape;
+UPDATE activity_link SET entity_type = 'company' WHERE entity_type = 'organization';
+ALTER TABLE activity_link ADD CONSTRAINT activity_link_entity_type_check
+  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'project'));
+ALTER TABLE activity_link ADD CONSTRAINT activity_link_shape
+  CHECK (((entity_type = 'person') AND (person_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company') AND (company_id IS NOT NULL) AND (person_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal') AND (deal_id IS NOT NULL) AND (person_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead') AND (lead_id IS NOT NULL) AND (person_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project') AND (project_id IS NOT NULL) AND (person_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL)));
+
+-- ai_feedback.subject_type
+ALTER TABLE ai_feedback DROP CONSTRAINT ai_feedback_subject_type_check;
+UPDATE ai_feedback SET subject_type = 'company' WHERE subject_type = 'organization';
+ALTER TABLE ai_feedback ADD CONSTRAINT ai_feedback_subject_type_check
+  CHECK (subject_type IN ('company', 'person', 'deal', 'lead'));
+
+-- attachment.entity_type
+ALTER TABLE attachment DROP CONSTRAINT attachment_entity_type_check;
+UPDATE attachment SET entity_type = 'company' WHERE entity_type = 'organization';
+ALTER TABLE attachment ADD CONSTRAINT attachment_entity_type_check
+  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'));
+
+-- capture_backfill_creation.kind
+ALTER TABLE capture_backfill_creation DROP CONSTRAINT capture_backfill_creation_kind;
+UPDATE capture_backfill_creation SET kind = 'company_queued' WHERE kind = 'organization_queued';
+ALTER TABLE capture_backfill_creation ADD CONSTRAINT capture_backfill_creation_kind
+  CHECK (kind IN ('person', 'company_queued'));
+
+-- capture_pending_counterparty.kind
+ALTER TABLE capture_pending_counterparty DROP CONSTRAINT capture_pending_counterparty_kind_check;
+UPDATE capture_pending_counterparty SET kind = 'company_sender' WHERE kind = 'organization_sender';
+ALTER TABLE capture_pending_counterparty ADD CONSTRAINT capture_pending_counterparty_kind_check
+  CHECK ((kind IS NULL) OR kind IN ('person', 'role_mailbox', 'company_sender', 'newsletter', 'transactional', 'spam', 'personal', 'advisor'));
+
+-- custom_field.object
+ALTER TABLE custom_field DROP CONSTRAINT custom_field_object_check;
+UPDATE custom_field SET object = 'company' WHERE object = 'organization';
+ALTER TABLE custom_field ADD CONSTRAINT custom_field_object_check
+  CHECK (object IN ('person', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'));
+
+-- dedupe_candidate.entity_type
+ALTER TABLE dedupe_candidate DROP CONSTRAINT dedupe_candidate_entity_type_check;
+ALTER TABLE dedupe_candidate DROP CONSTRAINT dedupe_candidate_shape;
+UPDATE dedupe_candidate SET entity_type = 'company' WHERE entity_type = 'organization';
+ALTER TABLE dedupe_candidate ADD CONSTRAINT dedupe_candidate_entity_type_check
+  CHECK (entity_type IN ('person', 'company', 'lead'));
+ALTER TABLE dedupe_candidate ADD CONSTRAINT dedupe_candidate_shape
+  CHECK (((entity_type = 'person') AND (left_person_id IS NOT NULL) AND (right_person_id IS NOT NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'company') AND (left_company_id IS NOT NULL) AND (right_company_id IS NOT NULL) AND (left_person_id IS NULL) AND (right_person_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'lead') AND (left_lead_id IS NOT NULL) AND (right_lead_id IS NOT NULL) AND (left_person_id IS NULL) AND (right_person_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL)));
+
+-- embedding.entity_type
+ALTER TABLE embedding DROP CONSTRAINT embedding_entity_type_check;
+UPDATE embedding SET entity_type = 'company' WHERE entity_type = 'organization';
+ALTER TABLE embedding ADD CONSTRAINT embedding_entity_type_check
+  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'));
+
+-- field_provenance.object_type
+ALTER TABLE field_provenance DROP CONSTRAINT field_provenance_object_type_check;
+UPDATE field_provenance SET object_type = 'company' WHERE object_type = 'organization';
+ALTER TABLE field_provenance ADD CONSTRAINT field_provenance_object_type_check
+  CHECK (object_type IN ('person', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'));
+
+-- list.entity_type
+ALTER TABLE list DROP CONSTRAINT list_entity_type_check;
+UPDATE list SET entity_type = 'company' WHERE entity_type = 'organization';
+ALTER TABLE list ADD CONSTRAINT list_entity_type_check
+  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'project'));
+
+-- list_member.entity_type
+ALTER TABLE list_member DROP CONSTRAINT list_member_entity_type_check;
+UPDATE list_member SET entity_type = 'company' WHERE entity_type = 'organization';
+ALTER TABLE list_member ADD CONSTRAINT list_member_entity_type_check
+  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'project'));
+
+-- person_profile_field.field
+ALTER TABLE person_profile_field DROP CONSTRAINT person_profile_field_field_check;
+UPDATE person_profile_field SET field = 'company_name' WHERE field = 'org_name';
+ALTER TABLE person_profile_field ADD CONSTRAINT person_profile_field_field_check
+  CHECK (field IN ('title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website'));
+
+-- record_grant.record_type
+ALTER TABLE record_grant DROP CONSTRAINT record_grant_record_type_check;
+UPDATE record_grant SET record_type = 'company' WHERE record_type = 'organization';
+ALTER TABLE record_grant ADD CONSTRAINT record_grant_record_type_check
+  CHECK (record_type IN ('person', 'company', 'deal', 'lead', 'project'));
+
+-- saved_view.resource
+ALTER TABLE saved_view DROP CONSTRAINT saved_view_resource_check;
+UPDATE saved_view SET resource = 'companies' WHERE resource = 'organizations';
+ALTER TABLE saved_view ADD CONSTRAINT saved_view_resource_check
+  CHECK (resource IN ('people', 'companies', 'deals', 'activities', 'leads', 'partners', 'projects'));
+
+-- signal.entity_type
+ALTER TABLE signal DROP CONSTRAINT signal_entity_type_check;
+UPDATE signal SET entity_type = 'company' WHERE entity_type = 'organization';
+ALTER TABLE signal ADD CONSTRAINT signal_entity_type_check
+  CHECK ((entity_type IS NULL) OR entity_type IN ('deal', 'company', 'person', 'project'));
+
+-- site_read.target_kind
+ALTER TABLE site_read DROP CONSTRAINT site_read_target_kind_check;
+ALTER TABLE site_read DROP CONSTRAINT site_read_target_shape;
+UPDATE site_read SET target_kind = 'company' WHERE target_kind = 'organization';
+ALTER TABLE site_read ADD CONSTRAINT site_read_target_kind_check
+  CHECK (target_kind IN ('onboarding', 'company', 'domain_triage'));
+ALTER TABLE site_read ADD CONSTRAINT site_read_target_shape
+  CHECK (((target_kind = 'onboarding') AND ((company_id IS NULL) OR ((company_id IS NOT NULL) AND (confirmed_at IS NOT NULL)))) OR ((target_kind = 'company') AND (company_id IS NOT NULL)) OR ((target_kind = 'domain_triage') AND ((company_id IS NULL) OR ((company_id IS NOT NULL) AND (confirmed_at IS NOT NULL)))));
+
+-- taggable.entity_type
+ALTER TABLE taggable DROP CONSTRAINT taggable_entity_type_check;
+UPDATE taggable SET entity_type = 'company' WHERE entity_type = 'organization';
+ALTER TABLE taggable ADD CONSTRAINT taggable_entity_type_check
+  CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'project'));
+
+-- user_record_view.entity_type
+ALTER TABLE user_record_view DROP CONSTRAINT user_record_view_entity_type_check;
+UPDATE user_record_view SET entity_type = 'company' WHERE entity_type = 'organization';
+ALTER TABLE user_record_view ADD CONSTRAINT user_record_view_entity_type_check
+  CHECK (entity_type IN ('company', 'person'));
+
+-- weekly_plan_commitment.linked_record_type
+ALTER TABLE weekly_plan_commitment DROP CONSTRAINT weekly_plan_commitment_link_type_check;
+UPDATE weekly_plan_commitment SET linked_record_type = 'company' WHERE linked_record_type = 'organization';
+ALTER TABLE weekly_plan_commitment ADD CONSTRAINT weekly_plan_commitment_link_type_check
+  CHECK ((linked_record_type IS NULL) OR linked_record_type IN ('deal', 'lead', 'person', 'company', 'project'));
 
 -- 10. where the word is a VALUE or a sentence rather than a name.
 --
