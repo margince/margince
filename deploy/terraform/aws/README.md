@@ -59,15 +59,21 @@ exists as this Terraform-generated value.)
 
 ```bash
 IMAGE_TAG="<the same value you set for image_tag in terraform.tfvars>"
+PLATFORM="linux/arm64"   # match cpu_architecture in terraform.tfvars — "linux/amd64" if you left it X86_64
 
 aws ecr get-login-password --region "$(terraform output -raw ecr_api_repository_url | cut -d. -f4)" \
   | docker login --username AWS --password-stdin "$(terraform output -raw ecr_api_repository_url | cut -d/ -f1)"
 
 for role in api worker web; do
-  docker build --target "$role" -t "$(terraform output -raw ecr_${role}_repository_url):${IMAGE_TAG}" .
-  docker push "$(terraform output -raw ecr_${role}_repository_url):${IMAGE_TAG}"
+  docker buildx build --platform "$PLATFORM" --target "$role" \
+    -t "$(terraform output -raw ecr_${role}_repository_url):${IMAGE_TAG}" --push .
 done
 ```
+
+A plain `docker build` produces an image matching your OWN machine's
+architecture, not necessarily the one `cpu_architecture` names — `buildx
+--platform` is what actually cross-compiles to it (the Dockerfile already
+supports this via `TARGETARCH`; nothing here needs to change).
 
 `IMAGE_TAG` must equal `var.image_tag` exactly. The three ECR repos are
 `image_tag_mutability = IMMUTABLE`, so pick a real release identifier (a git
@@ -157,18 +163,22 @@ so access runs through IAM/bucket policy alone); the api and worker task
 definitions set `stopTimeout = 60` so an in-flight request or job finishes
 draining rather than being cut off at Fargate's 30s default; every task
 definition declares `runtime_platform` explicitly (`var.cpu_architecture`,
-default `X86_64` — `ARM64` is genuinely supported, not theoretical, see the
-variable's own description).
+default `ARM64` — RDS and ElastiCache already default to Graviton instance
+families, so this keeps the whole stack on one architecture family by
+default; see the variable's own description).
 
-**Considered and deliberately not applied**: an S3 bucket-policy deny on
-any `PutObject` that does not explicitly carry `aws:kms` server-side
-encryption headers naming this stack's key. `s3.tf` explains why —
-`backend/internal/platform/blobstore/s3.go`'s `PutObject` call sets no SSE
-headers at all, relying entirely on the bucket's default encryption, so
-that deny would refuse every upload this app makes without a paired Go-side
-change this PR does not include.
+**S3 SSE-KMS enforcement**: `s3.tf`'s bucket policy denies any `PutObject`
+that isn't `aws:kms`-encrypted under this stack's own key
+(`MARGINCE_BLOBSTORE_KMS_KEY_ID`, wired in `ecs.tf`) — paired with the Go
+change in `backend/internal/platform/blobstore/s3.go` that sends the
+matching SSE-KMS header on every write. Both sides shipped together;
+landing the policy alone would have refused every upload the app makes.
+
+**S3 versioning** is enabled with a 90-day noncurrent-version expiry, so an
+accidental delete/overwrite on this CRM's attachment store is recoverable.
 
 **Left out, deliberately** (see the [shared README](../README.md)): S3
-object versioning / MFA delete, a WAF in front of the ALB. Each is a real
-option, not a gap this stack missed — they cost something (storage, WAF
-rule tuning) that belongs to a deployment decision rather than a default.
+Object Lock / MFA delete, a WAF in front of the ALB. Each is a real option,
+not a gap this stack missed — they cost something (a stricter retention
+posture, WAF rule tuning) that belongs to a deployment decision rather than
+a default.

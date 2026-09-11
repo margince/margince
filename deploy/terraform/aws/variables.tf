@@ -33,17 +33,19 @@ variable "az_count" {
 variable "cpu_architecture" {
   description = <<-EOT
     Fargate runtime_platform.cpu_architecture for all three task definitions
-    — "X86_64" or "ARM64". ARM64 (Graviton) is genuinely supported here, not
-    theoretical: the product's own release pipeline already builds and
+    — "X86_64" or "ARM64". Defaults to ARM64 (Graviton): RDS (db.t4g.medium)
+    and ElastiCache (cache.t4g.small) already default to Graviton instance
+    families, the product's own release pipeline already builds and
     smoke-tests every image on real arm64 GitHub runners
-    (.github/workflows/release.yml), the backend has zero cgo, and the
-    Dockerfile cross-compiles via TARGETARCH already. Defaults to X86_64
-    because it is the safer unsurprising default for a reference stack, not
-    because arm64 is unproven — switch it once you've pushed arm64 (or
-    multi-arch) images to the ECR repos this stack creates.
+    (.github/workflows/release.yml) and pushes multi-arch
+    (linux/amd64,linux/arm64) images, the backend has zero cgo, and the
+    Dockerfile cross-compiles via TARGETARCH already — Fargate on Graviton
+    also runs meaningfully cheaper than x86_64 at the same vCPU/memory. Set
+    to X86_64 if your own build/push step (README.md step 3) only produces
+    an amd64 image.
   EOT
   type        = string
-  default     = "X86_64"
+  default     = "ARM64"
   validation {
     condition     = contains(["X86_64", "ARM64"], var.cpu_architecture)
     error_message = "cpu_architecture must be \"X86_64\" or \"ARM64\"."
