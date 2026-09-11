@@ -28,19 +28,6 @@ export default defineConfig({
   // reasons that are the point rather than a fault.
   timeout: benchMobile ? 300_000 : 30_000,
   fullyParallel: true,
-  // One worker per core, not Playwright's default half.
-  //
-  // The default is a machine-sharing rule: a developer running the suite wants
-  // the other half of their laptop back. A CI runner is not shared — it exists
-  // for this run and is discarded after it — so half its cores were being left
-  // idle for nine minutes on every frontend pull request, and this lane is the
-  // last check to report on all of them.
-  //
-  // Bounded by the CPU count rather than a constant, so it follows the runner
-  // instead of encoding today's four cores. These specs mock the API at the
-  // network edge and share no server state, which is what makes the extra
-  // parallelism safe: `fullyParallel` above already runs them in any order.
-  workers: process.env.CI ? "100%" : undefined,
   use: {
     baseURL: process.env.BASE_URL ?? "http://localhost:4317",
     // MOBILE-AC-2 measures the mobile viewport (§3.8's 390px), so the benchmark
