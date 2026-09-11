@@ -126,7 +126,7 @@ const resetTables = `
 // it, so the corpus lives here beside the reset that owns it.
 const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
 	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', 'overlay_mode', ` +
-	`'currency_minor_digits')`
+	`'currency_minor_digits', 'deal_acquisition_source')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the
