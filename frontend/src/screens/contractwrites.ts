@@ -36,11 +36,16 @@ export async function patchContract(
       title: draft.title.trim(),
       contract_number: draft.contractNumber.trim() || null,
       value_minor: draft.valueMinor > 0 ? draft.valueMinor : null,
+      arr_minor: draft.arrMinor > 0 ? draft.arrMinor : null,
       // Same pairing as a create, and the same refusal to complete it with a
-      // guess: an amount whose currency the form does not hold goes out as the
-      // half it is, for the server to refuse in the open.
+      // guess: a figure whose currency the form does not hold goes out as the
+      // half it is, for the server to refuse in the open. Either figure keeps
+      // the code, because an agreement priced only on its recurring value
+      // still needs one.
       currency:
-        draft.valueMinor > 0 && draft.currency !== "" ? draft.currency : null,
+        (draft.valueMinor > 0 || draft.arrMinor > 0) && draft.currency !== ""
+          ? draft.currency
+          : null,
       value_basis: draft.valueBasis,
       starts_on: draft.startsOn || null,
       ends_on: draft.endsOn || null,

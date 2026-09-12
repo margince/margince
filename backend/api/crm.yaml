@@ -31463,6 +31463,7 @@ components:
         name: { type: string }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
+        expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.' }
         masked_fields:
           type: array
           readOnly: true
@@ -31587,6 +31588,7 @@ components:
         name: { type: string }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
+        expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
         pipeline_id: { type: string, format: uuid }
         stage_id: { type: string, format: uuid }
         company_id: { type: [string, 'null'], format: uuid }
@@ -31646,6 +31648,7 @@ components:
         name: { type: string }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
+        expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
         company_id: { type: [string, 'null'], format: uuid }
         partner_company_id: { type: [string, 'null'], format: uuid, description: 'The partner who brought this deal. The company must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.' }
         partner_attribution:
@@ -31883,6 +31886,7 @@ components:
           format: int64
           description: 'Total contract value in minor units, or twelve months of billing when `value_basis` is `annualized_12m`. Present exactly when `currency` is.'
         currency: { type: [string, 'null'], minLength: 3, maxLength: 3 }
+        arr_minor: { type: [integer, 'null'], format: int64, description: 'Annual recurring revenue in minor units of `currency`. Null means the agreement carries no recurring component, which is not the same as zero. `currency` is present exactly when `value_minor` or `arr_minor` is.' }
         value_basis:
           type: string
           enum: [total, annualized_12m]
@@ -31974,6 +31978,7 @@ components:
         title: { type: string, minLength: 1 }
         value_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], minLength: 3, maxLength: 3 }
+        arr_minor: { type: [integer, 'null'], format: int64, description: 'Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
         value_basis: { type: string, enum: [total, annualized_12m], default: total }
         starts_on: { type: [string, 'null'], format: date }
         ends_on: { type: [string, 'null'], format: date }
@@ -31995,6 +32000,7 @@ components:
         title: { type: string, minLength: 1 }
         value_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], minLength: 3, maxLength: 3 }
+        arr_minor: { type: [integer, 'null'], format: int64, description: 'Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
         value_basis: { type: string, enum: [total, annualized_12m] }
         starts_on: { type: [string, 'null'], format: date }
         ends_on: { type: [string, 'null'], format: date }
@@ -32044,6 +32050,7 @@ components:
         contract_number: { type: [string, 'null'] }
         value_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], minLength: 3, maxLength: 3 }
+        arr_minor: { type: [integer, 'null'], format: int64, description: 'Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
         value_basis:
           type: string
           enum: [total, annualized_12m]

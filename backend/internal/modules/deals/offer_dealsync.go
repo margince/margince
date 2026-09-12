@@ -63,6 +63,7 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	var status string
 	var closedAt *time.Time
 	var amountBefore *int64
+	var arrBefore *int64
 	var currencyBefore *string
 	var rateBefore *string
 	var rateDateBefore *time.Time
@@ -70,11 +71,23 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	// closed deal replaces a rate it already carries, and the audit diff has to
 	// say which one.
 	if err := tx.QueryRow(ctx,
-		`SELECT status, closed_at, amount_minor, currency, fx_rate_to_base::text, fx_rate_date
+		`SELECT status, closed_at, amount_minor, expected_arr_minor, currency,
+		        fx_rate_to_base::text, fx_rate_date
 		   FROM deal WHERE id = $1`,
-		dealID).Scan(&status, &closedAt, &amountBefore, &currencyBefore,
+		dealID).Scan(&status, &closedAt, &amountBefore, &arrBefore, &currencyBefore,
 		&rateBefore, &rateDateBefore); err != nil {
 		return nil, fmt.Errorf("read deal for amount sync: %w", err)
+	}
+
+	// An offer priced in a different currency cannot re-denominate a recurring
+	// figure it says nothing about. The offer carries a one-off gross and no
+	// recurring component, so accepting it in a new currency would leave the
+	// ARR as a number in a currency nobody quoted it in. Refusing is atomic:
+	// the transaction rolls back, the deal keeps both figures, and the caller
+	// is told to settle the ARR first. An offer in the SAME currency is no
+	// conflict — the recurring figure still reads correctly.
+	if arrBefore != nil && currencyBefore != nil && *currencyBefore != offer.Currency {
+		return nil, &ArrCurrencyConflictError{From: *currencyBefore, To: offer.Currency}
 	}
 
 	// The columns are nullable and the offer's figures are not, so each half is

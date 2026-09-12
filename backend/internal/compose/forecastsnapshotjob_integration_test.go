@@ -174,3 +174,64 @@ func TestASecondPassInOneDayFreezesNothingAndSucceeds(t *testing.T) {
 		t.Errorf("two passes in one local day left %d snapshots, want the one the arbiter admits", count)
 	}
 }
+
+// A deal priced ONLY on its recurring value does not abort the whole snapshot.
+//
+// The deal row admits a currency beside a null one-off amount — that is what
+// deal_money_currency_pair now says, and it is the shape a subscription deal
+// takes. The contribution row does not: forecast_contribution_amount_currency_pair
+// still pairs its single amount with its currency, because a contribution
+// records the one-off figure and nothing else.
+//
+// So the snapshot has to drop the code rather than carry it across. Carrying it
+// aborts the INSERT, and because every contribution is written in one statement
+// the failure takes the ENTIRE workspace's snapshot with it — one subscription
+// deal stops the daily forecast for every other deal in the period, every day,
+// until somebody prices it.
+func TestASubscriptionDealDoesNotAbortTheDailySnapshot(t *testing.T) {
+	e := setupSnapshotJob(t)
+	owner := integration.OwnerConn(t)
+
+	// No amount_minor at all, a live currency, and ARR. Illegal before the
+	// money pairing was rewritten; ordinary now. It joins the priced deal the
+	// fixture already seeded, on that deal's own pipeline and stage, so the
+	// snapshot has both shapes in one period.
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO deal (pipeline_id, stage_id, name, owner_id, status, source, captured_by,
+		                  expected_arr_minor, currency, expected_close_date)
+		SELECT d.pipeline_id, d.stage_id, 'Subscription Fixture', d.owner_id, 'open', 'manual', 'test',
+		       1200000, 'EUR', d.expected_close_date
+		  FROM deal d WHERE d.name = 'Snapshot Fixture'`); err != nil {
+		t.Fatalf("seeding the subscription deal: %v", err)
+	}
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the snapshot refused a workspace holding a subscription deal: %v", err)
+	}
+
+	count, snapshot := e.dailySnapshots(t)
+	if count != 1 {
+		t.Fatalf("the pass froze %d snapshots, want 1", count)
+	}
+
+	// The subscription deal IS in the snapshot — dropped rather than skipped
+	// would mean the period silently stopped counting it — and it is there
+	// with neither an amount nor a currency, which is what the contribution's
+	// own pairing admits.
+	var amount *int64
+	var currency *string
+	if err := owner.QueryRow(context.Background(), `
+		SELECT c.amount_minor, c.currency
+		  FROM forecast_contribution c
+		  JOIN deal d ON d.id = c.deal_id
+		 WHERE c.snapshot_id = $1 AND d.name = 'Subscription Fixture'`,
+		snapshot).Scan(&amount, &currency); err != nil {
+		t.Fatalf("the subscription deal has no contribution row: %v", err)
+	}
+	if amount != nil {
+		t.Fatalf("contribution amount_minor = %d, want null — the deal carries no one-off figure", *amount)
+	}
+	if currency != nil {
+		t.Fatalf("contribution currency = %q beside a null amount, which the table's own CHECK refuses", *currency)
+	}
+}

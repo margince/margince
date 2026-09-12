@@ -16,10 +16,10 @@ import { problemMessageOf, throwProblem } from "./common";
 import {
   type ContractDraft,
   ContractTermsFields,
-  contractTermsBody,
   draftProblem,
   pricedIn,
 } from "./contractform";
+import { contractTermsBody, renewDraftOf } from "./contracttermsbody";
 
 // margince#3286: the three transitions a signed agreement actually goes
 // through after it is first recorded — renew, assert a status, record a
@@ -29,7 +29,6 @@ import {
 
 type Contract = components["schemas"]["Contract"];
 type ContractStatus = NonNullable<Contract["status"]>;
-type ValueBasis = ContractDraft["valueBasis"];
 
 // A status a contract can only ARRIVE at through renewal — the server sets it
 // on the predecessor, in the same transaction that creates the successor
@@ -60,28 +59,6 @@ export function isTerminalContractStatus(status: Contract["status"]): boolean {
   return (
     status === "expired" || status === "cancelled" || status === "superseded"
   );
-}
-
-function renewDraftOf(predecessor: Contract): ContractDraft {
-  return {
-    // Title and basis are the two the successor is likeliest to keep, and the
-    // wire requires both — prefilled so renewing an unchanged agreement does
-    // not mean retyping its own name. Nothing else is handed down: the request
-    // inherits only the counterparty, which the server derives, because a
-    // renewal is a fresh negotiation and an inherited amount, notice period or
-    // payment term would be a number nobody agreed to this time.
-    title: predecessor.title,
-    contractNumber: "",
-    valueMinor: 0,
-    currency: "",
-    valueBasis: (predecessor.value_basis as ValueBasis) ?? "total",
-    startsOn: "",
-    endsOn: "",
-    renewalOn: "",
-    noticePeriodDays: "",
-    paymentTermDays: "",
-    signedOn: "",
-  };
 }
 
 function renewalBody(

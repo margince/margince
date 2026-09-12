@@ -136,7 +136,7 @@ func (s *Store) today() time.Time {
 // so that a filtered list and a single read cannot drift apart: one expression,
 // one meaning of the word (CONTRACT-FORM-1).
 const contractColumns = `id, company_id, deal_id, project_id, contract_number, title,
-	value_minor, currency, value_basis, fx_rate_to_base, fx_rate_date,
+	value_minor, arr_minor, currency, value_basis, fx_rate_to_base, fx_rate_date,
 	starts_on, ends_on, renewal_on, auto_renew, notice_period_days, payment_term_days,
 	status, signed_on, cancellation_notice_on, cancellation_effective_on,
 	superseded_by_id, source, captured_by, version, created_at, updated_at, archived_at`
@@ -186,7 +186,7 @@ func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contr
 
 	dests := []any{
 		&id, &companyID, &dealID, &projectID, &c.ContractNumber, &c.Title,
-		&c.ValueMinor, &c.Currency, &basis, &c.FxRateToBase, &fxDate,
+		&c.ValueMinor, &c.ArrMinor, &c.Currency, &basis, &c.FxRateToBase, &fxDate,
 		&startsOn, &endsOn, &renewalOn, &c.AutoRenew, &c.NoticePeriodDays, &c.PaymentTermDays,
 		&status, &signedOn, &noticeOn, &effectiveOn,
 		&supersededBy, &c.Source, &capturedBy, &c.Version, &c.CreatedAt, &c.UpdatedAt,

@@ -26,11 +26,24 @@ import (
 // dealMaskableFields are the columns a mask may name on a deal, and how each
 // is withheld. A mask naming a column not listed here is inert: withholding
 // is a deliberate act per field, not a reflective one over the struct.
+//
+// The keys are WIRE field names as a configured mask spells them, which is a
+// different vocabulary from the column constants they happen to coincide with:
+// renaming a column would not rename what an installation's stored mask says.
+//
+//nolint:goconst // wire field names against column names, each its own vocabulary
 var dealMaskableFields = map[string]func(*crmcontracts.Deal){
-	// The money pair goes together: a currency beside a withheld amount
-	// would read as a priced deal with its figure missing.
-	"amount_minor": func(d *crmcontracts.Deal) { d.AmountMinor, d.Currency = nil, nil },
-	"currency":     func(d *crmcontracts.Deal) { d.Currency = nil },
+	// The money fields go together: a currency beside a withheld amount
+	// would read as a priced deal with its figure missing, and an ARR left
+	// standing beside a withheld one-off amount discloses the size of the
+	// deal the mask was meant to hide.
+	"amount_minor": func(d *crmcontracts.Deal) {
+		d.AmountMinor, d.ExpectedArrMinor, d.Currency = nil, nil, nil
+	},
+	"expected_arr_minor": func(d *crmcontracts.Deal) {
+		d.AmountMinor, d.ExpectedArrMinor, d.Currency = nil, nil, nil
+	},
+	"currency": func(d *crmcontracts.Deal) { d.Currency = nil },
 	// The three references. They are withheld by the same mechanism as a role
 	// mask because the reader needs the same thing from them: a null they can
 	// tell from an empty field. Which rows they are withheld ON is a different

@@ -661,6 +661,23 @@ type CreateDealRequest = components["schemas"]["CreateDealRequest"];
 // chose is a currency the SAVE writes, so seeding one made an unpriced deal
 // acquire it the moment a reader edited its name — and since amount and
 // currency are paired by CHECK, that turned an innocent rename into a refusal.
+// One money figure as the form's own string, or empty.
+//
+// The currency's own scale, not a hundred. A row that WITHHELD the currency
+// for row scope while sending the figure would be scaled at the two-digit
+// default and shown wrong, so there being no honest reading without its unit,
+// the field stays empty rather than guessing one.
+//
+// Both of a deal's figures go through here, because they are scaled by one
+// rule and withheld by one mask — two copies of it would eventually disagree
+// about which.
+function moneyFieldValue(
+  minor: number | null | undefined,
+  currency?: string | null,
+): string {
+  return minor != null && currency ? String(toMajorUnits(minor, currency)) : "";
+}
+
 function dealEditRecord(deal: Deal): Record<
   string,
   string | number | undefined
@@ -672,16 +689,8 @@ function dealEditRecord(deal: Deal): Record<
     id: deal.id,
     version: deal.version,
     name: deal.name,
-    // The currency's own scale, not a hundred. amount_minor and currency are
-    // NULL together (the deal_amount_currency_pair CHECK), so a priced deal
-    // always carries the code — but a row that WITHHELD the currency for row
-    // scope while sending the amount would be scaled at the two-digit default
-    // and shown wrong. There is no honest figure without its unit, so the field
-    // stays empty rather than guessing one.
-    amount:
-      deal.amount_minor != null && deal.currency
-        ? String(toMajorUnits(deal.amount_minor, deal.currency))
-        : "",
+    amount: moneyFieldValue(deal.amount_minor, deal.currency),
+    expected_arr: moneyFieldValue(deal.expected_arr_minor, deal.currency),
     currency: deal.currency ?? "",
     owner_id: deal.owner_id ?? "",
     company_id: deal.company_id ?? "",
@@ -775,6 +784,7 @@ export function mapDealUpdate(
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
   const currency = str(values.currency);
   const amount = str(values.amount);
+  const expectedArr = str(values.expected_arr);
   const patch: UpdateDealRequest = {};
   // One reading of "the contact moved this field", over the form's own spelling
   // of the value rather than the wire's: a select left alone holds exactly the
@@ -810,6 +820,14 @@ export function mapDealUpdate(
   // amount_minor this form would have to invent.
   if (moved("amount") || (moved("currency") && amount)) {
     patch.amount_minor = amount ? toMinorUnits(Number(amount), currency) : null;
+  }
+  // ARR carries its currency's scale for the same reason the amount does, and
+  // travels on a currency move for the same reason: the code is what says how
+  // many minor units the figure counts in.
+  if (moved("expected_arr") || (moved("currency") && expectedArr)) {
+    patch.expected_arr_minor = expectedArr
+      ? toMinorUnits(Number(expectedArr), currency)
+      : null;
   }
   onMove("currency", "currency", () => currency || undefined);
   onMove("company_id", "company_id", () => str(values.company_id) || null);
@@ -873,8 +891,12 @@ function withoutMasked(
     if (field === "partner_company_id") {
       delete out.partner_attribution;
     }
-    if (field === "amount_minor") {
+    if (field === "amount_minor" || field === "expected_arr_minor") {
+      // The server withholds the whole money reading as one unit, so a patch
+      // that kept either figure would write back a half it was never shown.
       delete out.currency;
+      delete out.amount_minor;
+      delete out.expected_arr_minor;
     }
   }
   return out as UpdateDealRequest;
@@ -896,6 +918,7 @@ export function mapDealCreate(
 ): CreateDealRequest {
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
   const amount = str(values.amount);
+  const expectedArr = str(values.expected_arr);
   const currency = str(values.currency) || "EUR";
   return {
     name: str(values.name),
@@ -905,6 +928,9 @@ export function mapDealCreate(
     // currency carries — a dong has none, so multiplying by a hundred here
     // priced the deal a hundredfold and nothing downstream could tell.
     amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
+    expected_arr_minor: expectedArr
+      ? toMinorUnits(Number(expectedArr), currency)
+      : null,
     currency,
     company_id: str(values.company_id) || null,
     partner_company_id: str(values.partner_company_id) || null,
@@ -1202,6 +1228,11 @@ export function dealEditFields(
   return [
     { key: "name", label: "create.dealName", required: true },
     { key: "amount", label: "create.amount", type: "number" },
+    // The recurring half of the price, annual, in the same currency as the
+    // amount above. Beside it rather than in a section of its own because the
+    // two are one money value on the row: they share the currency field below,
+    // and the server refuses either one stranded without it.
+    { key: "expected_arr", label: "deal.expectedArr", type: "number" },
     {
       key: "currency",
       label: "create.currency",

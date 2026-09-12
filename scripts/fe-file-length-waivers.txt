@@ -85,7 +85,7 @@
 516 frontend/src/design-system/richtext.tsx
 525 frontend/src/screens/onboarding-backread.tsx
 527 frontend/src/screens/importflow.ts
-528 frontend/src/screens/contractlifecycle.tsx
+506 frontend/src/screens/contractlifecycle.tsx
 531 frontend/src/screens/voice-versions.tsx
 533 frontend/src/screens/companywork.tsx
 542 frontend/src/screens/leadpresentation.tsx
@@ -115,7 +115,7 @@
 666 frontend/src/screens/record360/citations.tsx
 594 frontend/src/screens/approvalkind.ts
 670 frontend/src/screens/entityref.tsx
-671 frontend/src/screens/contractform.tsx
+633 frontend/src/screens/contractform.tsx
 671 frontend/src/screens/users-admin.tsx
 676 frontend/src/screens/worklist.dispositions.tsx
 682 frontend/src/screens/contactcards.tsx

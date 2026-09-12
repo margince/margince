@@ -5,6 +5,7 @@ const DRAFT = {
   title: "MSA 2026",
   contractNumber: "",
   valueMinor: 0,
+  arrMinor: 0,
   currency: "EUR",
   valueBasis: "total" as const,
   startsOn: "",

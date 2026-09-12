@@ -2721,16 +2721,19 @@ public.contact_social_contact_id_platform_key CREATE UNIQUE INDEX contact_social
 public.contact_social_pkey CREATE UNIQUE INDEX contact_social_pkey ON public.contact_social USING btree (id)
 public.contract acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contract.archived_at timestamp with time zone gen=- def=-
+public.contract.arr_minor bigint gen=- def=-
 public.contract.auto_renew boolean NOT NULL gen=- def=false
 public.contract.cancellation_effective_on date gen=- def=-
 public.contract.cancellation_notice_on date gen=- def=-
 public.contract.captured_by text NOT NULL gen=- def=-
 public.contract.company_id uuid NOT NULL gen=- def=-
+public.contract.contract_arr_nonnegative CHECK (((arr_minor IS NULL) OR (arr_minor >= 0)))
 public.contract.contract_cancellation_order CHECK (((cancellation_notice_on IS NULL) OR (cancellation_effective_on IS NULL) OR (cancellation_effective_on >= cancellation_notice_on)))
 public.contract.contract_cancellation_within_term CHECK (((cancellation_effective_on IS NULL) OR (ends_on IS NULL) OR (cancellation_effective_on <= ends_on)))
 public.contract.contract_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.contract.contract_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE SET NULL
 public.contract.contract_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))
+public.contract.contract_money_currency_pair CHECK ((((value_minor IS NULL) AND (arr_minor IS NULL)) = (currency IS NULL)))
 public.contract.contract_notice_period_days_check CHECK (((notice_period_days IS NULL) OR (notice_period_days >= 0)))
 public.contract.contract_number text gen=- def=-
 public.contract.contract_payment_term_days_nonnegative CHECK (((payment_term_days IS NULL) OR (payment_term_days >= 0)))
@@ -2743,7 +2746,6 @@ public.contract.contract_superseded_by_id_fkey FOREIGN KEY (superseded_by_id) RE
 public.contract.contract_supersedes_not_self CHECK (((superseded_by_id IS NULL) OR (superseded_by_id <> id)))
 public.contract.contract_term_order CHECK (((starts_on IS NULL) OR (ends_on IS NULL) OR (ends_on >= starts_on)))
 public.contract.contract_value_basis_check CHECK ((value_basis = ANY (ARRAY['total'::text, 'annualized_12m'::text])))
-public.contract.contract_value_pair CHECK (((value_minor IS NULL) = (currency IS NULL)))
 public.contract.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contract.currency character(3) gen=- def=-
 public.contract.deal_id uuid gen=- def=-
@@ -2868,17 +2870,18 @@ public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.currency character(3) gen=- def=-
 public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES deal_acquisition_source(key) ON UPDATE CASCADE ON DELETE RESTRICT
-public.deal.deal_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
 public.deal.deal_closed_fx CHECK (((status = 'open'::text) OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))
 public.deal.deal_commercial_motion_check CHECK (((commercial_motion IS NULL) OR (commercial_motion = ANY (ARRAY['new_business'::text, 'renewal'::text, 'upsell'::text, 'cross_sell'::text, 'expansion'::text, 'existing_business'::text]))))
 public.deal.deal_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL (company_id)
 public.deal.deal_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
 public.deal.deal_description_bounded CHECK (((description IS NULL) OR (length(description) <= 20000)))
+public.deal.deal_expected_arr_nonnegative CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))
 public.deal.deal_forecast_category_check CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit'::text, 'best_case'::text, 'pipeline'::text, 'omitted'::text]))))
 public.deal.deal_last_activity CREATE TRIGGER deal_last_activity AFTER UPDATE OF company_id ON public.deal FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()
 public.deal.deal_lost_reason CHECK (((status <> 'lost'::text) OR (lost_reason IS NOT NULL)))
 public.deal.deal_lost_reason_only_when_lost CHECK (((lost_reason IS NULL) OR (status = 'lost'::text)))
+public.deal.deal_money_currency_pair CHECK ((((amount_minor IS NULL) AND (expected_arr_minor IS NULL)) = (currency IS NULL)))
 public.deal.deal_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.deal.deal_partner_attribution_check CHECK (((partner_attribution IS NULL) OR (partner_attribution = ANY (ARRAY['sourced'::text, 'influenced'::text]))))
 public.deal.deal_partner_attribution_pairing CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))
@@ -2894,6 +2897,7 @@ public.deal.deal_won_without_contract_detail CHECK (((won_without_contract_reaso
 public.deal.deal_won_without_contract_only_when_won CHECK (((won_without_contract_reason IS NULL) OR (status = 'won'::text)))
 public.deal.deal_won_without_contract_reason CHECK (((won_without_contract_reason IS NULL) OR (won_without_contract_reason = ANY (ARRAY['imported'::text, 'purchase_order'::text, 'verbal'::text, 'renewal_by_email'::text, 'other'::text]))))
 public.deal.description text gen=- def=-
+public.deal.expected_arr_minor bigint gen=- def=-
 public.deal.expected_close_date date gen=- def=-
 public.deal.forecast_category text gen=- def=-
 public.deal.fx_rate_date date gen=- def=-

@@ -131,6 +131,7 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 	in := CreateDealInput{
 		Name:             req.Name,
 		AmountMinor:      req.AmountMinor,
+		ExpectedArrMinor: req.ExpectedArrMinor,
 		Currency:         req.Currency,
 		PipelineID:       pathID[ids.PipelineKind](req.PipelineId),
 		StageID:          pathID[ids.StageKind](req.StageId),
@@ -165,6 +166,7 @@ func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) Updat
 	in := UpdateDealInput{
 		Name:             req.Name,
 		AmountMinor:      req.AmountMinor,
+		ExpectedArrMinor: req.ExpectedArrMinor,
 		Currency:         req.Currency,
 		CompanyID:        idArg[ids.CompanyKind](req.CompanyId),
 		ProjectID:        idArg[ids.ProjectKind](req.ProjectId),

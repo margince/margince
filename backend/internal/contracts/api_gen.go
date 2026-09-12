@@ -25271,7 +25271,10 @@ type ContextSection struct {
 // deal, falling back to the company (ADR-0109 §8).
 type Contract struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
-	AutoRenew  *bool      `json:"auto_renew,omitempty"`
+
+	// ArrMinor Annual recurring revenue in minor units of `currency`. Null means the agreement carries no recurring component, which is not the same as zero. `currency` is present exactly when `value_minor` or `arr_minor` is.
+	ArrMinor  *int64 `json:"arr_minor,omitempty"`
+	AutoRenew *bool  `json:"auto_renew,omitempty"`
 
 	// CancellationEffectiveOn When the agreement actually ends. Never after `ends_on`: a cancellation cannot extend a term that already expired.
 	CancellationEffectiveOn *openapi_types.Date `json:"cancellation_effective_on,omitempty"`
@@ -25635,6 +25638,8 @@ type CreateContactRequest struct {
 
 // CreateContractRequest defines model for CreateContractRequest.
 type CreateContractRequest struct {
+	// ArrMinor Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
+	ArrMinor             *int64                           `json:"arr_minor,omitempty"`
 	AutoRenew            *bool                            `json:"auto_renew,omitempty"`
 	CompanyId            openapi_types.UUID               `json:"company_id"`
 	ContractNumber       *string                          `json:"contract_number,omitempty"`
@@ -25701,6 +25706,9 @@ type CreateDealRequest struct {
 
 	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
 	Description *string `json:"description,omitempty"`
+
+	// ExpectedArrMinor Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
+	ExpectedArrMinor *int64 `json:"expected_arr_minor,omitempty"`
 
 	// ExpectedCloseDate Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
@@ -26356,6 +26364,9 @@ type Deal struct {
 
 	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
 	Description *string `json:"description,omitempty"`
+
+	// ExpectedArrMinor Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.
+	ExpectedArrMinor *int64 `json:"expected_arr_minor,omitempty"`
 
 	// ExpectedCloseDate INV-CLOSE-PAST (formulas §11): an open deal never claims a past close date — saving one is rejected 422 (close_date_past); one that ages into the past is corrected by the nightly run.
 	ExpectedCloseDate *openapi_types.Date   `json:"expected_close_date,omitempty"`
@@ -33334,6 +33345,8 @@ type RenderedValue struct {
 // term to the deal that won the old one. Both must belong to the counterparty the successor
 // inherits, and a caller may not name one it cannot see.
 type RenewContractRequest struct {
+	// ArrMinor Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
+	ArrMinor         *int64              `json:"arr_minor,omitempty"`
 	AutoRenew        *bool               `json:"auto_renew,omitempty"`
 	ContractNumber   *string             `json:"contract_number,omitempty"`
 	Currency         *string             `json:"currency,omitempty"`
@@ -36196,6 +36209,8 @@ type UpdateContactRequestVisibility string
 
 // UpdateContractRequest Partial. Status is absent by design — it moves through changeContractStatus.
 type UpdateContractRequest struct {
+	// ArrMinor Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
+	ArrMinor             *int64                           `json:"arr_minor,omitempty"`
 	AutoRenew            *bool                            `json:"auto_renew,omitempty"`
 	ContractNumber       *string                          `json:"contract_number,omitempty"`
 	Currency             *string                          `json:"currency,omitempty"`
@@ -36244,6 +36259,9 @@ type UpdateDealRequest struct {
 
 	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
 	Description *string `json:"description,omitempty"`
+
+	// ExpectedArrMinor Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
+	ExpectedArrMinor *int64 `json:"expected_arr_minor,omitempty"`
 
 	// ExpectedCloseDate On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.
 	ExpectedCloseDate *openapi_types.Date                `json:"expected_close_date,omitempty"`
@@ -46204,6 +46222,14 @@ func (a *Contract) UnmarshalJSON(b []byte) error {
 		delete(object, "archived_at")
 	}
 
+	if raw, found := object["arr_minor"]; found {
+		err = json.Unmarshal(raw, &a.ArrMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'arr_minor': %w", err)
+		}
+		delete(object, "arr_minor")
+	}
+
 	if raw, found := object["auto_renew"]; found {
 		err = json.Unmarshal(raw, &a.AutoRenew)
 		if err != nil {
@@ -46459,6 +46485,13 @@ func (a Contract) MarshalJSON() ([]byte, error) {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.ArrMinor != nil {
+		object["arr_minor"], err = json.Marshal(a.ArrMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'arr_minor': %w", err)
 		}
 	}
 
@@ -47077,6 +47110,14 @@ func (a *CreateContractRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["arr_minor"]; found {
+		err = json.Unmarshal(raw, &a.ArrMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'arr_minor': %w", err)
+		}
+		delete(object, "arr_minor")
+	}
+
 	if raw, found := object["auto_renew"]; found {
 		err = json.Unmarshal(raw, &a.AutoRenew)
 		if err != nil {
@@ -47215,6 +47256,13 @@ func (a *CreateContractRequest) UnmarshalJSON(b []byte) error {
 func (a CreateContractRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.ArrMinor != nil {
+		object["arr_minor"], err = json.Marshal(a.ArrMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'arr_minor': %w", err)
+		}
+	}
 
 	if a.AutoRenew != nil {
 		object["auto_renew"], err = json.Marshal(a.AutoRenew)
@@ -47399,6 +47447,14 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "description")
 	}
 
+	if raw, found := object["expected_arr_minor"]; found {
+		err = json.Unmarshal(raw, &a.ExpectedArrMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'expected_arr_minor': %w", err)
+		}
+		delete(object, "expected_arr_minor")
+	}
+
 	if raw, found := object["expected_close_date"]; found {
 		err = json.Unmarshal(raw, &a.ExpectedCloseDate)
 		if err != nil {
@@ -47537,6 +47593,13 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 		object["description"], err = json.Marshal(a.Description)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	if a.ExpectedArrMinor != nil {
+		object["expected_arr_minor"], err = json.Marshal(a.ExpectedArrMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'expected_arr_minor': %w", err)
 		}
 	}
 
@@ -48593,6 +48656,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "description")
 	}
 
+	if raw, found := object["expected_arr_minor"]; found {
+		err = json.Unmarshal(raw, &a.ExpectedArrMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'expected_arr_minor': %w", err)
+		}
+		delete(object, "expected_arr_minor")
+	}
+
 	if raw, found := object["expected_close_date"]; found {
 		err = json.Unmarshal(raw, &a.ExpectedCloseDate)
 		if err != nil {
@@ -48898,6 +48969,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["description"], err = json.Marshal(a.Description)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	if a.ExpectedArrMinor != nil {
+		object["expected_arr_minor"], err = json.Marshal(a.ExpectedArrMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'expected_arr_minor': %w", err)
 		}
 	}
 
@@ -51809,6 +51887,14 @@ func (a *RenewContractRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["arr_minor"]; found {
+		err = json.Unmarshal(raw, &a.ArrMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'arr_minor': %w", err)
+		}
+		delete(object, "arr_minor")
+	}
+
 	if raw, found := object["auto_renew"]; found {
 		err = json.Unmarshal(raw, &a.AutoRenew)
 		if err != nil {
@@ -51939,6 +52025,13 @@ func (a *RenewContractRequest) UnmarshalJSON(b []byte) error {
 func (a RenewContractRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.ArrMinor != nil {
+		object["arr_minor"], err = json.Marshal(a.ArrMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'arr_minor': %w", err)
+		}
+	}
 
 	if a.AutoRenew != nil {
 		object["auto_renew"], err = json.Marshal(a.AutoRenew)
@@ -52504,6 +52597,14 @@ func (a *UpdateContractRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["arr_minor"]; found {
+		err = json.Unmarshal(raw, &a.ArrMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'arr_minor': %w", err)
+		}
+		delete(object, "arr_minor")
+	}
+
 	if raw, found := object["auto_renew"]; found {
 		err = json.Unmarshal(raw, &a.AutoRenew)
 		if err != nil {
@@ -52634,6 +52735,13 @@ func (a *UpdateContractRequest) UnmarshalJSON(b []byte) error {
 func (a UpdateContractRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.ArrMinor != nil {
+		object["arr_minor"], err = json.Marshal(a.ArrMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'arr_minor': %w", err)
+		}
+	}
 
 	if a.AutoRenew != nil {
 		object["auto_renew"], err = json.Marshal(a.AutoRenew)
@@ -52815,6 +52923,14 @@ func (a *UpdateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "description")
 	}
 
+	if raw, found := object["expected_arr_minor"]; found {
+		err = json.Unmarshal(raw, &a.ExpectedArrMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'expected_arr_minor': %w", err)
+		}
+		delete(object, "expected_arr_minor")
+	}
+
 	if raw, found := object["expected_close_date"]; found {
 		err = json.Unmarshal(raw, &a.ExpectedCloseDate)
 		if err != nil {
@@ -52977,6 +53093,13 @@ func (a UpdateDealRequest) MarshalJSON() ([]byte, error) {
 		object["description"], err = json.Marshal(a.Description)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	if a.ExpectedArrMinor != nil {
+		object["expected_arr_minor"], err = json.Marshal(a.ExpectedArrMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'expected_arr_minor': %w", err)
 		}
 	}
 

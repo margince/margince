@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -33,10 +32,13 @@ import (
 type CreateDealInput struct {
 	Name        string
 	AmountMinor *int64
-	Currency    *string
-	PipelineID  ids.PipelineID
-	StageID     ids.StageID
-	CompanyID   *ids.CompanyID
+	// ExpectedArrMinor is the recurring half of the price, in the same
+	// currency as AmountMinor.
+	ExpectedArrMinor *int64
+	Currency         *string
+	PipelineID       ids.PipelineID
+	StageID          ids.StageID
+	CompanyID        *ids.CompanyID
 	// PartnerCompanyID and PartnerAttribution are the one fact the
 	// schema stores as one: the deal_partner_attribution_pairing CHECK
 	// rejects either half alone, so birthAttribution below settles them
@@ -144,16 +146,11 @@ func (s *Store) readyDealCreate(ctx context.Context, in CreateDealInput) (bornDe
 	}
 	// The money pair holds from birth (data-model §6): a deal with an
 	// amount and no currency would silently skip the FX freeze at close
-	// and trip the deal_closed_fx CHECK far from the cause. values.Money
-	// is the one spelling of "a valid amount+currency" — the same rule
-	// the schema CHECKs repeat.
-	if (in.AmountMinor == nil) != (in.Currency == nil) {
-		return bornDeal{}, &AmountCurrencyPairError{Missing: missingMoneyHalf(in.AmountMinor == nil)}
-	}
-	if in.AmountMinor != nil {
-		if _, err := values.NewMoney(*in.AmountMinor, *in.Currency); err != nil {
-			return bornDeal{}, err
-		}
+	// and trip the deal_closed_fx CHECK far from the cause. moneyPairError is
+	// the same rule the update path applies, so a row cannot be born in a
+	// state no edit could have reached.
+	if err := moneyPairError(in.AmountMinor, in.ExpectedArrMinor, in.Currency); err != nil {
+		return bornDeal{}, err
 	}
 	attribution, err := birthAttribution(in)
 	if err != nil {
@@ -298,14 +295,16 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		in.CompanyID, in.PartnerCompanyID, born.attribution,
 		in.ProjectID, in.OwnerID, in.ExpectedClose, in.Source, born.by,
 		in.Description, in.CommercialMotion, in.Priority, in.AcquisitionSource,
+		in.ExpectedArrMinor,
 	})
 	_, err := tx.Exec(ctx,
 		`INSERT INTO deal (id, name, amount_minor, currency, pipeline_id, stage_id,
 		                   company_id, partner_company_id, partner_attribution,
 		                   project_id, owner_id, expected_close_date, source, captured_by,
-		                   description, commercial_motion, priority, acquisition_source`+cfCols+`)
+		                   description, commercial_motion, priority, acquisition_source,
+		                   expected_arr_minor`+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-		         $15, $16, $17, $18`+cfHolders+`)`,
+		         $15, $16, $17, $18, $19`+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Covers the remaining FKs (pipeline, owner); the stage/pipeline
