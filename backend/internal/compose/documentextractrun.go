@@ -81,6 +81,7 @@ var documentTextMIMEs = []string{
 type DocumentExtractor struct {
 	pool  *pgxpool.Pool
 	brain documentCompleter
+	pdf   *pdftext.Reader
 	log   *slog.Logger
 }
 
@@ -101,8 +102,16 @@ type documentCompleter interface {
 }
 
 // NewDocumentExtractor builds the engine over the pool and one model lane.
+//
+// The PDF reader is built here and kept, because it owns a compiled WebAssembly
+// module: one per extractor, compiled on the first PDF this installation is
+// asked to read and never again.
+// The engine is not closed, and that is the whole lifecycle: it is compiled on
+// the first PDF and lives as long as the worker that reads them, which is as
+// long as the process. A Close here would need a shutdown seam the job runtime
+// does not have, for a resource whose release coincides with exit.
 func NewDocumentExtractor(pool *pgxpool.Pool, brain documentCompleter, log *slog.Logger) *DocumentExtractor {
-	return &DocumentExtractor{pool: pool, brain: brain, log: log}
+	return &DocumentExtractor{pool: pool, brain: brain, pdf: pdftext.New(), log: log}
 }
 
 // documentReadStore is the slice of the activities store one reading drives.
@@ -305,7 +314,7 @@ func (d *DocumentExtractor) laneFor(
 func (d *DocumentExtractor) extractedSource(
 	ctx context.Context, meta crmcontracts.Attachment, raw []byte,
 ) (documentSource, string) {
-	text, err := pdftext.Extract(ctx, raw, maxDocumentTextChars)
+	text, err := d.pdf.Read(ctx, raw, maxDocumentTextChars)
 	switch {
 	case errors.Is(err, pdftext.ErrNoTextLayer):
 		// A scan. Its pages are pictures, so there is no text to read and this

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"github.com/go-pdf/fpdf"
@@ -22,6 +23,19 @@ import (
 
 // generous is a bound no test case here is trying to hit.
 const generous = 100_000
+
+// reader is shared across this file's cases on purpose: each Reader owns a
+// compiled 5 MB WebAssembly module, and building one per test would spend a
+// second per test compiling the same bytes.
+var reader = pdftext.New()
+
+func TestMain(m *testing.M) {
+	code := m.Run()
+	if err := reader.Close(); err != nil {
+		panic("closing the PDF engine: " + err.Error())
+	}
+	os.Exit(code)
+}
 
 // invoicePDF builds the shape this feature actually reads: an order
 // confirmation stating the four deal fields, one line each.
@@ -50,7 +64,7 @@ func TestExtractReadsWhatAGeneratedDocumentStates(t *testing.T) {
 		"Delivery date: 31 January 2027",
 	)
 
-	text, err := pdftext.Extract(t.Context(), raw, generous)
+	text, err := reader.Read(t.Context(), raw, generous)
 	if err != nil {
 		t.Fatalf("reading a generated PDF: %v", err)
 	}
@@ -69,7 +83,7 @@ func TestExtractReadsWhatAGeneratedDocumentStates(t *testing.T) {
 func TestExtractPreservesAFigureInTheSpellingAQuoteIsCheckedAgainst(t *testing.T) {
 	raw := invoicePDF(t, "Contract value: EUR 148,500.00", "Deposit: EUR 500.00")
 
-	text, err := pdftext.Extract(t.Context(), raw, generous)
+	text, err := reader.Read(t.Context(), raw, generous)
 	if err != nil {
 		t.Fatalf("reading a generated PDF: %v", err)
 	}
@@ -96,7 +110,7 @@ func TestExtractSaysAScanCarriesNoText(t *testing.T) {
 		t.Fatalf("building the fixture PDF: %v", err)
 	}
 
-	_, err := pdftext.Extract(t.Context(), out.Bytes(), generous)
+	_, err := reader.Read(t.Context(), out.Bytes(), generous)
 	if !errors.Is(err, pdftext.ErrNoTextLayer) {
 		t.Fatalf("a PDF with no text must report ErrNoTextLayer, got %v", err)
 	}
@@ -108,7 +122,7 @@ func TestExtractSaysAScanCarriesNoText(t *testing.T) {
 func TestExtractTreatsAPageOfWhitespaceAsNoTextAtAll(t *testing.T) {
 	raw := invoicePDF(t, "   ", "\t", " ")
 
-	_, err := pdftext.Extract(t.Context(), raw, generous)
+	_, err := reader.Read(t.Context(), raw, generous)
 	if !errors.Is(err, pdftext.ErrNoTextLayer) {
 		t.Fatalf("whitespace-only text must report ErrNoTextLayer, got %v", err)
 	}
@@ -124,7 +138,7 @@ func TestExtractRefusesWhatIsNotAPDF(t *testing.T) {
 		"truncated trail": []byte("%PDF-1.4\n1 0 obj\n<<>>\nendobj\n"),
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := pdftext.Extract(t.Context(), raw, generous)
+			_, err := reader.Read(t.Context(), raw, generous)
 			if !errors.Is(err, pdftext.ErrUnreadable) {
 				t.Fatalf("%s must report ErrUnreadable, got %v", name, err)
 			}
@@ -132,16 +146,12 @@ func TestExtractRefusesWhatIsNotAPDF(t *testing.T) {
 	}
 }
 
-// The defect this package's recover exists for, asserted rather than described.
+// Breadth: six hundred corrupted documents, none of which may crash the process
+// or come back as anything but an answer.
 //
-// The PDF library panics on malformed input instead of returning an error, and
-// these bytes arrive from an upload — so the crash is reachable by anyone who
-// can attach a document, and one panicking reading would take every other
-// reading on the worker with it.
-//
-// Mutations of a VALID file rather than random bytes: random bytes fail the
-// header check and never reach the parser, which is exactly the shape of test
-// that would report this as safe while the real case still panicked.
+// Mutations of a VALID file rather than random bytes, because random bytes fail
+// the header check and never reach the parser — the shape of corpus that reports
+// a parser as safe while never having tested it.
 func TestExtractSurvivesACorruptedDocumentInsteadOfPanicking(t *testing.T) {
 	valid := invoicePDF(t, "Contract value: EUR 148,500.00")
 	// Seeded, so the corpus is the same 600 documents on every run: a corruption
@@ -156,7 +166,7 @@ func TestExtractSurvivesACorruptedDocumentInsteadOfPanicking(t *testing.T) {
 		}
 		// No recover here on purpose: a panic escaping Extract fails this test
 		// by crashing it, which is the outcome being asserted against.
-		text, err := pdftext.Extract(t.Context(), mutant, generous)
+		text, err := reader.Read(t.Context(), mutant, generous)
 		switch {
 		case err == nil && text == "":
 			t.Fatal("a reading that succeeded must carry text")
@@ -172,28 +182,82 @@ func TestExtractSurvivesACorruptedDocumentInsteadOfPanicking(t *testing.T) {
 	t.Logf("%d of 600 mutations were refused without panicking", corrupted)
 }
 
-// The corpus above proves breadth; this proves DEPTH, and it is the one that
-// holds the recover.
+// The three files below are the reason this package parses inside a sandbox
+// rather than in the host process. Each one defeated the pure-Go parser this
+// package was written against first, and each is committed so the defeat cannot
+// come back unnoticed.
 //
-// A refusal count cannot tell a document turned away at the header from one the
-// parser opened and choked on, so a corpus that stopped reaching the page reader
-// would keep passing. This fixture is a specific file measured to panic inside
-// the parser — `unexpected keyword "841.8\x97" parsing object` — so if the
-// recover is ever removed or narrowed, this test does not fail politely: it
-// crashes, which is the failure mode being guarded.
-//
-// Committed rather than generated: it is one mutant out of hundreds, and a test
-// that re-derived it would be asserting that the generator still happens to find
-// one.
-func TestADocumentThatPanicsTheParserIsRefusedInstead(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("testdata", "panics-the-parser.pdf"))
+// They are held to a DEADLINE as well as an answer. Two of the three cost
+// nothing in memory and everything in time, and a test that only checked the
+// verdict would pass just as happily while a worker span forever.
+const attackDeadline = 5 * time.Second
+
+// readWithin fails the test if a reading does not come back in time, rather
+// than hanging the suite until the whole package times out.
+func readWithin(t *testing.T, raw []byte) error {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), attackDeadline)
+	defer cancel()
+
+	type outcome struct{ err error }
+	done := make(chan outcome, 1)
+	go func() {
+		_, err := reader.Read(ctx, raw, generous)
+		done <- outcome{err}
+	}()
+	select {
+	case got := <-done:
+		return got.err
+	case <-time.After(attackDeadline):
+		t.Fatalf("the reading did not come back within %v — a document is holding the engine", attackDeadline)
+		return nil
+	}
+}
+
+// A cross-reference table may name any object number it likes, and the previous
+// parser sized its table from that number: a 133-byte file claiming twenty
+// million objects allocated 610 MB and reported SUCCESS, and the same file
+// scaled up reached tens of gigabytes. A Go out-of-memory is a fatal error
+// rather than a panic, so no amount of recovering caught it.
+func TestAnXrefClaimingMoreObjectsThanTheFileCouldHoldIsRefused(t *testing.T) {
+	raw := fixture(t, "xref-claims-millions-of-objects.pdf")
+
+	if err := readWithin(t, raw); !errors.Is(err, pdftext.ErrUnreadable) {
+		t.Fatalf("a file whose xref outruns its own length must be refused, got %v", err)
+	}
+}
+
+// A page tree may list itself as its own child. The previous parser followed
+// `/Kids` with no visited set, so a 224-byte file span with no exit — nothing
+// panicked, nothing allocated, and the goroutine could not be stopped.
+func TestAPageTreeThatListsItselfIsRefusedRatherThanFollowed(t *testing.T) {
+	raw := fixture(t, "page-tree-lists-itself.pdf")
+
+	if err := readWithin(t, raw); err == nil {
+		t.Fatal("a page tree that is its own child must not read as a document")
+	}
+}
+
+// One mutant of a valid file, measured to PANIC the previous parser
+// (`unexpected keyword "841.8\x97" parsing object`). The engine here opens it
+// and finds nothing to read, which is a better answer than a crash and still
+// one the caller can route on.
+func TestADocumentThatCrashedThePreviousParserIsMerelyAnswered(t *testing.T) {
+	raw := fixture(t, "crashed-the-previous-parser.pdf")
+
+	err := readWithin(t, raw)
+	if !errors.Is(err, pdftext.ErrUnreadable) && !errors.Is(err, pdftext.ErrNoTextLayer) {
+		t.Fatalf("a document that used to crash the parser must come back as a sentinel, got %v", err)
+	}
+}
+
+func fixture(t *testing.T, name string) []byte {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("testdata", name))
 	if err != nil {
 		t.Fatalf("reading the committed fixture: %v", err)
 	}
-
-	if _, err := pdftext.Extract(t.Context(), raw, generous); !errors.Is(err, pdftext.ErrUnreadable) {
-		t.Fatalf("a document that panics the parser must come back as ErrUnreadable, got %v", err)
-	}
+	return raw
 }
 
 // Truncation is also refused rather than survived, and it is a different corpus
@@ -203,7 +267,7 @@ func TestExtractSurvivesATruncatedDocument(t *testing.T) {
 	valid := invoicePDF(t, "Contract value: EUR 148,500.00")
 
 	for cut := 1; cut < len(valid); cut += max(1, len(valid)/60) {
-		if _, err := pdftext.Extract(t.Context(), valid[:cut], generous); err != nil &&
+		if _, err := reader.Read(t.Context(), valid[:cut], generous); err != nil &&
 			!errors.Is(err, pdftext.ErrUnreadable) && !errors.Is(err, pdftext.ErrNoTextLayer) {
 			t.Fatalf("truncation at %d reported %v, which is not a sentinel a caller can route on", cut, err)
 		}
@@ -228,7 +292,7 @@ func TestExtractStopsAtTheCallersBound(t *testing.T) {
 	}
 
 	const limit = 100
-	text, err := pdftext.Extract(t.Context(), raw, limit)
+	text, err := reader.Read(t.Context(), raw, limit)
 	if err != nil {
 		t.Fatalf("reading a long PDF: %v", err)
 	}
@@ -249,7 +313,7 @@ func TestTheBoundCountsCharactersRatherThanBytes(t *testing.T) {
 	raw := invoicePDF(t, lines...)
 
 	const limit = 300
-	text, err := pdftext.Extract(t.Context(), raw, limit)
+	text, err := reader.Read(t.Context(), raw, limit)
 	if err != nil {
 		t.Fatalf("reading a long PDF: %v", err)
 	}
@@ -279,7 +343,7 @@ func TestARealGeneratorsDocumentReadsBackAsItsWords(t *testing.T) {
 		t.Fatalf("reading the committed fixture: %v", err)
 	}
 
-	text, err := pdftext.Extract(t.Context(), raw, generous)
+	text, err := reader.Read(t.Context(), raw, generous)
 	if err != nil {
 		t.Fatalf("reading a browser-printed PDF: %v", err)
 	}
@@ -339,33 +403,21 @@ func pdfClaimingPages(t *testing.T, claimed int, line string) []byte {
 	return out.Bytes()
 }
 
-// `/Count` is a number the DOCUMENT chooses, and the parser returns it from
-// NumPage without checking it against anything. Honouring it walks the page tree
-// that many times — and the library keeps no object cache, so each walk
-// re-parses — which turns a sub-kilobyte file into unbounded work.
+// `/Count` is a number the DOCUMENT chooses, and this package no longer has any
+// arithmetic of its own to defend against it: the engine resolves the page tree
+// and reports what it found, so the count reaching the page loop is a fact about
+// the file rather than the file's claim about itself.
 //
-// The walk is bounded by what the FILE could really hold instead, and this
-// asserts the arithmetic rather than the survival: the fixture is small enough
-// that len/minBytesPerPage is far below the claim, so the claim must be the
-// thing discarded. No deadline, because a timeout rescuing it would prove
-// nothing about the bound.
-func TestALyingPageCountIsBoundedByTheFileItself(t *testing.T) {
-	const claimed = 99999999
-	lying := pdfClaimingPages(t, claimed, "Contract value: EUR 148,500.00")
+// Asserted because that is a PROPERTY OF THE ENGINE and not of this code — the
+// kind of thing a version bump can take away silently. A document claiming a
+// hundred million pages must still be read as the one page it has, promptly.
+func TestALyingPageCountIsReadAsTheDocumentActuallyIs(t *testing.T) {
+	lying := pdfClaimingPages(t, 99999999, "Contract value: EUR 148,500.00")
 
-	// The premise, checked rather than assumed: the file's own length has to cap
-	// the walk well below what the document claims, or this test is measuring
-	// nothing. 64 is minBytesPerPage; naming it here rather than importing it
-	// keeps the production constant unexported.
-	if affordable := len(lying) / 64; affordable >= claimed {
-		t.Fatalf("the fixture is %d bytes and could afford %d pages, which is not below its claim of %d",
-			len(lying), affordable, claimed)
-	}
+	ctx, cancel := context.WithTimeout(t.Context(), attackDeadline)
+	defer cancel()
 
-	text, err := pdftext.Extract(t.Context(), lying, generous)
-	// Unconditional: a document that parses must still be READ. Accepting
-	// ErrUnreadable here is what let an earlier version of this test pass while
-	// the parser refused the file before the page count was ever consulted.
+	text, err := reader.Read(ctx, lying, generous)
 	if err != nil {
 		t.Fatalf("a lying page count must not change the answer, got %v", err)
 	}
@@ -384,7 +436,7 @@ func TestExtractGivesUpWhenItsContextDoes(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	if _, err := pdftext.Extract(ctx, raw, generous); !errors.Is(err, pdftext.ErrUnreadable) {
+	if _, err := reader.Read(ctx, raw, generous); !errors.Is(err, pdftext.ErrUnreadable) {
 		t.Fatalf("a read whose context is done must report ErrUnreadable, got %v", err)
 	}
 }
@@ -393,7 +445,7 @@ func TestExtractRefusesABoundItCannotHonour(t *testing.T) {
 	raw := invoicePDF(t, "Contract value: EUR 148,500.00")
 
 	for _, limit := range []int{0, -1} {
-		if _, err := pdftext.Extract(t.Context(), raw, limit); err == nil {
+		if _, err := reader.Read(t.Context(), raw, limit); err == nil {
 			t.Errorf("a bound of %d must be refused rather than silently treated as unbounded", limit)
 		}
 	}
