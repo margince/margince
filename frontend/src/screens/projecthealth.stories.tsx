@@ -117,3 +117,37 @@ export const NeverAssessed: Story = {
     </Served>
   ),
 };
+
+/**
+ * The panel as a reader who may write the project sees it: a way to record a
+ * reading, and a correction offered on the one that stands.
+ */
+export const Writable: Story = {
+  render: () => (
+    <Served
+      rows={[reading({ id: "h2", state: "at_risk", note: "Feed is late." })]}
+    >
+      <ProjectHealth
+        projectId={PROJECT}
+        onRecord={() => {}}
+        onCorrect={() => {}}
+      />
+    </Served>
+  ),
+};
+
+/**
+ * A project this reader may not write: an archived one, or somebody else's.
+ *
+ * The judgement still renders — how a delivery is going is a fact a read-only
+ * reader is entitled to. What goes is every verb.
+ */
+export const ReadOnly: Story = {
+  render: () => (
+    <Served
+      rows={[reading({ id: "h2", state: "at_risk", note: "Feed is late." })]}
+    >
+      <ProjectHealth projectId={PROJECT} readOnly onRecord={() => {}} />
+    </Served>
+  ),
+};

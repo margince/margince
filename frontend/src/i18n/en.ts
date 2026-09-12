@@ -9143,6 +9143,19 @@ export const en = {
   "projectHealth.state.onTrack": "On track",
   "projectHealth.state.atRisk": "At risk",
   "projectHealth.state.offTrack": "Off track",
+  "projectHealth.record": "Record a reading",
+  "projectHealth.correct": "Correct this",
+  "projectHealth.recordTitle": "Record how the delivery is going",
+  "projectHealth.correctTitle": "Correct this reading",
+  "projectHealth.stateLabel": "How it is going",
+  "projectHealth.note": "What is happening",
+  "projectHealth.noteOptionalHint": "Optional while the project is on track.",
+  "projectHealth.noteRequiredHint":
+    "Say what is wrong, so whoever looks next does not have to guess.",
+  "projectHealth.correctionNote":
+    "A correction fixes what was said, never when it was said. The reading keeps its original date.",
+  "projectHealth.saveReading": "Record it",
+  "projectHealth.saveCorrection": "Save correction",
   "project.keyMinted":
     "Margince gives each project a short key. Write [{key}] in an email subject and the mail is filed under this project.",
   "project.company": "Company",

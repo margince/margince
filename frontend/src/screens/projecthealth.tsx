@@ -1,5 +1,5 @@
 import { useRecordZone } from "../app/recordzone";
-import { Badge } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate } from "../format/format";
@@ -22,13 +22,42 @@ import {
  * that the earlier reading was wrong, and dropping it would leave a gap in the
  * history where the mistake was, which is the part a review wants to see.
  */
-export function ProjectHealth({ projectId }: Readonly<{ projectId: string }>) {
+export function ProjectHealth({
+  projectId,
+  readOnly = false,
+  onRecord,
+  onCorrect,
+}: Readonly<{
+  projectId: string;
+  // The page's own answer to whether this project takes writes. The panel does
+  // not re-derive it: the server refuses an unauthorized write whatever this
+  // says, and a second implementation of the gate here is the defect rather
+  // than the protection.
+  readOnly?: boolean;
+  // The page owns the dialog — one modal per page, so two cards cannot both
+  // put one on the screen. The panel only says which verb was asked for.
+  onRecord?: () => void;
+  onCorrect?: (assessment: ProjectHealthAssessment) => void;
+}>) {
   const t = useT();
   const { data, isPending, isError } = useProjectHealth(projectId);
   const rows = data ?? [];
   const current = rows.find((row) => !row.superseded);
+  // A failed read is not an unjudged project. Inviting a reading over a list
+  // that could not be fetched invites a second judgement beside one that may
+  // already stand.
+  const canWrite = !readOnly && !isPending && !isError && Boolean(onRecord);
   return (
-    <Panel title={t("projectHealth.title")}>
+    <Panel
+      title={t("projectHealth.title")}
+      actions={
+        canWrite ? (
+          <Button variant="ghost" onClick={onRecord}>
+            {t("projectHealth.record")}
+          </Button>
+        ) : undefined
+      }
+    >
       <PanelBody>
         {isPending || isError || rows.length === 0 ? (
           <SurfaceState
@@ -41,8 +70,15 @@ export function ProjectHealth({ projectId }: Readonly<{ projectId: string }>) {
           </SurfaceState>
         ) : (
           <>
-            {current && <CurrentReading assessment={current} />}
-            <ul className="firmo">
+            {current && (
+              <CurrentReading
+                assessment={current}
+                onCorrect={
+                  canWrite && onCorrect ? () => onCorrect(current) : undefined
+                }
+              />
+            )}
+            <ul className="firmo healthlog">
               {rows.map((row) => (
                 <HistoryRow key={row.id} assessment={row} />
               ))}
@@ -57,12 +93,16 @@ export function ProjectHealth({ projectId }: Readonly<{ projectId: string }>) {
 /** The judgement that stands, with the day it applies to and why. */
 function CurrentReading({
   assessment,
-}: Readonly<{ assessment: ProjectHealthAssessment }>) {
+  onCorrect,
+}: Readonly<{
+  assessment: ProjectHealthAssessment;
+  onCorrect?: () => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   return (
-    <div>
+    <div className="health-current">
       <StateBadge state={assessment.state} />
       <span className="t-caption mute">
         {t("projectHealth.assessedOn", {
@@ -70,6 +110,14 @@ function CurrentReading({
         })}
       </span>
       {assessment.note && <p>{assessment.note}</p>}
+      {/* Correcting is offered on the reading that STANDS and on no other. A
+          superseded row has already been answered, and the server refuses a
+          second correction of it. */}
+      {onCorrect && (
+        <Button variant="ghost" onClick={onCorrect}>
+          {t("projectHealth.correct")}
+        </Button>
+      )}
     </div>
   );
 }
@@ -89,7 +137,7 @@ function HistoryRow({
             though nobody ever got it wrong. */}
         {assessment.superseded && ` ${t("projectHealth.corrected")}`}
       </span>
-      <span>
+      <span className="healthlog-reading">
         <StateBadge state={assessment.state} />
         {assessment.note}
       </span>
