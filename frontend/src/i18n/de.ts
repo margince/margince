@@ -8977,6 +8977,21 @@ export const de = {
   "projectHealth.state.onTrack": "Im Plan",
   "projectHealth.state.atRisk": "Gef\u00e4hrdet",
   "projectHealth.state.offTrack": "Aus dem Plan",
+  "projectHealth.record": "Einschätzung festhalten",
+  "projectHealth.correct": "Korrigieren",
+  "projectHealth.correctOne": "Einschätzung vom {date} korrigieren",
+  "projectHealth.recordTitle": "Festhalten, wie die Lieferung läuft",
+  "projectHealth.correctTitle": "Diese Einschätzung korrigieren",
+  "projectHealth.stateLabel": "Wie es läuft",
+  "projectHealth.note": "Was gerade passiert",
+  "projectHealth.noteOptionalHint":
+    "Optional, solange das Projekt im Plan ist.",
+  "projectHealth.noteRequiredHint":
+    "Sagen Sie, was nicht stimmt, damit der Nächste nicht raten muss.",
+  "projectHealth.correctionNote":
+    "Eine Korrektur berichtigt, was gesagt wurde, nie wann es gesagt wurde. Das Datum der Einschätzung bleibt.",
+  "projectHealth.saveReading": "Festhalten",
+  "projectHealth.saveCorrection": "Korrektur speichern",
   "project.keyMinted":
     "Margince vergibt jedem Projekt ein kurzes Kürzel. Steht [{key}] im Betreff einer E-Mail, wird sie diesem Projekt zugeordnet.",
   "project.company": "Unternehmen",

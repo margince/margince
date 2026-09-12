@@ -1452,3 +1452,35 @@
   flex: 0 0 auto;
   margin-inline-start: auto;
 }
+
+/* The Delivery health panel (screens/projecthealth.tsx).
+ *
+ * Its rows are labelled pairs like .firmo's, but the panel had no sheet of its
+ * own, so the state badge, the date and the note ran together into one string:
+ * "At riskas of 13/09/2026". The current reading is a small stack; the history
+ * rows below it are the same shape as a responsibility row. */
+.health-current {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.health-current > .t-caption {
+  display: block;
+}
+.healthlog {
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.healthlog > li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+/* The badge and the note share a line, and the note wraps under nothing. */
+.healthlog .healthlog-reading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}

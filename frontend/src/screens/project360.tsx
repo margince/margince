@@ -28,6 +28,8 @@ import { EditAction } from "./edit";
 import { useOpenEmail } from "./openemail";
 import { ProjectCompanies } from "./projectcompanies";
 import { ProjectHealth } from "./projecthealth";
+import type { ProjectHealthAssessment } from "./projecthealth.queries";
+import { ProjectHealthModal } from "./projecthealthmodal";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
 import {
@@ -129,6 +131,11 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // one modal per page, so two cards cannot both put a dialog on the screen.
   // The same arrangement the account page uses for its own step rows.
   const [openTask, setOpenTask] = useState<string | null>(null);
+  // The health card's dialog, owned here for the same reason the task detail
+  // is: one modal per page. "new" records a reading; a row corrects that one.
+  const [healthEdit, setHealthEdit] = useState<
+    ProjectHealthAssessment | "new" | null
+  >(null);
   const taskUpdate = useTaskUpdate(taskWriteKeys("project", project.id));
   // The TASK's own permission, not the project's. They are different questions
   // with different answers: the modal's verbs PATCH /activities/{id}, which
@@ -228,7 +235,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           onMove={setMoveTo}
         />
         <RollupsStrip view={view} />
-        <ProjectHealth projectId={project.id} />
+        <ProjectHealth
+          projectId={project.id}
+          readOnly={readOnly}
+          onRecord={() => setHealthEdit("new")}
+          onCorrect={setHealthEdit}
+        />
         <div id={PROJECT_DEALS_ANCHOR}>
           <ProjectDealsCard
             view={view}
@@ -260,6 +272,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         version={project.version}
         to={moveTo}
         onClose={() => setMoveTo(null)}
+      />
+      <ProjectHealthModal
+        open={healthEdit !== null}
+        onClose={() => setHealthEdit(null)}
+        projectId={project.id}
+        correcting={healthEdit && healthEdit !== "new" ? healthEdit : undefined}
       />
       {openTask && (
         <TaskDetailModal

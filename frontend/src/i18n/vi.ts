@@ -8860,6 +8860,21 @@ export const vi = {
   "projectHealth.state.onTrack": "\u0110\u00fang k\u1ebf ho\u1ea1ch",
   "projectHealth.state.atRisk": "C\u00f3 r\u1ee7i ro",
   "projectHealth.state.offTrack": "Ch\u1ec7ch k\u1ebf ho\u1ea1ch",
+  "projectHealth.record": "Ghi nhận đánh giá",
+  "projectHealth.correct": "Sửa lại",
+  "projectHealth.correctOne": "Sửa đánh giá ngày {date}",
+  "projectHealth.recordTitle": "Ghi nhận việc bàn giao đang diễn ra thế nào",
+  "projectHealth.correctTitle": "Sửa lại đánh giá này",
+  "projectHealth.stateLabel": "Tình hình ra sao",
+  "projectHealth.note": "Điều gì đang xảy ra",
+  "projectHealth.noteOptionalHint":
+    "Không bắt buộc khi dự án đang đúng tiến độ.",
+  "projectHealth.noteRequiredHint":
+    "Hãy nói rõ vấn đề, để người xem tiếp theo không phải đoán.",
+  "projectHealth.correctionNote":
+    "Một chỉnh sửa sửa lại điều đã nói, không bao giờ sửa thời điểm đã nói. Đánh giá giữ nguyên ngày gốc.",
+  "projectHealth.saveReading": "Ghi nhận",
+  "projectHealth.saveCorrection": "Lưu chỉnh sửa",
   "project.keyMinted":
     "Margince cấp cho mỗi dự án một mã ngắn. Ghi [{key}] trong tiêu đề email thì thư được xếp vào dự án này.",
   "project.company": "Công ty",
