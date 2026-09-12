@@ -167,11 +167,17 @@ check:
 ## minutes and needs Postgres up, so paying it on a README edit would train
 ## everybody to skip the gate that also holds the security cases.
 ##
-## Not in the pre-push hook either, and the reason is this machine rather than
-## principle: parallel sessions share one test template, so a hook running the
-## lane on every push would have them rebuilding each other's schema mid-run —
-## failures that are schema-shaped and look nothing like their cause. The hook
-## keeps the checks that are fast, need nothing running, and cannot collide.
+## The pre-push hook DOES run the lane, for a push that changes backend Go or
+## SQL — a migration is the likeliest thing of all to redden it.
+## It did not until 2026-09-12, and the reason it gave had expired: parallel
+## sessions were said to share one test template, so a hook would have them
+## rebuilding each other's schema mid-run. scripts/lib-testdb.sh has derived a
+## template per linked worktree since 2026-08-24 (_testdb_worktree_slug), which
+## is two weeks before that reasoning was written down.
+##
+## What is still shared: two shells in the SAME worktree, and the primary
+## checkout. The hook skips rather than blocks when pg_isready says Postgres is
+## not ready, because a push blocked on a stopped stack gets the hook disabled.
 check-all:
 	@bash scripts/phase-timer.sh reset
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
