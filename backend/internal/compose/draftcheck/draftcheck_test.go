@@ -24,7 +24,7 @@ func TestTheDraftTheJudgeFlooredIsCaught(t *testing.T) {
 		t.Fatal("the phrasing the judge floored passed the check")
 	}
 	for _, f := range findings {
-		if f.Rule != "assumed-memory" {
+		if f.Rule != draftcheck.RuleAssumedMemory {
 			t.Errorf("unexpected rule %q for %q", f.Rule, f.Phrase)
 		}
 	}
@@ -53,7 +53,7 @@ func TestAWellbeingOpenerIsCaughtAtEveryBand(t *testing.T) {
 		convstate.BandNone, convstate.BandFresh, convstate.BandWeeks, convstate.BandMonths,
 	} {
 		findings := draftcheck.Body(body, textlang.English, band, draftcheck.Grounds{})
-		if len(findings) != 1 || findings[0].Rule != "wellbeing-opener" {
+		if len(findings) != 1 || findings[0].Rule != draftcheck.RuleWellbeingOpener {
 			t.Errorf("at band %q: got %+v, want one wellbeing-opener finding", band, findings)
 		}
 	}
@@ -147,7 +147,7 @@ func TestAnInventedIntroductionInAChipIsCaught(t *testing.T) {
 	if len(findings) == 0 {
 		t.Fatal("the chip that shipped the original defect passed the check")
 	}
-	if findings[0].Rule != "invented-relationship" {
+	if findings[0].Rule != draftcheck.RuleInventedRelationship {
 		t.Errorf("expected an invented-relationship finding, got %q", findings[0].Rule)
 	}
 }
@@ -279,7 +279,7 @@ func TestAMixedRegisterIsCaught(t *testing.T) {
 	if len(findings) == 0 {
 		t.Fatal("a draft using both du and Sie should be caught")
 	}
-	if findings[0].Rule != "mixed-register" {
+	if findings[0].Rule != draftcheck.RuleMixedRegister {
 		t.Errorf("expected a mixed-register finding, got %q", findings[0].Rule)
 	}
 }
@@ -330,7 +330,7 @@ func TestADraftMayNotDeclareTheirSideResolved(t *testing.T) {
 	if len(findings) == 0 {
 		t.Fatal("a draft asserting their side resolved something should be caught")
 	}
-	if findings[0].Rule != "assumed-resolution" {
+	if findings[0].Rule != draftcheck.RuleAssumedResolution {
 		t.Errorf("expected an assumed-resolution finding, got %q", findings[0].Rule)
 	}
 }
@@ -456,7 +456,7 @@ func TestAnEnglishDayIsRefusedToo(t *testing.T) {
 // refusedAsUnscheduled reports whether the unscheduled-arrangement rule fired.
 func refusedAsUnscheduled(findings []draftcheck.Finding) bool {
 	for _, f := range findings {
-		if f.Rule == "unscheduled-arrangement" {
+		if f.Rule == draftcheck.RuleUnscheduledArrangement {
 			return true
 		}
 	}

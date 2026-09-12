@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
@@ -198,9 +199,24 @@ func (l draftRetryLog) RetryFailed(ctx context.Context, findings int, err error)
 		"findings", findings, "err", err)
 }
 
-func (l draftRetryLog) RetryDidNotClear(ctx context.Context, rule, phrase string, remaining int) {
-	l.log.WarnContext(ctx, "draft still carries rejected phrasing after one retry",
-		"rule", rule, "phrase", phrase, "remaining", remaining)
+func (l draftRetryLog) RetryDidNotClear(ctx context.Context, rule draftcheck.Rule, phrase string, remaining int) {
+	// The SEVERITY is logged beside the rule, because "the retry did not clear"
+	// is a different event for a false claim than for a phrasing tic, and an
+	// operator scanning these lines should not have to know every rule by name
+	// to tell them apart.
+	l.log.WarnContext(ctx, "draft still carries a rejected phrase after one retry",
+		"rule", rule.Name(), "severity", severityName(rule.Severity()),
+		"phrase", phrase, "remaining_rules", remaining)
+}
+
+// severityName renders a severity for a log line. A word rather than the
+// integer, because an operator reading `severity=1` learns nothing and the
+// ordering is an implementation detail of the comparison.
+func severityName(s draftcheck.Severity) string {
+	if s == draftcheck.Claim {
+		return "claim"
+	}
+	return "style"
 }
 
 // parseReplyDraft reads one model reply as the draft it claims to be. The

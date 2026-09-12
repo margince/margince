@@ -44,8 +44,14 @@ type Observer interface {
 	// RetryFailed: the correction call itself errored, and the first draft
 	// stands.
 	RetryFailed(ctx context.Context, findings int, err error)
-	// RetryDidNotClear: the retry answered, and rejected phrasing survived it.
-	RetryDidNotClear(ctx context.Context, rule, phrase string, remaining int)
+	// RetryDidNotClear: the retry answered, and something survived it.
+	//
+	// The RULE rather than its name, because "the retry did not clear" means
+	// something different for a false claim than for a phrasing tic, and an
+	// operator reading the line needs to be able to tell which without knowing
+	// every rule by heart. `remaining` counts the DISTINCT rules still broken,
+	// which is the number the serve decision was made on.
+	RetryDidNotClear(ctx context.Context, rule draftcheck.Rule, phrase string, remaining int)
 }
 
 // TextOf reads the two channels of a draft a check has to judge.
@@ -147,15 +153,51 @@ func CorrectOnce[D any](
 		return retried, nil
 	}
 	if observe != nil {
-		observe.RetryDidNotClear(ctx, remaining[0].Rule, remaining[0].Phrase, len(remaining))
+		observe.RetryDidNotClear(ctx, remaining[0].Rule, remaining[0].Phrase, draftcheck.Rules(remaining))
 	}
-	// A TIE goes to the retry. Both attempts carry one finding often enough to
-	// matter — the model swaps "circling back" for "checking in" — and the
-	// retried one was at least written with the correction in hand, so it is
-	// the better bet on everything the check does not measure. Only a retry
-	// that is strictly worse is discarded.
-	if len(remaining) <= len(findings) {
+	if servesRetry(findings, remaining) {
 		return retried, nil
 	}
 	return draft, nil
+}
+
+// servesRetry decides which attempt a reader would call safer.
+//
+// SEVERITY FIRST, then the count of distinct rules, and neither half alone is
+// the answer.
+//
+// The raw finding count was not comparable across rules, because the rules do
+// not match at the same rate: the band-gated loops append one finding per
+// matching phrase while the world-claim rules report one per rule. So a draft
+// saying the same wrong thing three ways scored 3 and a draft making two
+// separate false statements scored 2, and the more serious one was discarded.
+//
+// Deduplicating by rule makes the two styles comparable and still gets that
+// case wrong: three phrasings of one memory assumption is ONE rule against the
+// other draft's TWO, so a false statement about the world still loses to a
+// phrasing habit. Severity is what fixes it, and it is the half a reader would
+// have used first: a rep sends what the product wrote, and an invented call
+// reaches the recipient as the company's own word.
+//
+// A TIE goes to the retry, unchanged. Both attempts carry one finding often
+// enough to matter — the model swaps "circling back" for "checking in" — and
+// the retried one was at least written with the correction in hand, so it is
+// the better bet on everything the check does not measure. Only a retry that is
+// strictly worse is discarded.
+func servesRetry(first, retried []draftcheck.Finding) bool {
+	firstWorst, _ := draftcheck.Worst(first)
+	retriedWorst, _ := draftcheck.Worst(retried)
+	if retriedWorst != firstWorst {
+		return retriedWorst < firstWorst
+	}
+	if firstRules, retriedRules := draftcheck.Rules(first), draftcheck.Rules(retried); retriedRules != firstRules {
+		return retriedRules < firstRules
+	}
+	// SAME SEVERITY AND THE SAME NUMBER OF RULES: the raw match count is the
+	// last thing that separates them, and here it is honest. The comparison the
+	// ticket objected to was across DIFFERENT rules, where one rule reports per
+	// phrase and another reports once however many matched; by this point both
+	// drafts break the same number of rules, and a draft saying the same wrong
+	// thing three ways is more of it than a draft saying it once.
+	return len(retried) <= len(first)
 }

@@ -17,7 +17,7 @@ import (
 func rules(body string) []string {
 	out := []string{}
 	for _, finding := range draftcheck.Formatting(body) {
-		out = append(out, finding.Rule)
+		out = append(out, finding.Rule.Name())
 	}
 	return out
 }
@@ -30,7 +30,7 @@ func rules(body string) []string {
 func TestAProvenanceChipIsNotAskedForParagraphs(t *testing.T) {
 	long := strings.TrimSpace(strings.Repeat("die offene Frage zu Michael Grodd und dem Angebot ", 6))
 	for _, finding := range draftcheck.Reasoning([]string{long}, textlang.German, convstate.BandWeeks) {
-		if finding.Rule == "unbroken-block" {
+		if finding.Rule == draftcheck.RuleUnbrokenBlock {
 			t.Errorf("a reasoning chip was told to add paragraphs: %q", long)
 		}
 	}

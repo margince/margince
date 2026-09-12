@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -182,7 +183,7 @@ type recorder struct {
 }
 
 func (r *recorder) RetryFailed(context.Context, int, error) { r.failed++ }
-func (r *recorder) RetryDidNotClear(_ context.Context, _, phrase string, _ int) {
+func (r *recorder) RetryDidNotClear(_ context.Context, _ draftcheck.Rule, phrase string, _ int) {
 	r.notCleared = append(r.notCleared, phrase)
 }
 
@@ -222,5 +223,100 @@ func TestTheLoopReportsARetryThatDidNotHelp(t *testing.T) {
 	}
 	if quiet.failed != 0 || len(quiet.notCleared) != 0 {
 		t.Errorf("a retry that worked should report nothing, got %+v", quiet)
+	}
+}
+
+// A FALSE CLAIM LOSES TO A PHRASING TIC, however many phrases the tic carries.
+//
+// This is the case the raw finding count could not see and that deduplicating
+// by rule does not fix either. The rules do not match at the same rate: the
+// band-gated loops append one finding per matching phrase, so a draft saying
+// the same wrong thing three ways scored 3, while a draft inventing a call
+// scored 1 and was served as the better one.
+//
+// Both counts are beside the point. A rep sends what the product wrote, and an
+// invented conversation reaches the recipient as the company's own word; a
+// stale opener is a habit. Severity is the comparison a reader would have made
+// first, so it is the one made first here.
+func TestAFalseClaimIsWorseThanAnyNumberOfPhrasingTics(t *testing.T) {
+	// The first attempt is three wellbeing openers — Style, three findings, one
+	// rule. The retry invents a conversation on an unthreaded message — Claim,
+	// one finding, one rule. Every count says the retry is better.
+	lane := &scripted{bodies: []string{
+		"I hope this finds you well. I hope you are well. Hope you're doing well. " +
+			"The quote is attached and the depot slots are open on Tuesday.",
+		"It was great speaking with you earlier. The quote is attached and the " +
+			"depot slots are open on Tuesday.",
+	}}
+	got, err := draftcore.CorrectOnce(context.Background(),
+		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.body != lane.bodies[0] {
+		t.Errorf("a draft claiming a conversation that never happened was served over one whose "+
+			"only fault is three stale openers — the recipient reads the first as the company's "+
+			"own word.\n  served: %q", got.body)
+	}
+}
+
+// And the severity is what a surface is told, not only what the loop used.
+//
+// "The retry did not clear" means something different for a false claim than
+// for a phrasing tic, and an operator scanning the line should not have to know
+// every rule by name to tell them apart.
+func TestTheUnclearedRetryIsReportedWithItsSeverity(t *testing.T) {
+	stubborn := "It was great speaking with you earlier. The quote is attached."
+	seen := &severityRecorder{}
+	lane := &scripted{bodies: []string{stubborn, stubborn}}
+	if _, err := draftcore.CorrectOnce(context.Background(),
+		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, seen); err != nil {
+		t.Fatal(err)
+	}
+	if len(seen.rules) != 1 {
+		t.Fatalf("the loop reported %d uncleared retries, want 1", len(seen.rules))
+	}
+	if got := seen.rules[0].Severity(); got != draftcheck.Claim {
+		t.Errorf("the uncleared retry was reported as severity %v, want Claim — %q states a "+
+			"conversation the input does not carry", got, stubborn)
+	}
+}
+
+// severityRecorder keeps the RULE rather than its phrase, which is what the
+// observer gained: the phrase says where, the rule says how bad.
+type severityRecorder struct{ rules []draftcheck.Rule }
+
+func (severityRecorder) RetryFailed(context.Context, int, error) {}
+func (r *severityRecorder) RetryDidNotClear(_ context.Context, rule draftcheck.Rule, _ string, _ int) {
+	r.rules = append(r.rules, rule)
+}
+
+// THE TICKET'S OWN EXAMPLE: two false statements lose to three phrasings of one.
+//
+// The rules do not report at the same rate. The band-gated loops append one
+// finding per matching phrase, so "circling back … as discussed … touching
+// base" scores 3 while the world-claim rules report once per rule, so an
+// invented conversation plus an attributed claim scores 2. The raw count then
+// served the draft making TWO separate false statements over the one making
+// one, three ways.
+//
+// Deduplicating by rule is what makes the two styles comparable: 2 rules
+// against 1. Severity cannot decide this pair — both are claims about the world
+// — which is why this case is here beside the one severity does decide.
+func TestTwoBrokenRulesLoseToThreePhrasingsOfOne(t *testing.T) {
+	lane := &scripted{bodies: []string{
+		"It was great speaking with you earlier.\n\nYou mentioned the depot slots " +
+			"were the blocker, so the quote is attached.",
+		"Circling back as discussed.\n\nTouching base on the quote, which is attached.",
+	}}
+	got, err := draftcore.CorrectOnce(context.Background(),
+		textlang.English, convstate.BandMonths, false, lane.write, bodyOf, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.body != lane.bodies[1] {
+		t.Errorf("a draft breaking TWO rules was served over one breaking one three ways — the "+
+			"raw finding count is not comparable across rules that do not match at the same "+
+			"rate.\n  served: %q", got.body)
 	}
 }
