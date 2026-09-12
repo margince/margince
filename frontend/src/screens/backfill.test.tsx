@@ -208,7 +208,7 @@ describe("the connect-time backfill payoff", () => {
     render(<BackfillPanel provider="gmail" />);
 
     // The scope appears with no user interaction, and the WINDOW leads it: the
-    // period of their own mailbox is what a person agrees to, and the count
+    // period of their own mailbox is what the mailbox owner agrees to, and the count
     // describes that period.
     expect(await screen.findByText(/6 months of your mailbox/)).toBeTruthy();
     expect(screen.getByText(/1,234 messages in that period/)).toBeTruthy();

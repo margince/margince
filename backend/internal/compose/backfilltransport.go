@@ -244,8 +244,8 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 	// backfill consent flow — the fault is logged, never swallowed silently.
 	if h.estimator != nil {
 		// Priced from the counted number even when that is a floor. A floor
-		// prices low, which is the honest direction for a figure the person is
-		// told is advisory: the alternative is inventing a multiplier for
+		// prices low, which is the honest direction for a figure the mailbox owner
+		// is told is advisory: the alternative is inventing a multiplier for
 		// messages nobody counted.
 		cost, err := h.estimator.EstimateBackfill(r.Context(), string(provider), userID, int64(estimate.Messages))
 		if err != nil {

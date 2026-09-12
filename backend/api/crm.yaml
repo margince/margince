@@ -24958,7 +24958,7 @@ components:
             shown as a count is short by multiples and a reader has no way to tell which kind they
             are looking at — and this is the number they are consenting to. Absent means the count
             is exact.
-            It is NOT a reason to refuse: the scope a person consents to is the mailbox and the
+            It is NOT a reason to refuse: the scope being consented to is the mailbox and the
             period, and the count is supporting detail.
         estimated_ai_tokens: { type: integer, description: 'The estimator''s input-anchored token figure across classify+enrich+embeddings for that count; absent on estimator fault (ADR-0068).' }
         estimated_cost_minor: { type: integer, description: 'USD minor units, estimated from observed ai_call history priced per served model at current ai_model_rate; absent when no rate applies (ADR-0068).' }

@@ -285,7 +285,7 @@ function EstimateCard({
   return (
     <div className="backfill-estimate">
       {counting && <p className="t-caption">{t("backfill.previewLoading")}</p>}
-      {/* THE WINDOW FIRST. What a person consents to is a period of their own
+      {/* THE WINDOW FIRST. What the mailbox owner consents to is a period of their own
           mailbox; the count describes that period and is not the thing being
           agreed to. It also degrades better — the scope sentence is true while
           the count is still arriving, or when it never does. */}

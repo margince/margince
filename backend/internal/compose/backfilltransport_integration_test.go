@@ -263,7 +263,7 @@ func (f faultyEstimator) EstimateBackfill(context.Context, string, ids.UserID, i
 // itself comes from the fake connector, not the database.
 // A capped count is a FLOOR, and the wire has to say so — the client cannot
 // tell the two kinds of number apart by looking, and it is the number the
-// person is consenting to. It has to SURVIVE the start too: the progress
+// mailbox owner is consenting to. It has to SURVIVE the start too: the progress
 // denominator is read back long after the preview that produced it, and a bar
 // dividing by a bound runs past its own end.
 func TestAFlooredEstimateSaysSoOnThePreviewAndOnTheRun(t *testing.T) {
