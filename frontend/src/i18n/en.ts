@@ -4675,6 +4675,9 @@ export const en = {
   "notice.excuseExempt": "The duty does not apply",
   "notice.excuseGround": "Why, in your own words",
   "notice.excuseConfirm": "Record this",
+  "privacy.caseNotHere": "The request this link names is not on this page yet.",
+  "privacy.caseNotHereBody":
+    "It may be under a different status filter, or further down a queue that loads twenty at a time. Choose the status it is in, or load more.",
   "privacy.facetAll": "All",
   "privacy.inboxAdminOnly":
     "Seeing subject requests needs permission your seat does not hold. They name the people who asked, so the queue is not open to everyone.",

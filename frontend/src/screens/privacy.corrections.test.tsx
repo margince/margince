@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../api/schema";
+import type { RbacAction } from "../app/capability";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -80,7 +81,10 @@ type Posted = { url: string; body: unknown };
 function server(
   rows: readonly ConfirmSubmission[],
   posted: Posted[],
-  grant = ["update"],
+  // Typed against the contract's action vocabulary rather than inferred. An
+  // inferred `string[]` compiles here and fails where meFixture reads it, so
+  // the default has to name the type it is a default FOR.
+  grant: readonly RbacAction[] = ["update"],
 ) {
   vi.stubGlobal(
     "fetch",

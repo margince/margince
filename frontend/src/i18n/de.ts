@@ -4537,6 +4537,10 @@ export const de = {
   "notice.excuseExempt": "Die Pflicht gilt nicht",
   "notice.excuseGround": "Warum, in Ihren eigenen Worten",
   "notice.excuseConfirm": "Festhalten",
+  "privacy.caseNotHere":
+    "Die Anfrage, die dieser Link nennt, ist noch nicht auf dieser Seite.",
+  "privacy.caseNotHereBody":
+    "Sie steht möglicherweise unter einem anderen Statusfilter oder weiter unten in einer Liste, die zwanzig auf einmal lädt. Wählen Sie den passenden Status oder laden Sie mehr.",
   "privacy.facetAll": "Alle",
   "privacy.inboxAdminOnly":
     "Für Betroffenenanfragen fehlt Ihrem Sitzplatz die Berechtigung. Sie nennen die Personen, die angefragt haben — deshalb steht die Liste nicht allen offen.",

@@ -15,6 +15,7 @@ import {
   COMPOSE_PARAM,
   THREAD_PARAM,
 } from "./contactpage.address";
+import { caseHref } from "./privacy.caselink";
 import { settingsHref } from "./settingsrouting";
 import { countsUnder } from "./worklist.narrowing";
 import type {
@@ -98,7 +99,28 @@ const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
 // neither — a system condition fixed on a settings screen the card does not
 // pretend to know.
 export function rowHref(item: WorklistItem): string | undefined {
-  return askHref(item) ?? subjectHref(item) ?? SOURCE_QUEUE[item.source];
+  return (
+    askHref(item) ??
+    caseQueueHref(item) ??
+    subjectHref(item) ??
+    SOURCE_QUEUE[item.source]
+  );
+}
+
+// A subject request goes to the case, not merely to the queue that holds it.
+//
+// The row already carried the queue's address, and it was one step short: the
+// officer arrived at twenty rows with nothing saying which one they had been
+// sent to read, and the case they wanted was as likely to be below the fold as
+// on screen. The row's `id` IS the case id, so the address can name it
+// (privacy.caselink.ts opens it on arrival).
+//
+// Still no verb. The queue answers these and this page cannot, so the row says
+// where the case is and stops there — the difference between telling somebody
+// where a room is and claiming to have opened the door, which is the rule the
+// table below already follows.
+export function caseQueueHref(item: WorklistItem): string | undefined {
+  return item.source === "dsr" ? caseHref(item.id) : undefined;
 }
 
 // An introduction ask goes to the contact's NETWORK tab, not the contact.
