@@ -779,3 +779,21 @@ export function boundedMeetings(
 ): WorklistCount {
   return { category: "meetings", considered, shown, more_available: true };
 }
+
+/** A decisions count read to the end. */
+export function wholeDecisions(n: number): WorklistCount {
+  return {
+    category: "decisions",
+    considered: n,
+    shown: n,
+    more_available: false,
+  };
+}
+
+/** A decisions count whose lane stopped at its bound. */
+export function boundedDecisions(
+  considered: number,
+  shown: number,
+): WorklistCount {
+  return { category: "decisions", considered, shown, more_available: true };
+}
