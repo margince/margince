@@ -487,6 +487,17 @@ export const SETTINGS_PAGES = [
     changes: acts(writes("custom_field")),
   },
   {
+    id: "reviewtemplates",
+    // `custom_field` read, which is what the templates endpoint itself
+    // requires. The card has no write of any kind — the API serves these
+    // templates and accepts no edits — so reading them IS the action, and the
+    // two questions have one answer.
+    group: "sales",
+    scope: "workspace",
+    requires: reads("custom_field"),
+    changes: readingIsTheAct,
+  },
+  {
     id: "recordroles",
     // Same `custom_field` authority as the vocabularies above: everyone reads,
     // admin/ops write. No destroys — a role is retired through its switch,
