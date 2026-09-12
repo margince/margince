@@ -3102,6 +3102,15 @@ export const en = {
   "brief.readings.floorTip":
     "A source was read to its limit, so this figure is a floor.",
   "brief.readings.urgent": "Urgent",
+  // THE DOOR'S OWN WORD, per reading. Five cards each saying "Open" were five
+  // identical entries in a screen reader's control list. Each says what its
+  // door DOES instead — replacing the generic word rather than appending to it,
+  // which is what produced "Open Open pipeline".
+  "brief.readings.openUrgent": "Review urgent work",
+  "brief.readings.openMeetings": "View today's meetings",
+  "brief.readings.openLeads": "Review leads owed a reply",
+  "brief.readings.openPipeline": "View pipeline",
+  "brief.readings.openDecisions": "Review decisions",
   "brief.readings.urgentBasis": "somebody waiting or a promise breaking",
   "brief.readings.decisions": "Decisions waiting",
   "brief.readings.decisionsBasis": "somebody is blocked until you answer",

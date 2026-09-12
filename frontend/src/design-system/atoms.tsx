@@ -906,6 +906,7 @@ export function StatCard({
   source,
   alert,
   onOpen,
+  openLabel,
   meter,
   density,
 }: Readonly<{
@@ -915,17 +916,18 @@ export function StatCard({
   // rather than a string, because a reading whose detail is two facts — how much
   // is failing, and why — says them on two lines, not in one parsed sentence.
   detail?: ReactNode;
-  // The way OUT of the reading: the tab that holds what it was read from. A
-  // handler and nothing else — the door's WORD is this component's ("Open"),
-  // the way the receipt's is, because six doors each naming their own
-  // destination were six spellings of one control, and a caller with a string
-  // to fill in is a caller who can invent a seventh.
-  //
-  // The whole CARD is this button's target: the tile answers the pointer aimed
-  // anywhere on it (atoms.css stretches the button over the card). ONE control
-  // and not two — the basis chip is layered above that target and keeps its own
-  // press, so asking what a figure rests on never also leaves the page.
+  // The way OUT of the reading: the tab that holds what it was read from. The
+  // whole CARD is this button's target (atoms.css stretches it over the tile).
+  // ONE control and not two — the basis chip layers above that target and keeps
+  // its own press, so asking what a figure rests on never also leaves the page.
   onOpen?: () => void;
+  // What the door SAYS, where "Open" is not enough. The default stays "Open"
+  // and 90-odd callers keep it, because doors each inventing a destination were
+  // several spellings of one control. Five readings on ONE plate are the case
+  // that does not cover: five buttons reading "Open" name none of them. This
+  // REPLACES the word rather than appending — appending produced "Open Open
+  // pipeline", which is why the name was generic.
+  openLabel?: string;
   // How far along this reading is, as the two numbers it is made of. Drawn as
   // separate segments when there are few enough to count (a verdict made of
   // three signals) and as one filled track when there are not (two of ten
@@ -1018,18 +1020,16 @@ export function StatCard({
           competed with the label for the first glance. */}
       {onOpen && (
         <span className="stat-card-foot">
-          {/* Five readings on a page are five doors saying "Open", so the
-              reading's name has to reach a screen reader too — as the button's
-              DESCRIPTION, pointing at the name already on the card. Folded into
-              the accessible name instead it read "Open Open pipeline", and every
-              label beginning with the word doubled it. */}
+          {/* The card's label reaches a screen reader as this button's
+              DESCRIPTION whatever the word is — folded into the NAME it read
+              "Open Open pipeline". A named door names the ACTION. */}
           <button
             type="button"
             className="stat-card-open"
             onClick={onOpen}
             aria-describedby={labelId}
           >
-            {t("stat.open")}
+            {openLabel ?? t("stat.open")}
             <span className="stat-card-arrow" aria-hidden="true">
               {"\u2192"}
             </span>
