@@ -338,7 +338,7 @@ function meetingsReading(day: Worklist): MeetingsReading {
 // THE PERIOD IS IN THE TITLE, NOT THE BASIS. The headline reads one quarter's
 // open pipeline, and a reader who cannot see which quarter cannot reconcile it
 // against the currency totals beside it. `Q3` is all a title has room for, so
-// the full range — and, where the reading is the whole organization's rather
+// the full range — and, where the reading is the whole company's rather
 // than this reader's, whose pipeline it is — goes on the cell's hover line.
 //
 // READ THROUGH THE SAME KEY ANALYTICS USES. Two surfaces asking what the
@@ -405,7 +405,7 @@ function PipelineOutlook() {
   }
   const quarter = quarterLabel(data.period_start);
   return (
-    // The range and, where the figure is the whole organization's, whose
+    // The range and, where the figure is the whole company's, whose
     // pipeline it is: a dense title has room for a quarter and nothing more.
     <span ref={tip.ref} {...tip.trigger}>
       <StatCard
