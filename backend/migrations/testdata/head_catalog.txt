@@ -1768,6 +1768,7 @@ public.communication_decision.communication_decision_instruction_shape CHECK (((
 public.communication_decision.communication_decision_mode CHECK ((mode = ANY (ARRAY['observe'::text, 'warn'::text, 'enforce'::text])))
 public.communication_decision.communication_decision_phase CHECK ((phase = ANY (ARRAY['staging'::text, 'transmit'::text])))
 public.communication_decision.communication_decision_pkey PRIMARY KEY (id)
+public.communication_decision.communication_decision_ruleset_shape CHECK ((((ruleset_codes IS NULL) OR (COALESCE(array_length(ruleset_codes, 1), 0) > 0)) AND ((ruleset_version IS NULL) OR (COALESCE(array_length(ruleset_codes, 1), 0) = 1))))
 public.communication_decision.communication_decision_subject_kind CHECK (((subject_kind IS NULL) OR (subject_kind = ANY (ARRAY['contact'::text, 'lead'::text]))))
 public.communication_decision.communication_decision_subject_shape CHECK (((subject_kind IS NULL) = (subject_id IS NULL)))
 public.communication_decision.communication_decision_verdict CHECK ((verdict = ANY (ARRAY['allow'::text, 'deny'::text, 'review'::text])))
@@ -1786,6 +1787,8 @@ public.communication_decision.reason_code text NOT NULL gen=- def=-
 public.communication_decision.recipient_address text NOT NULL gen=- def=-
 public.communication_decision.requested_category text gen=- def=-
 public.communication_decision.resolved_category text NOT NULL gen=- def=-
+public.communication_decision.ruleset_codes text[] gen=- def=-
+public.communication_decision.ruleset_version integer gen=- def=-
 public.communication_decision.subject_id uuid gen=- def=-
 public.communication_decision.subject_kind text gen=- def=-
 public.communication_decision.suppression text gen=- def=-

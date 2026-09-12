@@ -123,24 +123,56 @@ func For(code jurisdiction.Code) (Rules, bool) {
 // must treat "no rules at all" as the consent-only floor rather than as
 // permission — Strictest cannot invent an obligation for a country it was
 // never told about.
-func Strictest(codes ...jurisdiction.Code) (Rules, []jurisdiction.Code, bool) {
+//
+// THE APPLIED CODES are the third answer, and they are what a decision records.
+// A fold is no one jurisdiction's rule set, so stricter() clears Jurisdiction
+// and Version rather than misnaming the fold with one country's label — which
+// left a folded decision with nothing to say about the rules it was judged
+// under. The codes that actually contributed answer that, and they are not the
+// codes the caller passed in: an unknown one contributes nothing and must not
+// appear as though it bound the send.
+func Strictest(codes ...jurisdiction.Code) (Rules, Applied, bool) {
 	var out Rules
-	var unknown []jurisdiction.Code
+	var applied Applied
 	found := false
 	for _, code := range codes {
 		r, ok := For(code)
 		if !ok {
-			unknown = append(unknown, code)
+			applied.Unknown = append(applied.Unknown, code)
 			continue
 		}
+		applied.Codes = append(applied.Codes, code)
 		if !found {
 			out, found = r, true
 			continue
 		}
 		out = stricter(out, r)
 	}
-	return out, unknown, found
+	return out, applied, found
 }
+
+// Applied names which jurisdictions a fold actually used.
+//
+// A DECISION RECORDS THIS, because Rules alone cannot say it. A single
+// jurisdiction's rule set carries its own code and version; a fold of two
+// carries neither, by design. Without the codes, a subject asking which rules
+// judged their message would get an answer only for the installations that
+// happen to declare one country.
+type Applied struct {
+	// Codes are the jurisdictions that contributed obligations, in the order
+	// they were asked about. One entry means Rules.Version is meaningful;
+	// more than one means the fold zeroed it and these are the answer.
+	Codes []jurisdiction.Code
+
+	// Unknown are the codes named that no pack declares. They bound nothing —
+	// recorded so an installation naming a country the product does not carry
+	// is visible rather than silently ungoverned.
+	Unknown []jurisdiction.Code
+}
+
+// Folded reports whether more than one jurisdiction contributed, which is
+// exactly when Rules.Version stops meaning anything.
+func (a Applied) Folded() bool { return len(a.Codes) > 1 }
 
 // stricter folds one rule set into another, obligation by obligation.
 func stricter(a, b Rules) Rules {
@@ -149,7 +181,8 @@ func stricter(a, b Rules) Rules {
 	// country's code would misname the rules a decision was taken under.
 	out.Jurisdiction = ""
 	// A version is only meaningful for a single jurisdiction's set; a folded
-	// one carries none, and the decision records the codes it folded instead.
+	// one carries none, and the decision records Applied.Codes instead — which
+	// Strictest returns for exactly this reason.
 	out.Version = 0
 	out.ReplyWindow = shorterWindow(a.ReplyWindow, b.ReplyWindow)
 	out.DealFollowUpWindow = shorterWindow(a.DealFollowUpWindow, b.DealFollowUpWindow)

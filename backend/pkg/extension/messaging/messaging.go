@@ -47,9 +47,12 @@ type Rules struct {
 	// taken, and those rules change, so the number is meant to be recorded
 	// rather than re-derived from whatever the code says today.
 	//
-	// DECLARED, NOT YET APPLIED: no decision records it. Held by
-	// TestEveryDeclaredMessagingObligationIsAppliedOrRecorded
-	// (backend/gates/messagingruleapplied_test.go), which carries the reason.
+	// APPLIED: consent.rulesetStamp writes it onto every staging and transmit
+	// decision, beside the codes that produced it. A fold of two jurisdictions
+	// carries NO version — Strictest zeroes it rather than misnaming the fold
+	// with one country's number — and the recorded codes are what answers in
+	// that case. Held by TestEveryDeclaredMessagingObligationIsAppliedOrRecorded
+	// (backend/gates/messagingruleapplied_test.go).
 	Version int
 
 	// ReplyWindow is how long an inbound message keeps making a reply a reply

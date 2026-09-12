@@ -68,7 +68,7 @@ type packRules struct {
 // filled in a setting.
 func (s *Store) packRulesFor(ctx context.Context, tx pgx.Tx) (packRules, error) {
 	out := packRules{reply: defaultReplyWindow, dealFollow: defaultDealFollowUpWindow}
-	rules, applicable, err := s.applicableRules(ctx, tx)
+	rules, _, applicable, err := s.applicableRules(ctx, tx)
 	if err != nil {
 		return packRules{}, err
 	}

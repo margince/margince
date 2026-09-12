@@ -67,8 +67,10 @@ const (
 // Version is NOT identity, though it reads like it: messaging.Rules says it is
 // "stamped onto every decision taken under it", which is an obligation and a
 // promise to a subject who later asks which rules their message was judged
-// under. Excluding it here was this gate's own first blind spot — the register
-// below carries it instead, which is where an unkept promise belongs.
+// under. Excluding it here was this gate's own first blind spot. The register
+// below carried it until consent.rulesetStamp began writing it onto every
+// staging and transmit row, so it is an applied obligation now and belongs in
+// neither list.
 var rulesIdentityFields = []string{"Jurisdiction"}
 
 // unappliedRules are the obligations the engine does not read yet, each with
@@ -92,10 +94,6 @@ var unappliedRules = gatekit.Waive(map[string]string{
 	"OptOutAcknowledgement": "no acknowledgement is sent. The controller lane is the only " +
 		"one that may write to somebody who has just suppressed themselves, and it " +
 		"registers no template for this",
-	"Version": "no decision records which ruleset judged it. Strictest zeroes the version " +
-		"when it folds two jurisdictions and returns the codes it folded instead, and " +
-		"applicableRules discards that second result — so neither the version nor the " +
-		"codes reach communication_decision, which carries no column for either",
 })
 
 func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {

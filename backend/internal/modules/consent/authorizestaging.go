@@ -83,6 +83,14 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
+	// WHICH RULES ARE ABOUT TO JUDGE THIS, read here for the same reason the
+	// posture above is: before any decision is taken, so the row records the
+	// ruleset that actually judged it rather than whichever one is live by the
+	// time the rows are written.
+	ruleset, err := g.rulesetStamp(ctx, tx)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 
 	setID := ids.NewV7()
 	set := commsauthz.DecisionSet{}
@@ -112,7 +120,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 		}
 		directed.instructionID = instruction
 	}
-	if err := g.recordStagingDecisions(ctx, tx, deliveryID, setID, req, set, directedAuthority(directed)); err != nil {
+	if err := g.recordStagingDecisions(ctx, tx, deliveryID, setID, req, set, directedAuthority(directed), ruleset); err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
 	return set, nil
@@ -155,7 +163,7 @@ func refusesAnyRecipient(set commsauthz.DecisionSet) bool {
 // up yet, and every transmit row that follows carries the attempt it belonged
 // to. The fingerprint is of the message as staged, so a later reader can tell
 // whether what went out is what was authorized.
-func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID, setID ids.UUID, req commsauthz.Request, set commsauthz.DecisionSet, instruction ids.UUID) error {
+func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID, setID ids.UUID, req commsauthz.Request, set commsauthz.DecisionSet, instruction ids.UUID, ruleset rulesetStampValue) error {
 	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -209,14 +217,16 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
-			   content_fingerprint, mode, actor, evidence, execution_authority, instruction_id)
-			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+			   content_fingerprint, mode, actor, evidence, execution_authority, instruction_id,
+			   ruleset_version, ruleset_codes)
+			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
 			deliveryID, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested),
 			string(d.Resolved), string(d.Verdict), d.ReasonCode,
 			nullableBasis(d.Basis), nullableText(d.Suppression),
-			sum[:], string(d.Mode), by, evidence, authority, instructionID)
+			sum[:], string(d.Mode), by, evidence, authority, instructionID,
+			ruleset.Version, ruleset.Codes)
 		if err != nil {
 			return fmt.Errorf("consent: record the staging decision: %w", err)
 		}
