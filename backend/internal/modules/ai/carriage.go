@@ -127,13 +127,11 @@ func DocumentMIMEs() []string {
 // word that selects it. The census and DocumentMIMEs both read it, so neither
 // can go looking at a set of adapters the other does not.
 //
-// It is the same answer each adapter reports as Capabilities.WireAttachmentMIMEs,
-// and that is pinned rather than trusted: a row here that no buildable client
-// agrees with is a second copy of the subject, and the copy is what a reader
-// believes. TestOnlyAnOperatorPointedWireDeclaresAWildcard separately holds the
-// wildcard exemptions this map carries.
+// A row here is a claim about what its ADAPTER can put on the wire, and it is
+// held against the adapter rather than against another declaration: two
+// declarations agreeing prove only that somebody wrote the same thing twice.
 //
-// Held by: TestWireCarriageIsWhatSelectBrainActuallyBuilds (backend/internal/modules/ai/carriage_test.go)
+// Held by: TestTheOpenAICompatibleWireHasNoDocumentPart (backend/internal/modules/ai/carriage_test.go)
 func wireCarriage() map[string][]string {
 	return map[string][]string{
 		ProviderFake:      carriesImagesAndPDF,

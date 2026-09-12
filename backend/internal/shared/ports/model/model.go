@@ -338,21 +338,6 @@ type Capabilities struct {
 	// leaves no failed attempt behind for a configuration that is merely
 	// text-only.
 	AttachmentMIMEs []string
-	// WireAttachmentMIMEs is what this client's WIRE carries before the binding's
-	// own `input:` declaration narrows it — the same spelling, and always a
-	// superset of AttachmentMIMEs.
-	//
-	// It exists so a caller can tell the two reasons a media type is absent
-	// apart, because they call for opposite answers. A wire that never had a
-	// document part leaves the caller free to convert the document into something
-	// the wire does carry. A binding whose operator SWITCHED THE LANE OFF is a
-	// deliberate instruction about what may leave this deployment, and converting
-	// the document then sends its contents anyway — the control defeated, having
-	// reported success.
-	//
-	// Equal to AttachmentMIMEs on an undeclared binding, which is every binding
-	// that existed before `input:` did.
-	WireAttachmentMIMEs []string
 	// PromptWindow is the largest prompt this client will carry, in tokens, or
 	// 0 for a wire whose window is not a limit worth planning around.
 	//

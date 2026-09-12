@@ -12,17 +12,26 @@
 // and this package says so rather than guessing. The difference matters to the
 // caller, because a document whose text was READ can have a quote checked
 // against it and a document whose text was INVENTED cannot.
+//
+// The bytes reach here from an upload, so the file is hostile until proven
+// otherwise. Three things follow, and each is a defence against a shape the
+// underlying library does not defend against itself: the page walk is bounded by
+// what the FILE could really hold rather than by what it claims, the text is
+// accumulated against the caller's budget and abandoned the moment it is met,
+// and the whole read runs under the caller's context so a document that sends
+// the parser round a cycle cannot hold the worker that opened it.
 package pdftext
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/ledongthuc/pdf"
+	"golang.org/x/text/unicode/norm"
 )
 
 // ErrNoTextLayer is a PDF this package opened and found no text in — almost
@@ -37,6 +46,21 @@ var ErrNoTextLayer = errors.New("pdftext: this PDF carries no text layer")
 // all, truncated, encrypted, or malformed past the point of reading.
 var ErrUnreadable = errors.New("pdftext: this file could not be read as a PDF")
 
+// minBytesPerPage is the floor on what one REAL page costs in the file — a page
+// object, its resource dictionary and a content stream reference.
+//
+// It exists to bound the page walk by the file in hand rather than by the file's
+// own claim about itself. `NumPage` returns the `/Count` written in the document,
+// which is a number an author chooses: a 600-byte PDF may say two billion, and
+// the library has no object cache, so honouring it is two billion parses of the
+// same tree. Dividing the real length by this turns that claim into an
+// arithmetic impossibility instead of a loop.
+//
+// Deliberately far below any real page. Being wrong high would silently stop
+// reading a legitimate document; being wrong low costs a bounded walk over pages
+// that are not there.
+const minBytesPerPage = 64
+
 // Extract returns the text a PDF states, at most maxChars+1 runes of it.
 //
 // The one rune past the caller's bound is deliberate and mirrors how the
@@ -44,14 +68,24 @@ var ErrUnreadable = errors.New("pdftext: this file could not be read as a PDF")
 // from "truncated to the limit", and without it a document of exactly maxChars
 // and one of a million both arrive full-length and look identical.
 //
-// The bound is not tidiness. A PDF's text streams are compressed, so a file
-// inside the caller's byte ceiling can still decompress to orders of magnitude
-// more text — an input bound alone does not bound this.
-func Extract(raw []byte, maxChars int) (string, error) {
+// The answer is NFKC-normalised, which is what makes an extracted quote
+// checkable. Real generators emit the typographic ligatures a font provides —
+// Chrome prints "retrofit" as `retro` + U+FB01 — and a reader sees the word
+// while a byte comparison sees two different strings. The downstream grounding
+// check is a plain substring match, so a model that quotes what the PAGE shows
+// would have its whole reading refused for quoting the document correctly.
+// Compatibility normalisation folds those renderings back to the characters the
+// word is made of.
+//
+// ctx bounds the WALL CLOCK, and it is not a nicety. The parser follows
+// `/Parent` and `/Pages` links with no cycle guard, so a document whose page
+// tree points at itself spins forever — a shape no amount of recovering from
+// panics can see, because nothing panics.
+func Extract(ctx context.Context, raw []byte, maxChars int) (string, error) {
 	if maxChars <= 0 {
 		return "", fmt.Errorf("pdftext: maxChars must be positive, got %d", maxChars)
 	}
-	text, err := readPlainText(raw, maxChars)
+	text, err := readUnderContext(ctx, raw, maxChars)
 	if err != nil {
 		return "", err
 	}
@@ -63,21 +97,65 @@ func Extract(raw []byte, maxChars int) (string, error) {
 	// Trimmed before the emptiness test too, because a page of positioned
 	// whitespace is what an image-only PDF's text layer looks like when it has
 	// one at all: present, and stating nothing.
-	text = strings.TrimSpace(text)
+	//
+	// Normalised in the same step, before either the bound or the test: a
+	// ligature is one rune that folds to two, so budgeting the un-normalised
+	// text would hand the caller more characters than it asked for.
+	text = norm.NFKC.String(strings.TrimSpace(text))
 	if text == "" {
 		return "", ErrNoTextLayer
 	}
 	return truncateRunes(text, maxChars+1), nil
 }
 
-// readPlainText is the whole interaction with the PDF library, kept in one
-// function so the recover below covers all of it and nothing else.
+// readUnderContext runs the read on its own goroutine and gives up on it when
+// ctx does.
+//
+// The goroutine is ABANDONED rather than stopped, because the parser takes no
+// context and cannot be interrupted. That is the honest trade: a leaked
+// goroutine that will end when its page does, against a worker slot held for the
+// life of the process. The job that owns ctx gets its answer either way, which
+// is what stops one document from blocking every later reading of any document.
+func readUnderContext(ctx context.Context, raw []byte, maxChars int) (string, error) {
+	type result struct {
+		text string
+		err  error
+	}
+	done := make(chan result, 1) // buffered: an abandoned goroutine must not block on send
+	go func() {
+		text, err := readPlainText(raw, maxChars)
+		done <- result{text, err}
+	}()
+	select {
+	case r := <-done:
+		return r.text, r.err
+	case <-ctx.Done():
+		return "", fmt.Errorf("%w: reading it did not finish in time", ErrUnreadable)
+	}
+}
+
+// readPlainText walks the pages, stopping at the first of three bounds: the
+// caller's budget, what the file could really hold, and the pages the document
+// claims.
 //
 // It recovers because the library PANICS on malformed input rather than
 // returning an error — measured at 63 panics in 400 random single-byte
 // mutations of a valid file. These bytes arrive from an upload, so the crash is
 // reachable by anyone who can attach a document, and a panicking worker takes
 // every other reading down with it.
+//
+// The pages are walked ONE AT A TIME rather than through Reader.GetPlainText.
+// That helper concatenates every page into one buffer before returning it, so a
+// limit applied to what it returns bounds only what is KEPT — a file whose
+// content streams decompress to gigabytes has already allocated all of it by the
+// time the first byte can be read. Walking the pages holds one page plus the
+// budget instead, and stops as soon as the budget is met.
+//
+// What that does NOT bound is a single page: the library decompresses one
+// content stream whole, and nothing here can see inside that. The ceiling for
+// one page is the input length times whatever ratio its compression achieved,
+// which the caller's byte bound constrains but does not decide. Closing it means
+// a reader that bounds decompression, which this library does not expose.
 func readPlainText(raw []byte, maxChars int) (text string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -93,19 +171,29 @@ func readPlainText(raw []byte, maxChars int) (text string, err error) {
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", ErrUnreadable, err)
 	}
-	plain, err := doc.GetPlainText()
-	if err != nil {
-		return "", fmt.Errorf("%w: %w", ErrUnreadable, err)
+	pages := min(doc.NumPage(), len(raw)/minBytesPerPage)
+	var out strings.Builder
+	held := 0
+	for number := 1; number <= pages; number++ {
+		// nil fonts: the page builds its own charmap cache. Sharing one across
+		// pages is the library's own optimisation and it is not available from
+		// outside the package — and it would buy little here, because the loop
+		// stops at the budget and a business document meets it in a page or two.
+		onPage, err := doc.Page(number).GetPlainText(nil)
+		if err != nil {
+			return "", fmt.Errorf("%w: %w", ErrUnreadable, err)
+		}
+		out.WriteString(onPage)
+		held += utf8.RuneCountInString(onPage)
+		// Stopped as soon as the budget is MET, so what is held is one page plus
+		// the budget however many pages remain. Counted incrementally rather
+		// than over the accumulated string, which would re-walk everything read
+		// so far on every page.
+		if held > maxChars {
+			break
+		}
 	}
-	// A byte ceiling on the READ, which is the memory bound; the caller's rune
-	// bound is applied by Extract once the positioning whitespace is off. The
-	// budget is the worst case UTF-8 needs for that many runes, so the read can
-	// never come up short of them.
-	read, err := io.ReadAll(io.LimitReader(plain, int64(maxChars+1)*utf8.UTFMax))
-	if err != nil {
-		return "", fmt.Errorf("%w: %w", ErrUnreadable, err)
-	}
-	return string(read), nil
+	return out.String(), nil
 }
 
 // truncateRunes cuts a string to at most limit runes, never mid-rune.

@@ -142,7 +142,9 @@ deps:
     # xsyswindows: ownedfile's DACL, the Windows half of an owner-only file.
     # pdfread + fpdf: pdftext reads a PDF's text layer, and its tests build the
     # fixtures to read with the writer this tree already ships.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus, pdfread, fpdf]
+    # xtext: pdftext NFKC-folds a PDF's typographic ligatures back to the
+    # characters the word is made of — a Unicode normal form the stdlib lacks.
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus, pdfread, fpdf, xtext]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:

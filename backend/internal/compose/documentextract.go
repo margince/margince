@@ -220,9 +220,9 @@ func documentExtractRequest(src documentSource) model.Request {
 			// interpolated is a constant this package owns, never a header a
 			// sender chose.
 			fmt.Fprintf(&prompt,
-				"The text below was extracted by this system from a %s file, so it carries the document's words "+
-					"and not its layout. Quote only what appears in the text below. Do not report a table, a column "+
-					"or a position you cannot see in it.\n", src.ExtractedFrom)
+				"The text below was extracted by this system from the document (%s), so it carries the document's "+
+					"words and not its layout. Quote only what appears in the text below. Do not report a table, a "+
+					"column or a position you cannot see in it.\n", src.ExtractedFrom)
 		}
 		prompt.WriteString(fence.WrapAttr("document", "text", src.Text) + "\n")
 	} else {
