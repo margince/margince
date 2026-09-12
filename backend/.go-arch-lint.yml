@@ -44,10 +44,12 @@ vendors:
   river:  { in: github.com/riverqueue/** }
   minio:  { in: github.com/minio/** }
   fpdf:   { in: github.com/go-pdf/** }
-  # pdftext's reader: the text layer a generated PDF already carries, so a wire
-  # with no document part can be handed what the document says. Pure Go, no cgo,
-  # and a READER only — fpdf above is the writer, and they share no code.
-  pdfread: { in: github.com/ledongthuc/** }
+  # pdftext's engine: pdfium (the PDF implementation in Chrome) compiled to
+  # WebAssembly, plus the instance pool it is driven through. It runs under
+  # wazero, so an upload is parsed inside a sandbox rather than in the host heap.
+  # No cgo — the WASM build is what makes that true.
+  pdfium:  { in: github.com/klippa-app/** }
+  gopool:  { in: github.com/jolestar/** }
   # unicode transforms for the PO-PARAM-JW-2 dedupe preprocessing (casefold+unaccent)
   xtext:  { in: golang.org/x/text/** }
   # webread's crawl mechanics: the html tokenizer (link harvest from raw HTML)
@@ -140,11 +142,11 @@ deps:
     # wazero + brotli: licensecheck's runtime for the bundled validation
     # module, and the compression it is published in.
     # xsyswindows: ownedfile's DACL, the Windows half of an owner-only file.
-    # pdfread + fpdf: pdftext reads a PDF's text layer, and its tests build the
-    # fixtures to read with the writer this tree already ships.
+    # pdfium + gopool: pdftext reads a PDF's text layer through a sandboxed
+    # pdfium; fpdf is its TESTS building the fixtures they then read.
     # xtext: pdftext NFKC-folds a PDF's typographic ligatures back to the
     # characters the word is made of — a Unicode normal form the stdlib lacks.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus, pdfread, fpdf, xtext]
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus, pdfium, gopool, fpdf, xtext]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:
