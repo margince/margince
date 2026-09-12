@@ -366,6 +366,17 @@ function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
       // speaks it and shows it on hover from the one `label`.
       icon={pinned ? <PinOff aria-hidden="true" /> : <Pin aria-hidden="true" />}
       label={t(pinned ? "worklist.verb.unpin" : "worklist.verb.pin")}
+      // WHAT THE GLYPH CANNOT SAY. "Pin" answers what the control IS and
+      // nothing about what it does: a reader could not tell whether it marks
+      // the row urgent, whose order it changes, or how long it lasts.
+      //
+      // Per STATE, like the label beside it. One sentence for both states had
+      // the Unpin button describing itself as keeping the row on top, which is
+      // the control contradicting what pressing it now does.
+      //
+      // A description rather than part of the name: a control list repeating a
+      // sentence once per row would be worse than the bare word.
+      hint={t(pinned ? "worklist.verb.unpinHint" : "worklist.verb.pinHint")}
       // It SETS rather than does, and the two states of one switch look
       // identical without it: a glyph has no label on screen to carry the
       // difference, so the pressed state is what tells a reader this row is
