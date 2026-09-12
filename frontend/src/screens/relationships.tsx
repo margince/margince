@@ -33,6 +33,7 @@ import {
   type RelationshipEntity,
   searchByEntity,
 } from "./relationshipcandidates";
+import { KIND_LABELS } from "./relationshipkinds";
 import "./candidatepicker.css";
 
 // The Relationships tab (P-5): the one surface a contact/company 360 renders
@@ -44,7 +45,6 @@ import "./candidatepicker.css";
 type Relationship = components["schemas"]["Relationship"];
 type CreateRelationshipRequest =
   components["schemas"]["CreateRelationshipRequest"];
-type RelationshipKind = Relationship["kind"];
 
 // Which 360 this tab is rendered from — fixes which side of the edge is
 // "this record" and which is the picked "other side".
@@ -58,21 +58,6 @@ export type RelationshipScope =
   | { contact_id: string }
   | { company_id: string }
   | { deal_id: string };
-
-const KIND_LABELS: Record<RelationshipKind, MessageKey> = {
-  employment: "rel.kind.employment",
-  deal_stakeholder: "rel.kind.dealStakeholder",
-  project_stakeholder: "rel.kind.projectStakeholder",
-  // Readable here, never creatable below: a company's place on a project is
-  // written through the project's own surface, which holds the two rules this
-  // generic form cannot — write authority over the project row, and the refusal
-  // that keeps a project's last company on it.
-  project_company: "rel.kind.projectCompany",
-  partner_of: "rel.kind.partnerOf",
-  referred_by: "rel.kind.referredBy",
-  co_sell_with: "rel.kind.coSellWith",
-  works_with: "rel.kind.worksWith",
-};
 
 // What this FORM may create, which is narrower than what it may show: the
 // contract's create body omits project_company, so the type follows it and a

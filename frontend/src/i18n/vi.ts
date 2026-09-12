@@ -537,6 +537,7 @@ export const vi = {
   "rel.kind.referredBy": "Được giới thiệu bởi",
   "rel.kind.coSellWith": "Bán chung với",
   "rel.kind.worksWith": "Làm việc cùng",
+  "rel.kind.billingContact": "Liên hệ hóa đơn",
 
   "common.error": "Không tải được màn hình này.",
   "common.errorNoCause":
@@ -1153,6 +1154,13 @@ export const vi = {
   "evidence.explain": 'Nguồn của "{value}"',
   "evidence.fullHistory": "Lịch sử đầy đủ",
   "co.section.unavailable": "Không tải được — đây có thể chưa phải toàn cảnh",
+  "billing.title": "Liên hệ hóa đơn",
+  "billing.contactTitle": "Phụ trách hóa đơn cho",
+  "billing.none": "Chưa có ai được chỉ định — hãy thêm liên hệ nhận hóa đơn",
+  "billing.noEmail": "Chưa có email",
+  "billing.role.recipient": "Nhận hóa đơn",
+  "billing.role.approver": "Phê duyệt",
+  "billing.role.accountsPayable": "Kế toán công nợ",
   "finance.title": "Tài chính",
   "finance.titleHistorical": "Tài chính · lịch sử",
   "finance.none": "Chưa ghi nhận gì.",

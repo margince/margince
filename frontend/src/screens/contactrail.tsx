@@ -8,23 +8,12 @@ import {
   Phone,
   User,
 } from "lucide-react";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWriteRecord } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import {
-  Avatar,
-  Button,
-  Checkbox,
-  Field,
-  Modal,
-  OverflowMenu,
-  TextInput,
-} from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
+import { Avatar, Button } from "../design-system/atoms";
 import { ContactLink } from "../design-system/contactlink";
 import { EmailReference } from "../design-system/emailreference";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
@@ -32,16 +21,11 @@ import { InlineText } from "../design-system/inlinechoice";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
-  RecordPicker,
-  type RecordPickerCandidate,
-} from "../design-system/recordpicker";
-import {
   omitted,
   type SectionState,
   SurfaceState,
 } from "../design-system/surfacestate";
-import { stable } from "../format/collate";
-import { formatDayMonth, formatNumber, relativeDays } from "../format/format";
+import { formatNumber, relativeDays } from "../format/format";
 import { normalizeProfileUrl } from "../format/profileurl";
 import { linkedinUrl } from "../format/weburl";
 import {
@@ -53,13 +37,14 @@ import {
   usePlural,
   useT,
 } from "../i18n";
-import { problemMessageOf, throwProblem, useSorMode } from "./common";
+import { throwProblem, useSorMode } from "./common";
 import { ContactAccess } from "./contactaccess";
+import { ContactBillingRoles } from "./contactbillingroles";
 import { ConsentAndChannels } from "./contactconsentpanel";
+import { Employers } from "./contactemployers";
 import { daysSinceInbound, isQuiet } from "./contactquiet";
 import { contactTabRoute } from "./contacttab";
 import { CounterpartyHoldRow } from "./counterparty-hold";
-import { stillHeld, today } from "./employmentcurrency";
 import { TagsPanel } from "./tagspanel";
 
 // The right rail (concept §5.11): SEPARATE panels, each answering one question
@@ -74,7 +59,7 @@ import { TagsPanel } from "./tagspanel";
 // body — a reader who has to read the margin has lost the column it sits
 // beside.
 
-type Contact360 = components["schemas"]["Contact360"];
+export type Contact360 = components["schemas"]["Contact360"];
 type Contact = components["schemas"]["Contact"];
 type ContactConsentGuard = components["schemas"]["ContactConsentGuard"];
 type UpdateContactRequest = components["schemas"]["UpdateContactRequest"];
@@ -103,7 +88,7 @@ type Withheld = Readonly<{
   employments: boolean;
 }>;
 
-function withheldSections(view: Contact360): Withheld {
+export function withheldSections(view: Contact360): Withheld {
   return {
     lastTouch: omitted(view, "last_touch"),
     activities: omitted(view, "activities"),
@@ -131,7 +116,7 @@ function reading(
 // `empty` is the only state allowed to say there is none of something, so a
 // withheld section keeps its place in the rail and says it is withheld instead
 // of drawing as an account with nothing on it.
-function bodyState(withheld: boolean, count: number): SectionState {
+export function bodyState(withheld: boolean, count: number): SectionState {
   if (withheld) {
     return "withheld";
   }
@@ -160,6 +145,10 @@ export function ContactRail({
     <div className="pe-rail" data-testid="contact-rail">
       <DetailsGrid view={view} />
       <Employers view={view} />
+      {/* Beside their employers, not inside them: where somebody works and
+          whose invoices they handle are different facts, and an external
+          bookkeeper holds the second without the first. */}
+      <ContactBillingRoles companies={view.billing_roles} />
       <RelationshipPulse view={view} onExplain={onExplain} />
       <WhoKnows view={view} firstName={firstName} />
       <SignalsAndRisks view={view} />
@@ -303,7 +292,7 @@ type ContactFieldPress = Readonly<{
 // useCompanyReadOnlyReason gives for an account: archived first, since it is
 // the one a reader can act on (restore it), overlay second, since it is a
 // property of the installation rather than of this one record.
-function useContactReadOnlyReason(contact: Contact): string | undefined {
+export function useContactReadOnlyReason(contact: Contact): string | undefined {
   const t = useT();
   const overlay = useSorMode() === "overlay";
   if (contact.archived_at) {
@@ -518,590 +507,6 @@ function DetailsGrid({ view }: Readonly<{ view: Contact360 }>) {
       </PanelBody>
     </Panel>
   );
-}
-
-// --- Employers ---------------------------------------------------------
-
-type Employment = components["schemas"]["Contact360Employment"];
-type CreateRelationshipRequest =
-  components["schemas"]["CreateRelationshipRequest"];
-type UpdateRelationshipRequest =
-  components["schemas"]["UpdateRelationshipRequest"];
-
-async function searchCompanyCandidates(
-  q: string,
-): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.map((company) => ({
-    id: company.id,
-    name: company.display_name,
-  }));
-}
-
-// Contact360Employment is the 360's own projection of an employment edge — it
-// carries `relationship_id` but not the relationship row's own `version`, and
-// there is no `GET /relationships/{id}` in the contract to re-read one by id
-// (relationships.tsx's RelationshipsTab keeps the same note, for the same
-// reason). The one honest way to get an If-Match for a row this rail only
-// knows by id is to re-read it through the list endpoint, scoped tight enough
-// (this contact, this company, this kind) that it can only answer with the one
-// edge this row is already showing.
-async function fetchEmploymentVersion(
-  employment: Employment,
-  contactId: string,
-): Promise<number | undefined> {
-  const { data, error } = await api.GET("/relationships", {
-    params: {
-      query: {
-        contact_id: contactId,
-        company_id: employment.company_id,
-        kind: "employment",
-      },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.find((rel) => rel.id === employment.relationship_id)
-    ?.version;
-}
-
-// The one write path for everything on an employment row that is neither its
-// creation nor its removal: the role InlineText commits below and the
-// "mark as ended" verb both patch through here, so a role edit and an ended
-// date answer the same version-skew and permission failures the same way.
-//
-// An unresolved version is refused here rather than sent unpinned: a write with
-// no precondition writes straight over whatever changed underneath it instead of
-// failing loud with a 409. The list scoping fetchEmploymentVersion uses can
-// legitimately come back without this row (a narrower read scope, a paged
-// response, an edge whose kind changed), and this rail is the one place that
-// knows to say so — hence its own sentence for the reader rather than the shared
-// refusal, which can only report that the write did not happen.
-async function patchEmployment(
-  employment: Employment,
-  contactId: string,
-  body: UpdateRelationshipRequest,
-  t: ReturnType<typeof useT>,
-): Promise<void> {
-  const version = await fetchEmploymentVersion(employment, contactId);
-  if (version === undefined) {
-    throwProblem({
-      detail: t("contact.rail.employmentVersionUnresolved"),
-    });
-  }
-  const { error } = await api.PATCH("/relationships/{id}", {
-    params: {
-      path: { id: employment.relationship_id },
-      ...ifMatch(version),
-    },
-    body,
-  });
-  if (error) {
-    throwProblem(error);
-  }
-}
-
-// The four writes the Companies section makes, sharing one invalidation:
-// contact360 is what this section itself reads its rows from, and contactBrief
-// comes with it because the brief's first sentence names the employer. The
-// role InlineText below goes through `update` rather than calling
-// patchEmployment on its own, so every write this section makes — role,
-// ended date, create, remove — ends in the same refetch and the rail never
-// shows a saved edit next to its own stale value.
-function useEmploymentActions(contactId: string) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const invalidate = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ["contact360", contactId],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ["contactBrief", contactId],
-    });
-  };
-  const create = useMutation({
-    mutationFn: async (body: CreateRelationshipRequest) => {
-      const { data, error } = await api.POST("/relationships", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: invalidate,
-  });
-  const end = useMutation({
-    mutationFn: (employment: Employment) =>
-      patchEmployment(employment, contactId, { ended_at: today() }, t),
-    onSuccess: invalidate,
-  });
-  const update = useMutation({
-    mutationFn: ({
-      employment,
-      body,
-    }: {
-      employment: Employment;
-      body: UpdateRelationshipRequest;
-    }) => patchEmployment(employment, contactId, body, t),
-    onSuccess: invalidate,
-  });
-  const remove = useMutation({
-    mutationFn: async (relationshipId: string) => {
-      const { error } = await api.DELETE("/relationships/{id}", {
-        params: { path: { id: relationshipId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: invalidate,
-  });
-  return { create, end, update, remove };
-}
-
-type EmploymentActions = ReturnType<typeof useEmploymentActions>;
-
-// A contact can hold more than one employment edge at once, so this is a
-// list rather than the single Details row it used to be. The current
-// employer leads and carries an explicit marker: `is_current_primary` is
-// the recorded fact, not something a reader should have to derive from
-// whether `ended_at` happens to be blank — a rep who has to check dates to
-// know which company to email has already lost the point of the marker.
-function Employers({ view }: Readonly<{ view: Contact360 }>) {
-  const t = useT();
-  const contact = view.contact;
-  const readOnlyReason = useContactReadOnlyReason(contact);
-  // The same decision and the same read-only reasons DetailsGrid gates its own
-  // edit affordances on — a reader who cannot edit the contact's own fields
-  // cannot edit which company they work at either.
-  const canEdit = useCanWriteRecord("contact", contact) && !readOnlyReason;
-  const actions = useEmploymentActions(contact.id);
-  const [adding, setAdding] = useState(false);
-  const [removing, setRemoving] = useState<Employment | null>(null);
-  const employments = [...(view.employments?.data ?? [])].sort(
-    (a, b) =>
-      Number(b.is_current_primary && stillHeld(b)) -
-      Number(a.is_current_primary && stillHeld(a)),
-  );
-  // Every company this contact already has a live edge to — the 360 projection
-  // drops an edge the moment it is removed, so this list IS the live set,
-  // nothing further to filter. AddEmploymentModal excludes these from its
-  // own picker so a rep cannot draw a second edge to a company already on
-  // this list.
-  //
-  // Memoized on a primitive key rather than on `employments` itself: the
-  // array here is rebuilt fresh every render (the sort above always returns
-  // a new one), and AddEmploymentModal's own searchTargets treats a new
-  // identity as a new search space and clears the picker's candidates —
-  // so the set only gets a new identity when the set of ids it names
-  // actually changes.
-  // `stable` rather than the reader's collation, because this string is only
-  // ever compared against a previous rendering of itself: whose locale produced
-  // it must not be part of the answer.
-  const connectedCompanyKey = employments
-    .map((employment) => employment.company_id)
-    .sort(stable)
-    .join(",");
-  const connectedCompanyIds = useMemo(
-    () => (connectedCompanyKey === "" ? [] : connectedCompanyKey.split(",")),
-    [connectedCompanyKey],
-  );
-  return (
-    <Panel
-      title={t("contact.rail.employmentTitle")}
-      titleAction={
-        canEdit ? (
-          <Button small variant="ghost" onClick={() => setAdding(true)}>
-            {t("contact.rail.addEmployment")}
-          </Button>
-        ) : undefined
-      }
-    >
-      <PanelBody>
-        <SurfaceState
-          loadingLabel={t("contact.rail.employmentTitle")}
-          state={bodyState(
-            withheldSections(view).employments,
-            employments.length,
-          )}
-          emptyLabel={t("contact.rail.noEmployment")}
-        >
-          {employments.map((employment) => (
-            <EmploymentRow
-              key={employment.relationship_id}
-              employment={employment}
-              canEdit={canEdit}
-              readOnlyReason={readOnlyReason}
-              actions={actions}
-              onRemove={() => setRemoving(employment)}
-            />
-          ))}
-        </SurfaceState>
-        <AddEmploymentModal
-          open={adding}
-          onClose={() => setAdding(false)}
-          contactId={contact.id}
-          create={actions.create}
-          excludedCompanyIds={connectedCompanyIds}
-          hasCurrentEmployment={employments.some(stillHeld)}
-        />
-        {/* Remove is the irreversible verb — the connection and its history are
-          gone, not merely dated — so it is the one that sits behind a
-          confirm, unlike "mark as ended" which is an ordinary field edit. */}
-        <ConfirmModal
-          open={removing !== null}
-          onClose={() => {
-            setRemoving(null);
-            actions.remove.reset();
-          }}
-          title={t("contact.rail.removeEmploymentTitle")}
-          confirmLabel={t("rel.remove")}
-          confirmVariant="danger"
-          onConfirm={() => {
-            if (removing) {
-              actions.remove.mutate(removing.relationship_id, {
-                onSuccess: () => setRemoving(null),
-              });
-            }
-          }}
-          pending={actions.remove.isPending}
-          error={
-            actions.remove.isError
-              ? problemMessageOf(actions.remove.error, t)
-              : null
-          }
-        >
-          <p className="t-body">
-            {t("contact.rail.removeEmploymentBody", {
-              company: removing?.company_name ?? t("field.unset"),
-            })}
-          </p>
-        </ConfirmModal>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-// One employment edge: the company it names, the role at that company (inline-
-// editable — this is the ONE place a per-company title is corrected;
-// `contact.title` is a different field, edited in Details above), the dates,
-// and the row's own verbs folded behind an OverflowMenu — this row already
-// carries a focusable inline-edit control, so the verbs stay out of the way
-// until the row is hovered or that control (or the trigger itself) has
-// focus, the same reveal the company page's task rows use for theirs.
-function EmploymentRow({
-  employment,
-  canEdit,
-  readOnlyReason,
-  actions,
-  onRemove,
-}: Readonly<{
-  employment: Employment;
-  canEdit: boolean;
-  readOnlyReason: string | undefined;
-  actions: EmploymentActions;
-  onRemove: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const detail = employmentDetail(employment, t, locale, recordZone);
-  const ending =
-    actions.end.isPending &&
-    actions.end.variables?.relationship_id === employment.relationship_id;
-  // isPending and isError can never both hold at once (one shared mutation
-  // status behind both), so a failure that only rendered while "ending" was
-  // also true could never actually draw: pending clears before error sets.
-  // This row's own failure is instead keyed on the same identifier ending
-  // uses, just checked against isError rather than isPending, so the row
-  // that failed keeps its message once the mutation has settled.
-  const endFailed =
-    actions.end.isError &&
-    actions.end.variables?.relationship_id === employment.relationship_id;
-  return (
-    <div className="pe-employment">
-      <span className="pe-employment-body">
-        <span className="pe-employment-company">
-          {employment.company_name ? (
-            <button
-              type="button"
-              className="pe-meta-link"
-              onClick={() =>
-                navigate({
-                  screen: "companies",
-                  id: employment.company_id,
-                })
-              }
-            >
-              {employment.company_name}
-            </button>
-          ) : (
-            <span className="inlinetext">{t("field.unset")}</span>
-          )}
-          {employment.is_current_primary && stillHeld(employment) && (
-            <span className="pe-rail-value-good">{t("rel.current")}</span>
-          )}
-        </span>
-        <span className="pe-employment-role">
-          <InlineText
-            label={t("rel.role")}
-            value={employment.role ?? ""}
-            placeholder={t("field.addTitle")}
-            canEdit={canEdit}
-            readOnlyReason={readOnlyReason}
-            onSave={(next) =>
-              actions.update.mutateAsync({
-                employment,
-                body: { role: next || null },
-              })
-            }
-          />
-        </span>
-        {detail && (
-          <span className="pe-colleague-proof t-caption">{detail}</span>
-        )}
-      </span>
-      {canEdit && (
-        <span className="pe-employment-actions">
-          <OverflowMenu label={t("record.moreActions")}>
-            {!employment.ended_at && (
-              <Button
-                small
-                disabled={ending}
-                onClick={() => actions.end.mutate(employment)}
-              >
-                {t("contact.rail.markEnded")}
-              </Button>
-            )}
-            <Button small variant="danger" onClick={onRemove}>
-              {t("rel.remove")}
-            </Button>
-          </OverflowMenu>
-        </span>
-      )}
-      {endFailed && (
-        <p className="pe-colleague-proof t-caption" role="alert">
-          {problemMessageOf(actions.end.error, t)}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// The "add a company" modal: pick the company (RecordPicker, the shared
-// debounced search-and-pick), optionally its role, and whether it is the
-// current primary employer — a Checkbox, not a Switch, because ticking it
-// states an intent this modal's own Save then writes, it is not itself the
-// write (design-system/README.md's Checkbox/Switch distinction).
-function AddEmploymentModal({
-  open,
-  onClose,
-  contactId,
-  create,
-  excludedCompanyIds,
-  hasCurrentEmployment,
-}: Readonly<{
-  open: boolean;
-  onClose: () => void;
-  contactId: string;
-  create: EmploymentActions["create"];
-  // Companies this contact already has a live employment edge to — the
-  // picker refuses to offer a second edge to the same company, since only
-  // a duplicated current-primary is refused server-side.
-  excludedCompanyIds: ReadonlyArray<string>;
-  // Whether this contact already holds a job that has not ended. It is the exact
-  // fact the server's own rule turns on, read off the same rows, so the box can
-  // START in the state the save will produce instead of showing the reader one
-  // answer and writing the other.
-  hasCurrentEmployment: boolean;
-}>) {
-  const t = useT();
-  const headingId = useId();
-  const [company, setCompany] = useState<RecordPickerCandidate | null>(null);
-  const [role, setRole] = useState("");
-  // Ticked by default for somebody with no current job, because that is what
-  // the save will do either way: the server marks a contact's only current
-  // employment as their primary one. A box that started unticked and then
-  // produced the opposite was worse than sending the wrong value — it showed
-  // the reader a state the record never took, and left "no" expressible only by
-  // ticking and unticking again.
-  //
-  // So the box always STATES an answer and the reader can change it. The
-  // server's rule still exists for callers who send nothing — MCP and the API —
-  // and `hasCurrentEmployment` is read off the same rows that rule reads, so the
-  // two agree by construction rather than by being maintained in step.
-  const [isCurrent, setIsCurrent] = useState(!hasCurrentEmployment);
-  // useState only reads its initial value ONCE, and this modal is mounted for
-  // the life of the section rather than remounted per open. So the default has
-  // to be re-taken every time it opens, or it answers a question about the rows
-  // as they were the first time the section rendered: end the only employment,
-  // reopen, and the box would still be unticked because the initializer had
-  // already run — writing an explicit `false` for the contact's one current job,
-  // which is the whole defect this default exists to prevent.
-  useEffect(() => {
-    if (open) {
-      setIsCurrent(!hasCurrentEmployment);
-    }
-  }, [open, hasCurrentEmployment]);
-  const [allConnected, setAllConnected] = useState(false);
-
-  // Wraps the shared company search with this contact's own already-connected
-  // list. Kept on `excludedCompanyIds` alone, nothing that changes while the
-  // reader types — RecordPicker treats a new `searchTargets` identity as a
-  // new search space and empties whatever it was already showing.
-  const searchTargets = useCallback(
-    async (q: string) => {
-      const results = await searchCompanyCandidates(q);
-      const offered = results.filter(
-        (candidate) => !excludedCompanyIds.includes(candidate.id),
-      );
-      // Every match this query found is a company already on the list, not
-      // an empty search — the two read the same in a bare candidate box, so
-      // the modal says which one it is rather than leaving a silent gap.
-      setAllConnected(results.length > 0 && offered.length === 0);
-      return offered;
-    },
-    [excludedCompanyIds],
-  );
-
-  function close() {
-    setCompany(null);
-    setRole("");
-    setAllConnected(false);
-    create.reset();
-    onClose();
-  }
-
-  return (
-    <Modal open={open} onClose={close} labelledBy={headingId}>
-      <h2
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
-        {t("contact.rail.addEmployment")}
-      </h2>
-      <div className="form-stack">
-        <div className="field">
-          <span className="t-label">{t("contact.rail.employer")}</span>
-          <RecordPicker
-            label={t("contact.rail.employer")}
-            searchTargets={searchTargets}
-            selected={company}
-            onPick={setCompany}
-            disabled={create.isPending}
-          />
-          {!company && allConnected && (
-            <p className="t-caption">
-              {t("contact.rail.allCompaniesConnected")}
-            </p>
-          )}
-        </div>
-        <Field label={t("rel.role")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={role}
-              disabled={create.isPending}
-              onChange={(event) => setRole(event.target.value)}
-            />
-          )}
-        </Field>
-        <Checkbox
-          label={t("contact.rail.isCurrentEmployer")}
-          checked={isCurrent}
-          disabled={create.isPending}
-          onChange={(event) => setIsCurrent(event.target.checked)}
-        />
-      </div>
-      {create.isError && (
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--dangerText)" }}
-        >
-          {problemMessageOf(create.error, t)}
-        </p>
-      )}
-      <div className="actions">
-        <Button onClick={close} disabled={create.isPending}>
-          {t("create.cancel")}
-        </Button>
-        <Button
-          variant="primary"
-          disabled={!company || create.isPending}
-          onClick={() => {
-            if (!company) {
-              return;
-            }
-            create.mutate(
-              {
-                kind: "employment",
-                contact_id: contactId,
-                company_id: company.id,
-                role: role.trim() || undefined,
-                is_current_primary: isCurrent,
-                // `manual` is the one word for a first-party write by a
-                // contact — through this form or through an assistant. It used
-                // to say "ui", which named the screen rather than the origin,
-                // and would have re-created the spelling the backfill removed.
-                source: "manual",
-              },
-              { onSuccess: close },
-            );
-          }}
-        >
-          {t("create.save")}
-        </Button>
-      </div>
-    </Modal>
-  );
-}
-
-// The date range only — role is now its own InlineText control above, so
-// repeating it here would be the same fact twice. Through `formatDayMonth`,
-// which is the same function every other date on this page goes through — an
-// earlier version of this comment claimed the two sections could not disagree
-// about what "12 Jan" means while each held its own private copy of the
-// rendering, and both read the browser's guessed locale rather than the
-// reader's chosen one.
-// An employment that has ENDED says so even when nobody recorded when it
-// began: a period is a nicety, but a former employer that reads like a current
-// one is a rep writing to the wrong company. Only a connection with neither
-// date has nothing to say.
-function employmentDetail(
-  employment: Employment,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-  recordZone: string,
-): string {
-  // The record's zone. These arrive as instants (`format: date-time`), but they
-  // are WRITTEN from a date picker, so what is stored is midnight on the day a
-  // human chose and the time carries no information. Rendered in a reader's own
-  // zone west of UTC that midnight falls on the previous day, and two
-  // colleagues would quote different start dates for one employment. The
-  // record's zone is never behind UTC, so it renders the day that was picked.
-  const start = employment.started_at
-    ? formatDayMonth(employment.started_at, locale, recordZone)
-    : undefined;
-  const end = employment.ended_at
-    ? formatDayMonth(employment.ended_at, locale, recordZone)
-    : undefined;
-  if (start && end) {
-    return `${start} – ${end}`;
-  }
-  if (end) {
-    return t("rel.endedOn", { when: end });
-  }
-  if (start) {
-    return `${start} – ${t("rel.current")}`;
-  }
-  return "";
 }
 
 // --- Relationship pulse ----------------------------------------------------

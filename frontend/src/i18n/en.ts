@@ -559,6 +559,7 @@ export const en = {
   "rel.kind.referredBy": "Referred by",
   "rel.kind.coSellWith": "Co-sell with",
   "rel.kind.worksWith": "Works with",
+  "rel.kind.billingContact": "Billing contact",
 
   "common.error": "Couldn't load this view.",
   // What a failure that carries no server problem is allowed to say. A rejected
@@ -1254,6 +1255,14 @@ export const en = {
   "evidence.fullHistory": "Full history",
   "co.section.unavailable":
     "Could not be loaded — this may not be the whole picture",
+  "billing.title": "Billing contacts",
+  "billing.contactTitle": "Handles invoices for",
+  "billing.none":
+    "Nobody is named yet — add whoever the invoice should be addressed to",
+  "billing.noEmail": "No email recorded",
+  "billing.role.recipient": "Invoice recipient",
+  "billing.role.approver": "Approves",
+  "billing.role.accountsPayable": "Accounts payable",
   "finance.title": "Finance",
   "finance.titleHistorical": "Finance · historical",
   "finance.none": "Nothing recorded.",

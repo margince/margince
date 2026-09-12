@@ -54,7 +54,7 @@ const UNPINNED_WRITES: readonly string[] = [
   // and ContactPageV2 — the entry moved here with it, the same move merge-company's
   // own line made out of companies.tsx.
   "screens/contacteditmergearchive.tsx DELETE /contacts/{id}",
-  "screens/contactrail.tsx DELETE /relationships/{id}",
+  "screens/contactemployers.tsx DELETE /relationships/{id}",
   "screens/relationships.tsx DELETE /relationships/{id}",
   "screens/contractwrites.ts PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",

@@ -45,6 +45,7 @@ const (
 	sectionSinceLastVisit = crmcontracts.Company360SectionsOmitted("since_last_visit")
 	sectionSuggestions    = crmcontracts.Company360SectionsOmitted("suggestions")
 	sectionNextMeeting    = crmcontracts.Company360SectionsOmitted("next_meeting")
+	sectionBilling        = crmcontracts.Company360SectionsOmitted("billing_contacts")
 )
 
 // Service assembles the 360 and maintains the visit baseline.
@@ -156,6 +157,7 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.Company
 		{sectionHealth, a.readHealth},
 		{sectionNextSteps, a.readNextSteps},
 		{sectionNextMeeting, a.readNextMeeting},
+		{sectionBilling, a.readBillingContacts},
 		{sectionTags, a.readTags},
 		{sectionApprovals, a.readPendingApprovals},
 		{sectionSinceLastVisit, a.readSinceLastVisit},

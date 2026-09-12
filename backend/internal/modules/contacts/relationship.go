@@ -47,7 +47,7 @@ func relationshipAnchor(kind string) (object, column string) {
 		return anchorDeal, "deal_id"
 	case ProjectStakeholderKind, ProjectCompanyKind:
 		return projectObjectName, "project_id"
-	default: // partner_of, referred_by, co_sell_with
+	default: // partner_of, referred_by, co_sell_with, billing_contact
 		return anchorCompanyKind, "company_id"
 	}
 }
@@ -168,7 +168,7 @@ func ensureRelationshipAnchorWritable(
 var relationshipKinds = map[string]bool{
 	employmentKind: true, "deal_stakeholder": true, ProjectStakeholderKind: true,
 	"partner_of": true, "referred_by": true, "co_sell_with": true,
-	worksWithKind: true,
+	worksWithKind: true, BillingContactKind: true,
 }
 
 // worksWithKind is the one contact↔contact kind: two external contacts a rep
@@ -301,6 +301,16 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		}
 		if err := ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints()); err != nil {
 			return err
+		}
+		// A patch cannot move an edge's endpoints or its kind, but it CAN move
+		// the role — and for a billing contact the role is what the row means.
+		// Without this, the generic patch surface is the way to turn a stated
+		// capacity into a word the create path refuses. Asked on the PATCHED
+		// value: a patch that leaves role alone keeps whatever already passed.
+		if in.Role != nil {
+			if err := validBillingContactRole(current.Kind, in.Role); err != nil {
+				return err
+			}
 		}
 		if in.IfVersion != nil && *in.IfVersion != current.Version {
 			return apperrors.ErrVersionSkew

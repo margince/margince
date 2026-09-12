@@ -77,6 +77,29 @@ var relationshipKindList = func() string {
 	return strings.Join(kinds, ", ")
 }()
 
+// BillingContactRoleError refuses a capacity outside the three a billing
+// contact can hold.
+//
+// FieldFault on `role`, and it names the three: a caller who sent `payer` or
+// `finance` has one field to change, and the set is short enough to state.
+// The omitted case is a RequiredFieldError instead, because "you left it out"
+// and "you sent the wrong word" are different mistakes with different fixes,
+// and one sentence covering both sends half its readers after the wrong thing.
+type BillingContactRoleError struct{ Role string }
+
+func (e *BillingContactRoleError) Error() string {
+	return "`" + fieldRole + "` " + strconv.Quote(e.Role) + " is not a billing-contact role; use one of " +
+		strings.Join(BillingContactRoles, ", ")
+}
+
+// FieldFault names role and the contract's code for a value outside an enum.
+func (e *BillingContactRoleError) FieldFault() (field, code, message string) {
+	return fieldRole, "invalid_value", e.Error()
+}
+
+// billingContactUnique is the one-live-row-per-company-contact-role index.
+const billingContactUnique = "uq_rel_billing_contact"
+
 // RelationshipDatesError refuses an edge that ended before it started.
 type RelationshipDatesError struct{}
 
@@ -150,7 +173,10 @@ func (e *RelationshipConflictError) Is(target error) bool { return target == app
 // and the contact would keep an employer nobody recorded.
 func (e *RelationshipConflictError) AlreadyRecorded() bool {
 	switch e.Constraint {
-	case employmentUnique, projectStakeholderUnique, "uq_rel_deal_contact_role", "uq_rel_works_with":
+	case employmentUnique, projectStakeholderUnique, "uq_rel_deal_contact_role", "uq_rel_works_with",
+		billingContactUnique:
+		// Keyed on (company, contact, role) — the exact tuple offered — so this
+		// conflict does mean the edge is already on file.
 		return true
 	default:
 		return false
@@ -166,8 +192,14 @@ func mapRelationshipConstraint(err error, kind string) error {
 	if constraint, ok := storekit.CheckViolation(err); ok {
 		switch constraint {
 		case "rel_employment_shape", "rel_stakeholder_shape", "rel_partner_shape", "rel_project_stakeholder_shape",
-			"rel_works_with_shape":
+			"rel_works_with_shape", "rel_billing_contact_shape":
 			return &RelationshipShapeError{Kind: kind}
+		case "rel_billing_contact_role":
+			// The Go check above refuses this first and names the three roles,
+			// so reaching here means a writer bypassed it. Answer the caller in
+			// the same words rather than as a constraint name: which writer let
+			// it through is our problem, not theirs.
+			return &BillingContactRoleError{}
 		case "rel_dates":
 			return &RelationshipDatesError{}
 		}
@@ -175,7 +207,7 @@ func mapRelationshipConstraint(err error, kind string) error {
 	if constraint, ok := storekit.UniqueViolation(err); ok {
 		switch constraint {
 		case "uq_rel_current_primary_employer", "uq_rel_deal_contact_role", employmentUnique, projectStakeholderUnique,
-			"uq_rel_works_with":
+			"uq_rel_works_with", billingContactUnique:
 			return &RelationshipConflictError{Constraint: constraint}
 		}
 	}

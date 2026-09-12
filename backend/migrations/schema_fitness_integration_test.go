@@ -183,8 +183,6 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"record_assignment.project_id":         "gated: the same pair in ensureParentReadable and ensureParentWritable, on project",
 	"contract.company_id":                  "gated: auth.EnsureLinkTarget in createContractTx (H1) — the counterparty is client-supplied, so naming it is a read of it",
 	"project_health_assessment.project_id": "gated: auth.Require plus auth.HoldWritableLive on the project in RecordHealth and CorrectHealth, and auth.Require plus auth.EnsureVisible in ListHealth — the project comes from the ROUTE and every path probes it before a row is written or served",
-	"activity_review_response.deal_id":     "gated: auth.EnsureLinkTarget, through the note. WriteOutcomeReviewTx writes the review's note FIRST, with the deal as its activity link, so the deal a caller names is probed by insertActivityLinks before this row's INSERT runs — the review cannot reach the table under a deal the caller could not have linked a note to",
-	"activity_review_response.activity_id": "server-derived: the note this same transaction just wrote (LogActivityTx), never a caller's id. A review IS that note, and the row points back at it so the frozen answers and the prose stay one record",
 	// The deal and project links carry a SECOND obligation the sibling columns
 	// above do not, and it is the reason this table's gate is not just a copy.
 	// A contract's row visibility is INHERITED from its deal (falling back to

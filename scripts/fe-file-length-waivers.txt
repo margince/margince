@@ -52,7 +52,7 @@
 1402 frontend/src/screens/listquery.tsx
 1378 frontend/src/screens/offers.tsx
 1428 frontend/src/screens/contacts.test.tsx
-1433 frontend/src/screens/contactrail.tsx
+850 frontend/src/screens/contactrail.tsx
 1442 frontend/src/app/agentrail.test.tsx
 1505 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1527 frontend/src/design-system/listtable.test.tsx
@@ -97,7 +97,6 @@
 573 frontend/src/screens/project360.tsx
 583 frontend/src/screens/companycontracts.tsx
 584 frontend/src/screens/backfill.tsx
-587 frontend/src/screens/companyfinance.tsx
 589 frontend/src/app/palette.tsx
 591 frontend/src/screens/adddocument.tsx
 592 frontend/src/screens/rates.tsx

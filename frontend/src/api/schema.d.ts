@@ -19745,6 +19745,11 @@ export interface components {
             /** Format: uuid */
             company_id: string;
             state: components["schemas"]["FinanceSummaryState"];
+            /**
+             * @description Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
+             *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
+             */
+            billing_contacts?: components["schemas"]["BillingContact"][];
             /** @description Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected. */
             provider?: string | null;
             /**
@@ -20333,6 +20338,48 @@ export interface components {
             pending_proposals?: number | null;
         };
         /**
+         * @description One contact who handles a company's invoices, and in what capacity.
+         *
+         *     `email` is read LIVE off the contact, never copied onto the edge: an address
+         *     stored on the relationship would go stale the day they change it, and the
+         *     invoice would then be addressed to somewhere only that copy still believes in.
+         *     Null when the contact has no reachable address on file, which is a fact worth
+         *     showing — somebody named as the recipient with nowhere to send it.
+         *
+         *     Naming somebody here sends nothing. It creates no contact in the accounting
+         *     mirror, grants no consent to mail them, and starts no invoice.
+         */
+        BillingContact: {
+            /**
+             * Format: uuid
+             * @description The edge itself, so the panel can change or archive this one row.
+             */
+            relationship_id: string;
+            /** Format: uuid */
+            contact_id: string;
+            full_name: string;
+            role: components["schemas"]["BillingContactRole"];
+            title?: string | null;
+            /** @description The contact's current reachable address, read live. Null when none is on file. */
+            email?: string | null;
+        };
+        /**
+         * @description In what capacity somebody handles the invoice: `recipient` (it is addressed to
+         *     them), `approver` (they sign it off internally), `accounts_payable` (they pay it).
+         *     One contact may hold several, and each is a separate edge.
+         * @enum {string}
+         */
+        BillingContactRole: "recipient" | "approver" | "accounts_payable";
+        /** @description One company a contact handles invoices for — the same edge read from the contact's end. */
+        BillingCompany: {
+            /** Format: uuid */
+            relationship_id: string;
+            /** Format: uuid */
+            company_id: string;
+            company_name: string;
+            role: components["schemas"]["BillingContactRole"];
+        };
+        /**
          * @description The company record page in one payload. Every section except `company` is
          *     optional: absent means the caller lacks its grant, and `sections_omitted` names it.
          */
@@ -20364,11 +20411,13 @@ export interface components {
             next_meeting?: components["schemas"]["Company360NextMeeting"];
             health?: components["schemas"]["Company360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments")[];
+            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts")[];
             contacts?: {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
             };
+            /** @description Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld. */
+            billing_contacts?: components["schemas"]["BillingContact"][];
             deals?: components["schemas"]["Company360Deals"];
             /** @description The company's unarchived projects, work in motion first (delivering, pursuing, initiative, then closed), under the caller's project row scope. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Company360Project"][];
@@ -20583,8 +20632,10 @@ export interface components {
              */
             last_outbound_at?: string | null;
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile" | "dead_addresses")[];
+            sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile" | "dead_addresses" | "billing_roles")[];
             strength?: components["schemas"]["RelationshipStrength"];
+            /** @description The companies this contact handles invoices for, and in what capacity. Absent when the caller lacks the company or relationship grant, named in `sections_omitted` as `billing_roles`; a company outside the caller's row scope is not listed. */
+            billing_roles?: components["schemas"]["BillingCompany"][];
             /** @description The unarchived projects this contact is part of: the ones they hold a live stakeholder seat on, plus every project of the company they currently work for, one row per project, work in motion first. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Company360Project"][];
             /** @description The purchased contact-data snapshots (PO-EXT-9), one per CONNECTED provider: what each returned about this contact, kept beside the canonical record and never silently folded into it. One entry per connection so a reader can see who was paid for which value, and choose which provider to ask next; a provider nobody has run yet is present with state `never_run` rather than absent, because "we have not asked them" is the state the reader acts on. Ordered by provider name so the sections do not reshuffle between reads. Empty when no provider is connected. Absent when the caller lacks the contact grant, named in `sections_omitted` as `provider_profile`. */
@@ -22419,12 +22470,18 @@ export interface components {
          *     `works_with` is the one contact↔contact kind (contact_id ↔ counterparty_contact_id): two external
          *     contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
          *     and one live edge exists per pair whichever way it was recorded.
+         *
+         *     `billing_contact` (contact↔company) names who handles the account's invoices, in the
+         *     capacity `role` states. One live edge per company, contact and role: the same contact may
+         *     hold several roles, and the same role may be held by several contacts. It is a statement of
+         *     WHO, and nothing else — naming a recipient sends no invoice, creates nothing in the
+         *     accounting mirror, and grants no consent to mail them.
          */
         Relationship: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with" | "works_with";
+            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with" | "works_with" | "billing_contact";
             /** Format: uuid */
             contact_id?: string | null;
             /** Format: uuid */
@@ -22446,7 +22503,10 @@ export interface components {
              * @description The project on a project_stakeholder or project_company edge. Null for every other kind.
              */
             project_id?: string | null;
-            /** @description employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project. */
+            /**
+             * @description employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project.
+             *     `billing_contact` is the one kind where this field is REQUIRED and bounded: `recipient` (the invoice is addressed to them), `approver` (they sign it off internally) or `accounts_payable` (they pay it). An edge saying only that somebody is a billing contact would not say which of the three to do with them, so the server refuses it. Every other kind keeps free text.
+             */
             role?: string | null;
             /**
              * @description Employment — the one current primary employer (≤1 per contact).
@@ -22473,7 +22533,7 @@ export interface components {
         };
         CreateRelationshipRequest: {
             /** @enum {string} */
-            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "partner_of" | "referred_by" | "co_sell_with" | "works_with";
+            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "partner_of" | "referred_by" | "co_sell_with" | "works_with" | "billing_contact";
             /** Format: uuid */
             contact_id?: string | null;
             /** Format: uuid */
@@ -45273,7 +45333,7 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
-                kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with" | "works_with";
+                kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with" | "works_with" | "billing_contact";
                 contact_id?: string;
                 company_id?: string;
                 deal_id?: string;

@@ -5251,6 +5251,8 @@ BEGIN
   END LOOP;
 END;
 
+public.rel_billing_contact_by_company CREATE INDEX rel_billing_contact_by_company ON public.relationship USING btree (company_id, role) WHERE ((kind = 'billing_contact'::text) AND (archived_at IS NULL))
+public.rel_billing_contact_by_contact CREATE INDEX rel_billing_contact_by_contact ON public.relationship USING btree (contact_id) WHERE ((kind = 'billing_contact'::text) AND (archived_at IS NULL))
 public.relationship acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.relationship.archived_at timestamp with time zone gen=- def=-
 public.relationship.captured_by text NOT NULL gen=- def=-
@@ -5265,6 +5267,8 @@ public.relationship.id uuid NOT NULL gen=- def=uuidv7()
 public.relationship.is_current_primary boolean NOT NULL gen=- def=false
 public.relationship.kind text NOT NULL gen=- def=-
 public.relationship.project_id uuid gen=- def=-
+public.relationship.rel_billing_contact_role CHECK (((kind <> 'billing_contact'::text) OR ((role IS NOT NULL) AND (role = ANY (ARRAY['recipient'::text, 'approver'::text, 'accounts_payable'::text])))))
+public.relationship.rel_billing_contact_shape CHECK (((kind <> 'billing_contact'::text) OR ((contact_id IS NOT NULL) AND (company_id IS NOT NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_contact_id IS NULL) AND (counterparty_company_id IS NULL))))
 public.relationship.rel_dates CHECK (((ended_at IS NULL) OR (started_at IS NULL) OR (ended_at >= started_at)))
 public.relationship.rel_employment_shape CHECK (((kind <> 'employment'::text) OR ((contact_id IS NOT NULL) AND (company_id IS NOT NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_contact_id IS NULL))))
 public.relationship.rel_partner_shape CHECK (((kind <> ALL (ARRAY['partner_of'::text, 'referred_by'::text, 'co_sell_with'::text])) OR ((company_id IS NOT NULL) AND (counterparty_company_id IS NOT NULL) AND (company_id <> counterparty_company_id) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_contact_id IS NULL))))
@@ -5277,7 +5281,7 @@ public.relationship.relationship_contact_id_fkey FOREIGN KEY (contact_id) REFERE
 public.relationship.relationship_counterparty_company_id_fkey FOREIGN KEY (counterparty_company_id) REFERENCES company(id) ON DELETE CASCADE
 public.relationship.relationship_counterparty_contact_id_fkey FOREIGN KEY (counterparty_contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.relationship.relationship_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
-public.relationship.relationship_kind_check CHECK ((kind = ANY (ARRAY['employment'::text, 'deal_stakeholder'::text, 'partner_of'::text, 'referred_by'::text, 'co_sell_with'::text, 'project_stakeholder'::text, 'project_company'::text, 'works_with'::text])))
+public.relationship.relationship_kind_check CHECK ((kind = ANY (ARRAY['employment'::text, 'deal_stakeholder'::text, 'partner_of'::text, 'referred_by'::text, 'co_sell_with'::text, 'project_stakeholder'::text, 'project_company'::text, 'works_with'::text, 'billing_contact'::text])))
 public.relationship.relationship_last_activity CREATE TRIGGER relationship_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.relationship FOR EACH ROW EXECUTE FUNCTION trg_relationship_last_activity()
 public.relationship.relationship_pkey PRIMARY KEY (id)
 public.relationship.relationship_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
@@ -6120,6 +6124,7 @@ public.uq_record_assignment_deal_team CREATE UNIQUE INDEX uq_record_assignment_d
 public.uq_record_assignment_deal_user CREATE UNIQUE INDEX uq_record_assignment_deal_user ON public.record_assignment USING btree (deal_id, role_id, user_id) WHERE ((deal_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_record_assignment_project_team CREATE UNIQUE INDEX uq_record_assignment_project_team ON public.record_assignment USING btree (project_id, role_id, team_id) WHERE ((project_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_record_assignment_project_user CREATE UNIQUE INDEX uq_record_assignment_project_user ON public.record_assignment USING btree (project_id, role_id, user_id) WHERE ((project_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL))
+public.uq_rel_billing_contact CREATE UNIQUE INDEX uq_rel_billing_contact ON public.relationship USING btree (company_id, contact_id, role) WHERE ((kind = 'billing_contact'::text) AND (archived_at IS NULL))
 public.uq_rel_current_primary_employer CREATE UNIQUE INDEX uq_rel_current_primary_employer ON public.relationship USING btree (contact_id) WHERE ((kind = 'employment'::text) AND is_current_primary AND (archived_at IS NULL))
 public.uq_rel_deal_contact_role CREATE UNIQUE INDEX uq_rel_deal_contact_role ON public.relationship USING btree (deal_id, contact_id, role) WHERE ((kind = 'deal_stakeholder'::text) AND (archived_at IS NULL))
 public.uq_rel_employment CREATE UNIQUE INDEX uq_rel_employment ON public.relationship USING btree (contact_id, company_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))

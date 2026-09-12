@@ -2380,6 +2380,27 @@ func (e BackfillStatusWindow) Valid() bool {
 	}
 }
 
+// Defines values for BillingContactRole.
+const (
+	BillingContactRoleBillingContactRoleAccountsPayable BillingContactRole = "accounts_payable"
+	BillingContactRoleBillingContactRoleApprover        BillingContactRole = "approver"
+	BillingContactRoleBillingContactRoleRecipient       BillingContactRole = "recipient"
+)
+
+// Valid indicates whether the value is a known member of the BillingContactRole enum.
+func (e BillingContactRole) Valid() bool {
+	switch e {
+	case BillingContactRoleBillingContactRoleAccountsPayable:
+		return true
+	case BillingContactRoleBillingContactRoleApprover:
+		return true
+	case BillingContactRoleBillingContactRoleRecipient:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BlockedDomainAdmission.
 const (
 	BlockedDomainAdmissionAdmitted   BlockedDomainAdmission = "admitted"
@@ -3349,6 +3370,7 @@ func (e CompanyVisibility) Valid() bool {
 // Defines values for Company360SectionsOmitted.
 const (
 	Company360SectionsOmittedActivities       Company360SectionsOmitted = "activities"
+	Company360SectionsOmittedBillingContacts  Company360SectionsOmitted = "billing_contacts"
 	Company360SectionsOmittedContacts         Company360SectionsOmitted = "contacts"
 	Company360SectionsOmittedDeals            Company360SectionsOmitted = "deals"
 	Company360SectionsOmittedHealth           Company360SectionsOmitted = "health"
@@ -3369,6 +3391,8 @@ const (
 func (e Company360SectionsOmitted) Valid() bool {
 	switch e {
 	case Company360SectionsOmittedActivities:
+		return true
+	case Company360SectionsOmittedBillingContacts:
 		return true
 	case Company360SectionsOmittedContacts:
 		return true
@@ -5173,6 +5197,7 @@ func (e ContactVisibility) Valid() bool {
 // Defines values for Contact360SectionsOmitted.
 const (
 	Contact360SectionsOmittedContact360SectionsOmittedActivities          Contact360SectionsOmitted = "activities"
+	Contact360SectionsOmittedContact360SectionsOmittedBillingRoles        Contact360SectionsOmitted = "billing_roles"
 	Contact360SectionsOmittedContact360SectionsOmittedClaims              Contact360SectionsOmitted = "claims"
 	Contact360SectionsOmittedContact360SectionsOmittedCommercial          Contact360SectionsOmitted = "commercial"
 	Contact360SectionsOmittedContact360SectionsOmittedConsent             Contact360SectionsOmitted = "consent"
@@ -5197,6 +5222,8 @@ const (
 func (e Contact360SectionsOmitted) Valid() bool {
 	switch e {
 	case Contact360SectionsOmittedContact360SectionsOmittedActivities:
+		return true
+	case Contact360SectionsOmittedContact360SectionsOmittedBillingRoles:
 		return true
 	case Contact360SectionsOmittedContact360SectionsOmittedClaims:
 		return true
@@ -6801,6 +6828,7 @@ func (e CreateRecordGrantRequestSubjectType) Valid() bool {
 
 // Defines values for CreateRelationshipRequestKind.
 const (
+	CreateRelationshipRequestKindBillingContact     CreateRelationshipRequestKind = "billing_contact"
 	CreateRelationshipRequestKindCoSellWith         CreateRelationshipRequestKind = "co_sell_with"
 	CreateRelationshipRequestKindDealStakeholder    CreateRelationshipRequestKind = "deal_stakeholder"
 	CreateRelationshipRequestKindEmployment         CreateRelationshipRequestKind = "employment"
@@ -6813,6 +6841,8 @@ const (
 // Valid indicates whether the value is a known member of the CreateRelationshipRequestKind enum.
 func (e CreateRelationshipRequestKind) Valid() bool {
 	switch e {
+	case CreateRelationshipRequestKindBillingContact:
+		return true
 	case CreateRelationshipRequestKindCoSellWith:
 		return true
 	case CreateRelationshipRequestKindDealStakeholder:
@@ -11403,6 +11433,7 @@ func (e RefusedRecipientSubjectKind) Valid() bool {
 
 // Defines values for RelationshipKind.
 const (
+	RelationshipKindBillingContact     RelationshipKind = "billing_contact"
 	RelationshipKindCoSellWith         RelationshipKind = "co_sell_with"
 	RelationshipKindDealStakeholder    RelationshipKind = "deal_stakeholder"
 	RelationshipKindEmployment         RelationshipKind = "employment"
@@ -11416,6 +11447,8 @@ const (
 // Valid indicates whether the value is a known member of the RelationshipKind enum.
 func (e RelationshipKind) Valid() bool {
 	switch e {
+	case RelationshipKindBillingContact:
+		return true
 	case RelationshipKindCoSellWith:
 		return true
 	case RelationshipKindDealStakeholder:
@@ -17514,6 +17547,7 @@ func (e ListRecordGrantsParamsSubjectType) Valid() bool {
 
 // Defines values for ListRelationshipsParamsKind.
 const (
+	ListRelationshipsParamsKindBillingContact     ListRelationshipsParamsKind = "billing_contact"
 	ListRelationshipsParamsKindCoSellWith         ListRelationshipsParamsKind = "co_sell_with"
 	ListRelationshipsParamsKindDealStakeholder    ListRelationshipsParamsKind = "deal_stakeholder"
 	ListRelationshipsParamsKindEmployment         ListRelationshipsParamsKind = "employment"
@@ -17527,6 +17561,8 @@ const (
 // Valid indicates whether the value is a known member of the ListRelationshipsParamsKind enum.
 func (e ListRelationshipsParamsKind) Valid() bool {
 	switch e {
+	case ListRelationshipsParamsKindBillingContact:
+		return true
 	case ListRelationshipsParamsKindCoSellWith:
 		return true
 	case ListRelationshipsParamsKindDealStakeholder:
@@ -20717,6 +20753,50 @@ type BackfillStatusState string
 // BackfillStatusWindow defines model for BackfillStatus.Window.
 type BackfillStatusWindow string
 
+// BillingCompany One company a contact handles invoices for — the same edge read from the contact's end.
+type BillingCompany struct {
+	CompanyId      openapi_types.UUID `json:"company_id"`
+	CompanyName    string             `json:"company_name"`
+	RelationshipId openapi_types.UUID `json:"relationship_id"`
+
+	// Role In what capacity somebody handles the invoice: `recipient` (it is addressed to
+	// them), `approver` (they sign it off internally), `accounts_payable` (they pay it).
+	// One contact may hold several, and each is a separate edge.
+	Role BillingContactRole `json:"role"`
+}
+
+// BillingContact One contact who handles a company's invoices, and in what capacity.
+//
+// `email` is read LIVE off the contact, never copied onto the edge: an address
+// stored on the relationship would go stale the day they change it, and the
+// invoice would then be addressed to somewhere only that copy still believes in.
+// Null when the contact has no reachable address on file, which is a fact worth
+// showing — somebody named as the recipient with nowhere to send it.
+//
+// Naming somebody here sends nothing. It creates no contact in the accounting
+// mirror, grants no consent to mail them, and starts no invoice.
+type BillingContact struct {
+	ContactId openapi_types.UUID `json:"contact_id"`
+
+	// Email The contact's current reachable address, read live. Null when none is on file.
+	Email    *string `json:"email,omitempty"`
+	FullName string  `json:"full_name"`
+
+	// RelationshipId The edge itself, so the panel can change or archive this one row.
+	RelationshipId openapi_types.UUID `json:"relationship_id"`
+
+	// Role In what capacity somebody handles the invoice: `recipient` (it is addressed to
+	// them), `approver` (they sign it off internally), `accounts_payable` (they pay it).
+	// One contact may hold several, and each is a separate edge.
+	Role  BillingContactRole `json:"role"`
+	Title *string            `json:"title,omitempty"`
+}
+
+// BillingContactRole In what capacity somebody handles the invoice: `recipient` (it is addressed to
+// them), `approver` (they sign it off internally), `accounts_payable` (they pay it).
+// One contact may hold several, and each is a separate edge.
+type BillingContactRole string
+
 // BlockedDomain One domain carrying a standing admission decision. `suppressed` refuses it a company —
 // a vendor or bulk sender the business does not sell to — while `admitted` is a human
 // deliberately letting one in, which no later verdict may undo.
@@ -22050,6 +22130,9 @@ type Company360 struct {
 	// AttentionWithheld The reader may not read this account's activities, so no `attention` was derived on any deal or project row. The rows themselves are still listed and still true — this says the reasons behind them are missing, which a card must show rather than let an unexplained row read as a settled one.
 	AttentionWithheld *bool `json:"attention_withheld,omitempty"`
 
+	// BillingContacts Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld.
+	BillingContacts *[]BillingContact `json:"billing_contacts,omitempty"`
+
 	// Company A company. Mirrors the `company` table.
 	Company  Company `json:"company"`
 	Contacts *struct {
@@ -23261,7 +23344,10 @@ type CompanyFactListResponse struct {
 // we do not know. A card that renders the second as the first tells a rep an
 // account is healthy on the strength of a missing connector.
 type CompanyFinanceSummary struct {
-	CompanyId openapi_types.UUID `json:"company_id"`
+	// BillingContacts Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
+	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
+	BillingContacts *[]BillingContact  `json:"billing_contacts,omitempty"`
+	CompanyId       openapi_types.UUID `json:"company_id"`
 
 	// LastSyncedAt When the last successful sync finished. Null when none has.
 	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
@@ -24677,6 +24763,9 @@ type Contact360 struct {
 
 	// AsOf The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
 	AsOf time.Time `json:"as_of"`
+
+	// BillingRoles The companies this contact handles invoices for, and in what capacity. Absent when the caller lacks the company or relationship grant, named in `sections_omitted` as `billing_roles`; a company outside the caller's row scope is not listed.
+	BillingRoles *[]BillingCompany `json:"billing_roles,omitempty"`
 
 	// Claims What was promised, asked and decided in captured conversations (ADR-0097 D1) — one store behind the commitments card and the what-matters card, which differ only by kind. Every claim carries the activity it was read from and the verbatim snippet, so a reader can check it rather than trust it.
 	Claims *[]ConversationClaim `json:"claims,omitempty"`
@@ -33720,6 +33809,12 @@ type RejectVoiceDraftRequest struct {
 // `works_with` is the one contact↔contact kind (contact_id ↔ counterparty_contact_id): two external
 // contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
 // and one live edge exists per pair whichever way it was recorded.
+//
+// `billing_contact` (contact↔company) names who handles the account's invoices, in the
+// capacity `role` states. One live edge per company, contact and role: the same contact may
+// hold several roles, and the same role may be held by several contacts. It is a statement of
+// WHO, and nothing else — naming a recipient sends no invoice, creates nothing in the
+// accounting mirror, and grants no consent to mail them.
 type Relationship struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -33748,6 +33843,7 @@ type Relationship struct {
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
 	// Role employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project.
+	// `billing_contact` is the one kind where this field is REQUIRED and bounded: `recipient` (the invoice is addressed to them), `approver` (they sign it off internally) or `accounts_payable` (they pay it). An edge saying only that somebody is a billing contact would not say which of the three to do with them, so the server refuses it. Every other kind keeps free text.
 	Role      *string             `json:"role,omitempty"`
 	Source    string              `json:"source"`
 	StartedAt *openapi_types.Date `json:"started_at,omitempty"`

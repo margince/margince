@@ -61,6 +61,9 @@ func (s *Store) CreateRelationship(ctx context.Context, in CreateRelationshipInp
 	if !relationshipKinds[in.Kind] {
 		return relationshipRow{}, &RelationshipKindError{Kind: in.Kind}
 	}
+	if err := validBillingContactRole(in.Kind, in.Role); err != nil {
+		return relationshipRow{}, err
+	}
 	anchorObject, _ := relationshipAnchor(in.Kind)
 	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
 		return relationshipRow{}, err
@@ -94,6 +97,9 @@ func (s *Store) CreateRelationshipTx(ctx context.Context, tx pgx.Tx, in CreateRe
 	}
 	if !relationshipKinds[in.Kind] {
 		return relationshipRow{}, &RelationshipKindError{Kind: in.Kind}
+	}
+	if err := validBillingContactRole(in.Kind, in.Role); err != nil {
+		return relationshipRow{}, err
 	}
 	anchorObject, _ := relationshipAnchor(in.Kind)
 	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
