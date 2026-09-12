@@ -59,15 +59,38 @@ type NoticeState string
 // to match what every writer wrote.
 const fieldState = "state"
 
-// The states a notice case rests in. Open is owed and untouched; queued means a
-// disclosure is on its way; blocked means we cannot send one yet and says why;
-// completed and not_required are the two ways a duty ends, and both record when.
+// fieldRule is the name of the rule field wherever it crosses a boundary, for
+// the same reason fieldState is: three audit payloads carry it, and a reader
+// filtering audit rows on which disclosure duty moved has to match what every
+// writer wrote.
+const fieldRule = "rule"
+
+// The states a notice case rests in. Open is owed and untouched; assigned is
+// owed with somebody's name on it; queued means a disclosure is on its way;
+// blocked means we cannot send one yet and says why. Four states END a duty and
+// all four record when: completed is a disclosure that was sent and delivered,
+// provided_elsewhere and exempt_with_reason each say why no disclosure was
+// needed from here, and not_required is the older way of closing a case with no
+// reason attached.
 const (
-	NoticeOpen        NoticeState = "open"
-	NoticeQueued      NoticeState = "queued"
-	NoticeCompleted   NoticeState = "completed"
-	NoticeBlocked     NoticeState = "blocked"
-	NoticeNotRequired NoticeState = "not_required"
+	NoticeOpen     NoticeState = "open"
+	NoticeAssigned NoticeState = "assigned"
+	NoticeQueued   NoticeState = "queued"
+	// NoticeCompleted — a disclosure this installation sent was delivered.
+	NoticeCompleted NoticeState = "completed"
+	// NoticeProvidedElsewhere — the subject already has the information, and
+	// it did not come from a mail this installation sent. Somebody told them
+	// in a meeting, or a colleague wrote from their own mailbox. The duty is
+	// met; the evidence is the officer's statement, and the row carries it.
+	NoticeProvidedElsewhere NoticeState = "provided_elsewhere"
+	// NoticeExemptWithReason — the duty does not apply, on a ground the officer
+	// states. Art. 14(5) disapplies it where the subject already has the
+	// information, where notice is impossible or disproportionate, or where
+	// disclosure is laid down by law. Distinct from NoticeNotRequired, which
+	// records the same conclusion with no reason attached.
+	NoticeExemptWithReason NoticeState = "exempt_with_reason"
+	NoticeBlocked          NoticeState = "blocked"
+	NoticeNotRequired      NoticeState = "not_required"
 )
 
 // noticeStates is every state a case can be in, and the ONE place they are
@@ -81,7 +104,9 @@ const (
 //
 // gatekit:fixture the notice-case state vocabulary, mirroring the table CHECK
 var noticeStates = []NoticeState{
-	NoticeOpen, NoticeQueued, NoticeCompleted, NoticeBlocked, NoticeNotRequired,
+	NoticeOpen, NoticeAssigned, NoticeQueued, NoticeCompleted,
+	NoticeProvidedElsewhere, NoticeExemptWithReason,
+	NoticeBlocked, NoticeNotRequired,
 }
 
 // terminalNoticeStates are the states a discharged duty rests in. Membership
@@ -89,7 +114,23 @@ var noticeStates = []NoticeState{
 // somebody decides otherwise — the safe direction: a duty wrongly shown costs a
 // look, one wrongly hidden is invisible.
 func terminalNoticeStates() map[NoticeState]bool {
-	return map[NoticeState]bool{NoticeCompleted: true, NoticeNotRequired: true}
+	return map[NoticeState]bool{
+		NoticeCompleted:         true,
+		NoticeNotRequired:       true,
+		NoticeProvidedElsewhere: true,
+		NoticeExemptWithReason:  true,
+	}
+}
+
+// excusingNoticeStates are the terminal states that end a duty WITHOUT this
+// installation having sent anything. Both say why in resolution_note, which the
+// table's resolution_shape CHECK also holds, and membership here is what makes
+// the note required rather than each writer remembering to ask for one.
+func excusingNoticeStates() map[NoticeState]bool {
+	return map[NoticeState]bool{
+		NoticeProvidedElsewhere: true,
+		NoticeExemptWithReason:  true,
+	}
 }
 
 // unresolvedNoticeStates is "still owed", derived from the vocabulary rather
@@ -242,7 +283,7 @@ func OpenNoticeCaseTx(ctx context.Context, tx pgx.Tx, in NoticeCaseInput) error 
 	// lives. No event: nothing outside this module acts on a case being opened,
 	// and an event no consumer reads is a contract nobody can change later.
 	if _, err := storekit.Audit(ctx, tx, "create", "privacy_notice_case", caseID, nil, map[string]any{
-		"rule": string(in.Rule), "due_at": in.DueAt, fieldState: string(in.State),
+		fieldRule: string(in.Rule), "due_at": in.DueAt, fieldState: string(in.State),
 	}); err != nil {
 		return fmt.Errorf("audit the notice case: %w", err)
 	}

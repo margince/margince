@@ -7717,6 +7717,24 @@ func (e EnrichmentProposalStatus) Valid() bool {
 	}
 }
 
+// Defines values for ExcuseNoticeCaseState.
+const (
+	ExcuseNoticeCaseStateExemptWithReason  ExcuseNoticeCaseState = "exempt_with_reason"
+	ExcuseNoticeCaseStateProvidedElsewhere ExcuseNoticeCaseState = "provided_elsewhere"
+)
+
+// Valid indicates whether the value is a known member of the ExcuseNoticeCaseState enum.
+func (e ExcuseNoticeCaseState) Valid() bool {
+	switch e {
+	case ExcuseNoticeCaseStateExemptWithReason:
+		return true
+	case ExcuseNoticeCaseStateProvidedElsewhere:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExtractedFieldConfidence.
 const (
 	ExtractedFieldConfidenceHigh   ExtractedFieldConfidence = "high"
@@ -9715,6 +9733,60 @@ func (e NewForecastShareScopeKind) Valid() bool {
 	case NewForecastShareScopeKindTeam:
 		return true
 	case NewForecastShareScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeCaseRule.
+const (
+	NoticeCaseRuleArt13 NoticeCaseRule = "art13"
+	NoticeCaseRuleArt14 NoticeCaseRule = "art14"
+)
+
+// Valid indicates whether the value is a known member of the NoticeCaseRule enum.
+func (e NoticeCaseRule) Valid() bool {
+	switch e {
+	case NoticeCaseRuleArt13:
+		return true
+	case NoticeCaseRuleArt14:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeCaseState.
+const (
+	NoticeCaseStateAssigned          NoticeCaseState = "assigned"
+	NoticeCaseStateBlocked           NoticeCaseState = "blocked"
+	NoticeCaseStateCompleted         NoticeCaseState = "completed"
+	NoticeCaseStateExemptWithReason  NoticeCaseState = "exempt_with_reason"
+	NoticeCaseStateNotRequired       NoticeCaseState = "not_required"
+	NoticeCaseStateOpen              NoticeCaseState = "open"
+	NoticeCaseStateProvidedElsewhere NoticeCaseState = "provided_elsewhere"
+	NoticeCaseStateQueued            NoticeCaseState = "queued"
+)
+
+// Valid indicates whether the value is a known member of the NoticeCaseState enum.
+func (e NoticeCaseState) Valid() bool {
+	switch e {
+	case NoticeCaseStateAssigned:
+		return true
+	case NoticeCaseStateBlocked:
+		return true
+	case NoticeCaseStateCompleted:
+		return true
+	case NoticeCaseStateExemptWithReason:
+		return true
+	case NoticeCaseStateNotRequired:
+		return true
+	case NoticeCaseStateOpen:
+		return true
+	case NoticeCaseStateProvidedElsewhere:
+		return true
+	case NoticeCaseStateQueued:
 		return true
 	default:
 		return false
@@ -18867,6 +18939,11 @@ type AssignLeadsResult struct {
 	Results []AssignLeadOutcome `json:"results"`
 }
 
+// AssignNoticeCase defines model for AssignNoticeCase.
+type AssignNoticeCase struct {
+	OwnerUserId openapi_types.UUID `json:"owner_user_id"`
+}
+
 // AssignmentRecordType The kind of record an assignment hangs on.
 type AssignmentRecordType string
 
@@ -27504,6 +27581,18 @@ type EnrichmentProposal struct {
 // EnrichmentProposalStatus Always staged — accept via the approval inbox.
 type EnrichmentProposalStatus string
 
+// ExcuseNoticeCase defines model for ExcuseNoticeCase.
+type ExcuseNoticeCase struct {
+	// ResolutionNote The ground, in the officer's own words.
+	ResolutionNote string `json:"resolution_note"`
+
+	// State Which claim this is: the duty does not apply, or it was met somewhere this installation did not send from.
+	State ExcuseNoticeCaseState `json:"state"`
+}
+
+// ExcuseNoticeCaseState Which claim this is: the duty does not apply, or it was met somewhere this installation did not send from.
+type ExcuseNoticeCaseState string
+
 // ExtensionDirectory The composed extension set, sorted by name. Not paginated, for the same reason `RoleDirectory` is not: the set is fixed at build time and small by construction.
 type ExtensionDirectory struct {
 	Extensions []ComposedExtension `json:"extensions"`
@@ -30797,6 +30886,63 @@ type Notice struct {
 	// Subject The headline the recipient reads, derived from the kind rather than supplied.
 	Subject string `json:"subject"`
 }
+
+// NoticeCase One Art. 13 or Art. 14 disclosure duty: whose it is, what put it there, and by when.
+//
+// `contact_id` is carried because the duty is discharged on that contact's own screen. There
+// is no notice-case screen to route to, so a row naming only the case would prompt a reader
+// with nowhere to go.
+type NoticeCase struct {
+	// AllowedRoutes How this duty may be discharged. A case with no route is one the product cannot close by sending anything, and it says so rather than offering a button that fails.
+	AllowedRoutes *[]string  `json:"allowed_routes,omitempty"`
+	AssignedAt    *time.Time `json:"assigned_at,omitempty"`
+
+	// Attempts How many disclosures have been sent for this duty.
+	Attempts      int                 `json:"attempts"`
+	BlockedReason *string             `json:"blocked_reason,omitempty"`
+	CompletedAt   *time.Time          `json:"completed_at,omitempty"`
+	ContactId     openapi_types.UUID  `json:"contact_id"`
+	CreatedAt     time.Time           `json:"created_at"`
+	DueAt         time.Time           `json:"due_at"`
+	Id            openapi_types.UUID  `json:"id"`
+	OwnerUserId   *openapi_types.UUID `json:"owner_user_id,omitempty"`
+
+	// ResolutionNote Why the duty was excused, or where it was provided. Present exactly when the state is provided_elsewhere or exempt_with_reason.
+	ResolutionNote *string             `json:"resolution_note,omitempty"`
+	ResolvedBy     *openapi_types.UUID `json:"resolved_by,omitempty"`
+
+	// Rule Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
+	Rule NoticeCaseRule `json:"rule"`
+
+	// State Where a disclosure duty stands.
+	//
+	// `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
+	// on its way. `completed` is a disclosure this installation sent and delivered.
+	// `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
+	// `blocked` names an obstacle. `not_required` is the older way of closing a case with no
+	// reason attached, kept so nothing already closed is reinterpreted.
+	//
+	// There is no `overdue`. Overdue is a reading of `due_at` against the clock, not a stored
+	// fact — a stored one would leave every late case looking on time whenever a sweep failed to
+	// run.
+	State NoticeCaseState `json:"state"`
+}
+
+// NoticeCaseRule Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
+type NoticeCaseRule string
+
+// NoticeCaseState Where a disclosure duty stands.
+//
+// `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
+// on its way. `completed` is a disclosure this installation sent and delivered.
+// `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
+// `blocked` names an obstacle. `not_required` is the older way of closing a case with no
+// reason attached, kept so nothing already closed is reinterpreted.
+//
+// There is no `overdue`. Overdue is a reading of `due_at` against the clock, not a stored
+// fact — a stored one would leave every late case looking on time whenever a sweep failed to
+// run.
+type NoticeCaseState string
 
 // NoticeKind What a coaching notice is about. A closed vocabulary, because a notice addressed to a
 // colleague is words in their queue: the kind is what the recipient reads as the headline,
@@ -42294,6 +42440,15 @@ type UpdatePipelineParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ListNoticeCasesParams defines parameters for ListNoticeCases.
+type ListNoticeCasesParams struct {
+	// State Repeat to ask for several. Omitted means every unresolved state.
+	State *[]NoticeCaseState `form:"state,omitempty" json:"state,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListProductsParams defines parameters for ListProducts.
 type ListProductsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -44516,6 +44671,12 @@ type CreatePipelineJSONRequestBody = CreatePipelineRequest
 
 // UpdatePipelineJSONRequestBody defines body for UpdatePipeline for application/json ContentType.
 type UpdatePipelineJSONRequestBody = UpdatePipelineRequest
+
+// AssignNoticeCaseJSONRequestBody defines body for AssignNoticeCase for application/json ContentType.
+type AssignNoticeCaseJSONRequestBody = AssignNoticeCase
+
+// ExcuseNoticeCaseJSONRequestBody defines body for ExcuseNoticeCase for application/json ContentType.
+type ExcuseNoticeCaseJSONRequestBody = ExcuseNoticeCase
 
 // CreateProductJSONRequestBody defines body for CreateProduct for application/json ContentType.
 type CreateProductJSONRequestBody = CreateProductRequest
@@ -55526,6 +55687,15 @@ type ServerInterface interface {
 	// Put a retired pipeline back in use.
 	// (POST /pipelines/{id}/restore)
 	RestorePipeline(w http.ResponseWriter, r *http.Request, id Id)
+	// Disclosure duties this installation owes, soonest deadline first.
+	// (GET /privacy/notice-cases)
+	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
+	// Give a disclosure duty an owner.
+	// (POST /privacy/notice-cases/{id}/assign)
+	AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// End a disclosure duty on a stated ground, or record that it was met elsewhere.
+	// (POST /privacy/notice-cases/{id}/excuse)
+	ExcuseNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List rate-card products (live by default; cursor-paginated).
 	// (GET /products)
 	ListProducts(w http.ResponseWriter, r *http.Request, params ListProductsParams)
@@ -58844,6 +59014,24 @@ func (_ Unimplemented) UpdatePipeline(w http.ResponseWriter, r *http.Request, id
 // Put a retired pipeline back in use.
 // (POST /pipelines/{id}/restore)
 func (_ Unimplemented) RestorePipeline(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disclosure duties this installation owes, soonest deadline first.
+// (GET /privacy/notice-cases)
+func (_ Unimplemented) ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Give a disclosure duty an owner.
+// (POST /privacy/notice-cases/{id}/assign)
+func (_ Unimplemented) AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// End a disclosure duty on a stated ground, or record that it was met elsewhere.
+// (POST /privacy/notice-cases/{id}/excuse)
+func (_ Unimplemented) ExcuseNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -79071,6 +79259,122 @@ func (siw *ServerInterfaceWrapper) RestorePipeline(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListNoticeCases operation middleware
+func (siw *ServerInterfaceWrapper) ListNoticeCases(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNoticeCasesParams
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNoticeCases(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignNoticeCase operation middleware
+func (siw *ServerInterfaceWrapper) AssignNoticeCase(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignNoticeCase(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExcuseNoticeCase operation middleware
+func (siw *ServerInterfaceWrapper) ExcuseNoticeCase(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExcuseNoticeCase(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProducts operation middleware
 func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.Request) {
 
@@ -88698,6 +89002,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/pipelines/{id}/restore", wrapper.RestorePipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/notice-cases", wrapper.ListNoticeCases)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/privacy/notice-cases/{id}/assign", wrapper.AssignNoticeCase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/privacy/notice-cases/{id}/excuse", wrapper.ExcuseNoticeCase)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/products", wrapper.ListProducts)

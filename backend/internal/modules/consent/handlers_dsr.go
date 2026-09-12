@@ -39,7 +39,7 @@ func (h Handlers) ListDataSubjectRequests(w http.ResponseWriter, r *http.Request
 	if page.NextCursor != "" {
 		info.NextCursor = &page.NextCursor
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{"data": data, "page": info})
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{keyData: data, "page": info})
 }
 
 func (h Handlers) CreateDataSubjectRequest(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateDataSubjectRequestParams) {
