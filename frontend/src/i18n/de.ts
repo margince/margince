@@ -8815,6 +8815,15 @@ export const de = {
   "projectLinks.emptyTitle": "Noch keine Projekte",
   "projectLinks.searchLabel": "Projekte nach Name oder Kürzel suchen",
   "project.name": "Projektname",
+  "projectHealth.title": "Lieferstatus",
+  "projectHealth.empty": "Noch niemand hat das beurteilt",
+  "projectHealth.emptyDetail":
+    "Halten Sie fest, wie die Lieferung l\u00e4uft, damit beim n\u00e4chsten Blick niemand raten muss.",
+  "projectHealth.assessedOn": "Stand {date}",
+  "projectHealth.corrected": "(korrigiert)",
+  "projectHealth.state.onTrack": "Im Plan",
+  "projectHealth.state.atRisk": "Gef\u00e4hrdet",
+  "projectHealth.state.offTrack": "Aus dem Plan",
   "project.keyMinted":
     "Margince vergibt jedem Projekt ein kurzes Kürzel. Steht [{key}] im Betreff einer E-Mail, wird sie diesem Projekt zugeordnet.",
   "project.company": "Unternehmen",

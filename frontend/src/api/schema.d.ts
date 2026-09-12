@@ -3129,6 +3129,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{id}/health-assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * How this project has been going, newest judgement first.
+         * @description The whole history, corrections included, so a delivery review can read what was said
+         *     in March rather than only what is true now. A superseded reading stays in the list and
+         *     says so.
+         */
+        get: operations["listProjectHealthAssessments"];
+        put?: never;
+        /**
+         * Record how this project is going.
+         * @description Appends a judgement. Nothing is overwritten: an earlier reading stays exactly as it
+         *     was, which is what makes the history worth reading.
+         */
+        post: operations["createProjectHealthAssessment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/health-assessments/{assessment_id}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Correct one reading, keeping when it was said.
+         * @description Writes a successor carrying the target's effective time, which the server supplies —
+         *     a correction fixes WHAT was said and never WHEN. One correction per reading: a second
+         *     is refused, because two successors leave "which reading is current" with two answers.
+         */
+        post: operations["correctProjectHealthAssessment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{id}/stakeholders": {
         parameters: {
             query?: never;
@@ -22862,6 +22918,7 @@ export interface components {
                 data: components["schemas"]["Project360Stakeholder"][];
                 page: components["schemas"]["PageInfo"];
             };
+            health?: components["schemas"]["Project360Health"];
             contracts?: components["schemas"]["ContractListResponse"];
             /** @description The files attached to the project itself, newest first. */
             documents?: {
@@ -22878,10 +22935,73 @@ export interface components {
             rollups?: components["schemas"]["Project360Rollups"];
         };
         /**
+         * @description How a project is going, as somebody judged it.
+         * @enum {string}
+         */
+        ProjectHealthState: "on_track" | "at_risk" | "off_track";
+        /** @description One judgement of how a project is going, on the day it applies to. Assessments are never edited: a mistake is corrected by superseding the row, so what was said and when it was said both survive the correction. */
+        ProjectHealthAssessment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            project_id: string;
+            state: components["schemas"]["ProjectHealthState"];
+            /** @description Why. Required for anything but `on_track` — a risk nobody explained is an alarm nobody can act on. */
+            note?: string;
+            /**
+             * Format: date-time
+             * @description When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
+             */
+            assessed_at: string;
+            /** @description What recorded this assessment. */
+            readonly source: string;
+            /** @description Who is on record as having judged it, when that is not whoever typed it in. */
+            readonly source_author?: string;
+            /** @description True when a later correction replaced this reading. */
+            readonly superseded: boolean;
+            /**
+             * Format: uuid
+             * @description The correction that replaced it, when one has.
+             */
+            readonly superseded_by_id?: string;
+            /**
+             * Format: uuid
+             * @description The reading this one corrects, when it is a correction.
+             */
+            readonly supersedes_assessment_id?: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        ProjectHealthAssessmentListResponse: {
+            data: components["schemas"]["ProjectHealthAssessment"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        /** @description How the project is going now. `current` is absent when nobody has judged it yet, which is different from a project judged and found healthy. */
+        Project360Health: {
+            current?: components["schemas"]["ProjectHealthAssessment"];
+        };
+        CreateProjectHealthAssessmentRequest: {
+            state: components["schemas"]["ProjectHealthState"];
+            note?: string;
+            /**
+             * Format: date-time
+             * @description When the judgement applies. Defaults to now; a future time is refused, because a reading nobody could have taken yet would become current the moment it landed.
+             */
+            assessed_at?: string;
+            /** @description Who judged it, when that is not the caller. */
+            source_author?: string;
+        };
+        /** @description Correct one reading. The correction keeps the target's effective time, supplied by the server — a correction fixes what was said, never when it was said. */
+        CreateProjectHealthCorrectionRequest: {
+            state: components["schemas"]["ProjectHealthState"];
+            note?: string;
+            source_author?: string;
+        };
+        /**
          * @description One section of the project page, as `sections_omitted` names it.
          * @enum {string}
          */
-        Project360Section: "company" | "phase_history" | "deals" | "stakeholders" | "contracts" | "commitments" | "activities" | "coverage" | "rollups";
+        Project360Section: "company" | "phase_history" | "deals" | "stakeholders" | "contracts" | "commitments" | "activities" | "coverage" | "rollups" | "health";
         /** @description The company the project is for — the two fields a page header needs, read under the company grant and row scope. */
         Project360Company: {
             /** Format: uuid */
@@ -30120,10 +30240,23 @@ export interface components {
             refused: {
                 purpose_key: string;
                 /**
-                 * @description cannot_grant: the subject is archived, so a fresh grant would re-open a capability their erasure destroyed.
+                 * @description Why this choice did not simply take effect.
+                 *
+                 *     `cannot_grant` — the subject is archived, so a fresh grant would re-open a
+                 *     capability their erasure destroyed.
+                 *
+                 *     `confirmation_sent` — the subscribe was taken and a confirmation link is on its
+                 *     way. This purpose needs a double opt-in, so the grant is recorded when the
+                 *     subject spends that link, not when they press the button. The page should say
+                 *     the answer is pending rather than done: a save reported as plain success leaves
+                 *     somebody expecting mail that will not come until they click.
+                 *
+                 *     `confirmation_unavailable` — the subscribe could not be started because this
+                 *     installation cannot mail the confirmation. About US rather than the subject, so
+                 *     a page must not tell them their choice was declined.
                  * @enum {string}
                  */
-                reason: "cannot_grant";
+                reason: "cannot_grant" | "confirmation_sent" | "confirmation_unavailable";
             }[];
             purposes: {
                 key: string;
@@ -39684,6 +39817,144 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listProjectHealthAssessments: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assessments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectHealthAssessmentListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createProjectHealthAssessment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProjectHealthAssessmentRequest"];
+            };
+        };
+        responses: {
+            /** @description The recorded assessment. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectHealthAssessment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    correctProjectHealthAssessment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProjectHealthCorrectionRequest"];
+            };
+        };
+        responses: {
+            /** @description The correction. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectHealthAssessment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

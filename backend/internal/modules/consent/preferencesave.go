@@ -172,6 +172,18 @@ func (s *Store) saveChoiceTx(
 		if !grantable {
 			return ChoiceOutcome{PurposeKey: c.PurposeKey, Reason: ReasonCannotGrant}, false, nil
 		}
+		// A DOUBLE-OPT-IN PURPOSE NEEDS THE ROUND TRIP, and writing the grant
+		// here without one produced a row the send gate refuses anyway — the
+		// subject pressed subscribe, the page said yes, and nothing arrived.
+		// resubscribe.go mints the confirmation instead and reports the answer
+		// as pending; the grant is recorded when the link is spent.
+		outcome, handled, err := s.resubscribeTx(ctx, tx, contactID, purposeID, c.PurposeKey)
+		if err != nil {
+			return ChoiceOutcome{}, false, err
+		}
+		if handled {
+			return outcome, false, nil
+		}
 	}
 	if _, err := s.recordAdmittedTx(ctx, tx, in, sub, state); err != nil {
 		return ChoiceOutcome{}, false, err

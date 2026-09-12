@@ -27,6 +27,7 @@ import { NewDealAction } from "./companyactions";
 import { EditAction } from "./edit";
 import { useOpenEmail } from "./openemail";
 import { ProjectCompanies } from "./projectcompanies";
+import { ProjectHealth } from "./projecthealth";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
 import {
@@ -223,6 +224,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           onMove={setMoveTo}
         />
         <RollupsStrip view={view} />
+        <ProjectHealth projectId={project.id} />
         <div id={PROJECT_DEALS_ANCHOR}>
           <ProjectDealsCard
             view={view}

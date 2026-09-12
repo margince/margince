@@ -1943,6 +1943,18 @@ func (stubs) RemoveProjectCompany(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "RemoveProjectCompany")
 }
 
+func (stubs) ListProjectHealthAssessments(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListProjectHealthAssessmentsParams) {
+	httperr.NotImplemented(w, r, "ListProjectHealthAssessments")
+}
+
+func (stubs) CreateProjectHealthAssessment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.CreateProjectHealthAssessmentParams) {
+	httperr.NotImplemented(w, r, "CreateProjectHealthAssessment")
+}
+
+func (stubs) CorrectProjectHealthAssessment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, assessmentId openapi_types.UUID, params crmcontracts.CorrectProjectHealthAssessmentParams) {
+	httperr.NotImplemented(w, r, "CorrectProjectHealthAssessment")
+}
+
 func (stubs) ListProjectStakeholders(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListProjectStakeholders")
 }

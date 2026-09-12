@@ -8939,6 +8939,15 @@ export const en = {
   "projectLinks.emptyTitle": "No projects yet",
   "projectLinks.searchLabel": "Search projects by name or key",
   "project.name": "Project name",
+  "projectHealth.title": "Delivery health",
+  "projectHealth.empty": "Nobody has judged this yet",
+  "projectHealth.emptyDetail":
+    "Record how the delivery is going, so whoever looks next does not have to guess.",
+  "projectHealth.assessedOn": "as of {date}",
+  "projectHealth.corrected": "(corrected)",
+  "projectHealth.state.onTrack": "On track",
+  "projectHealth.state.atRisk": "At risk",
+  "projectHealth.state.offTrack": "Off track",
   "project.keyMinted":
     "Margince gives each project a short key. Write [{key}] in an email subject and the mail is filed under this project.",
   "project.company": "Company",

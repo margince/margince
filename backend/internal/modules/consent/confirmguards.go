@@ -27,6 +27,16 @@ type linkRequest struct {
 	contactID       ids.ContactID
 	purposeID       ids.PurposeID
 	expectedAddress string
+	// askedByTheSubject marks a mint the SUBJECT asked for from their own
+	// preference page, holding their own token.
+	//
+	// It lifts the re-solicitation guard below and nothing else. That guard
+	// exists to stop somebody ELSE restarting a conversation the subject ended
+	// — an operator pressing the verb, a booking naming a withdrawn contact —
+	// and its own comment has always said the subject may subscribe again
+	// themselves. Without this flag it refused them too, which made a
+	// withdrawal permanent in practice.
+	askedByTheSubject bool
 }
 
 // admitLinkTx runs every check a mint owes before it writes anything, and
@@ -52,8 +62,11 @@ func admitLinkTx(ctx context.Context, tx pgx.Tx, req linkRequest) (string, error
 	if err := requireExpectedAddress(req.expectedAddress, deliveredTo); err != nil {
 		return "", err
 	}
-	if err := refuseWithdrawnPurposeTx(ctx, tx, req.contactID, req.purposeID); err != nil {
-		return "", err
+	// THE SUBJECT'S OWN ASK IS NOT A RE-SOLICITATION. See the field.
+	if !req.askedByTheSubject {
+		if err := refuseWithdrawnPurposeTx(ctx, tx, req.contactID, req.purposeID); err != nil {
+			return "", err
+		}
 	}
 	return deliveredTo, nil
 }
