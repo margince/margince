@@ -8694,6 +8694,15 @@ export const vi = {
   "projectLinks.emptyTitle": "Chưa có dự án nào",
   "projectLinks.searchLabel": "Tìm dự án theo tên hoặc mã",
   "project.name": "Tên dự án",
+  "projectHealth.title": "T\u00ecnh h\u00ecnh b\u00e0n giao",
+  "projectHealth.empty": "Ch\u01b0a c\u00f3 ai \u0111\u00e1nh gi\u00e1",
+  "projectHealth.emptyDetail":
+    "Ghi l\u1ea1i ti\u1ebfn \u0111\u1ed9 b\u00e0n giao \u0111\u1ec3 l\u1ea7n xem sau kh\u00f4ng ph\u1ea3i ph\u1ecfng \u0111o\u00e1n.",
+  "projectHealth.assessedOn": "t\u00ednh \u0111\u1ebfn {date}",
+  "projectHealth.corrected": "(\u0111\u00e3 s\u1eeda)",
+  "projectHealth.state.onTrack": "\u0110\u00fang k\u1ebf ho\u1ea1ch",
+  "projectHealth.state.atRisk": "C\u00f3 r\u1ee7i ro",
+  "projectHealth.state.offTrack": "Ch\u1ec7ch k\u1ebf ho\u1ea1ch",
   "project.keyMinted":
     "Margince cấp cho mỗi dự án một mã ngắn. Ghi [{key}] trong tiêu đề email thì thư được xếp vào dự án này.",
   "project.company": "Công ty",

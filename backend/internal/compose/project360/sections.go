@@ -148,3 +148,21 @@ func (a *assembly) readStakeholders() error {
 	}{Data: data, Page: pageInfo(page)}
 	return nil
 }
+
+// readHealth answers how the project is going now: the newest judgement
+// nothing has corrected.
+//
+// Absent `current` means nobody has judged it, which the page must not render
+// as "on track" — a project judged and found healthy and a project nobody has
+// looked at are different states, and the second is the one worth chasing.
+//
+// It rides the project grant the anchor read already held: a judgement about a
+// record is a fact about that record, gated exactly as the record is.
+func (a *assembly) readHealth() error {
+	current, err := a.svc.projects.CurrentHealthTx(a.ctx, a.tx, a.projectID)
+	if err != nil {
+		return err
+	}
+	a.out.Health = &crmcontracts.Project360Health{Current: current}
+	return nil
+}

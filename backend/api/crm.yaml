@@ -4733,6 +4733,88 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /projects/{id}/health-assessments:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Projects]
+      operationId: listProjectHealthAssessments
+      summary: How this project has been going, newest judgement first.
+      description: |
+        The whole history, corrections included, so a delivery review can read what was said
+        in March rather than only what is true now. A superseded reading stays in the list and
+        says so.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: The assessments.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectHealthAssessmentListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Projects]
+      operationId: createProjectHealthAssessment
+      x-agent-access: human-only
+      summary: Record how this project is going.
+      description: |
+        Appends a judgement. Nothing is overwritten: an earlier reading stays exactly as it
+        was, which is what makes the history worth reading.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateProjectHealthAssessmentRequest' }
+      responses:
+        '201':
+          description: The recorded assessment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectHealthAssessment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /projects/{id}/health-assessments/{assessment_id}/corrections:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: assessment_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Projects]
+      operationId: correctProjectHealthAssessment
+      x-agent-access: human-only
+      summary: Correct one reading, keeping when it was said.
+      description: |
+        Writes a successor carrying the target's effective time, which the server supplies —
+        a correction fixes WHAT was said and never WHEN. One correction per reading: a second
+        is refused, because two successors leave "which reading is current" with two answers.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateProjectHealthCorrectionRequest' }
+      responses:
+        '201':
+          description: The correction.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectHealthAssessment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /projects/{id}/stakeholders:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -31961,6 +32043,8 @@ components:
           properties:
             data: { type: array, items: { $ref: '#/components/schemas/Project360Stakeholder' } }
             page: { $ref: '#/components/schemas/PageInfo' }
+        health:
+          $ref: '#/components/schemas/Project360Health'
         contracts: { $ref: '#/components/schemas/ContractListResponse' }
         documents:
           type: object
@@ -31980,10 +32064,102 @@ components:
         coverage: { $ref: '#/components/schemas/Project360Coverage' }
         rollups: { $ref: '#/components/schemas/Project360Rollups' }
 
+    ProjectHealthState:
+      type: string
+      enum: [on_track, at_risk, off_track]
+      description: How a project is going, as somebody judged it.
+
+    ProjectHealthAssessment:
+      type: object
+      description: >-
+        One judgement of how a project is going, on the day it applies to. Assessments are
+        never edited: a mistake is corrected by superseding the row, so what was said and
+        when it was said both survive the correction.
+      required: [id, project_id, state, assessed_at, source, created_at, superseded]
+      properties:
+        id: { type: string, format: uuid }
+        project_id: { type: string, format: uuid }
+        state: { $ref: '#/components/schemas/ProjectHealthState' }
+        note:
+          type: string
+          description: >-
+            Why. Required for anything but `on_track` — a risk nobody explained is an alarm
+            nobody can act on.
+        assessed_at:
+          type: string
+          format: date-time
+          description: >-
+            When the judgement APPLIES, which is not when it was written: a lead catching up
+            on Monday records Friday's reading, and the timeline shows it on Friday.
+        source: { type: string, readOnly: true, description: What recorded this assessment. }
+        source_author:
+          type: string
+          readOnly: true
+          description: >-
+            Who is on record as having judged it, when that is not whoever typed it in.
+        superseded:
+          type: boolean
+          readOnly: true
+          description: True when a later correction replaced this reading.
+        superseded_by_id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: The correction that replaced it, when one has.
+        supersedes_assessment_id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: The reading this one corrects, when it is a correction.
+        created_at: { type: string, format: date-time, readOnly: true }
+
+    ProjectHealthAssessmentListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/ProjectHealthAssessment' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
+    Project360Health:
+      type: object
+      description: >-
+        How the project is going now. `current` is absent when nobody has judged it yet,
+        which is different from a project judged and found healthy.
+      properties:
+        current: { $ref: '#/components/schemas/ProjectHealthAssessment' }
+
+    CreateProjectHealthAssessmentRequest:
+      type: object
+      required: [state]
+      properties:
+        state: { $ref: '#/components/schemas/ProjectHealthState' }
+        note: { type: string, maxLength: 4000 }
+        assessed_at:
+          type: string
+          format: date-time
+          description: >-
+            When the judgement applies. Defaults to now; a future time is refused, because a
+            reading nobody could have taken yet would become current the moment it landed.
+        source_author:
+          type: string
+          maxLength: 200
+          description: Who judged it, when that is not the caller.
+
+    CreateProjectHealthCorrectionRequest:
+      type: object
+      description: >-
+        Correct one reading. The correction keeps the target's effective time, supplied by
+        the server — a correction fixes what was said, never when it was said.
+      required: [state]
+      properties:
+        state: { $ref: '#/components/schemas/ProjectHealthState' }
+        note: { type: string, maxLength: 4000 }
+        source_author: { type: string, maxLength: 200 }
+
     Project360Section:
       type: string
       description: One section of the project page, as `sections_omitted` names it.
-      enum: [company, phase_history, deals, stakeholders, contracts, commitments, activities, coverage, rollups]
+      enum: [company, phase_history, deals, stakeholders, contracts, commitments, activities, coverage, rollups, health]
 
     Project360Company:
       type: object

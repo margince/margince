@@ -10431,6 +10431,7 @@ const (
 	Project360SectionContracts    Project360Section = "contracts"
 	Project360SectionCoverage     Project360Section = "coverage"
 	Project360SectionDeals        Project360Section = "deals"
+	Project360SectionHealth       Project360Section = "health"
 	Project360SectionPhaseHistory Project360Section = "phase_history"
 	Project360SectionRollups      Project360Section = "rollups"
 	Project360SectionStakeholders Project360Section = "stakeholders"
@@ -10451,11 +10452,34 @@ func (e Project360Section) Valid() bool {
 		return true
 	case Project360SectionDeals:
 		return true
+	case Project360SectionHealth:
+		return true
 	case Project360SectionPhaseHistory:
 		return true
 	case Project360SectionRollups:
 		return true
 	case Project360SectionStakeholders:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProjectHealthState.
+const (
+	ProjectHealthStateAtRisk   ProjectHealthState = "at_risk"
+	ProjectHealthStateOffTrack ProjectHealthState = "off_track"
+	ProjectHealthStateOnTrack  ProjectHealthState = "on_track"
+)
+
+// Valid indicates whether the value is a known member of the ProjectHealthState enum.
+func (e ProjectHealthState) Valid() bool {
+	switch e {
+	case ProjectHealthStateAtRisk:
+		return true
+	case ProjectHealthStateOffTrack:
+		return true
+	case ProjectHealthStateOnTrack:
 		return true
 	default:
 		return false
@@ -25844,6 +25868,28 @@ type CreateProductRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// CreateProjectHealthAssessmentRequest defines model for CreateProjectHealthAssessmentRequest.
+type CreateProjectHealthAssessmentRequest struct {
+	// AssessedAt When the judgement applies. Defaults to now; a future time is refused, because a reading nobody could have taken yet would become current the moment it landed.
+	AssessedAt *time.Time `json:"assessed_at,omitempty"`
+	Note       *string    `json:"note,omitempty"`
+
+	// SourceAuthor Who judged it, when that is not the caller.
+	SourceAuthor *string `json:"source_author,omitempty"`
+
+	// State How a project is going, as somebody judged it.
+	State ProjectHealthState `json:"state"`
+}
+
+// CreateProjectHealthCorrectionRequest Correct one reading. The correction keeps the target's effective time, supplied by the server — a correction fixes what was said, never when it was said.
+type CreateProjectHealthCorrectionRequest struct {
+	Note         *string `json:"note,omitempty"`
+	SourceAuthor *string `json:"source_author,omitempty"`
+
+	// State How a project is going, as somebody judged it.
+	State ProjectHealthState `json:"state"`
+}
+
 // CreateProjectRequest defines model for CreateProjectRequest.
 type CreateProjectRequest struct {
 	CompanyId            openapi_types.UUID     `json:"company_id"`
@@ -31840,6 +31886,9 @@ type Project360 struct {
 		Page PageInfo     `json:"page"`
 	} `json:"documents,omitempty"`
 
+	// Health How the project is going now. `current` is absent when nobody has judged it yet, which is different from a project judged and found healthy.
+	Health *Project360Health `json:"health,omitempty"`
+
 	// PhaseHistory Every phase transition the project has made, oldest first — the birth row has
 	// `from_phase` null — and the fold over them: how long the project has spent in each
 	// phase so far, in the order the phases were first entered. A re-opened project visits a
@@ -31892,6 +31941,12 @@ type Project360Company struct {
 type Project360Coverage struct {
 	Attributed         int `json:"attributed"`
 	UnattributedNearby int `json:"unattributed_nearby"`
+}
+
+// Project360Health How the project is going now. `current` is absent when nobody has judged it yet, which is different from a project judged and found healthy.
+type Project360Health struct {
+	// Current One judgement of how a project is going, on the day it applies to. Assessments are never edited: a mistake is corrected by superseding the row, so what was said and when it was said both survive the correction.
+	Current *ProjectHealthAssessment `json:"current,omitempty"`
 }
 
 // Project360PhaseDuration defines model for Project360PhaseDuration.
@@ -31978,6 +32033,45 @@ type ProjectCompany struct {
 type ProjectCompanyListResponse struct {
 	Data []ProjectCompany `json:"data"`
 }
+
+// ProjectHealthAssessment One judgement of how a project is going, on the day it applies to. Assessments are never edited: a mistake is corrected by superseding the row, so what was said and when it was said both survive the correction.
+type ProjectHealthAssessment struct {
+	// AssessedAt When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
+	AssessedAt time.Time          `json:"assessed_at"`
+	CreatedAt  *time.Time         `json:"created_at,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
+
+	// Note Why. Required for anything but `on_track` — a risk nobody explained is an alarm nobody can act on.
+	Note      *string            `json:"note,omitempty"`
+	ProjectId openapi_types.UUID `json:"project_id"`
+
+	// Source What recorded this assessment.
+	Source *string `json:"source,omitempty"`
+
+	// SourceAuthor Who is on record as having judged it, when that is not whoever typed it in.
+	SourceAuthor *string `json:"source_author,omitempty"`
+
+	// State How a project is going, as somebody judged it.
+	State ProjectHealthState `json:"state"`
+
+	// Superseded True when a later correction replaced this reading.
+	Superseded *bool `json:"superseded,omitempty"`
+
+	// SupersededById The correction that replaced it, when one has.
+	SupersededById *openapi_types.UUID `json:"superseded_by_id,omitempty"`
+
+	// SupersedesAssessmentId The reading this one corrects, when it is a correction.
+	SupersedesAssessmentId *openapi_types.UUID `json:"supersedes_assessment_id,omitempty"`
+}
+
+// ProjectHealthAssessmentListResponse defines model for ProjectHealthAssessmentListResponse.
+type ProjectHealthAssessmentListResponse struct {
+	Data []ProjectHealthAssessment `json:"data"`
+	Page PageInfo                  `json:"page"`
+}
+
+// ProjectHealthState How a project is going, as somebody judged it.
+type ProjectHealthState string
 
 // ProjectListResponse defines model for ProjectListResponse.
 type ProjectListResponse struct {
@@ -42424,6 +42518,60 @@ type RemoveProjectCompanyParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// ListProjectHealthAssessmentsParams defines parameters for ListProjectHealthAssessments.
+type ListProjectHealthAssessmentsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// CreateProjectHealthAssessmentParams defines parameters for CreateProjectHealthAssessment.
+type CreateProjectHealthAssessmentParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// CorrectProjectHealthAssessmentParams defines parameters for CorrectProjectHealthAssessment.
+type CorrectProjectHealthAssessmentParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // SetProjectStakeholderParams defines parameters for SetProjectStakeholder.
 type SetProjectStakeholderParams struct {
 	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
@@ -44338,6 +44486,12 @@ type AdvanceProjectPhaseJSONRequestBody = AdvanceProjectPhaseRequest
 
 // SetProjectCompanyJSONRequestBody defines body for SetProjectCompany for application/json ContentType.
 type SetProjectCompanyJSONRequestBody = SetProjectCompanyRequest
+
+// CreateProjectHealthAssessmentJSONRequestBody defines body for CreateProjectHealthAssessment for application/json ContentType.
+type CreateProjectHealthAssessmentJSONRequestBody = CreateProjectHealthAssessmentRequest
+
+// CorrectProjectHealthAssessmentJSONRequestBody defines body for CorrectProjectHealthAssessment for application/json ContentType.
+type CorrectProjectHealthAssessmentJSONRequestBody = CreateProjectHealthCorrectionRequest
 
 // SetProjectStakeholderJSONRequestBody defines body for SetProjectStakeholder for application/json ContentType.
 type SetProjectStakeholderJSONRequestBody = SetProjectStakeholderRequest
@@ -54087,6 +54241,15 @@ type ServerInterface interface {
 	// Take a company off a project (archives the edge).
 	// (DELETE /projects/{id}/companies/{company_id})
 	RemoveProjectCompany(w http.ResponseWriter, r *http.Request, id Id, companyId openapi_types.UUID, params RemoveProjectCompanyParams)
+	// How this project has been going, newest judgement first.
+	// (GET /projects/{id}/health-assessments)
+	ListProjectHealthAssessments(w http.ResponseWriter, r *http.Request, id Id, params ListProjectHealthAssessmentsParams)
+	// Record how this project is going.
+	// (POST /projects/{id}/health-assessments)
+	CreateProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, params CreateProjectHealthAssessmentParams)
+	// Correct one reading, keeping when it was said.
+	// (POST /projects/{id}/health-assessments/{assessment_id}/corrections)
+	CorrectProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params CorrectProjectHealthAssessmentParams)
 	// List a project's stakeholders (project↔contact relationships).
 	// (GET /projects/{id}/stakeholders)
 	ListProjectStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -57441,6 +57604,24 @@ func (_ Unimplemented) SetProjectCompany(w http.ResponseWriter, r *http.Request,
 // Take a company off a project (archives the edge).
 // (DELETE /projects/{id}/companies/{company_id})
 func (_ Unimplemented) RemoveProjectCompany(w http.ResponseWriter, r *http.Request, id Id, companyId openapi_types.UUID, params RemoveProjectCompanyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How this project has been going, newest judgement first.
+// (GET /projects/{id}/health-assessments)
+func (_ Unimplemented) ListProjectHealthAssessments(w http.ResponseWriter, r *http.Request, id Id, params ListProjectHealthAssessmentsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record how this project is going.
+// (POST /projects/{id}/health-assessments)
+func (_ Unimplemented) CreateProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, params CreateProjectHealthAssessmentParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Correct one reading, keeping when it was said.
+// (POST /projects/{id}/health-assessments/{assessment_id}/corrections)
+func (_ Unimplemented) CorrectProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params CorrectProjectHealthAssessmentParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78565,6 +78746,194 @@ func (siw *ServerInterfaceWrapper) RemoveProjectCompany(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListProjectHealthAssessments operation middleware
+func (siw *ServerInterfaceWrapper) ListProjectHealthAssessments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListProjectHealthAssessmentsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProjectHealthAssessments(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProjectHealthAssessment operation middleware
+func (siw *ServerInterfaceWrapper) CreateProjectHealthAssessment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProjectHealthAssessmentParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProjectHealthAssessment(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CorrectProjectHealthAssessment operation middleware
+func (siw *ServerInterfaceWrapper) CorrectProjectHealthAssessment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "assessment_id" -------------
+	var assessmentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "assessment_id", chi.URLParam(r, "assessment_id"), &assessmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "assessment_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CorrectProjectHealthAssessmentParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CorrectProjectHealthAssessment(w, r, id, assessmentId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjectStakeholders operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectStakeholders(w http.ResponseWriter, r *http.Request) {
 
@@ -87044,6 +87413,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/projects/{id}/companies/{company_id}", wrapper.RemoveProjectCompany)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/projects/{id}/health-assessments", wrapper.ListProjectHealthAssessments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/projects/{id}/health-assessments", wrapper.CreateProjectHealthAssessment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/projects/{id}/health-assessments/{assessment_id}/corrections", wrapper.CorrectProjectHealthAssessment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/projects/{id}/stakeholders", wrapper.ListProjectStakeholders)
