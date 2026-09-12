@@ -142,7 +142,7 @@ func dischargeNoticeCases(
 		// one case at a time.
 		before := map[string]any{fieldState: m.wasState, "attempts": m.wasAttempts}
 		if _, err := storekit.Audit(ctx, tx, "update", "privacy_notice_case", m.id, before, map[string]any{
-			"rule": m.rule, fieldState: string(NoticeQueued),
+			fieldRule: m.rule, fieldState: string(NoticeQueued),
 			"route": route, "attempts": m.attempts,
 		}); err != nil {
 			return 0, fmt.Errorf("audit the discharged notice case: %w", err)

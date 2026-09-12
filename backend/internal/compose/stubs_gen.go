@@ -1883,6 +1883,18 @@ func (stubs) RestorePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 	httperr.NotImplemented(w, r, "RestorePipeline")
 }
 
+func (stubs) ListNoticeCases(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticeCasesParams) {
+	httperr.NotImplemented(w, r, "ListNoticeCases")
+}
+
+func (stubs) AssignNoticeCase(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AssignNoticeCase")
+}
+
+func (stubs) ExcuseNoticeCase(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "ExcuseNoticeCase")
+}
+
 func (stubs) ListProducts(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListProductsParams) {
 	httperr.NotImplemented(w, r, "ListProducts")
 }

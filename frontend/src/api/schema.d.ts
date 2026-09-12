@@ -9494,6 +9494,104 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/privacy/notice-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Disclosure duties this installation owes, soonest deadline first.
+         * @description Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
+         *     when it falls due.
+         *
+         *     Gated on `privacy_request` at `read` and human-only, the same gate the subject-request
+         *     queue uses. A notice case says how a named contact was obtained and whether we have told
+         *     them, which is the same disclosure that queue makes about who exercised a right — so an
+         *     installation that delegated its privacy inbox delegated this with it, and no second grant
+         *     has to be handed out.
+         *
+         *     With no `state` filter the answer is every unresolved case. A caller wanting closed ones
+         *     names them, so a screen cannot show a discharged duty as owed because it forgot to filter.
+         *
+         *     There is deliberately no `overdue` state to ask for. Overdue is a reading of the clock
+         *     against `due_at`, not a fact anybody writes: a stored one would make a case overdue only
+         *     once a sweep had run, so a job that failed to fire would leave every late case looking on
+         *     time. Order is by `due_at`, and the reader compares it to now.
+         */
+        get: operations["listNoticeCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/privacy/notice-cases/{id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Give a disclosure duty an owner.
+         * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
+         *     nobody has taken.
+         *
+         *     An `open` case moves to `assigned`. A `queued` case already has a disclosure on its way and
+         *     a `blocked` one names an obstacle, so both take the owner and keep their state — somebody
+         *     looking at an obstacle has not cleared it, and saying the duty moved would be a claim about
+         *     work that has not happened. A case that has already ended takes no owner and answers 422.
+         */
+        post: operations["assignNoticeCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/privacy/notice-cases/{id}/excuse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End a disclosure duty on a stated ground, or record that it was met elsewhere.
+         * @description Closes a case without this installation having sent anything for it, and keeps the reason.
+         *
+         *     Two claims, and they are different. `exempt_with_reason` says the duty does not apply —
+         *     Art. 14(5) disapplies it where the subject already has the information, where notice is
+         *     impossible or disproportionate, or where disclosure is laid down by law.
+         *     `provided_elsewhere` says the duty was met, by somebody telling the subject in a meeting or
+         *     writing from their own mailbox. An auditor asking why a case is closed needs them apart.
+         *
+         *     The ground is required, in the officer's own words, up to 500 characters. That requirement
+         *     is the whole reason these two states exist beside `not_required`, which records the same
+         *     conclusion with nothing to defend it.
+         *
+         *     A case that has already ended is not excused a second time: a later note would overwrite a
+         *     real discharge and then read as the reason it happened.
+         */
+        post: operations["excuseNoticeCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/communication-reviews": {
         parameters: {
             query?: never;
@@ -30152,6 +30250,72 @@ export interface components {
             created_at: string;
         };
         /**
+         * @description Where a disclosure duty stands.
+         *
+         *     `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
+         *     on its way. `completed` is a disclosure this installation sent and delivered.
+         *     `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
+         *     `blocked` names an obstacle. `not_required` is the older way of closing a case with no
+         *     reason attached, kept so nothing already closed is reinterpreted.
+         *
+         *     There is no `overdue`. Overdue is a reading of `due_at` against the clock, not a stored
+         *     fact — a stored one would leave every late case looking on time whenever a sweep failed to
+         *     run.
+         * @enum {string}
+         */
+        NoticeCaseState: "open" | "assigned" | "queued" | "completed" | "provided_elsewhere" | "exempt_with_reason" | "blocked" | "not_required";
+        /**
+         * @description One Art. 13 or Art. 14 disclosure duty: whose it is, what put it there, and by when.
+         *
+         *     `contact_id` is carried because the duty is discharged on that contact's own screen. There
+         *     is no notice-case screen to route to, so a row naming only the case would prompt a reader
+         *     with nowhere to go.
+         */
+        NoticeCase: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            contact_id: string;
+            /**
+             * @description Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
+             * @enum {string}
+             */
+            rule: "art13" | "art14";
+            /** Format: date-time */
+            due_at: string;
+            state: components["schemas"]["NoticeCaseState"];
+            /** @description How this duty may be discharged. A case with no route is one the product cannot close by sending anything, and it says so rather than offering a button that fails. */
+            allowed_routes?: string[];
+            /** Format: uuid */
+            owner_user_id?: string | null;
+            /** Format: date-time */
+            assigned_at?: string | null;
+            /** @description How many disclosures have been sent for this duty. */
+            attempts: number;
+            /** @description Why the duty was excused, or where it was provided. Present exactly when the state is provided_elsewhere or exempt_with_reason. */
+            resolution_note?: string | null;
+            /** Format: uuid */
+            resolved_by?: string | null;
+            blocked_reason?: string | null;
+            /** Format: date-time */
+            completed_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AssignNoticeCase: {
+            /** Format: uuid */
+            owner_user_id: string;
+        };
+        ExcuseNoticeCase: {
+            /**
+             * @description Which claim this is: the duty does not apply, or it was met somewhere this installation did not send from.
+             * @enum {string}
+             */
+            state: "exempt_with_reason" | "provided_elsewhere";
+            /** @description The ground, in the officer's own words. */
+            resolution_note: string;
+        };
+        /**
          * @description The answer to a confirm-link submission. `cases` names every rights request it opened — one per
          *     corrected field under Art. 16, one for an erasure request under Art. 17. Empty when the submission
          *     proposed nothing: a marketing answer alone opens no case.
@@ -49400,6 +49564,85 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DataSubjectRequest"];
+                };
+            };
+        };
+    };
+    listNoticeCases: {
+        parameters: {
+            query?: {
+                /** @description Repeat to ask for several. Omitted means every unresolved state. */
+                state?: components["schemas"]["NoticeCaseState"][];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of notice cases. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["NoticeCase"][];
+                    };
+                };
+            };
+        };
+    };
+    assignNoticeCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignNoticeCase"];
+            };
+        };
+        responses: {
+            /** @description The case, with its owner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeCase"];
+                };
+            };
+        };
+    };
+    excuseNoticeCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExcuseNoticeCase"];
+            };
+        };
+        responses: {
+            /** @description The ended case, with its ground. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeCase"];
                 };
             };
         };

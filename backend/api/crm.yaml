@@ -13680,6 +13680,113 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+  /privacy/notice-cases:
+    get:
+      tags: [Compliance]
+      operationId: listNoticeCases
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Disclosure duties this installation owes, soonest deadline first.
+      description: |
+        Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
+        when it falls due.
+
+        Gated on `privacy_request` at `read` and human-only, the same gate the subject-request
+        queue uses. A notice case says how a named contact was obtained and whether we have told
+        them, which is the same disclosure that queue makes about who exercised a right — so an
+        installation that delegated its privacy inbox delegated this with it, and no second grant
+        has to be handed out.
+
+        With no `state` filter the answer is every unresolved case. A caller wanting closed ones
+        names them, so a screen cannot show a discharged duty as owed because it forgot to filter.
+
+        There is deliberately no `overdue` state to ask for. Overdue is a reading of the clock
+        against `due_at`, not a fact anybody writes: a stored one would make a case overdue only
+        once a sweep had run, so a job that failed to fire would leave every late case looking on
+        time. Order is by `due_at`, and the reader compares it to now.
+      parameters:
+        - name: state
+          in: query
+          description: Repeat to ask for several. Omitted means every unresolved state.
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/NoticeCaseState' }
+          style: form
+          explode: true
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of notice cases.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/NoticeCase' } }
+  /privacy/notice-cases/{id}/assign:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Compliance]
+      operationId: assignNoticeCase
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Give a disclosure duty an owner.
+      description: |
+        Records who is working this duty, so the queue shows a claimed case rather than a pile
+        nobody has taken.
+
+        An `open` case moves to `assigned`. A `queued` case already has a disclosure on its way and
+        a `blocked` one names an obstacle, so both take the owner and keep their state — somebody
+        looking at an obstacle has not cleared it, and saying the duty moved would be a claim about
+        work that has not happened. A case that has already ended takes no owner and answers 422.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignNoticeCase' }
+      responses:
+        '200':
+          description: The case, with its owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NoticeCase' }
+  /privacy/notice-cases/{id}/excuse:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Compliance]
+      operationId: excuseNoticeCase
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: End a disclosure duty on a stated ground, or record that it was met elsewhere.
+      description: |
+        Closes a case without this installation having sent anything for it, and keeps the reason.
+
+        Two claims, and they are different. `exempt_with_reason` says the duty does not apply —
+        Art. 14(5) disapplies it where the subject already has the information, where notice is
+        impossible or disproportionate, or where disclosure is laid down by law.
+        `provided_elsewhere` says the duty was met, by somebody telling the subject in a meeting or
+        writing from their own mailbox. An auditor asking why a case is closed needs them apart.
+
+        The ground is required, in the officer's own words, up to 500 characters. That requirement
+        is the whole reason these two states exist beside `not_required`, which records the same
+        conclusion with nothing to defend it.
+
+        A case that has already ended is not excused a second time: a later note would overwrite a
+        real discharge and then read as the reason it happened.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExcuseNoticeCase' }
+      responses:
+        '200':
+          description: The ended case, with its ground.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NoticeCase' }
   /communication-reviews:
     get:
       tags: [Communication]
@@ -40879,6 +40986,77 @@ components:
         created_at: { type: string, format: date-time }
         # no `version`/If-Match: data_subject_request has no version column (data-model §12.5) and is a
         # single-assignee human-only workflow record (x-agent-access: human-only) — not optimistically concurrent.
+
+    NoticeCaseState:
+      type: string
+      description: |
+        Where a disclosure duty stands.
+
+        `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
+        on its way. `completed` is a disclosure this installation sent and delivered.
+        `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
+        `blocked` names an obstacle. `not_required` is the older way of closing a case with no
+        reason attached, kept so nothing already closed is reinterpreted.
+
+        There is no `overdue`. Overdue is a reading of `due_at` against the clock, not a stored
+        fact — a stored one would leave every late case looking on time whenever a sweep failed to
+        run.
+      enum: [open, assigned, queued, completed, provided_elsewhere, exempt_with_reason, blocked, not_required]
+
+    NoticeCase:
+      type: object
+      description: |
+        One Art. 13 or Art. 14 disclosure duty: whose it is, what put it there, and by when.
+
+        `contact_id` is carried because the duty is discharged on that contact's own screen. There
+        is no notice-case screen to route to, so a row naming only the case would prompt a reader
+        with nowhere to go.
+      required: [id, contact_id, rule, due_at, state, attempts, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        rule:
+          type: string
+          description: 'Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.'
+          enum: [art13, art14]
+        due_at: { type: string, format: date-time }
+        state: { $ref: '#/components/schemas/NoticeCaseState' }
+        allowed_routes:
+          type: array
+          description: 'How this duty may be discharged. A case with no route is one the product cannot close by sending anything, and it says so rather than offering a button that fails.'
+          items: { type: string }
+        owner_user_id: { type: [string, 'null'], format: uuid }
+        assigned_at: { type: [string, 'null'], format: date-time }
+        attempts:
+          type: integer
+          description: 'How many disclosures have been sent for this duty.'
+        resolution_note:
+          type: [string, 'null']
+          description: 'Why the duty was excused, or where it was provided. Present exactly when the state is provided_elsewhere or exempt_with_reason.'
+        resolved_by: { type: [string, 'null'], format: uuid }
+        blocked_reason: { type: [string, 'null'] }
+        completed_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    AssignNoticeCase:
+      type: object
+      required: [owner_user_id]
+      properties:
+        owner_user_id: { type: string, format: uuid }
+
+    ExcuseNoticeCase:
+      type: object
+      required: [state, resolution_note]
+      properties:
+        state:
+          type: string
+          description: 'Which claim this is: the duty does not apply, or it was met somewhere this installation did not send from.'
+          enum: [exempt_with_reason, provided_elsewhere]
+        resolution_note:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: 'The ground, in the officer''s own words.'
 
     ConfirmSubmissionReceipt:
       type: object

@@ -17,6 +17,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// keyData is the envelope key every list response in this module answers under.
+// Three of them write it, and a fourth spelling it differently would give one
+// list a shape no client expects.
+const keyData = "data"
+
 // Handlers is the module's transport slice; compose embeds it so the
 // generated consent stubs are shadowed by real code.
 type Handlers struct {
@@ -97,8 +102,8 @@ func (h Handlers) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 		data = append(data, wirePurpose(p))
 	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{
-		"data": data,
-		"page": crmcontracts.PageInfo{HasMore: false},
+		keyData: data,
+		"page":  crmcontracts.PageInfo{HasMore: false},
 	})
 }
 
