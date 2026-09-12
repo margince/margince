@@ -19,11 +19,17 @@ import type { Deal } from "./brief.queries";
 import { OvernightPanel, RailQuiet } from "./brief.rail";
 import type { WorklistItem } from "./worklist.queries";
 
-// Brief's context rail (screens/brief.rail.tsx): what the night shift did, what
-// the pipeline is worth, and what has gone quiet. Three panels, all of them
-// READ, and each one gated on its OWN query — which is the property these cases
-// exist to hold: a transient failure in one panel must never blank another, and
-// a panel with no answer yet must draw nothing rather than a row of zeros.
+// Brief's context rail (screens/brief.rail.tsx): what the night shift did, and
+// what has gone quiet. Both READ, and each gated on its OWN query — which is the
+// property these cases exist to hold: a transient failure in one panel must
+// never blank another, and a panel with no answer yet must draw nothing rather
+// than a row of zeros.
+//
+// The open pipeline's money was a third panel here and is not any more. Brief
+// now asks one financial question rather than two that disagreed: this rail
+// computed its own open-pipeline total beside an Analytics screen answering the
+// same question over a different population, and a reader meeting both had no
+// way to tell which was wrong.
 //
 // Split out of brief.test.tsx at the 1000-line ceiling (frontend/CLAUDE.md), on
 // the seam the screen itself is built along: the work column and its readings
@@ -64,18 +70,16 @@ type Call = { method: string; path: string; body: unknown };
 type Routes = Record<string, (body: unknown) => Response | Promise<Response>>;
 
 // Every read Brief fans out to, answered honestly by default so each case
-// declares only the route it is about: a session, no nightly digest, no brief
-// run, and a pipeline report with no rows. The report matters — the fallback
-// empty PAGE carries no `rows`, which the pipeline reading would read as a
-// failure and put a refusal in the rail of every case in this file.
+// declares only the route it is about: a session, no nightly digest, and no
+// brief run. The deals-by-stage report is NOT here any more — Brief stopped
+// asking for it when the open-pipeline panel left the rail, and a default route
+// for a read nobody makes is a stub that outlives its caller.
 const DEFAULTS: Routes = {
   "GET /me": () => jsonResponse(meFixture()),
   "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
   "GET /digest": () =>
     jsonResponse({ title: "Not Found", code: "no_digest_yet" }, 404),
-  "POST /reports/deals-by-stage": () =>
-    jsonResponse({ report: "deals-by-stage", plan: {}, columns: [], rows: [] }),
-  // Same reason as the report above: the fallback empty PAGE carries no
+  // The fallback empty PAGE carries no
   // `readings` and no `counts`, and the Brief's strip reads both as required
   // fields. An unrouted worklist read has to answer with a worklist.
   "GET /worklist": () => jsonResponse(readingsDay({}, [])),
@@ -395,158 +399,6 @@ describe("BriefScreen — the context rail", () => {
 
     await screen.findByText("Overnight");
     expect(screen.queryByLabelText("Phase moves")).toBeNull();
-  });
-});
-
-// The open pipeline is grouped by currency and rendered one line each rather
-// than summed: adding native minor units across currencies produces a number
-// that is not money.
-describe("BriefScreen — the open pipeline", () => {
-  it("shows the server's raw and weighted totals", async () => {
-    stubApi({
-      "POST /reports/deals-by-stage": () =>
-        jsonResponse({
-          report: "deals-by-stage",
-          plan: {},
-          columns: [],
-          rows: [
-            {
-              currency: "EUR",
-              deals: 12,
-              raw_minor: 9_900_000,
-              weighted_minor: 3_300_000,
-            },
-          ],
-        }),
-    });
-    render(<BriefScreen />);
-
-    // THE SCALE, NOT THE AMOUNT. The rail gives this figure one short line, and
-    // "€99,000.00" wrapped mid-number there; the exact amount belongs to the
-    // Pipeline screen. The basis is ONE line under it rather than two, because
-    // the weighted total and the count are one statement about one figure.
-    expect(await screen.findByText("€99k")).toBeTruthy();
-    expect(screen.getByText("€33k weighted · 12 open deals")).toBeTruthy();
-    expect(screen.queryByText("€99,000.00")).toBeNull();
-  });
-
-  it("gives each currency its own line rather than one meaningless sum", async () => {
-    stubApi({
-      "POST /reports/deals-by-stage": () =>
-        jsonResponse({
-          report: "deals-by-stage",
-          plan: {},
-          columns: [],
-          rows: [
-            {
-              currency: "EUR",
-              deals: 2,
-              raw_minor: 100_000,
-              weighted_minor: 40_000,
-            },
-            {
-              currency: "USD",
-              deals: 3,
-              raw_minor: 200_000,
-              weighted_minor: 50_000,
-            },
-          ],
-        }),
-    });
-    render(<BriefScreen />);
-
-    // Under 10,000 the compact form IS the exact one — "€8k" is no shorter
-    // than "€8,332" and says less — so these two read in full.
-    expect(await screen.findByText("€1,000")).toBeTruthy();
-    expect(screen.getByText("US$2,000")).toBeTruthy();
-    // No combined figure anywhere: 300_000 minor units is not a currency.
-    expect(screen.queryByText("€3,000")).toBeNull();
-  });
-
-  // The filter is load-bearing: the report's own base predicate is
-  // unarchived-only, so without status=open this headline would count won and
-  // lost deals and grow every time somebody closed something. Asserting the
-  // rendered numbers cannot catch that — only the request can.
-  it("asks for open deals only, grouped by currency", async () => {
-    const calls = stubApi({});
-    render(<BriefScreen />);
-
-    await waitFor(() =>
-      expect(
-        calls.some((call) => call.path === "/reports/deals-by-stage"),
-      ).toBe(true),
-    );
-    const body = calls.find(
-      (call) => call.path === "/reports/deals-by-stage",
-    )?.body;
-    expect(body).toMatchObject({
-      filters: { status: "open" },
-      group_by: ["currency"],
-      aggregates: [
-        { fn: "count", as: "deals" },
-        { fn: "sum", field: "amount_minor", as: "raw_minor" },
-        { fn: "sum", field: "weighted_amount_minor", as: "weighted_minor" },
-      ],
-    });
-  });
-
-  // A refusal is not an absence. An empty panel would read as "there is no
-  // pipeline", which is a claim about the data made in place of a claim about
-  // authority.
-  it("keeps its place and says so when the figure cannot be read", async () => {
-    stubApi({
-      "POST /reports/deals-by-stage": () =>
-        jsonResponse({ title: "Forbidden" }, 403),
-    });
-    render(<BriefScreen />);
-
-    expect(
-      await screen.findByText("This figure could not be loaded."),
-    ).toBeTruthy();
-  });
-
-  it("says when a mask has kept deals out of the figures", async () => {
-    stubApi({
-      "POST /reports/deals-by-stage": () =>
-        jsonResponse({
-          report: "deals-by-stage",
-          plan: {},
-          columns: [],
-          excluded_by_permission: 4,
-          rows: [
-            {
-              currency: "EUR",
-              deals: 1,
-              raw_minor: 100_000,
-              weighted_minor: 40_000,
-            },
-          ],
-        }),
-    });
-    render(<BriefScreen />);
-
-    expect(
-      await screen.findByText(
-        "4 deals are not in these figures — your access does not cover them.",
-      ),
-    ).toBeTruthy();
-    // And the singular reads as one deal, not "1 open deals".
-    expect(screen.getByText("€400 weighted · 1 open deal")).toBeTruthy();
-  });
-
-  it("draws no position panel at all when there is no open pipeline", async () => {
-    stubApi({});
-    render(<BriefScreen />);
-
-    // Waits for the reads to answer, for the reason the overnight case above
-    // gives: absence proves nothing until the read that would have filled it
-    // has come back.
-    await waitFor(() =>
-      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
-    );
-    expect(
-      screen.queryByRole("region", { name: en["brief.panel.pipeline"] }),
-    ).toBeNull();
   });
 });
 

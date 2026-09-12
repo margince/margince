@@ -2808,11 +2808,6 @@ export const en = {
   "decision.status.rejected": "Rejected",
   "decision.status.expired": "Expired",
 
-  "brief.pipelinePartial":
-    "{count} deals are not in these figures — your access does not cover them.",
-  "brief.pipelineUnavailable": "This figure could not be loaded.",
-  "brief.pipelineBasis_one": "{weighted} weighted · {count} open deal",
-  "brief.pipelineBasis_other": "{weighted} weighted · {count} open deals",
   // The morning brief's own narrative. The "no pass" line is the honest degrade:
   // a run nobody annotated and a night with nothing in it read identically as
   // silence, so the screen says which one this is.
@@ -3119,10 +3114,9 @@ export const en = {
   "brief.glance.intro": "Here is your day.",
   "brief.panel.decisions": "Waiting on you",
   "brief.panel.overnight": "Overnight",
-  // The rail's own panels, after the rename that made each title claim exactly
+  // The rail's own panel titles, after the rename that made each claim exactly
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
-  "brief.panel.pipeline": "Open pipeline",
   "brief.panel.tasks": "Tasks due",
   // The one panel a silent morning gets: a line per source that had nothing to
   // report, so a reader can tell a quiet source from one the page forgot.

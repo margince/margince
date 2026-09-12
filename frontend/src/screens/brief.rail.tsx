@@ -6,19 +6,26 @@ import { routeHash } from "../app/router";
 import { DealCard } from "../design-system/composed";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatMoneyCompact, formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
+import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { type Deal, useMorningDigest, usePipelineValue } from "./brief.queries";
+import { type Deal, useMorningDigest } from "./brief.queries";
 import { overnightIsEmpty } from "./brief.rail.overnight";
 import { scheduleIsEmpty, tasksIsEmpty } from "./brief.schedule";
 import { toBoardDeal, useCompanyMarks } from "./deals";
 import { rosterOwnerNaming, useRoster } from "./entityref";
 import type { Worklist } from "./worklist.queries";
 
-// Brief's context rail: what happened, what the pipeline is worth, and what has
-// gone quiet. Every panel is READ — the work is in the main column beside them,
-// and a rail that asks for a move is a second lead.
+// Brief's context rail: what happened, and what has gone quiet. Every panel is
+// READ — the work is in the main column beside them, and a rail that asks for a
+// move is a second lead.
+//
+// It no longer carries what the pipeline is WORTH. A panel of open-pipeline
+// money sat here beside the worklist and asked a question the morning cannot
+// answer: one figure on a screen about today's work, on its own definition of
+// which deals count, next to an Analytics screen answering the same question on
+// a different one. Two pipeline summaries that disagree are worse than one
+// somewhere else, so the money moved to Analytics, where a reader can see the
+// scope and period it was computed over.
 //
 // Every panel is `Panel` rather than a card of its own, which is what makes the
 // rail read as one column of the same shape: a header band at one height,
@@ -34,87 +41,6 @@ import type { Worklist } from "./worklist.queries";
 // was at its line ceiling — and is re-exported here so the rail is still
 // assembled from one import.
 export { OvernightPanel } from "./brief.rail.overnight";
-
-/**
- * The open pipeline, one line per currency.
- *
- * A refusal is NOT an absence: an empty panel reads as "there is no pipeline",
- * which is a claim about the data made in place of a claim about authority. So a
- * settled error keeps the panel and says the figure is unavailable.
- */
-export function PositionPanel() {
-  const plural = usePlural();
-  const t = useT();
-  const { locale } = useLocale();
-  const query = usePipelineValue();
-
-  // Still loading: no panel. A headline has no honest skeleton — a shape where a
-  // number will be is a claim that a number is coming, and the work this rail
-  // sits beside is what the reader is here for.
-  if (query.isPending) {
-    return null;
-  }
-  if (query.isError) {
-    return (
-      <Panel title={t("brief.panel.pipeline")} className="rail-panel">
-        <PanelBody>
-          <p className="t-caption">{t("brief.pipelineUnavailable")}</p>
-        </PanelBody>
-      </Panel>
-    );
-  }
-  const rows = query.data?.rows ?? [];
-  const excluded = query.data?.excluded ?? 0;
-  if (rows.length === 0) {
-    return null;
-  }
-  return (
-    <Panel
-      title={t("brief.panel.pipeline")}
-      className="rail-panel"
-      footer={
-        // A mask kept rows out of these sums, so the figures understate the
-        // pipeline. Saying so is the difference between a partial answer and a
-        // wrong one.
-        excluded > 0 ? (
-          <span className="t-caption">
-            {t("brief.pipelinePartial", {
-              count: formatNumber(excluded, locale),
-            })}
-          </span>
-        ) : undefined
-      }
-    >
-      {rows.map((row) => (
-        <PanelRow key={row.currency}>
-          <span className="rail-money">
-            {/* THE SCALE, NOT THE AMOUNT. `€2.68m` is what a rail column of
-                this width can carry and what a reader takes in at a glance;
-                `€2,680,000.00` is a string of digits to be counted, and it
-                wrapped mid-number. The exact figure belongs to the Pipeline
-                screen, which is where a reader checking one goes. */}
-            <span className="rail-money-raw t-mono">
-              {formatMoneyCompact(row.rawMinor, row.currency, locale)}
-            </span>
-            {/* ONE basis line under the figure, not two: the weighted total and
-                the deal count are the same statement about the same figure, and
-                stacked they read as two more readings. */}
-            <span className="t-caption">
-              {plural("brief.pipelineBasis", row.deals, {
-                weighted: formatMoneyCompact(
-                  row.weightedMinor,
-                  row.currency,
-                  locale,
-                ),
-                count: formatNumber(row.deals, locale),
-              })}
-            </span>
-          </span>
-        </PanelRow>
-      ))}
-    </Panel>
-  );
-}
 
 /**
  * Whether the quiet-deals panel has nothing to draw.

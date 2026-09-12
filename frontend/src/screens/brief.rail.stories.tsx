@@ -11,7 +11,7 @@ import {
   readingsDay,
   report,
 } from "./brief.fixtures";
-import { PositionPanel, RailQuiet, WatchPanel } from "./brief.rail";
+import { RailQuiet, WatchPanel } from "./brief.rail";
 import {
   installFetchStub,
   jsonResponse,
@@ -21,8 +21,9 @@ import {
 } from "./story-utils";
 import type { WorklistItem } from "./worklist.queries";
 
-// Brief's context rail: what the pipeline is worth, what has gone quiet, and
-// the one panel a silent morning gets.
+// Brief's context rail: what has gone quiet, and the one panel a silent morning
+// gets. The open pipeline's money is NOT here — it moved to Analytics, where a
+// reader can see the scope and period behind the figure.
 //
 // TWO HALVES OF ONE RULE, AND BOTH ARE HERE. A panel earns its box by having
 // something in it: empty, it draws nothing, and `RailQuiet` prints one line per
@@ -79,50 +80,6 @@ const meta: Meta = {
 };
 export default meta;
 type Story = StoryObj;
-
-// ── The open pipeline ───────────────────────────────────────────────────────
-
-// One line per currency, never summed: adding native minor units across
-// currencies produces a number that is not money.
-//
-// THE FIGURE IS A SCALE, NOT AN AMOUNT. `€99k` is what this column's width can
-// carry and what a reader takes in at a glance; `€99,000.00` wrapped mid-number
-// here, and the exact figure belongs to the Pipeline screen, which is where a
-// reader checking one goes. Under 10,000 the compact form IS the exact one —
-// "€8k" is no shorter than "€8,332" and says less.
-export const Pipeline: Story = {
-  render: panel(<PositionPanel />),
-};
-
-// A mask kept rows out of these sums, so every figure above understates the
-// pipeline. The footer says so: a partial answer a reader knows is partial is
-// worth having, and one they do not is wrong.
-export const PipelineMasked: Story = {
-  render: panel(<PositionPanel />, {
-    ...RAIL_ROUTES,
-    "POST /reports/deals-by-stage": () => report(pipelineRows, 4),
-  }),
-};
-
-// A refusal is NOT an absence. An empty panel would read as "there is no
-// pipeline", which is a claim about the data made in place of one about
-// authority — so the panel keeps its place and says the figure is unavailable.
-export const PipelineRefused: Story = {
-  render: panel(<PositionPanel />, {
-    ...RAIL_ROUTES,
-    "POST /reports/deals-by-stage": () =>
-      jsonResponse({ title: "Forbidden", code: "forbidden" }, 403),
-  }),
-};
-
-// No open pipeline at all: no panel, and no headline skeleton either — a shape
-// where a number will be is a claim that a number is coming.
-export const PipelineCollapsed: Story = {
-  render: panel(<PositionPanel />, {
-    ...RAIL_ROUTES,
-    "POST /reports/deals-by-stage": () => report([]),
-  }),
-};
 
 // ── What has gone quiet ─────────────────────────────────────────────────────
 
