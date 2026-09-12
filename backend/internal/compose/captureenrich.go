@@ -56,16 +56,23 @@ const (
 	enrichPassLimit = 100
 )
 
-// enrichFieldNames is the §2.9 closed vocabulary, shared with the card reader:
-// a signature and a business card state the same things about a contact, and two
-// vocabularies would let which one arrived decide what could be recorded.
+// enrichFieldNames is the §2.9 closed vocabulary, shared with the card reader: a
+// signature and a card state the same things about a contact, and two vocabularies
+// would let which one arrived decide what could be recorded.
+//
+// `title` is the only word for a job title. `role` named the same thing and is gone:
+// only title is mirrored onto contact.title (contacts.observedFieldColumn), so a value
+// filed under role left the column empty and the screen showed a dash for a signature
+// that stated it outright — and offering both let the model pick differently run to run.
+// The contract keeps role for the research-claim surface and the rows already carrying
+// it; TestSignatureEnrichOffersNoSecondWordForAJobTitle holds this.
 var enrichFieldNames = map[string]bool{
-	fieldTitle: true, "phone": true, "role": true, "linkedin": true, companyNameField: true,
+	fieldTitle: true, "phone": true, "linkedin": true, companyNameField: true,
 	"address": true, "website": true,
 }
 
-const signatureEnrichSystem = `You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone, role,
-linkedin, company_name, address, website. Emit a field ONLY if the signature lines state it verbatim; the snippet
+const signatureEnrichSystem = `You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone,
+linkedin, company_name, address, website. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
 must appear character-for-character in the supplied text. Ignore quoted replies, legal
 disclaimers, and marketing taglines. Phone numbers verbatim, never normalized.
 Emit address as the single line the signature prints it on. Emit website only for the
@@ -324,7 +331,7 @@ func signatureEnrichRequest(cand contacts.SignatureCandidate, lines string) mode
 	// already holds. The pass reads a signature to find out whether what it
 	// holds is still true, so naming the empty fields would ask the narrower
 	// question and miss the number that changed.
-	prompt.WriteString("Fields to extract when stated: [\"title\",\"phone\",\"role\",\"linkedin\",\"company_name\",\"address\",\"website\"]\n")
+	prompt.WriteString("Fields to extract when stated: [\"title\",\"phone\",\"linkedin\",\"company_name\",\"address\",\"website\"]\n")
 	prompt.WriteString("Signature block (untrusted; the trailing lines of their last email):\n")
 	prompt.WriteString(fence.WrapAttr("source_id", cand.ActivityID.String(), lines) + "\n")
 	prompt.WriteString(`Return JSON: { "fields": [ { "field", "value", "evidence_snippet", "confidence" } ] }`)
@@ -386,7 +393,7 @@ func signatureEnrichSchema() json.RawMessage {
 		map[string]schema.Node{
 			laneFields: schema.Array(schema.Object(
 				map[string]schema.Node{
-					extractionFieldKey: schema.Enum(fieldTitle, "phone", "role", "linkedin", companyNameField, "address", "website"),
+					extractionFieldKey: schema.Enum(fieldTitle, "phone", "linkedin", companyNameField, "address", "website"),
 					"value":            schema.String(),
 					"evidence_snippet": schema.String(),
 					"confidence":       schema.Number(),
