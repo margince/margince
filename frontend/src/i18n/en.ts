@@ -2619,6 +2619,9 @@ export const en = {
   "deal.arrHint": "The recurring value for a year, in {currency}.",
   "deal.arrNeedsCurrency":
     "Expected ARR needs a currency. Set the deal's value and currency in Edit deal first.",
+  "deal.arrClear": "Remove",
+  "deal.arrFromOffer":
+    "Expected ARR comes from the accepted offer and is not edited here.",
   "deal.brief": "Deal brief",
   "deal.briefHint": "Customer need, scope and intended outcome.",
   "deal.briefMore": "Read more",

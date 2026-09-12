@@ -51,7 +51,16 @@ export function DealCommercialEdit({
   const [motion, setMotion] = useState("");
   const [priority, setPriority] = useState("");
   const [source, setSource] = useState("");
-  const [arrMinor, setArrMinor] = useState(0);
+  // `null` is "no recurring value", which is a different answer from 0 — a
+  // deal explicitly worth nothing per year. The server keeps both and refuses
+  // only a negative, so the form has to keep both too.
+  const [arrMinor, setArrMinor] = useState<number | null>(null);
+  // The reading this modal OPENED on, used to pin the save. `deal.version`
+  // moves under an open modal when the query refetches, and pinning to the
+  // live one makes the conflict check pass while the form still holds
+  // pre-refetch values — so a colleague's change to a field this reader never
+  // touched is silently overwritten by the stale copy.
+  const [openedVersion, setOpenedVersion] = useState<number | undefined>();
   const save = useSaveCommercial(deal.id);
   // Pulled out because the effect below depends on THIS function rather than
   // on the mutation object, which is a new object every render: depending on
@@ -75,7 +84,8 @@ export function DealCommercialEdit({
     setMotion(current.commercial_motion ?? "");
     setPriority(current.priority ?? "");
     setSource(current.acquisition_source ?? "");
-    setArrMinor(current.expected_arr_minor ?? 0);
+    setArrMinor(current.expected_arr_minor ?? null);
+    setOpenedVersion(current.version);
     resetSave();
   }, [open, resetSave]);
 
@@ -88,7 +98,12 @@ export function DealCommercialEdit({
       deal.masked_fields?.includes("currency"),
   );
   const currency = deal.currency ?? null;
-  const canPriceArr = !moneyMasked && currency !== null;
+  // An ARR the deal took FROM AN ACCEPTED OFFER is not a figure to retype. The
+  // server refuses a manual edit or clear while that provenance stands
+  // (`ArrFromOfferError`), and it refuses the WHOLE patch — so an editor here
+  // would lose a reader's unrelated motion or priority change along with it.
+  const arrFromOffer = Boolean(deal.arr_source_offer_id);
+  const canPriceArr = !moneyMasked && currency !== null && !arrFromOffer;
 
   async function submit() {
     const body: UpdateDealRequest = {
@@ -97,13 +112,14 @@ export function DealCommercialEdit({
       // An empty pick is "nobody answered", which the wire spells as null.
       acquisition_source: source === "" ? null : source,
     };
-    // Only when this reader was actually shown the money. Omitting the field
-    // leaves it alone; sending a zero the reader never entered would clear a
-    // figure they were not permitted to read.
+    // Only when this reader was actually shown the money AND may change it.
+    // Omitting the field leaves it alone; sending a figure they never entered
+    // would clear or restate one they may not read or may not touch.
     if (canPriceArr) {
-      body.expected_arr_minor = arrMinor === 0 ? null : arrMinor;
+      body.expected_arr_minor = arrMinor;
     }
-    await save.mutateAsync({ version: deal.version, body });
+    // Pinned to the reading the FORM holds, not the live one. See openedVersion.
+    await save.mutateAsync({ version: openedVersion, body });
     onClose();
   }
 
@@ -166,18 +182,42 @@ export function DealCommercialEdit({
             hint={t("deal.arrHint", { currency })}
           >
             {(control) => (
-              <MoneyInput
-                {...control}
-                valueMinor={arrMinor}
-                currency={currency}
-                onChangeMinor={setArrMinor}
-                // An unpriced deal shows an EMPTY box, not "0.00" — a figure
-                // nobody entered, which a reader then types after.
-                blankWhenZero
-                disabled={save.isPending}
-              />
+              <div className="actionrow">
+                <MoneyInput
+                  {...control}
+                  // A deal with NO recurring value shows nothing, and one worth
+                  // zero per year shows 0.00 — the server keeps those apart and
+                  // so does this. `blankWhenZero` would collapse them.
+                  valueMinor={arrMinor ?? 0}
+                  currency={currency}
+                  onChangeMinor={setArrMinor}
+                  blankWhenZero={arrMinor === null}
+                  disabled={save.isPending}
+                />
+                {/* MoneyInput deliberately ignores an emptied box — a
+                    half-deleted buffer is not an intention, and it restores the
+                    last committed figure on blur. Its own comment says the
+                    remedy is an explicit control that means "remove this
+                    value", so this is that control. Without it there is no way
+                    to take an ARR back off a deal. */}
+                {arrMinor !== null && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setArrMinor(null)}
+                    disabled={save.isPending}
+                  >
+                    {t("deal.arrClear")}
+                  </Button>
+                )}
+              </div>
             )}
           </Field>
+        )}
+        {arrFromOffer && !moneyMasked && (
+          // The figure came from an accepted offer, and the server refuses a
+          // manual edit while that stands. Saying so beats a refused save that
+          // would also lose the reader's unrelated changes.
+          <p className="t-caption mute">{t("deal.arrFromOffer")}</p>
         )}
         {!moneyMasked && currency === null && (
           // The server refuses a figure with no currency to price it in, so

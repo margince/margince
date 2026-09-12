@@ -2520,6 +2520,9 @@ export const vi = {
   "deal.arrHint": "Giá trị định kỳ cho một năm, tính bằng {currency}.",
   "deal.arrNeedsCurrency":
     "ARR dự kiến cần một loại tiền tệ. Hãy đặt giá trị và tiền tệ trong phần sửa thương vụ trước.",
+  "deal.arrClear": "Gỡ bỏ",
+  "deal.arrFromOffer":
+    "ARR dự kiến đến từ báo giá đã được chấp nhận và không sửa ở đây.",
   "deal.brief": "Tóm tắt thương vụ",
   "deal.briefHint": "Nhu cầu khách hàng, phạm vi và kết quả mong muốn.",
   "deal.briefMore": "Xem thêm",

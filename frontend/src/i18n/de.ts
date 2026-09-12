@@ -2546,6 +2546,9 @@ export const de = {
   "deal.arrHint": "Der wiederkehrende Wert für ein Jahr, in {currency}.",
   "deal.arrNeedsCurrency":
     "Erwarteter ARR braucht eine Währung. Legen Sie Wert und Währung zuerst unter „Deal bearbeiten“ fest.",
+  "deal.arrClear": "Entfernen",
+  "deal.arrFromOffer":
+    "Der erwartete ARR stammt aus dem angenommenen Angebot und wird hier nicht bearbeitet.",
   "deal.brief": "Deal-Briefing",
   "deal.briefHint": "Kundenbedarf, Umfang und angestrebtes Ergebnis.",
   "deal.briefMore": "Mehr lesen",
