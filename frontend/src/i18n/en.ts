@@ -9145,6 +9145,7 @@ export const en = {
   "projectHealth.state.offTrack": "Off track",
   "projectHealth.record": "Record a reading",
   "projectHealth.correct": "Correct this",
+  "projectHealth.correctOne": "Correct the reading of {date}",
   "projectHealth.recordTitle": "Record how the delivery is going",
   "projectHealth.correctTitle": "Correct this reading",
   "projectHealth.stateLabel": "How it is going",

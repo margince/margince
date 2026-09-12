@@ -70,17 +70,24 @@ export function ProjectHealth({
           </SurfaceState>
         ) : (
           <>
-            {current && (
-              <CurrentReading
-                assessment={current}
-                onCorrect={
-                  canWrite && onCorrect ? () => onCorrect(current) : undefined
-                }
-              />
-            )}
+            {current && <CurrentReading assessment={current} />}
             <ul className="firmo healthlog">
               {rows.map((row) => (
-                <HistoryRow key={row.id} assessment={row} />
+                <HistoryRow
+                  key={row.id}
+                  assessment={row}
+                  // Every reading that has NOT been corrected can still be
+                  // corrected, not only the newest one. The server's rule is
+                  // "this reading has no successor yet" — it never asks whether
+                  // a later reading exists — so a mistake in an older entry that
+                  // a newer reading did not supersede stays fixable. Offering it
+                  // on the current row alone would strand exactly those.
+                  onCorrect={
+                    canWrite && onCorrect && !row.superseded
+                      ? () => onCorrect(row)
+                      : undefined
+                  }
+                />
               ))}
             </ul>
           </>
@@ -90,14 +97,16 @@ export function ProjectHealth({
   );
 }
 
-/** The judgement that stands, with the day it applies to and why. */
+/**
+ * The judgement that stands, with the day it applies to and why.
+ *
+ * It carries no verb of its own: this reading is drawn AGAIN in the history
+ * below, and a Correct here as well would be two controls for one row — the
+ * second of which a reader would reasonably read as correcting something else.
+ */
 function CurrentReading({
   assessment,
-  onCorrect,
-}: Readonly<{
-  assessment: ProjectHealthAssessment;
-  onCorrect?: () => void;
-}>) {
+}: Readonly<{ assessment: ProjectHealthAssessment }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -110,21 +119,17 @@ function CurrentReading({
         })}
       </span>
       {assessment.note && <p>{assessment.note}</p>}
-      {/* Correcting is offered on the reading that STANDS and on no other. A
-          superseded row has already been answered, and the server refuses a
-          second correction of it. */}
-      {onCorrect && (
-        <Button variant="ghost" onClick={onCorrect}>
-          {t("projectHealth.correct")}
-        </Button>
-      )}
     </div>
   );
 }
 
 function HistoryRow({
   assessment,
-}: Readonly<{ assessment: ProjectHealthAssessment }>) {
+  onCorrect,
+}: Readonly<{
+  assessment: ProjectHealthAssessment;
+  onCorrect?: () => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -140,6 +145,18 @@ function HistoryRow({
       <span className="healthlog-reading">
         <StateBadge state={assessment.state} />
         {assessment.note}
+        {onCorrect && (
+          <Button
+            small
+            variant="ghost"
+            onClick={onCorrect}
+            aria-label={t("projectHealth.correctOne", {
+              date: formatDate(assessment.assessed_at, locale, recordZone),
+            })}
+          >
+            {t("projectHealth.correct")}
+          </Button>
+        )}
       </span>
     </li>
   );

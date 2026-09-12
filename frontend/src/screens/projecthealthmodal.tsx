@@ -21,6 +21,21 @@ const STATES: readonly ProjectHealthState[] = [
 ];
 
 /**
+ * Trim the way the SERVER trims, so the form and the save agree on what counts
+ * as an empty note.
+ *
+ * Go's `strings.TrimSpace` cuts every Unicode space character. JavaScript's
+ * `String.prototype.trim` cuts almost the same set and leaves U+0085 (NEXT
+ * LINE) standing. A note holding only that character therefore satisfied this
+ * form's "a note is present" check and was refused by the server as missing —
+ * the exact failure the check exists to prevent, reached through the one
+ * character nobody would think to look for.
+ */
+function serverTrim(value: string): string {
+  return value.replace(/^[\s\u0085]+|[\s\u0085]+$/gu, "");
+}
+
+/**
  * Recording how the delivery is going, or correcting a reading that was wrong.
  *
  * One modal for both, because they ask the same two questions and differ only
@@ -84,7 +99,7 @@ export function ProjectHealthModal({
     resetCorrect();
   }, [open, correcting, resetRecord, resetCorrect]);
 
-  const trimmed = note.trim();
+  const trimmed = serverTrim(note);
   // The server's own rule, stated here rather than discovered through a 422.
   const noteMissing = state !== "on_track" && trimmed === "";
 

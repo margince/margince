@@ -8861,6 +8861,7 @@ export const vi = {
   "projectHealth.state.offTrack": "Ch\u1ec7ch k\u1ebf ho\u1ea1ch",
   "projectHealth.record": "Ghi nhận đánh giá",
   "projectHealth.correct": "Sửa lại",
+  "projectHealth.correctOne": "Sửa đánh giá ngày {date}",
   "projectHealth.recordTitle": "Ghi nhận việc bàn giao đang diễn ra thế nào",
   "projectHealth.correctTitle": "Sửa lại đánh giá này",
   "projectHealth.stateLabel": "Tình hình ra sao",

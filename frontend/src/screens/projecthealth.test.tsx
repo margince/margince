@@ -87,7 +87,9 @@ it("offers no way in on a project this reader cannot write", async () => {
     0,
   );
   expect(screen.queryByRole("button", { name: "Record a reading" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Correct this" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /^Correct the reading of/ }),
+  ).toBeNull();
 });
 
 it("offers no way in over a read that failed", async () => {
@@ -99,9 +101,14 @@ it("offers no way in over a read that failed", async () => {
   expect(screen.queryByRole("button", { name: "Record a reading" })).toBeNull();
 });
 
-it("offers a correction on the reading that stands and on no other", async () => {
+it("offers a correction on every reading the server would still accept one for", async () => {
   const corrected: string[] = [];
-  stubFetch([CURRENT, SUPERSEDED]);
+  // An OLDER reading that nothing superseded, beside a newer one and a
+  // corrected one. The server's rule is "this reading has no successor yet" —
+  // it never asks whether a later reading exists — so the older row is still
+  // correctable and must say so.
+  const OLDER = { ...CURRENT, id: "h0", note: "Kickoff looked fine." };
+  stubFetch([CURRENT, OLDER, SUPERSEDED]);
   render(
     <ProjectHealth
       projectId={PROJECT_ID}
@@ -110,13 +117,29 @@ it("offers a correction on the reading that stands and on no other", async () =>
     />,
   );
   const buttons = await screen.findAllByRole("button", {
-    name: "Correct this",
+    name: /^Correct the reading of/,
   });
-  // One, not two: the superseded row has already been answered and the server
-  // refuses a second correction of it.
-  expect(buttons).toHaveLength(1);
-  await userEvent.click(buttons[0]);
-  expect(corrected).toEqual(["h2"]);
+  // Two, not one and not three: both unsuperseded rows, and never the row that
+  // has already been answered.
+  expect(buttons).toHaveLength(2);
+  await userEvent.click(buttons[1]);
+  expect(corrected).toEqual(["h0"]);
+});
+
+it("counts a note the server would call empty as empty", async () => {
+  stubFetch([]);
+  render(<ProjectHealthModal open onClose={() => {}} projectId={PROJECT_ID} />);
+  await userEvent.click(screen.getByRole("button", { name: "At risk" }));
+  // U+0085 is the one character Go's TrimSpace cuts and JavaScript's trim does
+  // not. A note holding only that would have passed the form and been refused
+  // by the server as missing.
+  const box = screen.getByRole("textbox") as HTMLTextAreaElement;
+  await userEvent.click(box);
+  await userEvent.paste(String.fromCodePoint(0x85));
+  expect(box.value).not.toBe("");
+  expect(
+    screen.getByRole("button", { name: "Record it" }).hasAttribute("disabled"),
+  ).toBe(true);
 });
 
 it("will not send a troubled reading without saying what is wrong", async () => {

@@ -8978,6 +8978,7 @@ export const de = {
   "projectHealth.state.offTrack": "Aus dem Plan",
   "projectHealth.record": "Einschätzung festhalten",
   "projectHealth.correct": "Korrigieren",
+  "projectHealth.correctOne": "Einschätzung vom {date} korrigieren",
   "projectHealth.recordTitle": "Festhalten, wie die Lieferung läuft",
   "projectHealth.correctTitle": "Diese Einschätzung korrigieren",
   "projectHealth.stateLabel": "Wie es läuft",
