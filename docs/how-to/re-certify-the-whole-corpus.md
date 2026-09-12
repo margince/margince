@@ -20,8 +20,12 @@ repeat any of that.
 ## 1. Capture the report BEFORE you spend
 
 ```bash
-cd backend && make e2e-ai-report | tee ../.tmp/readiness-before.txt
+mkdir -p .tmp
+(cd backend && make e2e-ai-report) | tee .tmp/readiness-before.txt
 ```
+
+`.tmp/` is gitignored and may not exist yet — this step runs before anything
+else has written there.
 
 This is not bookkeeping. A stale row names **which half of its stamp moved** —
 the case, the prompt this build sends, or the grader — and that is the only
@@ -148,8 +152,12 @@ unactionable artifact the stamps exist to prevent.
 
 ## 5. Re-run only what you changed
 
-A prompt fix moves that task's stamp and nothing else, so the re-run is one task
-on each preset — seconds and cents, not another sweep:
+**Let the report say what to re-run, rather than assuming your fix was
+task-local.** A prompt edit inside one task's builder moves that task's stamp and
+nothing else, and the re-run is then one task on each preset — seconds and cents,
+not another sweep. An edit to something SHARED moves every stamp that reads it,
+which is the same blast radius that put you here in §1. `make e2e-ai-report`
+tells the two apart for free, and it is the only thing that does:
 
 ```bash
 cd backend
@@ -159,6 +167,11 @@ make e2e-ai TASK=<task> ROUTING=config/presets/gemini_cloud.yaml \
 make e2e-ai TASK=<task> ROUTING=config/presets/openrouter_cloud.yaml \
   JUDGE=gemini:gemini-3.5-flash RESUME=
 ```
+
+Run it again afterwards and read the headline: every site current means the fix
+was as local as you thought. Anything still `stale` is a task your change
+reached and this re-run did not — repeat for each, or sweep §2 again if the list
+is long.
 
 `RESUME=` (empty) forces fresh measurement: the point of this run is that the
 prompt changed, and a replayed journal would answer the old one.
