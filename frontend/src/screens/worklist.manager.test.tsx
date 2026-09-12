@@ -15,7 +15,7 @@
 // reason from the other side: what it OFFERS is a promise about where a press
 // lands, and a choice that leads nowhere draws exactly like one that works.
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

@@ -227,6 +227,21 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // The DESKTOP viewport, stated rather than inherited.
+    //
+    // A list header folds its verbs into one overflow menu at or under
+    // NARROW_MAX_WIDTH (1100, app/viewport.ts), and it asks matchMedia. Under
+    // jsdom that question was never really asked: jsdom ships no matchMedia, so
+    // vitest.setup.ts installed a stub answering `matches: false` to everything
+    // — which happens to mean "not narrow", and every suite asserting a primary
+    // action on a list header rested on that accident. happy-dom ships a real
+    // matchMedia over a 1024-wide window, so the same suites saw the narrow
+    // arrangement and could not find a button that was in the overflow.
+    //
+    // 1280 is a desktop, which is the arrangement those suites are about. A
+    // suite testing the folded one sets its own width; what must not happen
+    // again is the width being decided by which environment is installed.
+    environmentOptions: { happyDOM: { width: 1280, height: 900 } },
     // Worker threads rather than child processes. Every test file still gets
     // its own module graph and its own jsdom (isolation is unchanged — the
     // suite has module-level state that a shared graph breaks, measured at 28

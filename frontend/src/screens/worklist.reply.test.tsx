@@ -6,7 +6,7 @@
 // The row a rep meets most often is somebody who wrote and nobody answered, and
 // it used to send them to the record to press Reply there.
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { day, renderWorklist, row, stub } from "./worklist.testkit";

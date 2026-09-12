@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { locationDouble } from "../testing/locationdouble";
 import { ConnectorsCard } from "./connectors";
 import { installFetchStub } from "./story-utils";
 
@@ -369,7 +370,7 @@ describe("the connected-inboxes card", () => {
 
   it("reconnect re-mints the consent URL and redirects", async () => {
     const assign = vi.fn();
-    vi.stubGlobal("location", { ...globalThis.location, assign });
+    vi.stubGlobal("location", locationDouble({ assign }));
     const calls = stubApi([gmailStale], {
       connect: { authorize_url: "https://accounts.google/consent" },
     });
@@ -386,7 +387,7 @@ describe("the connected-inboxes card", () => {
   });
 
   it("sends return_to=settings on reconnect so consent lands back on Settings", async () => {
-    vi.stubGlobal("location", { ...globalThis.location, assign: vi.fn() });
+    vi.stubGlobal("location", locationDouble({ assign: vi.fn() }));
     const calls = stubApi([gmailStale], {
       connect: { authorize_url: "https://accounts.google/consent" },
     });
@@ -663,7 +664,7 @@ describe("add a connection", () => {
 
   it("redirects the browser when an OAuth provider is chosen", async () => {
     const assign = vi.fn();
-    vi.stubGlobal("location", { ...globalThis.location, assign });
+    vi.stubGlobal("location", locationDouble({ assign }));
     stubApi([gmailConnected], {
       connect: { authorize_url: "https://accounts.google/cal" },
     });

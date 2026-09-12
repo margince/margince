@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
@@ -167,16 +167,27 @@ describe("the margins, and whether this reader wants them", () => {
     // Storage is refused in some embedded contexts. Persisting is the
     // enhancement; a switch that visibly does nothing when pressed is not a
     // degraded feature, it is a broken control.
-    vi.spyOn(window.localStorage, "setItem").mockImplementation(() => {
-      throw new Error("storage is not available here");
-    });
-    render(<AgentEdge />);
+    const refuses = vi
+      .spyOn(window.localStorage, "setItem")
+      .mockImplementation(() => {
+        throw new Error("storage is not available here");
+      });
+    try {
+      render(<AgentEdge />);
 
-    act(() => setEdgeLightShown(false));
+      act(() => setEdgeLightShown(false));
 
-    expect(edgeLightShown()).toBe(false);
-    expect(margins()).toBeNull();
-    vi.restoreAllMocks();
+      expect(edgeLightShown()).toBe(false);
+      expect(margins()).toBeNull();
+    } finally {
+      // THIS spy, in a finally, rather than vi.restoreAllMocks() after the
+      // assertions. Two reasons, and the second is what broke: restoring
+      // everything from inside one case reaches mocks the case did not install,
+      // and a restore that only runs when the assertions pass leaves a storage
+      // that throws installed for every case after a failure — which is a
+      // cascade of failures naming the wrong tests.
+      refuses.mockRestore();
+    }
   });
 
   // A fresh module is what makes this a claim about BOOT: the store resolves
