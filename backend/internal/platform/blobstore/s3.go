@@ -12,6 +12,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/encrypt"
 )
 
 // Config is the S3-compatible store's wiring, populated from operator
@@ -25,13 +26,22 @@ type Config struct {
 	Bucket    string
 	Region    string // default "us-east-1"
 	UseSSL    bool   // false for local MinIO
+	// KMSKeyID, set, sends explicit SSE-KMS headers on every PutObject so the
+	// bucket's own default-encryption enforcement (deploy/terraform/aws/s3.tf)
+	// can safely deny any write that doesn't carry them, instead of trusting
+	// every future caller to never regress onto AES256 or the wrong key.
+	// Empty for a MinIO deployment with no KMS to speak of, in which case the
+	// object is written with whatever the bucket's own default applies (or
+	// none, for local dev).
+	KMSKeyID string
 }
 
 // s3Store is the S3-compatible Store (MinIO in dev). It holds only bytes;
 // isolation lives in the workspace-prefixed key the caller supplies.
 type s3Store struct {
-	client *minio.Client
-	bucket string
+	client   *minio.Client
+	bucket   string
+	kmsKeyID string
 }
 
 // New builds an S3-compatible store and ensures its bucket exists. It
@@ -67,7 +77,7 @@ func New(ctx context.Context, cfg Config) (Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("blobstore: new client: %w", err)
 	}
-	s := &s3Store{client: client, bucket: cfg.Bucket}
+	s := &s3Store{client: client, bucket: cfg.Bucket, kmsKeyID: cfg.KMSKeyID}
 	if err := s.ensureBucket(ctx, region); err != nil {
 		return nil, err
 	}
@@ -122,7 +132,18 @@ func backoff(attempt int) time.Duration {
 }
 
 func (s *s3Store) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
-	if _, err := s.client.PutObject(ctx, s.bucket, key, r, size, minio.PutObjectOptions{ContentType: contentType}); err != nil {
+	opts := minio.PutObjectOptions{ContentType: contentType}
+	if s.kmsKeyID != "" {
+		// The nil context never actually fails NewSSEKMS (it only marshals a
+		// non-nil one to JSON), but the signature still returns an error and
+		// this package swallows none.
+		sse, err := encrypt.NewSSEKMS(s.kmsKeyID, nil)
+		if err != nil {
+			return fmt.Errorf("blobstore: put %q: sse-kms config: %w", key, err)
+		}
+		opts.ServerSideEncryption = sse
+	}
+	if _, err := s.client.PutObject(ctx, s.bucket, key, r, size, opts); err != nil {
 		return fmt.Errorf("blobstore: put %q: %w", key, err)
 	}
 	return nil

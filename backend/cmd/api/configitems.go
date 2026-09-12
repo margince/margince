@@ -41,6 +41,7 @@ var apiPublic = map[string]bool{
 	"MARGINCE_LOG_LEVEL":         true,
 	"MARGINCE_LOG_FORMAT":        true,
 	"MARGINCE_REDIS":             true,
+	"MARGINCE_REDIS_TLS":         true,
 	"MARGINCE_PUBLIC_BASE_URL":   true,
 	"MARGINCE_API_BASE_URL":      true,
 	"MARGINCE_MCP_APPS_BASE_URL": true,

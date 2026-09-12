@@ -22,6 +22,7 @@ const (
 	EnvRegion    = "MARGINCE_BLOBSTORE_REGION"
 	EnvUseSSL    = "MARGINCE_BLOBSTORE_USE_SSL"
 	EnvPath      = "MARGINCE_BLOBSTORE_PATH"
+	EnvKMSKeyID  = "MARGINCE_BLOBSTORE_KMS_KEY_ID"
 )
 
 // FromEnv builds a Store from the MARGINCE_BLOBSTORE_* configuration. Secrets
@@ -61,6 +62,7 @@ func FromEnv(ctx context.Context, env config.Lookup) (store Store, configured bo
 		Bucket:    env(EnvBucket),
 		Region:    env(EnvRegion),
 		UseSSL:    env(EnvUseSSL) == "true",
+		KMSKeyID:  env(EnvKMSKeyID),
 	})
 	if err != nil {
 		return nil, false, err
@@ -103,6 +105,10 @@ func ConfigItems() []config.Item {
 		{
 			Name: EnvPath, Kind: config.KindString, Roles: worker,
 			Doc: "directory attachment bytes are written to, for an installation with no object storage service; IGNORED when MARGINCE_BLOBSTORE_ENDPOINT is set, which wins",
+		},
+		{
+			Name: EnvKMSKeyID, Kind: config.KindString, Roles: worker,
+			Doc: "KMS key id/ARN to request via explicit SSE-KMS headers on every PutObject; unset writes with whatever the bucket's own default encryption applies (or none, for local MinIO). Set this to let deploy/terraform/aws/s3.tf's bucket policy safely deny any write that doesn't carry it",
 		},
 	}
 }
