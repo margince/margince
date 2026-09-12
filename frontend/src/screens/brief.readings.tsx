@@ -97,6 +97,20 @@ type Reading = Readonly<{
   lane: WorklistFilter;
   /** What this reading's door says, so five doors are not five "Open"s. */
   openLabel: string;
+  /**
+   * This slot spans the whole day rather than naming one topic, so its door
+   * stands even at zero.
+   *
+   * A TOPIC's zero has nothing behind it and its door is a trip: "no meetings
+   * today" leads to an empty lane framed by every other slot's urgent count,
+   * which reads as a broken filter. The spanning slot is not a topic — it is
+   * the strip's way into the worklist at all, and a clear morning is exactly
+   * when a reader wants to go and look.
+   *
+   * Declared by the caller rather than read off `lane`, so this component never
+   * has to know which of its callers' values is the special one.
+   */
+  spans?: boolean;
 }>;
 
 /**
@@ -120,6 +134,7 @@ function LaneReading({
   floor,
   lane,
   openLabel,
+  spans,
 }: Reading) {
   const t = useT();
   const { locale } = useLocale();
@@ -128,6 +143,18 @@ function LaneReading({
   // that counts something and nowhere else. A bounded read that found none of
   // a kind is a reading of zero, and the `+` was noise on it.
   const marked = floor === true && count > 0;
+  // A DOOR INTO NOTHING IS NOT REASSURANCE, it is a trip. A topic's confirmed
+  // zero has no rows behind it, so its door lands the reader in an empty lane
+  // framed by the urgent counts of every other slot — which reads as a filter
+  // they broke rather than as a morning with none of that kind.
+  //
+  // Three things keep a door, and each is a different reason:
+  //   - a figure that counts something, which has rows to show;
+  //   - a BOUNDED zero, because "none so far, and the read stopped early" is a
+  //     question the worklist can still answer where "none" is not. `floor`
+  //     tells those apart and is already on this slot for the `+` mark;
+  //   - the SPANNING slot, which is the strip's way into the worklist at all.
+  const openable = count > 0 || floor === true || spans === true;
   // The tip rides the whole CELL rather than the three characters that carry
   // the mark: a `+` that explains itself only to a pointer resting on it is a
   // mark most readers never read. Focus reaches it too — the card's own door is
@@ -145,7 +172,7 @@ function LaneReading({
       // same air. At the tile's default floor the day's own work started below
       // the fold on a laptop.
       density="compact"
-      onOpen={() => openLane(lane)}
+      onOpen={openable ? () => openLane(lane) : undefined}
       openLabel={openLabel}
     />
   );
@@ -204,6 +231,10 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // 2; opening `all` landed a reader who was sent by a 4 in a list of
           // thirty, with nothing saying which four it meant.
           lane="urgent"
+          // The one slot that is not a topic: its door stands at zero, because
+          // a clear morning is exactly when a reader goes to look for
+          // themselves. Every other slot's zero is a dead end.
+          spans
         />
         <LaneReading
           label={t("brief.readings.meetings")}
