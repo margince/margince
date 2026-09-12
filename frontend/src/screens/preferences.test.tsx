@@ -75,6 +75,17 @@ const CENTER = {
       choice: "opted_out",
       can_opt_in: true,
     },
+    // A purpose the subject once had and took back, needing a confirmation
+    // round trip to have again. The row this page used to refuse to offer.
+    {
+      key: "doi_news",
+      label: "Research digest",
+      state: "withdrawn",
+      locked: false,
+      grant_needs_confirmation: true,
+      choice: "opted_out",
+      can_opt_in: false,
+    },
   ],
 };
 
@@ -456,5 +467,174 @@ describe("one-click unsubscribe (G-7)", () => {
 
     expect((await screen.findAllByRole("checkbox")).length).toBeGreaterThan(0);
     expect(screen.queryAllByRole("switch")).toHaveLength(0);
+  });
+
+  // THE ROW USED TO BE DISABLED, and that was right while the write always
+  // failed: the subject could turn a subscription off and never back on, and
+  // the mint guard refuses anybody doing it for them. A withdrawal was
+  // permanent, and a dead switch at least said so honestly.
+  //
+  // The server now mails a confirmation instead of refusing, so withholding
+  // the switch would withhold the only route back to a subscription somebody
+  // once wanted.
+  it("offers the switch for a purpose that needs a confirmation", async () => {
+    stubCenter();
+    render(<PreferenceCenterScreen token="tok-123" />);
+
+    expect(
+      await screen.findByRole("checkbox", { name: "Research digest" }),
+    ).toBeEnabled();
+  });
+
+  // AND SAYS WHAT PRESSING IT DOES, because the outcome is not the one a
+  // checkbox implies: nothing is subscribed until a link is clicked elsewhere.
+  it("still says a confirmation is needed", async () => {
+    stubCenter();
+    render(<PreferenceCenterScreen token="tok-123" />);
+
+    await screen.findByRole("checkbox", { name: "Research digest" });
+    expect(
+      screen.getByText(en["prefs.confirmationNeededWhy"]),
+    ).toBeInTheDocument();
+  });
+
+  // THE CHOICE REACHES THE SERVER. Stripped here, the subject would tick the
+  // box, press save, and nothing at all would happen — the same dead end the
+  // old blocked switch was built to be honest about, one layer up.
+  it("submits the grant so the server can mail its confirmation", async () => {
+    const sent: Sent[] = [];
+    stubCenter({}, sent);
+    render(<PreferenceCenterScreen token="tok-123" />);
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Research digest" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    const put = sent.find((r) => r.key === "PUT /public/preferences/tok-123");
+    if (!put)
+      throw new Error("nothing was PUT, so no choice reached the server");
+    const { choices } = put.body as { choices: { purpose_key: string }[] };
+    expect(choices.map((choice) => choice.purpose_key)).toContain("doi_news");
+  });
+
+  // AN INELIGIBLE SUBJECT IS REFUSED AT THE ROW, not silently at the server.
+  //
+  // can_opt_in conflates two things: whether a purpose needs a round trip, and
+  // whether this SUBJECT may take a grant at all — an archived or Art. 17
+  // anonymised record whose erasure destroyed the capability. Unblocking the
+  // DOI row meant no longer reading that flag directly, and without the
+  // subject-level half recovered separately the page would offer a checkbox
+  // the server refuses with `cannot_grant` and say nothing about it.
+  it("refuses the switch when the subject cannot be granted anything", async () => {
+    stubCenter({
+      "GET /public/preferences/tok-123": () =>
+        jsonResponse({
+          ...CENTER,
+          // Every decidable purpose closed to opt-in: the refusal is about the
+          // record, not about any one subscription.
+          purposes: CENTER.purposes.map((purpose) => ({
+            ...purpose,
+            can_opt_in: false,
+          })),
+        }),
+    });
+    render(<PreferenceCenterScreen token="tok-123" />);
+
+    expect(
+      await screen.findByRole("checkbox", { name: "Research digest" }),
+    ).toBeDisabled();
+    expect(
+      screen.getAllByText(en["prefs.cannotGrantWhy"]).length,
+    ).toBeGreaterThan(0);
+  });
+
+  // A RELAY FAULT IS NOT A REFUSAL, and the page must not report it as one —
+  // nor stay silent, which is what it did before: the tick simply vanished on
+  // the refetch with nothing said.
+  it("says the confirmation could not be sent rather than nothing", async () => {
+    stubCenter({
+      "PUT /public/preferences/tok-123": () =>
+        jsonResponse({
+          ...CENTER,
+          refused: [
+            { purpose_key: "doi_news", reason: "confirmation_unavailable" },
+          ],
+        }),
+    });
+    render(<PreferenceCenterScreen token="tok-123" />);
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Research digest" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    expect(
+      await screen.findByText(/could not send the confirmation/i),
+    ).toBeInTheDocument();
+    // And NOT the success sentence: telling somebody to check their email for
+    // a message this installation could not send sends them looking for a
+    // fault on their own side.
+    expect(screen.queryByText(/check your email/i)).not.toBeInTheDocument();
+  });
+
+  // THE NOTICE DOES NOT OUTLIVE THE SAVE THAT PRODUCED IT. A later save with
+  // nothing pending would otherwise leave "check your email" standing about a
+  // choice the subject has since changed.
+  it("clears the pending notice on the next ordinary save", async () => {
+    let pending = true;
+    stubCenter({
+      "PUT /public/preferences/tok-123": () => {
+        const refused = pending
+          ? [{ purpose_key: "doi_news", reason: "confirmation_sent" }]
+          : [];
+        pending = false;
+        return jsonResponse({ ...CENTER, refused });
+      },
+    });
+    render(<PreferenceCenterScreen token="tok-123" />);
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Research digest" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText(/check your email/i);
+
+    await userEvent.click(
+      screen.getByRole("checkbox", {
+        name: en["prefs.purpose.marketing_email"],
+      }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() =>
+      expect(screen.queryByText(/check your email/i)).not.toBeInTheDocument(),
+    );
+  });
+
+  // A PENDING SUBSCRIBE IS NOT A FAILURE AND NOT A PLAIN SUCCESS. The purpose
+  // rows come back unchanged — nothing is granted until the link is clicked —
+  // so a page that said nothing here would show the subject their tick
+  // vanishing with no explanation.
+  it("tells the subject a confirmation link is on its way", async () => {
+    stubCenter({
+      "PUT /public/preferences/tok-123": () =>
+        jsonResponse({
+          ...CENTER,
+          refused: [{ purpose_key: "doi_news", reason: "confirmation_sent" }],
+        }),
+    });
+    render(<PreferenceCenterScreen token="tok-123" />);
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Research digest" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    // It names WHICH subscription is waiting, in the notice itself: somebody
+    // who ticked two boxes needs to know which one is pending, and the rows
+    // cannot show it — nothing about them changed.
+    const notice = await screen.findByText(/check your email/i);
+    expect(notice).toHaveTextContent("Research digest");
   });
 });

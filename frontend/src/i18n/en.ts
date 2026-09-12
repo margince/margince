@@ -6447,6 +6447,15 @@ export const en = {
     "We record the exact wording you saw and a timestamp as proof — then it applies to every future send.",
   "prefs.save": "Save preferences",
   "prefs.discard": "Discard",
+  "prefs.cannotGrant":
+    "We cannot start {purposes} on this record. If you think that is wrong, reply to any of our emails and we will look into it.",
+  "prefs.cannotGrantWhy": "This cannot be switched on for this record.",
+  "prefs.choiceNotApplied":
+    "One of your choices did not take effect. Your current settings are shown above.",
+  "prefs.confirmationSent":
+    "Almost there: check your email and click the link to confirm {purposes}. That subscription does not start until you do.",
+  "prefs.confirmationUnavailable":
+    "We could not send the confirmation email for {purposes}, so it has not started. Please try again later.",
   "prefs.partialSave":
     "Something went wrong part-way. Some of your choices may have been saved — we've reloaded your current settings so you can see exactly where you stand.",
   "prefs.wording.business_correspondence":

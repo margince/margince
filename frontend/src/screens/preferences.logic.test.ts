@@ -61,8 +61,9 @@ const doiPurposes: PurposeView[] = [
     state: "withdrawn",
     locked: false,
     choice: "opted_out",
-    // A purpose needing a confirmation round-trip cannot be granted from
-    // here either, for the same reason a locked one cannot.
+    // can_opt_in is the SERVER's own field and stays as the server sends it.
+    // What changed is what the page does with a grant: it submits one, and the
+    // server answers by mailing a confirmation rather than refusing.
     can_opt_in: false,
     grant_needs_confirmation: true,
   },
@@ -173,11 +174,20 @@ describe("choice building", () => {
 });
 
 describe("a purpose needing a confirmation round-trip", () => {
-  // The defect this holds: the page offered the switch, the contact turned it
-  // on, and the save came back 422 with nothing recorded.
-  it("never submits a grant the server refuses", () => {
+  // THIS USED TO ASSERT THE OPPOSITE, and the reversal is the point.
+  //
+  // The grant was stripped here because the server refused it: submitting one
+  // came back 422 with nothing recorded, and it took the rest of the save with
+  // it. So a subscription could be turned off and never back on, and the mint
+  // guard refuses anybody doing it for the subject — a withdrawal was permanent.
+  //
+  // The server now mails a confirmation link instead of refusing. Stripping the
+  // choice here would mean the subject ticked the box, pressed save, and
+  // nothing happened at all — the same dead end, one layer up and without the
+  // honesty of the old blocked switch.
+  it("submits a grant so the server can mail its confirmation", () => {
     const draft = { doi_newsletter: true, doi_granted: true };
-    expect(dirtyKeys(doiPurposes, draft)).toEqual([]);
+    expect(dirtyKeys(doiPurposes, draft)).toEqual(["doi_newsletter"]);
   });
 
   // And the half that must keep working: an unsubscribe is honoured, so

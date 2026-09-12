@@ -6287,6 +6287,15 @@ export const de = {
     "Wir speichern den genauen Wortlaut, den du gesehen hast, und einen Zeitstempel als Nachweis — danach gilt er für jeden künftigen Versand.",
   "prefs.save": "Einstellungen speichern",
   "prefs.discard": "Verwerfen",
+  "prefs.cannotGrant":
+    "F\u00fcr diesen Datensatz k\u00f6nnen wir {purposes} nicht starten. Wenn das nicht stimmt, antworten Sie auf eine unserer E-Mails \u2014 ein Mensch sieht nach.",
+  "prefs.cannotGrantWhy": "F\u00fcr diesen Datensatz nicht aktivierbar.",
+  "prefs.choiceNotApplied":
+    "Eine Ihrer Auswahlen wurde nicht \u00fcbernommen. Oben sehen Sie Ihre aktuellen Einstellungen.",
+  "prefs.confirmationSent":
+    "Fast geschafft: Bitte pr\u00fcfen Sie Ihre E-Mails und best\u00e4tigen Sie {purposes} \u00fcber den Link. Bis dahin startet dieses Abo nicht.",
+  "prefs.confirmationUnavailable":
+    "Wir konnten die Best\u00e4tigungs-E-Mail f\u00fcr {purposes} nicht senden, daher wurde nichts gestartet. Bitte versuchen Sie es sp\u00e4ter erneut.",
   "prefs.partialSave":
     "Beim Speichern ist etwas schiefgelaufen. Einige deiner Entscheidungen wurden möglicherweise schon übernommen — wir haben deinen aktuellen Stand neu geladen, damit du genau siehst, wo du stehst.",
   "prefs.wording.business_correspondence":
