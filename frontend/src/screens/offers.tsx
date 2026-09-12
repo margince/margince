@@ -15,7 +15,7 @@ import {
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { MoneyInput } from "../design-system/moneyinput";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -29,6 +29,14 @@ import {
   QueryGate,
   throwProblem,
 } from "./common";
+import {
+  EMPTY_LINE_BILLING,
+  type LineBilling,
+  lineBillingBody,
+  OfferLineBillingFields,
+} from "./offerlinebilling";
+import { NewLineRates } from "./offerlinerates";
+import { OfferTotalsPanel } from "./offerrecurring";
 import { searchProductCandidates } from "./products";
 
 // The offer 360: header, read-only totals, and a draft-only header edit whose
@@ -466,6 +474,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [newLine, setNewLine] = useState<NewLineState>(EMPTY_NEW_LINE);
+  const [billing, setBilling] = useState<LineBilling>(EMPTY_LINE_BILLING);
   const [priceTouched, setPriceTouched] = useState(false);
   const [product, setProduct] = useState<RecordPickerCandidate | null>(null);
 
@@ -741,44 +750,8 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
               />
             )}
           </Field>
-          <Field label={t("offer.discountPct")}>
-            {(control) => (
-              <input
-                {...control}
-                data-testid="new-line-discount"
-                type="number"
-                step="0.01"
-                className="input"
-                style={{ width: 90 }}
-                value={newLine.discount_pct}
-                onChange={(event) =>
-                  setNewLine((prev) => ({
-                    ...prev,
-                    discount_pct: event.target.value,
-                  }))
-                }
-              />
-            )}
-          </Field>
-          <Field label={t("offer.taxRate")}>
-            {(control) => (
-              <input
-                {...control}
-                data-testid="new-line-tax"
-                type="number"
-                step="0.01"
-                className="input"
-                style={{ width: 90 }}
-                value={newLine.tax_rate}
-                onChange={(event) =>
-                  setNewLine((prev) => ({
-                    ...prev,
-                    tax_rate: event.target.value,
-                  }))
-                }
-              />
-            )}
-          </Field>
+          <NewLineRates value={newLine} onChange={setNewLine} />
+          <OfferLineBillingFields value={billing} onChange={setBilling} />
         </div>
         <div
           style={{
@@ -824,6 +797,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                   newLine.tax_rate === ""
                     ? undefined
                     : Number(newLine.tax_rate),
+                ...lineBillingBody(billing),
               })
             }
           >
@@ -1318,7 +1292,6 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
 
 export function OfferScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const { locale } = useLocale();
   const [editing, setEditing] = useState(false);
   const offerQuery = useQuery({
     queryKey: ["offer", id],
@@ -1387,26 +1360,7 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
               {null}
             </Panel>
             <AiDisclosureBanner offer={offer} />
-            <Panel title={t("offer.totals")}>
-              <PanelRow>
-                <span className="t-label">{t("offer.net")}</span>
-                <div className="t-mono">
-                  {formatMoney(offer.net_minor, offer.currency, locale)}
-                </div>
-              </PanelRow>
-              <PanelRow>
-                <span className="t-label">{t("offer.tax")}</span>
-                <div className="t-mono">
-                  {formatMoney(offer.tax_minor, offer.currency, locale)}
-                </div>
-              </PanelRow>
-              <PanelRow>
-                <span className="t-label">{t("offer.gross")}</span>
-                <div className="t-mono">
-                  {formatMoney(offer.gross_minor, offer.currency, locale)}
-                </div>
-              </PanelRow>
-            </Panel>
+            <OfferTotalsPanel offer={offer} />
             <RenderOfferPdfAction offer={offer} />
             {offer.status === "draft" && <OfferLineEditor offer={offer} />}
             {offer.status === "draft" && (

@@ -79,14 +79,25 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 		return nil, fmt.Errorf("read deal for amount sync: %w", err)
 	}
 
-	// An offer priced in a different currency cannot re-denominate a recurring
-	// figure it says nothing about. The offer carries a one-off gross and no
-	// recurring component, so accepting it in a new currency would leave the
-	// ARR as a number in a currency nobody quoted it in. Refusing is atomic:
-	// the transaction rolls back, the deal keeps both figures, and the caller
-	// is told to settle the ARR first. An offer in the SAME currency is no
-	// conflict — the recurring figure still reads correctly.
-	if arrBefore != nil && currencyBefore != nil && *currencyBefore != offer.Currency {
+	// What the offer says about recurring value, if anything.
+	//
+	// A CLASSIFIED offer states the deal's recurring figure outright: its
+	// lines say what repeats and how often, so the ARR it derives is the
+	// answer and replaces whatever a human had typed. An offer whose lines are
+	// all one-off states that there is none, which is why zero is written
+	// rather than the figure being left alone — an offer of purely one-off
+	// work does not leave last quarter's subscription standing.
+	//
+	// An UNCLASSIFIED offer states nothing. Every offer written before this
+	// classification existed is unclassified, so this is the ordinary case for
+	// historical documents, and for those the older rule still holds: the
+	// deal's ARR is a human's figure, and an offer in another currency cannot
+	// re-denominate it.
+	offeredARR, offersARR, err := acceptedOfferARR(ctx, tx, ids.From[ids.OfferKind](ids.UUID(offer.Id)))
+	if err != nil {
+		return nil, err
+	}
+	if !offersARR && arrBefore != nil && currencyBefore != nil && *currencyBefore != offer.Currency {
 		return nil, &ArrCurrencyConflictError{From: *currencyBefore, To: offer.Currency}
 	}
 
@@ -100,6 +111,16 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	}
 	if currencyBefore == nil || *currencyBefore != offer.Currency {
 		p.Set(currencyField, currencyBefore, offer.Currency)
+	}
+	if offersARR {
+		// The provenance travels WITH the figure, in the same patch, so a deal
+		// can never hold an offer-derived ARR without naming the offer it came
+		// from — which is what the manual-edit lock reads to decide whether the
+		// figure is a human's to change.
+		if arrBefore == nil || *arrBefore != offeredARR {
+			p.Set(arrField, arrBefore, offeredARR)
+		}
+		p.Set(arrSourceField, nil, offer.Id)
 	}
 	if p.Empty() {
 		// The deal already holds this offer's figures: no write, so no history
@@ -117,4 +138,64 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 		return nil, fmt.Errorf("sync deal amount from offer: %w", err)
 	}
 	return p.After(), nil
+}
+
+// arrSourceField names the column recording which accepted offer stated a
+// deal's recurring figure.
+const arrSourceField = "arr_source_offer_id"
+
+// acceptedOfferARR derives what an offer says about recurring value, and
+// whether it says anything at all.
+//
+// It reads the LINES rather than trusting a wire struct, because the accept
+// path loads the offer row under a lock and never asks for its lines — a check
+// against the struct there would find an empty list and read every offer as
+// unclassified.
+//
+// An offer is classified when at least one accepted line carries a billing
+// model. That is a deliberately low bar: a document mixing a classified
+// subscription line with an unclassified one still states a recurring figure
+// for the part it classified, and demanding every line be classified would let
+// one un-updated line silence the whole offer.
+//
+// A fully unclassified offer says nothing, which is what every offer written
+// before this classification existed says.
+func acceptedOfferARR(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) (int64, bool, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT quantity::text, unit_price_minor, discount_pct::text, tax_rate::text,
+		        billing_model, billing_interval_months, interval_count
+		   FROM offer_line_item
+		  WHERE offer_id = $1 AND proposal_state = 'accepted'`, offerID)
+	if err != nil {
+		return 0, false, fmt.Errorf("read offer lines for recurring value: %w", err)
+	}
+	defer rows.Close()
+
+	var inputs []RecurringLineInput
+	classified := false
+	for rows.Next() {
+		var in RecurringLineInput
+		var model *string
+		if err := rows.Scan(&in.Line.Quantity, &in.Line.UnitPriceMinor,
+			&in.Line.DiscountPct, &in.Line.TaxRate,
+			&model, &in.IntervalMonths, &in.IntervalCount); err != nil {
+			return 0, false, err
+		}
+		if model != nil {
+			in.BillingModel = *model
+			classified = true
+		}
+		inputs = append(inputs, in)
+	}
+	if err := rows.Err(); err != nil {
+		return 0, false, err
+	}
+	if !classified {
+		return 0, false, nil
+	}
+	figures, err := OfferRecurringTotals(inputs)
+	if err != nil {
+		return 0, false, err
+	}
+	return figures.ArrMinor, true, nil
 }

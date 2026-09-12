@@ -6676,6 +6676,48 @@ func (e CreateLeadRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for CreateProductRequestBillingIntervalMonths.
+const (
+	CreateProductRequestBillingIntervalMonthsN1  CreateProductRequestBillingIntervalMonths = 1
+	CreateProductRequestBillingIntervalMonthsN12 CreateProductRequestBillingIntervalMonths = 12
+	CreateProductRequestBillingIntervalMonthsN3  CreateProductRequestBillingIntervalMonths = 3
+	CreateProductRequestBillingIntervalMonthsN6  CreateProductRequestBillingIntervalMonths = 6
+)
+
+// Valid indicates whether the value is a known member of the CreateProductRequestBillingIntervalMonths enum.
+func (e CreateProductRequestBillingIntervalMonths) Valid() bool {
+	switch e {
+	case CreateProductRequestBillingIntervalMonthsN1:
+		return true
+	case CreateProductRequestBillingIntervalMonthsN12:
+		return true
+	case CreateProductRequestBillingIntervalMonthsN3:
+		return true
+	case CreateProductRequestBillingIntervalMonthsN6:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateProductRequestBillingModel.
+const (
+	CreateProductRequestBillingModelOneTime   CreateProductRequestBillingModel = "one_time"
+	CreateProductRequestBillingModelRecurring CreateProductRequestBillingModel = "recurring"
+)
+
+// Valid indicates whether the value is a known member of the CreateProductRequestBillingModel enum.
+func (e CreateProductRequestBillingModel) Valid() bool {
+	switch e {
+	case CreateProductRequestBillingModelOneTime:
+		return true
+	case CreateProductRequestBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateRecordGrantRequestAccess.
 const (
 	CreateRecordGrantRequestAccessRead  CreateRecordGrantRequestAccess = "read"
@@ -9847,6 +9889,90 @@ func (e OfferStatus) Valid() bool {
 	}
 }
 
+// Defines values for OfferLineItemBillingIntervalMonths.
+const (
+	OfferLineItemBillingIntervalMonthsN1  OfferLineItemBillingIntervalMonths = 1
+	OfferLineItemBillingIntervalMonthsN12 OfferLineItemBillingIntervalMonths = 12
+	OfferLineItemBillingIntervalMonthsN3  OfferLineItemBillingIntervalMonths = 3
+	OfferLineItemBillingIntervalMonthsN6  OfferLineItemBillingIntervalMonths = 6
+)
+
+// Valid indicates whether the value is a known member of the OfferLineItemBillingIntervalMonths enum.
+func (e OfferLineItemBillingIntervalMonths) Valid() bool {
+	switch e {
+	case OfferLineItemBillingIntervalMonthsN1:
+		return true
+	case OfferLineItemBillingIntervalMonthsN12:
+		return true
+	case OfferLineItemBillingIntervalMonthsN3:
+		return true
+	case OfferLineItemBillingIntervalMonthsN6:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OfferLineItemBillingModel.
+const (
+	OfferLineItemBillingModelOneTime   OfferLineItemBillingModel = "one_time"
+	OfferLineItemBillingModelRecurring OfferLineItemBillingModel = "recurring"
+)
+
+// Valid indicates whether the value is a known member of the OfferLineItemBillingModel enum.
+func (e OfferLineItemBillingModel) Valid() bool {
+	switch e {
+	case OfferLineItemBillingModelOneTime:
+		return true
+	case OfferLineItemBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OfferLineItemInputBillingIntervalMonths.
+const (
+	OfferLineItemInputBillingIntervalMonthsN1  OfferLineItemInputBillingIntervalMonths = 1
+	OfferLineItemInputBillingIntervalMonthsN12 OfferLineItemInputBillingIntervalMonths = 12
+	OfferLineItemInputBillingIntervalMonthsN3  OfferLineItemInputBillingIntervalMonths = 3
+	OfferLineItemInputBillingIntervalMonthsN6  OfferLineItemInputBillingIntervalMonths = 6
+)
+
+// Valid indicates whether the value is a known member of the OfferLineItemInputBillingIntervalMonths enum.
+func (e OfferLineItemInputBillingIntervalMonths) Valid() bool {
+	switch e {
+	case OfferLineItemInputBillingIntervalMonthsN1:
+		return true
+	case OfferLineItemInputBillingIntervalMonthsN12:
+		return true
+	case OfferLineItemInputBillingIntervalMonthsN3:
+		return true
+	case OfferLineItemInputBillingIntervalMonthsN6:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OfferLineItemInputBillingModel.
+const (
+	OfferLineItemInputBillingModelOneTime   OfferLineItemInputBillingModel = "one_time"
+	OfferLineItemInputBillingModelRecurring OfferLineItemInputBillingModel = "recurring"
+)
+
+// Valid indicates whether the value is a known member of the OfferLineItemInputBillingModel enum.
+func (e OfferLineItemInputBillingModel) Valid() bool {
+	switch e {
+	case OfferLineItemInputBillingModelOneTime:
+		return true
+	case OfferLineItemInputBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OmittedExtractionFieldReason.
 const (
 	OmittedExtractionFieldReasonNotConfidentlyStated OmittedExtractionFieldReason = "not_confidently_stated"
@@ -10477,6 +10603,48 @@ func (e PreferenceCenterRefusedReason) Valid() bool {
 	case PreferenceCenterRefusedReasonConfirmationSent:
 		return true
 	case PreferenceCenterRefusedReasonConfirmationUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProductBillingIntervalMonths.
+const (
+	ProductBillingIntervalMonthsN1  ProductBillingIntervalMonths = 1
+	ProductBillingIntervalMonthsN12 ProductBillingIntervalMonths = 12
+	ProductBillingIntervalMonthsN3  ProductBillingIntervalMonths = 3
+	ProductBillingIntervalMonthsN6  ProductBillingIntervalMonths = 6
+)
+
+// Valid indicates whether the value is a known member of the ProductBillingIntervalMonths enum.
+func (e ProductBillingIntervalMonths) Valid() bool {
+	switch e {
+	case ProductBillingIntervalMonthsN1:
+		return true
+	case ProductBillingIntervalMonthsN12:
+		return true
+	case ProductBillingIntervalMonthsN3:
+		return true
+	case ProductBillingIntervalMonthsN6:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProductBillingModel.
+const (
+	ProductBillingModelOneTime   ProductBillingModel = "one_time"
+	ProductBillingModelRecurring ProductBillingModel = "recurring"
+)
+
+// Valid indicates whether the value is a known member of the ProductBillingModel enum.
+func (e ProductBillingModel) Valid() bool {
+	switch e {
+	case ProductBillingModelOneTime:
+		return true
+	case ProductBillingModelRecurring:
 		return true
 	default:
 		return false
@@ -13522,6 +13690,93 @@ func (e UpdateLeadRequestStatus) Valid() bool {
 	case UpdateLeadRequestStatusEngaged:
 		return true
 	case UpdateLeadRequestStatusNew:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateOfferLineItemRequestBillingIntervalMonths.
+const (
+	UpdateOfferLineItemRequestBillingIntervalMonthsN1  UpdateOfferLineItemRequestBillingIntervalMonths = 1
+	UpdateOfferLineItemRequestBillingIntervalMonthsN12 UpdateOfferLineItemRequestBillingIntervalMonths = 12
+	UpdateOfferLineItemRequestBillingIntervalMonthsN3  UpdateOfferLineItemRequestBillingIntervalMonths = 3
+	UpdateOfferLineItemRequestBillingIntervalMonthsN6  UpdateOfferLineItemRequestBillingIntervalMonths = 6
+)
+
+// Valid indicates whether the value is a known member of the UpdateOfferLineItemRequestBillingIntervalMonths enum.
+func (e UpdateOfferLineItemRequestBillingIntervalMonths) Valid() bool {
+	switch e {
+	case UpdateOfferLineItemRequestBillingIntervalMonthsN1:
+		return true
+	case UpdateOfferLineItemRequestBillingIntervalMonthsN12:
+		return true
+	case UpdateOfferLineItemRequestBillingIntervalMonthsN3:
+		return true
+	case UpdateOfferLineItemRequestBillingIntervalMonthsN6:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateOfferLineItemRequestBillingModel.
+const (
+	UpdateOfferLineItemRequestBillingModelOneTime   UpdateOfferLineItemRequestBillingModel = "one_time"
+	UpdateOfferLineItemRequestBillingModelRecurring UpdateOfferLineItemRequestBillingModel = "recurring"
+)
+
+// Valid indicates whether the value is a known member of the UpdateOfferLineItemRequestBillingModel enum.
+func (e UpdateOfferLineItemRequestBillingModel) Valid() bool {
+	switch e {
+	case UpdateOfferLineItemRequestBillingModelOneTime:
+		return true
+	case UpdateOfferLineItemRequestBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateProductRequestBillingIntervalMonths.
+const (
+	UpdateProductRequestBillingIntervalMonthsN1  UpdateProductRequestBillingIntervalMonths = 1
+	UpdateProductRequestBillingIntervalMonthsN12 UpdateProductRequestBillingIntervalMonths = 12
+	UpdateProductRequestBillingIntervalMonthsN3  UpdateProductRequestBillingIntervalMonths = 3
+	UpdateProductRequestBillingIntervalMonthsN6  UpdateProductRequestBillingIntervalMonths = 6
+)
+
+// Valid indicates whether the value is a known member of the UpdateProductRequestBillingIntervalMonths enum.
+func (e UpdateProductRequestBillingIntervalMonths) Valid() bool {
+	switch e {
+	case UpdateProductRequestBillingIntervalMonthsN1:
+		return true
+	case UpdateProductRequestBillingIntervalMonthsN12:
+		return true
+	case UpdateProductRequestBillingIntervalMonthsN3:
+		return true
+	case UpdateProductRequestBillingIntervalMonthsN6:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateProductRequestBillingModel.
+const (
+	UpdateProductRequestBillingModelNotSpecified UpdateProductRequestBillingModel = "not_specified"
+	UpdateProductRequestBillingModelOneTime      UpdateProductRequestBillingModel = "one_time"
+	UpdateProductRequestBillingModelRecurring    UpdateProductRequestBillingModel = "recurring"
+)
+
+// Valid indicates whether the value is a known member of the UpdateProductRequestBillingModel enum.
+func (e UpdateProductRequestBillingModel) Valid() bool {
+	switch e {
+	case UpdateProductRequestBillingModelNotSpecified:
+		return true
+	case UpdateProductRequestBillingModelOneTime:
+		return true
+	case UpdateProductRequestBillingModelRecurring:
 		return true
 	default:
 		return false
@@ -25964,8 +26219,14 @@ type CreatePipelineRequest struct {
 // CreateProductRequest defines model for CreateProductRequest.
 type CreateProductRequest struct {
 	// Active Defaults to true.
-	Active   *bool  `json:"active,omitempty"`
-	Currency string `json:"currency"`
+	Active *bool `json:"active,omitempty"`
+
+	// BillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+	BillingIntervalMonths *CreateProductRequestBillingIntervalMonths `json:"billing_interval_months,omitempty"`
+
+	// BillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+	BillingModel *CreateProductRequestBillingModel `json:"billing_model,omitempty"`
+	Currency     string                            `json:"currency"`
 
 	// DefaultTaxRate Percent; defaults to 0.
 	DefaultTaxRate *float64 `json:"default_tax_rate,omitempty"`
@@ -25979,6 +26240,12 @@ type CreateProductRequest struct {
 	UnitPriceMinor       int64                  `json:"unit_price_minor"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CreateProductRequestBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+type CreateProductRequestBillingIntervalMonths int
+
+// CreateProductRequestBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+type CreateProductRequestBillingModel string
 
 // CreateProjectHealthAssessmentRequest defines model for CreateProjectHealthAssessmentRequest.
 type CreateProjectHealthAssessmentRequest struct {
@@ -26352,6 +26619,9 @@ type Deal struct {
 	AcquisitionSource *string    `json:"acquisition_source,omitempty"`
 	AmountMinor       *int64     `json:"amount_minor,omitempty"`
 	ArchivedAt        *time.Time `json:"archived_at,omitempty"`
+
+	// ArrSourceOfferId The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
+	ArrSourceOfferId *openapi_types.UUID `json:"arr_source_offer_id,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
@@ -30977,8 +31247,11 @@ type Offer struct {
 	AiDisclosure *string `json:"ai_disclosure,omitempty"`
 
 	// AiGenerated Art. 50 AI-assisted disclosure (features/07 §11 gate 9). true only on the response of the regenerate call that produced this draft revision; false on every other read — disclosure is stamped on the drafting call itself, not persisted across future reads.
-	AiGenerated    *bool               `json:"ai_generated,omitempty"`
-	ArchivedAt     *time.Time          `json:"archived_at,omitempty"`
+	AiGenerated *bool      `json:"ai_generated,omitempty"`
+	ArchivedAt  *time.Time `json:"archived_at,omitempty"`
+
+	// ArrMinor The annualized NET value of this offer's recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.
+	ArrMinor       *int64              `json:"arr_minor,omitempty"`
 	BuyerCompanyId *openapi_types.UUID `json:"buyer_company_id,omitempty"`
 
 	// BuyerSnapshot Buyer legal block captured at send time.
@@ -31023,6 +31296,9 @@ type Offer struct {
 	// NetMinor Σ line nets — derived, never client-set.
 	NetMinor *int64 `json:"net_minor,omitempty"`
 
+	// NetTcvMinor The total the buyer commits to: one-off lines in full, plus each recurring line's per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.
+	NetTcvMinor *int64 `json:"net_tcv_minor,omitempty"`
+
 	// OfferNumber Human-facing Angebot number, minted server-side, unique per workspace (with revision).
 	OfferNumber *string `json:"offer_number,omitempty"`
 
@@ -31059,8 +31335,13 @@ type OfferStatus string
 // optional product at line creation); `line_net_minor`/`line_tax_minor`/`line_total_minor`
 // are DERIVED server-side (formulas §12.6) and never stored or client-settable.
 type OfferLineItem struct {
-	CreatedAt   time.Time `json:"created_at"`
-	Description string    `json:"description"`
+	// BillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+	BillingIntervalMonths *OfferLineItemBillingIntervalMonths `json:"billing_interval_months,omitempty"`
+
+	// BillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+	BillingModel *OfferLineItemBillingModel `json:"billing_model,omitempty"`
+	CreatedAt    time.Time                  `json:"created_at"`
+	Description  string                     `json:"description"`
 
 	// DiscountPct 0–100, up to 2 decimal places.
 	DiscountPct float64 `json:"discount_pct"`
@@ -31068,6 +31349,9 @@ type OfferLineItem struct {
 	// Evidence {snippet, source_id} when AI-drafted (evidence-or-omit, features/07).
 	Evidence *map[string]interface{} `json:"evidence,omitempty"`
 	Id       openapi_types.UUID      `json:"id"`
+
+	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
+	IntervalCount *int `json:"interval_count,omitempty"`
 
 	// LineNetMinor round(qty × unit_price × (1 − discount_pct/100)) — server-computed.
 	LineNetMinor *int64 `json:"line_net_minor,omitempty"`
@@ -31106,12 +31390,26 @@ type OfferLineItem struct {
 	Version *RowVersion `json:"version,omitempty"`
 }
 
+// OfferLineItemBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+type OfferLineItemBillingIntervalMonths int
+
+// OfferLineItemBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+type OfferLineItemBillingModel string
+
 // OfferLineItemInput One line to add. With `product_id`, description/unit/unit_price_minor/tax_rate default
 // from the product (a SNAPSHOT — later product edits never touch the line); without it,
 // description and unit_price_minor are required. Totals are never accepted here (422).
 type OfferLineItemInput struct {
-	Description *string  `json:"description,omitempty"`
-	DiscountPct *float64 `json:"discount_pct,omitempty"`
+	// BillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+	BillingIntervalMonths *OfferLineItemInputBillingIntervalMonths `json:"billing_interval_months,omitempty"`
+
+	// BillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+	BillingModel *OfferLineItemInputBillingModel `json:"billing_model,omitempty"`
+	Description  *string                         `json:"description,omitempty"`
+	DiscountPct  *float64                        `json:"discount_pct,omitempty"`
+
+	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
+	IntervalCount *int `json:"interval_count,omitempty"`
 
 	// Position Defaults to the next free position.
 	Position  *int                `json:"position,omitempty"`
@@ -31123,6 +31421,12 @@ type OfferLineItemInput struct {
 	Unit           *string  `json:"unit,omitempty"`
 	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty"`
 }
+
+// OfferLineItemInputBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+type OfferLineItemInputBillingIntervalMonths int
+
+// OfferLineItemInputBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+type OfferLineItemInputBillingModel string
 
 // OfferListResponse defines model for OfferListResponse.
 type OfferListResponse struct {
@@ -31967,6 +32271,12 @@ type Product struct {
 	Active     bool       `json:"active"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
+	// BillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+	BillingIntervalMonths *ProductBillingIntervalMonths `json:"billing_interval_months,omitempty"`
+
+	// BillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+	BillingModel *ProductBillingModel `json:"billing_model,omitempty"`
+
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
 	CapturedBy *string   `json:"captured_by,omitempty"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -31997,6 +32307,12 @@ type Product struct {
 	Version              *RowVersion            `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ProductBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+type ProductBillingIntervalMonths int
+
+// ProductBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+type ProductBillingModel string
 
 // ProductListResponse defines model for ProductListResponse.
 type ProductListResponse struct {
@@ -36502,14 +36818,28 @@ type UpdateLeadSourceRequest struct {
 
 // UpdateOfferLineItemRequest Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
 type UpdateOfferLineItemRequest struct {
-	Description    *string  `json:"description,omitempty"`
-	DiscountPct    *float64 `json:"discount_pct,omitempty"`
+	// BillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+	BillingIntervalMonths *UpdateOfferLineItemRequestBillingIntervalMonths `json:"billing_interval_months,omitempty"`
+
+	// BillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+	BillingModel *UpdateOfferLineItemRequestBillingModel `json:"billing_model,omitempty"`
+	Description  *string                                 `json:"description,omitempty"`
+	DiscountPct  *float64                                `json:"discount_pct,omitempty"`
+
+	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
+	IntervalCount  *int     `json:"interval_count,omitempty"`
 	Position       *int     `json:"position,omitempty"`
 	Quantity       *float64 `json:"quantity,omitempty"`
 	TaxRate        *float64 `json:"tax_rate,omitempty"`
 	Unit           *string  `json:"unit,omitempty"`
 	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty"`
 }
+
+// UpdateOfferLineItemRequestBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+type UpdateOfferLineItemRequestBillingIntervalMonths int
+
+// UpdateOfferLineItemRequestBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+type UpdateOfferLineItemRequestBillingModel string
 
 // UpdateOfferRequest Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
 type UpdateOfferRequest struct {
@@ -36539,16 +36869,28 @@ type UpdatePipelineRequest struct {
 
 // UpdateProductRequest Any subset; omit a field to leave it unchanged. A price change never re-prices existing offer lines (they hold snapshots).
 type UpdateProductRequest struct {
-	Active               *bool                  `json:"active,omitempty"`
-	Currency             *string                `json:"currency,omitempty"`
-	DefaultTaxRate       *float64               `json:"default_tax_rate,omitempty"`
-	Description          *string                `json:"description,omitempty"`
-	Name                 *string                `json:"name,omitempty"`
-	Sku                  *string                `json:"sku,omitempty"`
-	Unit                 *string                `json:"unit,omitempty"`
-	UnitPriceMinor       *int64                 `json:"unit_price_minor,omitempty"`
-	AdditionalProperties map[string]interface{} `json:"-"`
+	Active *bool `json:"active,omitempty"`
+
+	// BillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+	BillingIntervalMonths *UpdateProductRequestBillingIntervalMonths `json:"billing_interval_months,omitempty"`
+
+	// BillingModel Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.
+	BillingModel         *UpdateProductRequestBillingModel `json:"billing_model,omitempty"`
+	Currency             *string                           `json:"currency,omitempty"`
+	DefaultTaxRate       *float64                          `json:"default_tax_rate,omitempty"`
+	Description          *string                           `json:"description,omitempty"`
+	Name                 *string                           `json:"name,omitempty"`
+	Sku                  *string                           `json:"sku,omitempty"`
+	Unit                 *string                           `json:"unit,omitempty"`
+	UnitPriceMinor       *int64                            `json:"unit_price_minor,omitempty"`
+	AdditionalProperties map[string]interface{}            `json:"-"`
 }
+
+// UpdateProductRequestBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
+type UpdateProductRequestBillingIntervalMonths int
+
+// UpdateProductRequestBillingModel Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.
+type UpdateProductRequestBillingModel string
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
 // `key` is absent for a different reason: the server mints it from the name and
@@ -48259,6 +48601,22 @@ func (a *CreateProductRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "active")
 	}
 
+	if raw, found := object["billing_interval_months"]; found {
+		err = json.Unmarshal(raw, &a.BillingIntervalMonths)
+		if err != nil {
+			return fmt.Errorf("error reading 'billing_interval_months': %w", err)
+		}
+		delete(object, "billing_interval_months")
+	}
+
+	if raw, found := object["billing_model"]; found {
+		err = json.Unmarshal(raw, &a.BillingModel)
+		if err != nil {
+			return fmt.Errorf("error reading 'billing_model': %w", err)
+		}
+		delete(object, "billing_model")
+	}
+
 	if raw, found := object["currency"]; found {
 		err = json.Unmarshal(raw, &a.Currency)
 		if err != nil {
@@ -48346,6 +48704,20 @@ func (a CreateProductRequest) MarshalJSON() ([]byte, error) {
 		object["active"], err = json.Marshal(a.Active)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'active': %w", err)
+		}
+	}
+
+	if a.BillingIntervalMonths != nil {
+		object["billing_interval_months"], err = json.Marshal(a.BillingIntervalMonths)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'billing_interval_months': %w", err)
+		}
+	}
+
+	if a.BillingModel != nil {
+		object["billing_model"], err = json.Marshal(a.BillingModel)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'billing_model': %w", err)
 		}
 	}
 
@@ -48605,6 +48977,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'archived_at': %w", err)
 		}
 		delete(object, "archived_at")
+	}
+
+	if raw, found := object["arr_source_offer_id"]; found {
+		err = json.Unmarshal(raw, &a.ArrSourceOfferId)
+		if err != nil {
+			return fmt.Errorf("error reading 'arr_source_offer_id': %w", err)
+		}
+		delete(object, "arr_source_offer_id")
 	}
 
 	if raw, found := object["captured_by"]; found {
@@ -48932,6 +49312,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.ArrSourceOfferId != nil {
+		object["arr_source_offer_id"], err = json.Marshal(a.ArrSourceOfferId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'arr_source_offer_id': %w", err)
 		}
 	}
 
@@ -50832,6 +51219,14 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 		delete(object, "archived_at")
 	}
 
+	if raw, found := object["arr_minor"]; found {
+		err = json.Unmarshal(raw, &a.ArrMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'arr_minor': %w", err)
+		}
+		delete(object, "arr_minor")
+	}
+
 	if raw, found := object["buyer_company_id"]; found {
 		err = json.Unmarshal(raw, &a.BuyerCompanyId)
 		if err != nil {
@@ -50950,6 +51345,14 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'net_minor': %w", err)
 		}
 		delete(object, "net_minor")
+	}
+
+	if raw, found := object["net_tcv_minor"]; found {
+		err = json.Unmarshal(raw, &a.NetTcvMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'net_tcv_minor': %w", err)
+		}
+		delete(object, "net_tcv_minor")
 	}
 
 	if raw, found := object["offer_number"]; found {
@@ -51087,6 +51490,13 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.ArrMinor != nil {
+		object["arr_minor"], err = json.Marshal(a.ArrMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'arr_minor': %w", err)
+		}
+	}
+
 	if a.BuyerCompanyId != nil {
 		object["buyer_company_id"], err = json.Marshal(a.BuyerCompanyId)
 		if err != nil {
@@ -51176,6 +51586,13 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 	object["net_minor"], err = json.Marshal(a.NetMinor)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'net_minor': %w", err)
+	}
+
+	if a.NetTcvMinor != nil {
+		object["net_tcv_minor"], err = json.Marshal(a.NetTcvMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'net_tcv_minor': %w", err)
+		}
 	}
 
 	object["offer_number"], err = json.Marshal(a.OfferNumber)
@@ -51291,6 +51708,22 @@ func (a *Product) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'archived_at': %w", err)
 		}
 		delete(object, "archived_at")
+	}
+
+	if raw, found := object["billing_interval_months"]; found {
+		err = json.Unmarshal(raw, &a.BillingIntervalMonths)
+		if err != nil {
+			return fmt.Errorf("error reading 'billing_interval_months': %w", err)
+		}
+		delete(object, "billing_interval_months")
+	}
+
+	if raw, found := object["billing_model"]; found {
+		err = json.Unmarshal(raw, &a.BillingModel)
+		if err != nil {
+			return fmt.Errorf("error reading 'billing_model': %w", err)
+		}
+		delete(object, "billing_model")
 	}
 
 	if raw, found := object["captured_by"]; found {
@@ -51425,6 +51858,20 @@ func (a Product) MarshalJSON() ([]byte, error) {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.BillingIntervalMonths != nil {
+		object["billing_interval_months"], err = json.Marshal(a.BillingIntervalMonths)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'billing_interval_months': %w", err)
+		}
+	}
+
+	if a.BillingModel != nil {
+		object["billing_model"], err = json.Marshal(a.BillingModel)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'billing_model': %w", err)
 		}
 	}
 
@@ -53906,6 +54353,22 @@ func (a *UpdateProductRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "active")
 	}
 
+	if raw, found := object["billing_interval_months"]; found {
+		err = json.Unmarshal(raw, &a.BillingIntervalMonths)
+		if err != nil {
+			return fmt.Errorf("error reading 'billing_interval_months': %w", err)
+		}
+		delete(object, "billing_interval_months")
+	}
+
+	if raw, found := object["billing_model"]; found {
+		err = json.Unmarshal(raw, &a.BillingModel)
+		if err != nil {
+			return fmt.Errorf("error reading 'billing_model': %w", err)
+		}
+		delete(object, "billing_model")
+	}
+
 	if raw, found := object["currency"]; found {
 		err = json.Unmarshal(raw, &a.Currency)
 		if err != nil {
@@ -53985,6 +54448,20 @@ func (a UpdateProductRequest) MarshalJSON() ([]byte, error) {
 		object["active"], err = json.Marshal(a.Active)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'active': %w", err)
+		}
+	}
+
+	if a.BillingIntervalMonths != nil {
+		object["billing_interval_months"], err = json.Marshal(a.BillingIntervalMonths)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'billing_interval_months': %w", err)
+		}
+	}
+
+	if a.BillingModel != nil {
+		object["billing_model"], err = json.Marshal(a.BillingModel)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'billing_model': %w", err)
 		}
 	}
 

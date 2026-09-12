@@ -389,7 +389,7 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 		" AND EXISTS (SELECT 1 FROM company pref WHERE pref.id = partner_company_id AND %s)", scope), nil
 }
 
-const dealColumns = `id, name, amount_minor, expected_arr_minor, currency, pipeline_id, stage_id,
+const dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_id, currency, pipeline_id, stage_id,
 	company_id, project_id, owner_id, partner_company_id, partner_attribution, status, lost_reason,
 	won_without_contract_reason, won_without_contract_detail,
 	description, commercial_motion, priority, acquisition_source,
@@ -417,7 +417,7 @@ func readDeal(ctx context.Context, tx pgx.Tx, id ids.DealID, archived storekit.A
 func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontracts.Deal, error) {
 	var d crmcontracts.Deal
 	var id, pipelineID, stageID ids.UUID
-	var companyID, projectID, ownerID, partnerID *ids.UUID
+	var companyID, projectID, ownerID, partnerID, arrSource *ids.UUID
 	var status string
 	var forecastCat *string
 	var expectedClose, waitUntil *time.Time
@@ -427,7 +427,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var wonReason *string
 	var motion, priority *string
 	dests := []any{
-		&id, &d.Name, &d.AmountMinor, &d.ExpectedArrMinor, &d.Currency, &pipelineID, &stageID,
+		&id, &d.Name, &d.AmountMinor, &d.ExpectedArrMinor, &arrSource, &d.Currency, &pipelineID, &stageID,
 		&companyID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
 		&wonReason, &d.WonWithoutContractDetail,
 		&d.Description, &motion, &priority, &d.AcquisitionSource,
@@ -464,6 +464,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	sid := openapi_types.UUID(stageID)
 	d.StageId = &sid
 	d.CompanyId = uuidPtr(companyID)
+	d.ArrSourceOfferId = uuidPtr(arrSource)
 	d.ProjectId = uuidPtr(projectID)
 	d.OwnerId = uuidPtr(ownerID)
 	d.PartnerCompanyId = uuidPtr(partnerID)

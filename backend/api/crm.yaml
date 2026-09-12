@@ -31501,6 +31501,7 @@ components:
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.' }
+        arr_source_offer_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer''s to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.' }
         masked_fields:
           type: array
           readOnly: true
@@ -41810,6 +41811,8 @@ components:
         description: { type: [string, 'null'] }
         unit: { type: string, description: "'unit' | 'hour' | 'day' | … — display only, free text." }
         unit_price_minor: { type: integer, format: int64, description: Integer minor units (P11); no float money. }
+        billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
+        billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, description: 'Percent, e.g. 19.00 (DE USt.); per-line override allowed.' }
         active: { type: boolean }
@@ -41838,6 +41841,8 @@ components:
         description: { type: [string, 'null'] }
         unit: { type: [string, 'null'], description: Defaults to 'unit'. }
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
+        billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
+        billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0. }
         active: { type: [boolean, 'null'], description: Defaults to true. }
@@ -41854,6 +41859,8 @@ components:
         description: { type: [string, 'null'] }
         unit: { type: string }
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
+        billing_model: { type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.' }
+        billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, minimum: 0 }
         active: { type: boolean }
@@ -42474,6 +42481,9 @@ components:
         unit: { type: string }
         quantity: { type: number, format: double, description: 'Up to 3 decimal places (numeric 14,3); must be > 0.' }
         unit_price_minor: { type: integer, format: int64, description: Snapshot — never re-read from product after creation. }
+        billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
+        billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
+        interval_count: { type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.' }
         discount_pct: { type: number, format: double, description: '0–100, up to 2 decimal places.' }
         tax_rate: { type: number, format: double, description: 'Percent, up to 2 decimal places.' }
         line_net_minor: { type: integer, format: int64, readOnly: true, description: 'round(qty × unit_price × (1 − discount_pct/100)) — server-computed.' }
@@ -42505,6 +42515,8 @@ components:
         net_minor: { type: integer, format: int64, readOnly: true, description: 'Σ line nets — derived, never client-set.' }
         tax_minor: { type: integer, format: int64, readOnly: true, description: 'Σ line taxes — derived, never client-set.' }
         gross_minor: { type: integer, format: int64, readOnly: true, description: 'net + tax — derived, never client-set.' }
+        arr_minor: { type: integer, format: int64, readOnly: true, description: 'The annualized NET value of this offer''s recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.' }
+        net_tcv_minor: { type: integer, format: int64, readOnly: true, description: 'The total the buyer commits to: one-off lines in full, plus each recurring line''s per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.' }
         fx_rate_to_base: { type: [string, 'null'], readOnly: true, description: 'Native→base, frozen at send (RT-PR-C2). Decimal-as-string to avoid float rounding.' }
         fx_rate_date: { type: [string, 'null'], format: date, readOnly: true }
         template_id: { type: [string, 'null'], format: uuid, description: The offer_template used for locale/layout at render time; unset falls back to the workspace's default template for the offer's locale. }
@@ -42560,6 +42572,9 @@ components:
         unit: { type: [string, 'null'] }
         quantity: { type: number, format: double, description: '> 0, up to 3 decimal places.' }
         unit_price_minor: { type: [integer, 'null'], format: int64, minimum: 0 }
+        billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
+        billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
+        interval_count: { type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.' }
         discount_pct: { type: [number, 'null'], format: double, minimum: 0, maximum: 100 }
         tax_rate: { type: [number, 'null'], format: double, minimum: 0 }
 
@@ -42572,6 +42587,9 @@ components:
         unit: { type: string }
         quantity: { type: number, format: double }
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
+        billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
+        billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
+        interval_count: { type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.' }
         discount_pct: { type: number, format: double, minimum: 0, maximum: 100 }
         tax_rate: { type: number, format: double, minimum: 0 }
 

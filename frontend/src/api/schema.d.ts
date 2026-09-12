@@ -22418,6 +22418,11 @@ export interface components {
              * @description Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.
              */
             expected_arr_minor?: number | null;
+            /**
+             * Format: uuid
+             * @description The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
+             */
+            readonly arr_source_offer_id?: string | null;
             /** @description The fields of THIS row the caller's role withholds (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Sorting or filtering the list by a masked field is refused (422). */
             readonly masked_fields?: string[];
             /** @description Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate. */
@@ -31061,6 +31066,16 @@ export interface components {
              * @description Integer minor units (P11); no float money.
              */
             unit_price_minor: number;
+            /**
+             * @description Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+             * @enum {string|null}
+             */
+            billing_model?: "one_time" | "recurring" | null;
+            /**
+             * @description How many months one billing period spans. Required with `recurring`, refused otherwise.
+             * @enum {integer|null}
+             */
+            billing_interval_months?: 1 | 3 | 6 | 12 | null;
             currency: string;
             /**
              * Format: double
@@ -31093,6 +31108,16 @@ export interface components {
             unit?: string | null;
             /** Format: int64 */
             unit_price_minor: number;
+            /**
+             * @description Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+             * @enum {string|null}
+             */
+            billing_model?: "one_time" | "recurring" | null;
+            /**
+             * @description How many months one billing period spans. Required with `recurring`, refused otherwise.
+             * @enum {integer|null}
+             */
+            billing_interval_months?: 1 | 3 | 6 | 12 | null;
             currency: string;
             /**
              * Format: double
@@ -31113,6 +31138,16 @@ export interface components {
             unit?: string;
             /** Format: int64 */
             unit_price_minor?: number;
+            /**
+             * @description Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.
+             * @enum {string|null}
+             */
+            billing_model?: "one_time" | "recurring" | "not_specified" | null;
+            /**
+             * @description How many months one billing period spans. Required with `recurring`, refused otherwise.
+             * @enum {integer|null}
+             */
+            billing_interval_months?: 1 | 3 | 6 | 12 | null;
             currency?: string;
             /** Format: double */
             default_tax_rate?: number;
@@ -31676,6 +31711,18 @@ export interface components {
              */
             unit_price_minor: number;
             /**
+             * @description Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+             * @enum {string|null}
+             */
+            billing_model?: "one_time" | "recurring" | null;
+            /**
+             * @description How many months one billing period spans. Required with `recurring`, refused otherwise.
+             * @enum {integer|null}
+             */
+            billing_interval_months?: 1 | 3 | 6 | 12 | null;
+            /** @description How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none. */
+            interval_count?: number | null;
+            /**
              * Format: double
              * @description 0–100, up to 2 decimal places.
              */
@@ -31757,6 +31804,16 @@ export interface components {
              * @description net + tax — derived, never client-set.
              */
             readonly gross_minor: number;
+            /**
+             * Format: int64
+             * @description The annualized NET value of this offer's recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.
+             */
+            readonly arr_minor?: number;
+            /**
+             * Format: int64
+             * @description The total the buyer commits to: one-off lines in full, plus each recurring line's per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.
+             */
+            readonly net_tcv_minor?: number;
             /** @description Native→base, frozen at send (RT-PR-C2). Decimal-as-string to avoid float rounding. */
             readonly fx_rate_to_base?: string | null;
             /** Format: date */
@@ -31823,6 +31880,18 @@ export interface components {
             quantity: number;
             /** Format: int64 */
             unit_price_minor?: number | null;
+            /**
+             * @description Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+             * @enum {string|null}
+             */
+            billing_model?: "one_time" | "recurring" | null;
+            /**
+             * @description How many months one billing period spans. Required with `recurring`, refused otherwise.
+             * @enum {integer|null}
+             */
+            billing_interval_months?: 1 | 3 | 6 | 12 | null;
+            /** @description How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none. */
+            interval_count?: number | null;
             /** Format: double */
             discount_pct?: number | null;
             /** Format: double */
@@ -31837,6 +31906,18 @@ export interface components {
             quantity?: number;
             /** Format: int64 */
             unit_price_minor?: number;
+            /**
+             * @description Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
+             * @enum {string|null}
+             */
+            billing_model?: "one_time" | "recurring" | null;
+            /**
+             * @description How many months one billing period spans. Required with `recurring`, refused otherwise.
+             * @enum {integer|null}
+             */
+            billing_interval_months?: 1 | 3 | 6 | 12 | null;
+            /** @description How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none. */
+            interval_count?: number | null;
             /** Format: double */
             discount_pct?: number;
             /** Format: double */

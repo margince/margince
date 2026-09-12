@@ -2862,6 +2862,7 @@ public.deal.acquisition_source text gen=- def=-
 public.deal.amount_minor bigint gen=- def=-
 public.deal.amount_minor_base bigint gen=- def=-
 public.deal.archived_at timestamp with time zone gen=- def=-
+public.deal.arr_source_offer_id uuid gen=- def=-
 public.deal.captured_by text NOT NULL gen=- def=-
 public.deal.close_date_provisional boolean NOT NULL gen=- def=false
 public.deal.closed_at timestamp with time zone gen=- def=-
@@ -2870,6 +2871,7 @@ public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.currency character(3) gen=- def=-
 public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES deal_acquisition_source(key) ON UPDATE CASCADE ON DELETE RESTRICT
+public.deal.deal_arr_source_same_deal FOREIGN KEY (id, arr_source_offer_id) REFERENCES offer(deal_id, id) ON DELETE SET NULL
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
 public.deal.deal_closed_fx CHECK (((status = 'open'::text) OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))
 public.deal.deal_commercial_motion_check CHECK (((commercial_motion IS NULL) OR (commercial_motion = ANY (ARRAY['new_business'::text, 'renewal'::text, 'upsell'::text, 'cross_sell'::text, 'expansion'::text, 'existing_business'::text]))))
@@ -4535,6 +4537,7 @@ public.offer.offer_accepted_at CHECK (((status <> 'accepted'::text) OR (accepted
 public.offer.offer_buyer_company_fkey FOREIGN KEY (buyer_company_id) REFERENCES company(id) ON DELETE SET NULL (buyer_company_id)
 public.offer.offer_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.offer.offer_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE RESTRICT
+public.offer.offer_deal_id_id_key UNIQUE (deal_id, id)
 public.offer.offer_number text NOT NULL gen=- def=-
 public.offer.offer_number_rev_unique UNIQUE (offer_number, revision)
 public.offer.offer_pkey PRIMARY KEY (id)
@@ -4553,12 +4556,16 @@ public.offer.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.offer.uq_offer_ws_id UNIQUE (id)
 public.offer.valid_until date gen=- def=-
 public.offer.version bigint NOT NULL gen=- def=1
+public.offer_deal_id_id_key CREATE UNIQUE INDEX offer_deal_id_id_key ON public.offer USING btree (deal_id, id)
 public.offer_line_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.offer_line_item.billing_interval_months integer gen=- def=-
+public.offer_line_item.billing_model text gen=- def=-
 public.offer_line_item.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.offer_line_item.description text NOT NULL gen=- def=-
 public.offer_line_item.discount_pct numeric(5,2) NOT NULL gen=- def=0
 public.offer_line_item.evidence jsonb gen=- def=-
 public.offer_line_item.id uuid NOT NULL gen=- def=uuidv7()
+public.offer_line_item.interval_count integer gen=- def=-
 public.offer_line_item.offer_id uuid NOT NULL gen=- def=-
 public.offer_line_item.offer_line_item_discount_pct_check CHECK (((discount_pct >= (0)::numeric) AND (discount_pct <= (100)::numeric)))
 public.offer_line_item.offer_line_item_pkey PRIMARY KEY (id)
@@ -4568,6 +4575,10 @@ public.offer_line_item.offer_line_item_quantity_check CHECK ((quantity > (0)::nu
 public.offer_line_item.offer_line_item_tax_rate_check CHECK ((tax_rate >= (0)::numeric))
 public.offer_line_item.offer_line_item_ungrounded_price_zero CHECK ((price_grounded OR (unit_price_minor = 0)))
 public.offer_line_item.offer_line_item_unit_price_minor_check CHECK ((unit_price_minor >= 0))
+public.offer_line_item.oli_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12]))))
+public.offer_line_item.oli_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text]))))
+public.offer_line_item.oli_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'one_time'::text)) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'recurring'::text)) AND (billing_interval_months IS NOT NULL))))
+public.offer_line_item.oli_interval_count_check CHECK (((interval_count IS NULL) OR (interval_count > 0)))
 public.offer_line_item.oli_offer_fkey FOREIGN KEY (offer_id) REFERENCES offer(id) ON DELETE CASCADE
 public.offer_line_item.oli_product_fkey FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE SET NULL (product_id)
 public.offer_line_item.position integer NOT NULL gen=- def=-
@@ -4844,6 +4855,8 @@ public.privacy_notice_case_pkey CREATE UNIQUE INDEX privacy_notice_case_pkey ON 
 public.product acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.product.active boolean NOT NULL gen=- def=true
 public.product.archived_at timestamp with time zone gen=- def=-
+public.product.billing_interval_months integer gen=- def=-
+public.product.billing_model text gen=- def=-
 public.product.captured_by text NOT NULL gen=- def=-
 public.product.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.product.currency character(3) NOT NULL gen=- def=-
@@ -4851,6 +4864,9 @@ public.product.default_tax_rate numeric(5,2) NOT NULL gen=- def=0
 public.product.description text gen=- def=-
 public.product.id uuid NOT NULL gen=- def=uuidv7()
 public.product.name text NOT NULL gen=- def=-
+public.product.product_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12]))))
+public.product.product_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text]))))
+public.product.product_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'one_time'::text)) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'recurring'::text)) AND (billing_interval_months IS NOT NULL))))
 public.product.product_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.product.product_default_tax_rate_check CHECK ((default_tax_rate >= (0)::numeric))
 public.product.product_pkey PRIMARY KEY (id)

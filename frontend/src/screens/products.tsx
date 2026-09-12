@@ -9,6 +9,7 @@ import { formatMoney } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
+import { billingOf, billingPatchOf } from "./billingclassification";
 import { throwProblem, useMe } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
@@ -83,6 +84,32 @@ const PRODUCT_FIELDS: CreateField[] = [
     options: ["EUR", "USD", "GBP", "CHF"].map((c) => ({ value: c, label: c })),
   },
   { key: "default_tax_rate", label: "product.taxRate", type: "number" },
+  {
+    // The empty option is a real answer here, and the one every product
+    // written before this field existed carries: nobody has said whether this
+    // price repeats. It is offered first so that leaving the form alone keeps
+    // saying that, rather than quietly asserting a one-off price.
+    key: "billing_model",
+    label: "product.billingModel",
+    type: "select",
+    options: [
+      { value: "", label: "product.billingUnclassified" },
+      { value: "one_time", label: "product.billingOneTime" },
+      { value: "recurring", label: "product.billingRecurring" },
+    ],
+  },
+  {
+    key: "billing_interval_months",
+    label: "product.billingInterval",
+    type: "select",
+    options: [
+      { value: "", label: "product.billingNoInterval" },
+      { value: "1", label: "product.billingMonthly" },
+      { value: "3", label: "product.billingQuarterly" },
+      { value: "6", label: "product.billingHalfYearly" },
+      { value: "12", label: "product.billingYearly" },
+    ],
+  },
 ];
 
 // text narrows one value off the edit form's Record<string, unknown> without
@@ -148,6 +175,7 @@ export function ProductsAdmin() {
         default_tax_rate: values.default_tax_rate
           ? Number(values.default_tax_rate)
           : null,
+        ...billingOf(values),
         source: "manual",
       },
     });
@@ -190,6 +218,7 @@ export function ProductsAdmin() {
           default_tax_rate: values.default_tax_rate
             ? Number(values.default_tax_rate)
             : undefined,
+          ...billingPatchOf(values),
         },
       });
       if (error) {
@@ -222,6 +251,11 @@ export function ProductsAdmin() {
             record={{
               ...p,
               unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
+              billing_model: p.billing_model ?? "",
+              billing_interval_months:
+                p.billing_interval_months == null
+                  ? ""
+                  : String(p.billing_interval_months),
             }}
             update={updateProduct(p)}
             fields={PRODUCT_FIELDS}

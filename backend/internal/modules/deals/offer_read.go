@@ -254,7 +254,46 @@ func readOfferWithLines(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived
 		return crmcontracts.Offer{}, err
 	}
 	offer.LineItems = &lines
+	// The two recurring figures are DERIVED at read, never stored. Storing them
+	// would make a third copy of the same arithmetic that could disagree with
+	// the line list a reader is looking at, and the line list is what the buyer
+	// signed.
+	recurring, err := OfferRecurringTotals(recurringInputsOf(lines))
+	if err != nil {
+		return crmcontracts.Offer{}, fmt.Errorf("derive recurring totals: %w", err)
+	}
+	offer.ArrMinor = &recurring.ArrMinor
+	offer.NetTcvMinor = &recurring.NetTcvMinor
 	return offer, nil
+}
+
+// recurringInputsOf turns the read lines back into what the recurring engine
+// consumes. It reads the WIRE line rather than the row a second time, so the
+// figures are derived from exactly what the caller is being shown.
+func recurringInputsOf(lines []crmcontracts.OfferLineItem) []RecurringLineInput {
+	out := make([]RecurringLineInput, 0, len(lines))
+	for _, l := range lines {
+		in := RecurringLineInput{
+			Line: OfferLineInput{
+				Quantity:       formatQuantity(l.Quantity),
+				UnitPriceMinor: l.UnitPriceMinor,
+				DiscountPct:    formatPct(l.DiscountPct),
+				TaxRate:        formatPct(l.TaxRate),
+			},
+			IntervalCount: l.IntervalCount,
+		}
+		if l.BillingModel != nil {
+			in.BillingModel = string(*l.BillingModel)
+		}
+		if l.BillingIntervalMonths != nil {
+			// The contract generates the cadence as its own named integer
+			// type, because the schema enumerates the four values it admits.
+			months := int(*l.BillingIntervalMonths)
+			in.IntervalMonths = &months
+		}
+		out = append(out, in)
+	}
+	return out
 }
 
 func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
@@ -304,7 +343,8 @@ func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 func readOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) ([]crmcontracts.OfferLineItem, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, position, product_id, description, unit, quantity::text, unit_price_minor,
-		        discount_pct::text, tax_rate::text, evidence, price_grounded, version, created_at, updated_at
+		        discount_pct::text, tax_rate::text, evidence, price_grounded, version, created_at, updated_at,
+		        billing_model, billing_interval_months, interval_count
 		 FROM offer_line_item WHERE offer_id = $1 ORDER BY position, id`, offerID)
 	if err != nil {
 		return nil, fmt.Errorf("read offer lines: %w", err)
@@ -320,9 +360,15 @@ func readOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) ([]crmc
 		var evidence *map[string]interface{}
 		var priceGrounded bool
 		var version int64
+		var billingModel *string
 		if err := rows.Scan(&id, &l.Position, &productID, &l.Description, &l.Unit, &quantity,
-			&l.UnitPriceMinor, &discount, &taxRate, &evidence, &priceGrounded, &version, &l.CreatedAt, &l.UpdatedAt); err != nil {
+			&l.UnitPriceMinor, &discount, &taxRate, &evidence, &priceGrounded, &version, &l.CreatedAt, &l.UpdatedAt,
+			&billingModel, &l.BillingIntervalMonths, &l.IntervalCount); err != nil {
 			return nil, err
+		}
+		if billingModel != nil {
+			model := crmcontracts.OfferLineItemBillingModel(*billingModel)
+			l.BillingModel = &model
 		}
 		fig, err := LineTotals(OfferLineInput{
 			Quantity: quantity, UnitPriceMinor: l.UnitPriceMinor, DiscountPct: discount, TaxRate: taxRate,
