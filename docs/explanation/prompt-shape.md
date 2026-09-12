@@ -280,6 +280,13 @@ Two cautions when re-applying this:
   quote the message it came from AND that message's author to be whoever the
   role is proposed for. That is the shape to copy if a consequential task ever
   must batch: bind every answer to evidence only its own item could produce.
+- **[ai-prompts.md](../reference/ai-prompts.md) carries this classification per
+  site**, in a `batch` column, and a site added without one fails the gate that
+  renders it. The list is written out rather than derived for the same reason
+  the task registry is: the deciding fact — whether several MUTUALLY UNTRUSTED
+  authors share a prompt — is invisible to a scanner. `transcript_propose`
+  fences its spans in a loop and is one transcript from one author;
+  `capture_classify` does the same and carries ten strangers.
 - **Counting spans in a request does not tell you the capacity.** A site that
   batches ten may show one span for a one-item fixture. See
   [ai-prompts.md](../reference/ai-prompts.md), which publishes those counts and

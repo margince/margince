@@ -50,6 +50,85 @@ var updateAIPrompts = flag.Bool("update-ai-prompts", false,
 
 var aiPromptsPage = filepath.Join("..", "..", "..", "docs", "reference", "ai-prompts.md")
 
+// batchShape is what a site does with untrusted items, and it is the column a
+// reader comes to this page for.
+//
+// Written out rather than derived, for aitaskregistry's reason: the fact that
+// decides it is whether several MUTUALLY UNTRUSTED authors share one prompt,
+// and no walk of the syntax can see that. transcript_propose fences its spans
+// in a loop and is still ONE transcript from one author; capture_classify does
+// the same and carries ten strangers. The two read identically to a scanner.
+//
+// What keeps the list honest is that it may not go short: every registered site
+// must appear below or TestTheAIPromptsPageIsCurrent fails, so a site added
+// tomorrow is classified deliberately rather than defaulting to whatever is
+// safest to write.
+type batchShape string
+
+const (
+	// batchesStrangers: several mutually untrusted authors in one prompt. A
+	// hostile item has neighbours it could speak for.
+	batchesStrangers batchShape = "batches (several authors)"
+	// batchesOneSubject: several fenced spans, all from ONE subject — a
+	// transcript's lines, a document's parts. No neighbour to steer.
+	batchesOneSubject batchShape = "several spans, one subject"
+	// oneItemPerCall: one untrusted item, deliberately, because a wrong answer
+	// is consequential. The isolation IS the protection.
+	oneItemPerCall batchShape = "ONE per call (deliberate)"
+	// singleSubject: reads one company, deal, meeting or page. The question
+	// does not arise.
+	singleSubject batchShape = "single subject"
+)
+
+// siteBatchShape is the classification, one line per registered site.
+var siteBatchShape = map[string]batchShape{
+	"account_scan/company_scan":              singleSubject,
+	"agent_loop/loop":                        singleSubject,
+	"brief_ranking/rank":                     singleSubject,
+	"capture_classify/classify":              batchesStrangers,
+	"capture_confidentiality_verdict/thread": oneItemPerCall,
+	"capture_counterparty_verdict/verdict":   oneItemPerCall,
+	"cert_judge/judge":                       singleSubject,
+	"cold_start/acts":                        singleSubject,
+	"cold_start/company_message":             singleSubject,
+	"cold_start/field_extract":               singleSubject,
+	"cold_start/sitereadmessage":             singleSubject,
+	"corpus_ask/corpus_ask":                  batchesOneSubject,
+	"deal_health/deal_status":                singleSubject,
+	"document_extract/fields":                batchesOneSubject,
+	"draft_reply/account":                    singleSubject,
+	"draft_reply/contact":                    singleSubject,
+	"draft_reply/first":                      singleSubject,
+	"draft_reply/intro":                      singleSubject,
+	"draft_reply/intro_note":                 singleSubject,
+	"draft_reply/reply":                      singleSubject,
+	"enrich/signature":                       singleSubject,
+	"growth_fit/growth_fit":                  singleSubject,
+	"offer_draft/draft":                      singleSubject,
+	"owed_verdict/owed":                      batchesStrangers,
+	"propose_roles/committee":                batchesStrangers,
+	"rate_extract/fx":                        singleSubject,
+	"rate_extract/pricing":                   singleSubject,
+	"signal_extract/thread_events":           batchesOneSubject,
+	"site_extract/profile":                   singleSubject,
+	"site_fact_extract/page_facts":           singleSubject,
+	"site_triage/triage":                     singleSubject,
+	"stage_evidence_extract/criteria":        batchesOneSubject,
+	"summarize/company_ask":                  singleSubject,
+	"summarize/company_brief":                singleSubject,
+	"summarize/company_dossier":              singleSubject,
+	"summarize/contact_brief":                singleSubject,
+	"summarize/meeting_brief":                singleSubject,
+	"summarize/meeting_plan":                 singleSubject,
+	"transcript_propose/next_steps":          batchesOneSubject,
+	"voice_build/demo_draft":                 batchesOneSubject,
+	"voice_build/derive":                     batchesOneSubject,
+	"voice_build/eval_draft":                 batchesOneSubject,
+	"voice_build/eval_scores":                batchesOneSubject,
+	"weekly_learnings/learn":                 singleSubject,
+	"weekly_review/narrative":                singleSubject,
+}
+
 // sitePrompt is one site as the wire shows it.
 type sitePrompt struct {
 	task    string
@@ -60,6 +139,8 @@ type sitePrompt struct {
 	spans int
 	// requests is how many calls the case issued for one scenario.
 	requests int
+	// shape is what this site does with untrusted items.
+	shape batchShape
 }
 
 func TestTheAIPromptsPageIsCurrent(t *testing.T) {
@@ -94,6 +175,14 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 			t.Errorf("%s: %v", key, readErr)
 			continue
 		}
+		shape, classified := siteBatchShape[key]
+		if !classified {
+			t.Errorf("site %s has no batch classification — add it to siteBatchShape. "+
+				"The question is whether several MUTUALLY UNTRUSTED authors share one of its prompts, "+
+				"which decides whether a hostile item has a neighbour to speak for", key)
+			continue
+		}
+		got.shape = shape
 		prompts = append(prompts, got)
 	}
 	if len(prompts) == 0 {
@@ -187,9 +276,15 @@ func renderAIPromptsPage(prompts []sitePrompt) string {
 	b.WriteString("and what follows from it, is in\n")
 	b.WriteString("[prompt-shape.md](../explanation/prompt-shape.md).\n\n")
 
-	b.WriteString("## Untrusted spans in one real call\n\n")
-	b.WriteString("How many separately fenced regions the first request carried, for that\n")
-	b.WriteString("site's own committed scenario.\n\n")
+	b.WriteString("## Which sites batch, and what one real call carried\n\n")
+	b.WriteString("**batch** is the column that matters. It answers: does one prompt ever hold\n")
+	b.WriteString("untrusted text from SEVERAL DIFFERENT AUTHORS?\n\n")
+	b.WriteString("| value | meaning |\n|---|---|\n")
+	b.WriteString("| `batches (several authors)` | several strangers in one prompt. A hostile item has neighbours it could speak for. |\n")
+	b.WriteString("| `several spans, one subject` | several fenced regions, all from ONE subject — a transcript's lines, a document's parts. No neighbour to steer. |\n")
+	b.WriteString("| `ONE per call (deliberate)` | one item, on purpose, because a wrong answer creates a record or shows somebody's mail. The isolation IS the protection. |\n")
+	b.WriteString("| `single subject` | reads one company, deal, meeting or page. The question does not arise. |\n\n")
+	b.WriteString("**spans in this scenario** is a measurement, not a capacity.\n\n")
 	b.WriteString("**This is not the site's batch capacity.** It is what one scenario produced.\n")
 	b.WriteString("`capture_classify` asks about ten messages in production and shows 1 here,\n")
 	b.WriteString("because its fixture holds one message. Read this as \"what a real call looked\n")
@@ -198,9 +293,9 @@ func renderAIPromptsPage(prompts []sitePrompt) string {
 	b.WriteString("a hostile item has neighbours it could speak for — the hazard\n")
 	b.WriteString("[prompt-shape.md](../explanation/prompt-shape.md) frames. A 0 means no fenced\n")
 	b.WriteString("region was found in that call at all.\n\n")
-	b.WriteString("| task | site | spans in this scenario | calls |\n|---|---|---:|---:|\n")
+	b.WriteString("| task | site | batch | spans in this scenario | calls |\n|---|---|---|---:|---:|\n")
 	for _, p := range prompts {
-		fmt.Fprintf(&b, "| `%s` | `%s` | %d | %d |\n", p.task, p.variant, p.spans, p.requests)
+		fmt.Fprintf(&b, "| `%s` | `%s` | %s | %d | %d |\n", p.task, p.variant, p.shape, p.spans, p.requests)
 	}
 
 	b.WriteString("\n## The instructions\n\n")

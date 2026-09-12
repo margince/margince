@@ -14,10 +14,19 @@ fixed placeholder so this page does not change on every run. Why it is random,
 and what follows from it, is in
 [prompt-shape.md](../explanation/prompt-shape.md).
 
-## Untrusted spans in one real call
+## Which sites batch, and what one real call carried
 
-How many separately fenced regions the first request carried, for that
-site's own committed scenario.
+**batch** is the column that matters. It answers: does one prompt ever hold
+untrusted text from SEVERAL DIFFERENT AUTHORS?
+
+| value | meaning |
+|---|---|
+| `batches (several authors)` | several strangers in one prompt. A hostile item has neighbours it could speak for. |
+| `several spans, one subject` | several fenced regions, all from ONE subject — a transcript's lines, a document's parts. No neighbour to steer. |
+| `ONE per call (deliberate)` | one item, on purpose, because a wrong answer creates a record or shows somebody's mail. The isolation IS the protection. |
+| `single subject` | reads one company, deal, meeting or page. The question does not arise. |
+
+**spans in this scenario** is a measurement, not a capacity.
 
 **This is not the site's batch capacity.** It is what one scenario produced.
 `capture_classify` asks about ten messages in production and shows 1 here,
@@ -29,53 +38,53 @@ a hostile item has neighbours it could speak for — the hazard
 [prompt-shape.md](../explanation/prompt-shape.md) frames. A 0 means no fenced
 region was found in that call at all.
 
-| task | site | spans in this scenario | calls |
-|---|---|---:|---:|
-| `account_scan` | `company_scan` | 1 | 1 |
-| `agent_loop` | `loop` | 0 | 1 |
-| `brief_ranking` | `rank` | 0 | 1 |
-| `capture_classify` | `classify` | 1 | 1 |
-| `capture_confidentiality_verdict` | `thread` | 1 | 1 |
-| `capture_counterparty_verdict` | `verdict` | 1 | 1 |
-| `cert_judge` | `judge` | 2 | 1 |
-| `cold_start` | `acts` | 1 | 1 |
-| `cold_start` | `company_message` | 1 | 1 |
-| `cold_start` | `field_extract` | 2 | 1 |
-| `cold_start` | `sitereadmessage` | 1 | 1 |
-| `corpus_ask` | `corpus_ask` | 1 | 1 |
-| `deal_health` | `deal_status` | 1 | 1 |
-| `document_extract` | `fields` | 2 | 1 |
-| `draft_reply` | `account` | 1 | 1 |
-| `draft_reply` | `contact` | 1 | 1 |
-| `draft_reply` | `first` | 1 | 1 |
-| `draft_reply` | `intro` | 1 | 1 |
-| `draft_reply` | `intro_note` | 1 | 1 |
-| `draft_reply` | `reply` | 1 | 1 |
-| `enrich` | `signature` | 2 | 1 |
-| `growth_fit` | `growth_fit` | 1 | 1 |
-| `offer_draft` | `draft` | 1 | 1 |
-| `owed_verdict` | `owed` | 2 | 1 |
-| `propose_roles` | `committee` | 5 | 1 |
-| `rate_extract` | `fx` | 1 | 1 |
-| `rate_extract` | `pricing` | 1 | 1 |
-| `signal_extract` | `thread_events` | 1 | 1 |
-| `site_extract` | `profile` | 1 | 1 |
-| `site_fact_extract` | `page_facts` | 1 | 1 |
-| `site_triage` | `triage` | 1 | 1 |
-| `stage_evidence_extract` | `criteria` | 3 | 1 |
-| `summarize` | `company_ask` | 1 | 1 |
-| `summarize` | `company_brief` | 1 | 1 |
-| `summarize` | `company_dossier` | 1 | 1 |
-| `summarize` | `contact_brief` | 1 | 1 |
-| `summarize` | `meeting_brief` | 1 | 1 |
-| `summarize` | `meeting_plan` | 1 | 1 |
-| `transcript_propose` | `next_steps` | 7 | 1 |
-| `voice_build` | `demo_draft` | 4 | 1 |
-| `voice_build` | `derive` | 5 | 1 |
-| `voice_build` | `eval_draft` | 5 | 1 |
-| `voice_build` | `eval_scores` | 4 | 1 |
-| `weekly_learnings` | `learn` | 1 | 1 |
-| `weekly_review` | `narrative` | 1 | 1 |
+| task | site | batch | spans in this scenario | calls |
+|---|---|---|---:|---:|
+| `account_scan` | `company_scan` | single subject | 1 | 1 |
+| `agent_loop` | `loop` | single subject | 0 | 1 |
+| `brief_ranking` | `rank` | single subject | 0 | 1 |
+| `capture_classify` | `classify` | batches (several authors) | 1 | 1 |
+| `capture_confidentiality_verdict` | `thread` | ONE per call (deliberate) | 1 | 1 |
+| `capture_counterparty_verdict` | `verdict` | ONE per call (deliberate) | 1 | 1 |
+| `cert_judge` | `judge` | single subject | 2 | 1 |
+| `cold_start` | `acts` | single subject | 1 | 1 |
+| `cold_start` | `company_message` | single subject | 1 | 1 |
+| `cold_start` | `field_extract` | single subject | 2 | 1 |
+| `cold_start` | `sitereadmessage` | single subject | 1 | 1 |
+| `corpus_ask` | `corpus_ask` | several spans, one subject | 1 | 1 |
+| `deal_health` | `deal_status` | single subject | 1 | 1 |
+| `document_extract` | `fields` | several spans, one subject | 2 | 1 |
+| `draft_reply` | `account` | single subject | 1 | 1 |
+| `draft_reply` | `contact` | single subject | 1 | 1 |
+| `draft_reply` | `first` | single subject | 1 | 1 |
+| `draft_reply` | `intro` | single subject | 1 | 1 |
+| `draft_reply` | `intro_note` | single subject | 1 | 1 |
+| `draft_reply` | `reply` | single subject | 1 | 1 |
+| `enrich` | `signature` | single subject | 2 | 1 |
+| `growth_fit` | `growth_fit` | single subject | 1 | 1 |
+| `offer_draft` | `draft` | single subject | 1 | 1 |
+| `owed_verdict` | `owed` | batches (several authors) | 2 | 1 |
+| `propose_roles` | `committee` | batches (several authors) | 5 | 1 |
+| `rate_extract` | `fx` | single subject | 1 | 1 |
+| `rate_extract` | `pricing` | single subject | 1 | 1 |
+| `signal_extract` | `thread_events` | several spans, one subject | 1 | 1 |
+| `site_extract` | `profile` | single subject | 1 | 1 |
+| `site_fact_extract` | `page_facts` | single subject | 1 | 1 |
+| `site_triage` | `triage` | single subject | 1 | 1 |
+| `stage_evidence_extract` | `criteria` | several spans, one subject | 3 | 1 |
+| `summarize` | `company_ask` | single subject | 1 | 1 |
+| `summarize` | `company_brief` | single subject | 1 | 1 |
+| `summarize` | `company_dossier` | single subject | 1 | 1 |
+| `summarize` | `contact_brief` | single subject | 1 | 1 |
+| `summarize` | `meeting_brief` | single subject | 1 | 1 |
+| `summarize` | `meeting_plan` | single subject | 1 | 1 |
+| `transcript_propose` | `next_steps` | several spans, one subject | 7 | 1 |
+| `voice_build` | `demo_draft` | several spans, one subject | 4 | 1 |
+| `voice_build` | `derive` | several spans, one subject | 5 | 1 |
+| `voice_build` | `eval_draft` | several spans, one subject | 5 | 1 |
+| `voice_build` | `eval_scores` | several spans, one subject | 4 | 1 |
+| `weekly_learnings` | `learn` | single subject | 1 | 1 |
+| `weekly_review` | `narrative` | single subject | 1 | 1 |
 
 ## The instructions
 
