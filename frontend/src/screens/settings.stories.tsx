@@ -5,12 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
-import {
-  AuditLogCard,
-  PipelinesCard,
-  SettingsScreen,
-  settingsAddress,
-} from "./settings";
+import { AuditLogCard, SettingsScreen, settingsAddress } from "./settings";
+import { PipelinesCard } from "./settings.pipelines";
 import {
   installFetchStub,
   jsonResponse,

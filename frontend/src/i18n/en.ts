@@ -4761,6 +4761,15 @@ export const en = {
   "pipeline.default": "Default",
   "pipeline.notDefault": "Not default",
   "pipeline.position": "Position",
+  "pipeline.retired": "Retired",
+  "pipeline.retire": "Retire",
+  "pipeline.retireConfirm":
+    "Retire {name}? It drops out of the pickers and the new-deal flows. Deals already on it keep their stage, their history and their forecast contribution, and you can put it back at any time.",
+  "pipeline.retireBlocked":
+    "This is the default pipeline, and new deals need one. Make another pipeline the default first, then retire this one.",
+  "pipeline.retired.done": "{name} is retired",
+  "pipeline.restore": "Put back in use",
+  "pipeline.restored": "{name} is back in use",
   "stage.new": "New stage",
   "stage.edit": "Edit stage",
   "stage.name": "Name",

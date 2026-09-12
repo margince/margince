@@ -10,10 +10,16 @@ import { problemMessageOf } from "./common";
 
 // The shared archive/disqualify affordance (P-3): a human-direct DELETE that
 // soft-archives a contact/company/lead (sets archived_at; leads also
-// flip to status=disqualified). There is NO restore endpoint in the
-// contract, so this hook and action are archive-only — never wire a restore
-// control against them. Mirrors useUpdateRecord/EditAction (edit.tsx): the
-// screen supplies the transport, this stays resource-agnostic.
+// flip to status=disqualified). Mirrors useUpdateRecord/EditAction (edit.tsx):
+// the screen supplies the transport, this stays resource-agnostic.
+//
+// It is the ARCHIVE half only — never wire a restore control against this hook.
+// That used to be because no resource had a restore endpoint at all; pipelines
+// now do (`POST /pipelines/{id}/restore`), and the reason survives the change:
+// what this hook owns is the confirm, the invalidation and a toast that states
+// a record is gone, and a restore is none of those. A screen with an undo puts
+// the verb where the archived record is, which is where a reader looking for it
+// will be.
 
 export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   archive,
@@ -29,9 +35,8 @@ export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   invalidate: string;
   recordKey: string;
   // What the reader is told once it is gone, already translated. REQUIRED, and
-  // that is the point: an archive is destructive and has no restore endpoint
-  // behind it, so the closing dialog was the only thing a reader got and it
-  // says nothing about whether the server agreed. A caller that would rather
+  // that is the point: the closing dialog was the only thing a reader got and
+  // it says nothing about whether the server agreed. A caller that would rather
   // stay silent has to say so by writing the sentence, which is a decision
   // somebody makes rather than one that happens by nobody adding a line.
   //
@@ -42,9 +47,10 @@ export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   // and telling somebody the wrong domain is refused is worse than telling
   // them nothing.
   //
-  // No `action` here for the same reason the comment at the top of this file
-  // gives: the contract has no restore endpoint, and an Undo with nothing
-  // behind it is worse than none.
+  // No `action` here: for most resources the contract has no restore endpoint,
+  // and an Undo with nothing behind it is worse than none. A resource that DOES
+  // have one (pipelines) offers the undo where the archived record is listed
+  // rather than in a toast that has already gone — see the top of this file.
   archivedMessage: string | ((archived: Archived) => string);
   onDone: (archived: Archived) => void;
 }>) {
