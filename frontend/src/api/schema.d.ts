@@ -9494,6 +9494,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/privacy/controller-particulars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What this installation says about itself in the messages it sends.
+         * @description Every jurisdiction pack declares disclosures — who is writing, who answers about the data,
+         *     how to say stop — and none of them could be rendered, because nothing recorded who the
+         *     controller IS. This is where an installation states it.
+         *
+         *     FREE TEXT rather than a structured address, and deliberately. What each jurisdiction
+         *     demands differs in shape: a German business letter wants a register court and number, a
+         *     Vietnamese advertising mail wants a phone and a website. A field per jurisdiction would be
+         *     a form nobody outside that jurisdiction can fill in, so each of these is a block of words
+         *     written by somebody who knows what their own law requires.
+         *
+         *     A field left empty is a real answer, not an omission to be filled in later: the renderer
+         *     reports that disclosure as unmeetable rather than inventing one, which is what makes an
+         *     unconfigured installation visible instead of silently non-compliant.
+         *
+         *     NOTHING RENDERS THESE INTO A MESSAGE YET. The particulars are stated here and the mapping
+         *     from a jurisdiction's obligation to the words that meet it exists, but no step between
+         *     composing a body and handing it to a provider asks for them. The gap is recorded in
+         *     `backend/gates/messagingruleapplied_test.go`.
+         */
+        get: operations["getControllerParticulars"];
+        /**
+         * State who this installation is.
+         * @description Gated on `installation_settings` at `update`, which is where the trust sits: these words
+         *     are destined for the bottom of every message this installation sends, so changing them
+         *     changes what every recipient will be told.
+         *
+         *     READING them is deliberately ungated for the send path. A rep writing a reply, a worker
+         *     dispatching a scheduled send and the controller lane mailing a privacy notice all need the
+         *     disclosures, and none of those principals holds a settings grant — a gated read would mean
+         *     a message went out without its legally required disclosure because the sender lacked an
+         *     operator permission.
+         *
+         *     Each field is bounded at 500 characters. They appear in every message, and a footer nobody
+         *     reads is not a disclosure.
+         */
+        put: operations["setControllerParticulars"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/privacy/notice-cases": {
         parameters: {
             query?: never;
@@ -30580,6 +30632,33 @@ export interface components {
             created_at: string;
         };
         /**
+         * @description What this installation must be able to say about itself when it writes to somebody.
+         *
+         *     Every field is optional and every field is free text. A jurisdiction pack declares WHICH
+         *     disclosures a message carries; these are the words that meet them.
+         */
+        ControllerParticulars: {
+            /** @description Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020. */
+            legal_name?: string;
+            /** @description Where they are, as a block of lines — including a register court and number where a business letter needs one. */
+            postal_address?: string;
+            /** @description How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists. */
+            privacy_contact?: string;
+            /**
+             * @description How to say stop, free and without a barrier. §7(3) UWG requires it on every advertising
+             *     message rather than only the first. The one-click unsubscribe this product mints is
+             *     usually the honest answer; an installation whose recipients answer by phone says so here.
+             */
+            objection_route?: string;
+            /**
+             * @description How to reach the advertiser directly — a phone number, a website. A SEPARATE field from
+             *     the postal address because the obligation is about reachability rather than about where
+             *     somebody is registered, and answering it with a street address reports an unmet duty
+             *     as met.
+             */
+            advertiser_contact?: string;
+        };
+        /**
          * @description Where a disclosure duty stands.
          *
          *     `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
@@ -50021,6 +50100,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DataSubjectRequest"];
+                };
+            };
+        };
+    };
+    getControllerParticulars: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stated particulars. Empty fields where nothing has been said. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControllerParticulars"];
+                };
+            };
+        };
+    };
+    setControllerParticulars: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ControllerParticulars"];
+            };
+        };
+        responses: {
+            /** @description The particulars as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControllerParticulars"];
                 };
             };
         };

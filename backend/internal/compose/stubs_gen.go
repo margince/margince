@@ -1899,6 +1899,14 @@ func (stubs) RestorePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 	httperr.NotImplemented(w, r, "RestorePipeline")
 }
 
+func (stubs) GetControllerParticulars(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetControllerParticulars")
+}
+
+func (stubs) SetControllerParticulars(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SetControllerParticulars")
+}
+
 func (stubs) ListNoticeCases(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticeCasesParams) {
 	httperr.NotImplemented(w, r, "ListNoticeCases")
 }
