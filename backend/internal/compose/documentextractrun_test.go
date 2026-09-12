@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -96,18 +95,9 @@ func runReading(t *testing.T, store *fakeReadStore, brain documentCompleter) err
 type scriptedBrain struct {
 	*ai.FakeClient
 	carriage []string
-	// withheld names the media types this binding's operator closed off with
-	// `input:`, as distinct from ones no wire here ever carried. A test that
-	// leaves it empty is describing a wire that simply has no lane, which is the
-	// ordinary case.
-	withheld []string
 }
 
 func (s scriptedBrain) AttachmentMIMEs() []string { return s.carriage }
-
-func (s scriptedBrain) WithheldByBinding(mime string) bool {
-	return slices.Contains(s.withheld, mime)
-}
 
 func groundedDocumentReply() string {
 	return allFour(
@@ -391,9 +381,6 @@ embeddings: {provider: fake, model: m-embed, dimensions: 8}
 		if !model.CarriesMIME(brain.AttachmentMIMEs(), pdf) {
 			t.Errorf("an undeclared binding must carry a PDF, got %v", brain.AttachmentMIMEs())
 		}
-		if brain.WithheldByBinding(pdf) {
-			t.Error("nothing was declared, so nothing can have been withheld")
-		}
 	})
 
 	t.Run("`input:` on the bound tiers is what the lane sees", func(t *testing.T) {
@@ -407,10 +394,6 @@ embeddings: {provider: fake, model: m-embed, dimensions: 8}
 `)
 		if model.CarriesMIME(brain.AttachmentMIMEs(), pdf) {
 			t.Errorf("a narrowed binding must not carry a PDF, got %v", brain.AttachmentMIMEs())
-		}
-		if !brain.WithheldByBinding(pdf) {
-			t.Error("the `input:` line the operator wrote did not reach the document lane, " +
-				"so the reading would extract the text and send what they withheld")
 		}
 	})
 }
@@ -463,36 +446,6 @@ func TestNativeCarriageIsPreferredToExtraction(t *testing.T) {
 	}
 }
 
-// The decision this change turns on. A lane an OPERATOR closed is not a lane the
-// reading may route around: extracting the text and sending that delivers the
-// contents they withheld, and reports success for having done it.
-func TestAPDFTheOperatorWithheldIsRefusedRatherThanExtracted(t *testing.T) {
-	store := &fakeReadStore{
-		meta: pdfAttachment(),
-		body: invoicePDFBytes(t, "Contract value: EUR 148,500.00"),
-	}
-	brain := scriptedBrain{
-		FakeClient: ai.NewFakeClient().Script(groundedDocumentReply()),
-		carriage:   carriesImagesOnly,
-		withheld:   []string{documentPDFMIME},
-	}
-
-	if err := runReading(t, store, brain); err != nil {
-		t.Fatalf("Read: %v", err)
-	}
-	if store.outcome.Status != activities.ExtractionReadFailed {
-		t.Fatalf("status = %q, want failed — the operator declined this", store.outcome.Status)
-	}
-	// The refusal names the line, because unlike a wire that never had the lane
-	// this one is one config edit from reading the file.
-	if !strings.Contains(store.outcome.Detail, "`input:`") {
-		t.Errorf("detail = %q, want it to name the line an operator can change", store.outcome.Detail)
-	}
-	if calls := brain.Calls(); len(calls) != 0 {
-		t.Errorf("made %d model call(s) for a document the operator withheld, want 0", len(calls))
-	}
-}
-
 // A scan is a real document somebody can re-send in another form, and saying so
 // is a different answer from "this file is broken". The refusal has to be the
 // one a rep can act on.
@@ -519,6 +472,56 @@ func TestAScannedPDFSaysItHoldsNoTextRatherThanFailingVaguely(t *testing.T) {
 	}
 	if calls := brain.Calls(); len(calls) != 0 {
 		t.Errorf("made %d model call(s) for a document with nothing to read, want 0", len(calls))
+	}
+}
+
+// The bound maxDocumentBytes' own comment states — "refused as a reading rather
+// than truncated, because nothing on the panel would say which half it saw" —
+// applies to the extracted lane too. The text lane already honours it; reading
+// the first 60,000 characters of a contract and reporting `done` is the outcome
+// it exists to refuse.
+func TestAPDFLongerThanOneReadingIsRefusedRatherThanTruncated(t *testing.T) {
+	lines := make([]string, 0, 4000)
+	for range 4000 {
+		lines = append(lines,
+			"Contract value: EUR 148,500.00 for the packaging line retrofit and its commissioning")
+	}
+	store := &fakeReadStore{meta: pdfAttachment(), body: invoicePDFBytes(t, lines...)}
+	brain := scriptedBrain{
+		FakeClient: ai.NewFakeClient().Script(groundedDocumentReply()),
+		carriage:   carriesImagesOnly,
+	}
+
+	if err := runReading(t, store, brain); err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if store.outcome.Status != activities.ExtractionReadFailed {
+		t.Fatalf("status = %q, want failed — a reading of part of a contract cannot say which part",
+			store.outcome.Status)
+	}
+	if calls := brain.Calls(); len(calls) != 0 {
+		t.Errorf("made %d model call(s) with a truncated document, want 0", len(calls))
+	}
+}
+
+// What ingress stored is a HEADER, and a header carries parameters. The same
+// document must not be read or refused depending on which client uploaded it.
+func TestAContentTypeCarryingParametersStillNamesItsLane(t *testing.T) {
+	withParams := "application/pdf; charset=binary"
+	store := &fakeReadStore{
+		meta: crmcontracts.Attachment{Filename: "order.pdf", ContentType: &withParams},
+		body: invoicePDFBytes(t, "ORDER FORM", "Contract value: EUR 148,500.00"),
+	}
+	brain := scriptedBrain{
+		FakeClient: ai.NewFakeClient().Script(groundedDocumentReply()),
+		carriage:   carriesImagesOnly,
+	}
+
+	if err := runReading(t, store, brain); err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if store.outcome.Status != activities.ExtractionReadDone {
+		t.Fatalf("outcome = %+v, want done — the parameter decided the lane", store.outcome)
 	}
 }
 

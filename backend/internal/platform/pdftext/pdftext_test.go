@@ -5,8 +5,11 @@ package pdftext_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -46,7 +49,7 @@ func TestExtractReadsWhatAGeneratedDocumentStates(t *testing.T) {
 		"Delivery date: 31 January 2027",
 	)
 
-	text, err := pdftext.Extract(raw, generous)
+	text, err := pdftext.Extract(t.Context(), raw, generous)
 	if err != nil {
 		t.Fatalf("reading a generated PDF: %v", err)
 	}
@@ -65,7 +68,7 @@ func TestExtractReadsWhatAGeneratedDocumentStates(t *testing.T) {
 func TestExtractPreservesAFigureInTheSpellingAQuoteIsCheckedAgainst(t *testing.T) {
 	raw := invoicePDF(t, "Contract value: EUR 148,500.00", "Deposit: EUR 500.00")
 
-	text, err := pdftext.Extract(raw, generous)
+	text, err := pdftext.Extract(t.Context(), raw, generous)
 	if err != nil {
 		t.Fatalf("reading a generated PDF: %v", err)
 	}
@@ -92,7 +95,7 @@ func TestExtractSaysAScanCarriesNoText(t *testing.T) {
 		t.Fatalf("building the fixture PDF: %v", err)
 	}
 
-	_, err := pdftext.Extract(out.Bytes(), generous)
+	_, err := pdftext.Extract(t.Context(), out.Bytes(), generous)
 	if !errors.Is(err, pdftext.ErrNoTextLayer) {
 		t.Fatalf("a PDF with no text must report ErrNoTextLayer, got %v", err)
 	}
@@ -104,7 +107,7 @@ func TestExtractSaysAScanCarriesNoText(t *testing.T) {
 func TestExtractTreatsAPageOfWhitespaceAsNoTextAtAll(t *testing.T) {
 	raw := invoicePDF(t, "   ", "\t", " ")
 
-	_, err := pdftext.Extract(raw, generous)
+	_, err := pdftext.Extract(t.Context(), raw, generous)
 	if !errors.Is(err, pdftext.ErrNoTextLayer) {
 		t.Fatalf("whitespace-only text must report ErrNoTextLayer, got %v", err)
 	}
@@ -120,7 +123,7 @@ func TestExtractRefusesWhatIsNotAPDF(t *testing.T) {
 		"truncated trail": []byte("%PDF-1.4\n1 0 obj\n<<>>\nendobj\n"),
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := pdftext.Extract(raw, generous)
+			_, err := pdftext.Extract(t.Context(), raw, generous)
 			if !errors.Is(err, pdftext.ErrUnreadable) {
 				t.Fatalf("%s must report ErrUnreadable, got %v", name, err)
 			}
@@ -152,7 +155,7 @@ func TestExtractSurvivesACorruptedDocumentInsteadOfPanicking(t *testing.T) {
 		}
 		// No recover here on purpose: a panic escaping Extract fails this test
 		// by crashing it, which is the outcome being asserted against.
-		text, err := pdftext.Extract(mutant, generous)
+		text, err := pdftext.Extract(t.Context(), mutant, generous)
 		switch {
 		case err == nil && text == "":
 			t.Fatal("a reading that succeeded must carry text")
@@ -178,7 +181,7 @@ func TestExtractSurvivesATruncatedDocument(t *testing.T) {
 	valid := invoicePDF(t, "Contract value: EUR 148,500.00")
 
 	for cut := 1; cut < len(valid); cut += max(1, len(valid)/60) {
-		if _, err := pdftext.Extract(valid[:cut], generous); err != nil &&
+		if _, err := pdftext.Extract(t.Context(), valid[:cut], generous); err != nil &&
 			!errors.Is(err, pdftext.ErrUnreadable) && !errors.Is(err, pdftext.ErrNoTextLayer) {
 			t.Fatalf("truncation at %d reported %v, which is not a sentinel a caller can route on", cut, err)
 		}
@@ -194,9 +197,15 @@ func TestExtractStopsAtTheCallersBound(t *testing.T) {
 		lines = append(lines, "Contract value: EUR 148,500.00 for the packaging line retrofit")
 	}
 	raw := invoicePDF(t, lines...)
+	// Many PAGES, not one long one, which is what makes this a memory assertion
+	// rather than a string-length one: the walk must stop early instead of
+	// materialising every page and trimming the result.
+	if pages := bytes.Count(raw, []byte("/Type /Page\n")); pages < 5 {
+		t.Fatalf("the fixture spans %d page(s); this test needs enough that stopping early matters", pages)
+	}
 
 	const limit = 100
-	text, err := pdftext.Extract(raw, limit)
+	text, err := pdftext.Extract(t.Context(), raw, limit)
 	if err != nil {
 		t.Fatalf("reading a long PDF: %v", err)
 	}
@@ -217,7 +226,7 @@ func TestTheBoundCountsCharactersRatherThanBytes(t *testing.T) {
 	raw := invoicePDF(t, lines...)
 
 	const limit = 300
-	text, err := pdftext.Extract(raw, limit)
+	text, err := pdftext.Extract(t.Context(), raw, limit)
 	if err != nil {
 		t.Fatalf("reading a long PDF: %v", err)
 	}
@@ -229,11 +238,94 @@ func TestTheBoundCountsCharactersRatherThanBytes(t *testing.T) {
 	}
 }
 
+// A document printed by a REAL generator, which every case above is not.
+//
+// fpdf writes one text block per line and no ligatures; a browser positions
+// words with Td/Tm and emits the ligature glyphs its embedded font provides.
+// Those are different enough that a suite built only on the friendly shape can
+// report this package as working while every invoice a customer actually sends
+// reads back wrong — so one real file is committed and read as bytes.
+//
+// The ligature is the case it caught. Chrome prints "retrofit" as
+// `retro` + U+FB01, and the downstream grounding check is a plain substring
+// match: left folded, a model that quotes what the PAGE shows has its whole
+// reading refused for quoting the document correctly.
+func TestARealGeneratorsDocumentReadsBackAsItsWords(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "chrome-order-confirmation.pdf"))
+	if err != nil {
+		t.Fatalf("reading the committed fixture: %v", err)
+	}
+
+	text, err := pdftext.Extract(t.Context(), raw, generous)
+	if err != nil {
+		t.Fatalf("reading a browser-printed PDF: %v", err)
+	}
+	// The four things a reading of this document has to be able to quote, in the
+	// spelling the grounding checks compare under.
+	for _, want := range []string{"EUR 148,500.00", "EUR 500.00", "NL-2027-0041", "31 January 2027"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("extracted text does not state %q; got:\n%s", want, text)
+		}
+	}
+	// "Packaging line 3 retrofit" is printed with a ﬁ ligature.
+	if !strings.Contains(text, "retrofit") {
+		t.Errorf("a ligature was left as the single rune the font draws, so a quote of "+
+			"the word it spells cannot be found in this text; got:\n%s", text)
+	}
+	for _, ligature := range []string{"ﬀ", "ﬁ", "ﬂ", "ﬃ", "ﬄ"} {
+		if strings.Contains(text, ligature) {
+			t.Errorf("ligature %q survived normalisation", ligature)
+		}
+	}
+}
+
+// `/Count` is a number the DOCUMENT chooses, and the parser returns it from
+// NumPage without checking it against anything. Honouring it walks the page tree
+// that many times — and the library keeps no object cache, so each walk re-parses
+// — which turns a 1.5 KB file into an unbounded amount of work.
+//
+// The walk is bounded by what the FILE could really hold instead. This test
+// hands the parser a document that claims a hundred million pages and asserts it
+// answers anyway, which it cannot do unless the claim was ignored.
+func TestALyingPageCountIsBoundedByTheFileItself(t *testing.T) {
+	honest := invoicePDF(t, "Contract value: EUR 148,500.00")
+	lying := bytes.Replace(honest, []byte("/Count 1"), []byte("/Count 99999999"), 1)
+	if bytes.Equal(honest, lying) {
+		t.Fatal("the fixture carries no /Count to falsify, so this test never exercised the bound")
+	}
+
+	// No deadline: the point is that the WALK is bounded, not that a timeout
+	// rescues it. A test that passed only because ctx fired would prove nothing
+	// about the arithmetic.
+	text, err := pdftext.Extract(t.Context(), lying, generous)
+	if err != nil && !errors.Is(err, pdftext.ErrUnreadable) && !errors.Is(err, pdftext.ErrNoTextLayer) {
+		t.Fatalf("a lying page count must not change WHICH answer comes back, got %v", err)
+	}
+	if err == nil && !strings.Contains(text, "148,500.00") {
+		t.Errorf("the real page was not read; got %q", text)
+	}
+}
+
+// The parser follows `/Parent` and `/Pages` with no cycle guard, so a document
+// whose page tree points at itself spins forever. Nothing panics, so the recover
+// cannot see it; only a deadline can. An already-cancelled context is the
+// deterministic stand-in for that document — a real cycle fixture would hang
+// this test for as long as the bug lasted.
+func TestExtractGivesUpWhenItsContextDoes(t *testing.T) {
+	raw := invoicePDF(t, "Contract value: EUR 148,500.00")
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if _, err := pdftext.Extract(ctx, raw, generous); !errors.Is(err, pdftext.ErrUnreadable) {
+		t.Fatalf("a read whose context is done must report ErrUnreadable, got %v", err)
+	}
+}
+
 func TestExtractRefusesABoundItCannotHonour(t *testing.T) {
 	raw := invoicePDF(t, "Contract value: EUR 148,500.00")
 
 	for _, limit := range []int{0, -1} {
-		if _, err := pdftext.Extract(raw, limit); err == nil {
+		if _, err := pdftext.Extract(t.Context(), raw, limit); err == nil {
 			t.Errorf("a bound of %d must be refused rather than silently treated as unbounded", limit)
 		}
 	}

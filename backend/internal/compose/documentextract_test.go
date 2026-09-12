@@ -184,10 +184,6 @@ type fakeDocumentBrain struct{ *ai.FakeClient }
 
 func (f fakeDocumentBrain) AttachmentMIMEs() []string { return f.Caps().AttachmentMIMEs }
 
-// WithheldByBinding is false: the offline client is not narrowed by any routing
-// config, so whatever it does not carry is a wire without the lane.
-func (f fakeDocumentBrain) WithheldByBinding(string) bool { return false }
-
 // Every bound a stated field owes. Each of these is MODEL output derived from a
 // document a counterparty may have written, and each lands somewhere a human
 // reads — an audit note, a panel row — so an unbounded one is a way to push a

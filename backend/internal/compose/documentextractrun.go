@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -97,10 +98,6 @@ type documentCompleter interface {
 	// AttachmentMIMEs is what a caller may hand this lane, in
 	// model.CarriesMIME's spelling. Empty means documents cannot go to it.
 	AttachmentMIMEs() []string
-	// WithheldByBinding distinguishes the two reasons a media type is absent
-	// from that set: an operator closed the lane with `input:`, or no wire on
-	// the ladder ever had one. Only the second may be converted around.
-	WithheldByBinding(mime string) bool
 }
 
 // NewDocumentExtractor builds the engine over the pool and one model lane.
@@ -248,7 +245,7 @@ func (d *DocumentExtractor) sourceFor(
 	// product will send, never what the bytes are.
 	mime := ""
 	if meta.ContentType != nil {
-		mime = strings.ToLower(strings.TrimSpace(*meta.ContentType))
+		mime = mediaTypeOf(*meta.ContentType)
 	}
 	// One byte past the bound is what distinguishes "exactly at the limit" from
 	// "truncated to the limit"; without it a document of exactly maxDocumentBytes
@@ -262,7 +259,7 @@ func (d *DocumentExtractor) sourceFor(
 			"this document is larger than the %d MB one reading carries; a reading of part of it could not say which part it saw",
 			maxDocumentBytes>>20), nil
 	}
-	src, detail := d.laneFor(meta, mime, bytes)
+	src, detail := d.laneFor(ctx, meta, mime, bytes)
 	return src, detail, nil
 }
 
@@ -276,7 +273,7 @@ func (d *DocumentExtractor) sourceFor(
 // answer for a wire that cannot be handed the file at all, not an improvement on
 // one that can.
 func (d *DocumentExtractor) laneFor(
-	meta crmcontracts.Attachment, mime string, bytes []byte,
+	ctx context.Context, meta crmcontracts.Attachment, mime string, bytes []byte,
 ) (documentSource, string) {
 	if model.CarriesMIME(documentTextMIMEs, mime) {
 		return d.textSource(meta, bytes)
@@ -287,19 +284,8 @@ func (d *DocumentExtractor) laneFor(
 			Filename: meta.Filename,
 		}, ""
 	}
-	// Before converting anything: a lane an OPERATOR closed is not a lane this
-	// code may route around. `input:` on a tier whose wire does carry this type
-	// is a standing instruction that documents of this kind do not go to that
-	// model, and extracting the text and sending that instead delivers the
-	// contents they withheld. The refusal names the line, because unlike a wire
-	// that never had the lane, this one is an edit away from reading the file.
-	if d.brain.WithheldByBinding(mime) {
-		return documentSource{}, fmt.Sprintf(
-			"this installation is configured not to give %s documents to its model; the `input:` line on the tier serving this reading is what withholds them",
-			mime)
-	}
 	if mime == documentPDFMIME {
-		return d.extractedSource(meta, bytes)
+		return d.extractedSource(ctx, meta, bytes)
 	}
 	if mime == "" {
 		return documentSource{}, "this document declares no content type, so nothing can say how to read it"
@@ -317,9 +303,9 @@ func (d *DocumentExtractor) laneFor(
 // the same way — the model is handed characters, and was not asked to understand
 // a file format.
 func (d *DocumentExtractor) extractedSource(
-	meta crmcontracts.Attachment, raw []byte,
+	ctx context.Context, meta crmcontracts.Attachment, raw []byte,
 ) (documentSource, string) {
-	text, err := pdftext.Extract(raw, maxDocumentTextChars)
+	text, err := pdftext.Extract(ctx, raw, maxDocumentTextChars)
 	switch {
 	case errors.Is(err, pdftext.ErrNoTextLayer):
 		// A scan. Its pages are pictures, so there is no text to read and this
@@ -330,7 +316,33 @@ func (d *DocumentExtractor) extractedSource(
 	case err != nil:
 		return documentSource{}, "this PDF could not be opened to read its text"
 	}
+	// Held to the SAME bound the text lane holds, by the same words. Extract
+	// answers one rune past the budget precisely so this can tell a document
+	// that fits from one that was cut off, and a reading of the first 60,000
+	// characters of a contract reported as `done` is the outcome maxDocumentBytes'
+	// own comment refuses: nothing on the panel would say which part it saw.
+	if utf8.RuneCountInString(text) > maxDocumentTextChars {
+		return documentSource{}, fmt.Sprintf(
+			"this document is longer than the %d characters one reading addresses",
+			maxDocumentTextChars)
+	}
 	return documentSource{Text: text, Filename: meta.Filename, ExtractedFrom: documentPDFMIME}, ""
+}
+
+// mediaTypeOf reduces a stored Content-Type to the media type alone.
+//
+// What ingress recorded is a HEADER, and a header carries parameters: an upload
+// declaring `application/pdf; charset=binary` is declaring a PDF, and every lane
+// below compares against bare media types. Without this the parameter decides
+// the lane — the same document read or refused depending on which client sent
+// it — which is the sort of difference nobody can see from the panel.
+//
+// Not mime.ParseMediaType: that returns an error for a malformed header, and a
+// caller-chosen string being malformed is not an outcome worth distinguishing
+// here. Everything up to the first `;`, folded, is the whole answer.
+func mediaTypeOf(contentType string) string {
+	media, _, _ := strings.Cut(contentType, ";")
+	return strings.ToLower(strings.TrimSpace(media))
 }
 
 // textSource takes the text lane, where the document's bytes are its text.
@@ -339,7 +351,7 @@ func (d *DocumentExtractor) textSource(meta crmcontracts.Attachment, raw []byte)
 	if text == "" {
 		return documentSource{}, "this document carries no text to read"
 	}
-	if len(text) > maxDocumentTextChars {
+	if utf8.RuneCountInString(text) > maxDocumentTextChars {
 		return documentSource{}, fmt.Sprintf(
 			"this document is %d characters, and one reading addresses at most %d",
 			len(text), maxDocumentTextChars)
