@@ -9195,6 +9195,8 @@ export const de = {
   "worklist.filter.tasks": "Aufgaben",
   "worklist.filter.decisions": "Entscheidungen",
   "worklist.filter.system": "System",
+  "worklist.filter.linked.urgent":
+    "Nur Dringendes: jemand wartet, oder eine Zusage bricht.",
   "worklist.filter.linked.except_decisions":
     "Alles außer den Entscheidungen, nach denen Ihr Briefing bereits gefragt hat.",
   "worklist.filter.linked.changed_since_brief":

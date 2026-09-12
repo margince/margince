@@ -200,7 +200,10 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // twice and drops the one fact it could add.
           basis={t("brief.readings.urgentBasis")}
           openLabel={t("brief.readings.openUrgent")}
-          lane="all"
+          // ITS OWN LANE, not the whole queue. This figure counts levels 0 to
+          // 2; opening `all` landed a reader who was sent by a 4 in a list of
+          // thirty, with nothing saying which four it meant.
+          lane="urgent"
         />
         <LaneReading
           label={t("brief.readings.meetings")}

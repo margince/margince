@@ -731,7 +731,7 @@ describe("the pipeline period", () => {
   // NOBODY IS BLOCKED BY A DUPLICATE PAIR. The strip said "somebody is blocked
   // until you answer" under every pending decision, and most of them are
   // contact hygiene the ranker deliberately puts BELOW a waiting customer. A
-  // line that claims a person is held up by a merge suggestion is the one a
+  // line that claims somebody is held up by a merge suggestion is the one a
   // reader learns to discount.
   it("claims nobody is blocked when no decision holds work up", () => {
     draw(
@@ -816,7 +816,7 @@ describe("the pipeline period", () => {
   // door to the leads lane — passes it. This one presses each door and reads
   // where it landed.
   it.each([
-    { door: "openUrgent", filter: "all" },
+    { door: "openUrgent", filter: "urgent" },
     { door: "openMeetings", filter: "meetings" },
     { door: "openLeads", filter: "leads" },
     { door: "openDecisions", filter: "decisions" },

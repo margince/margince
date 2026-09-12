@@ -44,14 +44,16 @@ const FILTERS = [
 
 // The narrowings that are reachable by ADDRESS but are not pills.
 //
-// Both are the destination of a count on another screen — Brief's feed footer
-// and its overnight notice — and both exist so that count and its link read one
-// filter. Neither is a lane a reader picks: `except_decisions` is a complement
-// that only means something on a screen already drawing its own decisions, and
-// `changed_since_brief` describes a moment rather than a kind of work. Offered
-// as pills they would be two cuts nobody asked for, so the row stays the seven
-// kinds plus `all` and these arrive by link.
+// Each is the destination of a count on another screen — Brief's urgent
+// reading, its feed footer, its overnight notice — and each exists so that
+// count and its link read ONE filter. None is a lane a reader picks:
+// `urgent` is a level rather than a kind of work and already has a figure that
+// sends them here, `except_decisions` is a complement that only means something
+// on a screen already drawing its own decisions, and `changed_since_brief`
+// describes a moment. Offered as pills they would be three cuts nobody asked
+// for, so the row stays the seven kinds plus `all` and these arrive by link.
 const LINKED_ONLY = [
+  "urgent",
   "except_decisions",
   "changed_since_brief",
 ] as const satisfies readonly WorklistFilter[];

@@ -269,10 +269,17 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		// arrive in the lane's own order, which is not urgency, so taking the
 		// first would rank an incident by whichever failure happened to be
 		// read first and could file an urgent one below a routine row.
-		level, consequence = members[0].item.Level, members[0].item.Consequence
+		//
+		// Read through semanticLevelOf, so a PIN cannot mint an urgent group.
+		// A pin writes level 0 into `item.Level`, and this row is synthetic: it
+		// carries no pin of its own for a later reader to see through, so a
+		// member's ordering preference taken literally here became the whole
+		// group's band — and three routine failures reached a lane that counts
+		// only somebody waiting or a promise breaking.
+		level, consequence = semanticLevelOf(members[0]), members[0].item.Consequence
 		for _, member := range members[1:] {
-			if member.item.Level < level {
-				level, consequence = member.item.Level, member.item.Consequence
+			if semanticLevelOf(member) < level {
+				level, consequence = semanticLevelOf(member), member.item.Consequence
 			}
 		}
 		category = categorySystem

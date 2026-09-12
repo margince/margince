@@ -59,6 +59,11 @@ const (
 	filterExceptDecisions = crmcontracts.WorklistFilter("except_decisions")
 	// filterChangedSinceBrief is the rows the overnight run did not see.
 	filterChangedSinceBrief = crmcontracts.WorklistFilter("changed_since_brief")
+	// filterUrgent is the population `summary.urgent` counts: somebody waiting
+	// or a promise breaking. It exists because the strip's first figure had no
+	// door of its own and opened the WHOLE queue — a count of 4 landing a
+	// reader in a list of 30, which is the reading this filter closes.
+	filterUrgent = crmcontracts.WorklistFilter("urgent")
 )
 
 // opensTheDeck says whether a filter is a request to see inside a folded group.
@@ -120,6 +125,13 @@ func keepFiltered(rows []ranked, want crmcontracts.WorklistFilter) []ranked {
 
 func keepsRow(row ranked, want crmcontracts.WorklistFilter) bool {
 	switch want {
+	case filterUrgent:
+		// The row's OWN level, through the same predicate the summary counts
+		// through. A pin is a reader's ordering preference and makes nothing
+		// urgent, so pinning hygiene to the top of a morning must not grow the
+		// figure OR the list it opens — and the two cannot drift, because there
+		// is one spelling of "urgent" and this is a call to it.
+		return semanticLevelOf(row) <= levelPromise
 	case filterExceptDecisions:
 		return !alreadyACard(row)
 	case filterChangedSinceBrief:

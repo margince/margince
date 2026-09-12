@@ -9356,6 +9356,8 @@ export const en = {
   "worklist.filter.tasks": "Tasks",
   "worklist.filter.decisions": "Decisions",
   "worklist.filter.system": "System",
+  "worklist.filter.linked.urgent":
+    "Showing only what is urgent: somebody waiting, or a promise breaking.",
   "worklist.filter.linked.except_decisions":
     "Showing everything except the decisions your brief already asked you about.",
   "worklist.filter.linked.changed_since_brief":
