@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 type consentEnv struct {
@@ -807,4 +808,55 @@ func (c *consentEnv) sendFrom(t *testing.T, activityID, purpose string) (int, st
 		"to": []string{"subject@consent.test"}, "consent_purpose": purpose,
 	}, nil, &problem)
 	return status, problem.Code, problem.Detail
+}
+
+// TestASentMessageCarriesTheDisclosuresItOwes is the end of the chain this
+// slice builds, proved through a real send rather than the seam.
+//
+// The packs have declared disclosures since they shipped; consent can render
+// them; activities appends them. None of that puts words in a message unless
+// compose wires the edge, and a unit test on either side passes whether or not
+// it is wired. gates/messagingruleapplied_test.go recorded that gap by name,
+// and this is what lets the register line close.
+func TestASentMessageCarriesTheDisclosuresItOwes(t *testing.T) {
+	c := setupConsent(t)
+	owner := OwnerConn(t)
+
+	// A pack for a code no real jurisdiction claims, declaring one obligation,
+	// and the particulars that meet it.
+	messagingrules.Register(messagingrules.Rules{
+		Jurisdiction: "zm", Version: 1,
+		Disclosures: []messagingrules.Disclosure{
+			{Kind: messagingrules.ControllerIdentity},
+		},
+	})
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO setting (key, value, updated_at) VALUES ($1, $2::jsonb, now())
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = now()`,
+		consent.ControllerIdentity.Key(),
+		`{"LegalName":"Beispiel GmbH","PostalAddress":"Hauptstraße 1, 10115 Berlin"}`); err != nil {
+		t.Fatalf("stating the particulars: %v", err)
+	}
+	// The country is a SETTING like the particulars, not a column: the engine
+	// resolves the applicable pack through identity.CountryOf, which reads it.
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO setting (key, value, updated_at) VALUES ('installation.country', '"zm"'::jsonb, now())
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = now()`); err != nil {
+		t.Fatalf("placing the installation: %v", err)
+	}
+
+	if status, code, _ := c.sendFrom(t, c.inbound(t), "business_correspondence"); status != http.StatusAccepted {
+		t.Fatalf("correspondence → %d %q, want 202", status, code)
+	}
+
+	var body string
+	if err := owner.QueryRow(context.Background(), `
+		SELECT body FROM comms_outbound ORDER BY created_at DESC LIMIT 1`).Scan(&body); err != nil {
+		t.Fatalf("reading the staged message: %v", err)
+	}
+	if !strings.Contains(body, "Beispiel GmbH") {
+		t.Errorf("the sent message carries no controller identity:\n%s\n\nThe pack declares "+
+			"it, the installation stated it, and the send path is where the two meet — a "+
+			"body without it means the edge is not wired", body)
+	}
 }

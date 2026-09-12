@@ -89,6 +89,14 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// The RFC 8058 unsubscribe linker (B-E11.32): consent mints the
 		// preference token behind the List-Unsubscribe URL.
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
+		// The disclosures a jurisdiction demands, put into the body that owes
+		// them. See compose/disclosurefooter.go.
+		WithDisclosures(disclosureAdapter{store: consent.NewStore(InstallationDB(pool)).
+			// WITH THE COUNTRY READER, which decides which pack applies. A bare
+			// store answers no country, so applicableRules finds no pack and
+			// every message silently owes nothing — the failure this seam
+			// exists to end, arriving through the wiring instead.
+			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}).
 		// The sender's own sign-off (core 0235). contacts owns the row because
 		// it owns the contact the seat belongs to; activities appends it because
 		// it owns the one send. The edge is injected here rather than imported,

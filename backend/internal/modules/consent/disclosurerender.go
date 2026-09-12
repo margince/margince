@@ -47,6 +47,30 @@ type DisclosureLine struct {
 // somebody has to close, while the second is fine.
 func (d DisclosureLine) Missing() bool { return d.Text == "" }
 
+// Disclosures answers what a message of this category must disclose, opening
+// its own transaction.
+//
+// The send path composes a body without a transaction of its own to hand in —
+// the unsubscribe linker beside it has the same shape — so this is the door the
+// composition root wires, and DisclosuresFor below is the one a caller already
+// holding a transaction uses.
+//
+// A scheduled fire DOES hold one while it prepares, so this opens a second. What
+// it reads is a settings row and an in-process pack registry, neither of which
+// the outer transaction writes — so the nested read sees committed state, which
+// is what it wants.
+func (s *Store) Disclosures(
+	ctx context.Context, category commsauthz.Category,
+) ([]DisclosureLine, error) {
+	var out []DisclosureLine
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.DisclosuresFor(ctx, tx, category)
+		return err
+	})
+	return out, err
+}
+
 // DisclosuresFor answers what this message must disclose, and whether the
 // installation can say it.
 //
@@ -75,6 +99,12 @@ func (s *Store) DisclosuresFor(
 	if err != nil {
 		return nil, err
 	}
+	// An UNKNOWN category is treated as not-marketing, which is the safe
+	// direction: it carries the obligations binding every first contact and
+	// leaves out the advertising-only ones. A send that names no category is
+	// usually an older caller with a legacy purpose key, and putting an
+	// objection route under what may be an invoice is the error that reads as
+	// an invitation to stop receiving invoices.
 	marketing := category == commsauthz.CategoryMarketing
 	out := make([]DisclosureLine, 0, len(rules.Disclosures))
 	for _, d := range rules.Disclosures {
