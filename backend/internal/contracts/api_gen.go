@@ -17482,6 +17482,24 @@ func (e UpdatePreferencesJSONBodyChoicesState) Valid() bool {
 	}
 }
 
+// Defines values for PublicStopContactJSONBodyAction.
+const (
+	PublicStopContactJSONBodyActionStopAllContact   PublicStopContactJSONBodyAction = "stop_all_contact"
+	PublicStopContactJSONBodyActionStopAllMarketing PublicStopContactJSONBodyAction = "stop_all_marketing"
+)
+
+// Valid indicates whether the value is a known member of the PublicStopContactJSONBodyAction enum.
+func (e PublicStopContactJSONBodyAction) Valid() bool {
+	switch e {
+	case PublicStopContactJSONBodyActionStopAllContact:
+		return true
+	case PublicStopContactJSONBodyActionStopAllMarketing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OneClickUnsubscribeFormdataBodyListUnsubscribe.
 const (
 	OneClickUnsubscribeFormdataBodyListUnsubscribeOneClick OneClickUnsubscribeFormdataBodyListUnsubscribe = "One-Click"
@@ -43661,6 +43679,18 @@ type UpdatePreferencesJSONBody struct {
 // UpdatePreferencesJSONBodyChoicesState defines parameters for UpdatePreferences.
 type UpdatePreferencesJSONBodyChoicesState string
 
+// PublicStopContactJSONBody defines parameters for PublicStopContact.
+type PublicStopContactJSONBody struct {
+	Action PublicStopContactJSONBodyAction `json:"action"`
+
+	// Statement The subject's own words, kept verbatim. An objection a controller has to answer for is
+	// weaker evidence when the record holds only our paraphrase of it.
+	Statement *string `json:"statement,omitempty"`
+}
+
+// PublicStopContactJSONBodyAction defines parameters for PublicStopContact.
+type PublicStopContactJSONBodyAction string
+
 // OneClickUnsubscribeFormdataBody defines parameters for OneClickUnsubscribe.
 type OneClickUnsubscribeFormdataBody struct {
 	ListUnsubscribe *OneClickUnsubscribeFormdataBodyListUnsubscribe `form:"List-Unsubscribe,omitempty" json:"List-Unsubscribe,omitempty"`
@@ -43668,7 +43698,7 @@ type OneClickUnsubscribeFormdataBody struct {
 
 // OneClickUnsubscribeParams defines parameters for OneClickUnsubscribe.
 type OneClickUnsubscribeParams struct {
-	// Purpose The consent purpose key to withdraw. Omit to withdraw every lane the recipient has not already stopped.
+	// Purpose The consent purpose key to withdraw. Omit to withdraw every marketing-class purpose.
 	Purpose *string `form:"purpose,omitempty" json:"purpose,omitempty"`
 }
 
@@ -45463,6 +45493,9 @@ type SubmitConfirmDetailsJSONRequestBody SubmitConfirmDetailsJSONBody
 
 // UpdatePreferencesJSONRequestBody defines body for UpdatePreferences for application/json ContentType.
 type UpdatePreferencesJSONRequestBody UpdatePreferencesJSONBody
+
+// PublicStopContactJSONRequestBody defines body for PublicStopContact for application/json ContentType.
+type PublicStopContactJSONRequestBody PublicStopContactJSONBody
 
 // OneClickUnsubscribeFormdataRequestBody defines body for OneClickUnsubscribe for application/x-www-form-urlencoded ContentType.
 type OneClickUnsubscribeFormdataRequestBody OneClickUnsubscribeFormdataBody
@@ -56839,6 +56872,9 @@ type ServerInterface interface {
 	// Save per-purpose choices from the preference center (anonymous, token-authed).
 	// (PUT /public/preferences/{token})
 	UpdatePreferences(w http.ResponseWriter, r *http.Request, token string)
+	// Ask us to stop contacting you (anonymous, token-authed, POST-only).
+	// (POST /public/preferences/{token}/stop)
+	PublicStopContact(w http.ResponseWriter, r *http.Request, token string)
 	// RFC 8058 one-click unsubscribe (anonymous, token-authed, POST-only).
 	// (POST /public/preferences/{token}/unsubscribe)
 	OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, token string, params OneClickUnsubscribeParams)
@@ -60313,6 +60349,12 @@ func (_ Unimplemented) GetPreferenceCenter(w http.ResponseWriter, r *http.Reques
 // Save per-purpose choices from the preference center (anonymous, token-authed).
 // (PUT /public/preferences/{token})
 func (_ Unimplemented) UpdatePreferences(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask us to stop contacting you (anonymous, token-authed, POST-only).
+// (POST /public/preferences/{token}/stop)
+func (_ Unimplemented) PublicStopContact(w http.ResponseWriter, r *http.Request, token string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -82447,6 +82489,32 @@ func (siw *ServerInterfaceWrapper) UpdatePreferences(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// PublicStopContact operation middleware
+func (siw *ServerInterfaceWrapper) PublicStopContact(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublicStopContact(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // OneClickUnsubscribe operation middleware
 func (siw *ServerInterfaceWrapper) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request) {
 
@@ -90411,6 +90479,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/public/preferences/{token}", wrapper.UpdatePreferences)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/preferences/{token}/stop", wrapper.PublicStopContact)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/public/preferences/{token}/unsubscribe", wrapper.OneClickUnsubscribe)

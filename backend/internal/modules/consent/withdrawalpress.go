@@ -144,49 +144,6 @@ func (s *Store) StopForCredential(ctx context.Context, token string) error {
 	})
 }
 
-// WithdrawMarketingForCredential stops the MARKETING-CLASS purposes a contact
-// holds, for a credential whose scope is all_marketing.
-//
-// SCOPED BY CLASS, unlike the legacy one-click sweep beside it, which stops
-// every purpose in the catalog except the locked transactional one — so a
-// press there also withdraws business correspondence, and a contact who
-// unsubscribed from a newsletter stops receiving replies to their own
-// enquiries. That defect is older than this credential and its fix is a slice
-// of its own, because narrowing the LEGACY path changes what an existing link
-// in an existing mailbox does.
-//
-// This credential is new, so nothing depends on it being over-broad, and its
-// scope is called all_marketing. Honouring that literally is the only reading
-// that matches the words: a link minted to stop marketing stops marketing.
-//
-// phone_outreach is marketing by another channel and goes with it. The two
-// classes left standing are transactional and business_correspondence, which
-// are not subscriptions anybody opted into and so not things to unsubscribe
-// from.
-func (s *Store) WithdrawMarketingForCredential(
-	ctx context.Context, contactID ids.ContactID,
-) ([]string, error) {
-	var keys []string
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT key FROM consent_purpose
-			 WHERE archived_at IS NULL AND class IN ('marketing', 'phone_outreach')
-			 ORDER BY key`)
-		if err != nil {
-			return fmt.Errorf("consent: reading the marketing purposes a link may stop: %w", err)
-		}
-		keys, err = pgx.CollectRows(rows, pgx.RowTo[string])
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(keys) == 0 {
-		return []string{}, nil
-	}
-	return s.PublicWithdrawAll(ctx, contactID, keys)
-}
-
 // WithdrawMarketingNamed stops ONE purpose, and only if it is one an
 // all-marketing link may stop.
 //

@@ -174,7 +174,7 @@ func waitUntilNBlockedBy(t *testing.T, holder *pgx.Conn, want int) {
 // its row locks in its OWN order: the withdrawal sweeps go by ascending purpose
 // key, a granular save goes withdrawals-first so a refused grant cannot cost
 // the suppression beside it. A save of {grant a, withdraw b} therefore locks b
-// before a while an unsubscribe-everything locks a before b — and two at once
+// before a while an stop-all-marketing locks a before b — and two at once
 // on one contact deadlock. Postgres aborts one, and the reader sees a preference
 // change that failed for no reason they can act on.
 //
@@ -203,7 +203,7 @@ func TestOneContactsConsentWritesDoNotInterleave(t *testing.T) {
 
 	pressed := make(chan error, 1)
 	go func() {
-		_, err := e.store.PublicWithdrawEverything(publicPreferencesCtx(e), e.contact)
+		_, err := e.store.PublicStopAllMarketing(publicPreferencesCtx(e), e.contact)
 		pressed <- err
 	}()
 

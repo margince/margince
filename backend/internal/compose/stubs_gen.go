@@ -2051,6 +2051,10 @@ func (stubs) UpdatePreferences(w nethttp.ResponseWriter, r *nethttp.Request, tok
 	httperr.NotImplemented(w, r, "UpdatePreferences")
 }
 
+func (stubs) PublicStopContact(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "PublicStopContact")
+}
+
 func (stubs) OneClickUnsubscribe(w nethttp.ResponseWriter, r *nethttp.Request, token string, params crmcontracts.OneClickUnsubscribeParams) {
 	httperr.NotImplemented(w, r, "OneClickUnsubscribe")
 }

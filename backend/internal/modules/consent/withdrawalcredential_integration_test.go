@@ -403,15 +403,18 @@ func TestTheProductionRotationNamesItsReason(t *testing.T) {
 	}
 }
 
-// AN ALL-MARKETING LINK STOPS MARKETING AND LEAVES CORRESPONDENCE ALONE.
+// AN UNSUBSCRIBE STOPS MARKETING AND LEAVES CORRESPONDENCE ALONE.
 //
-// The legacy one-click sweep stops every purpose in the catalog except the
-// locked transactional one, so a press also ends business correspondence: the
-// contact who unsubscribed from a newsletter stops receiving replies to their
-// own enquiries. Narrowing THAT changes what links already in mailboxes do, so
-// it belongs to the slice owning the purpose vocabulary. A new credential is
-// owed no such breadth, and its scope is called all_marketing.
-func TestAnAllMarketingLinkLeavesBusinessCorrespondenceRunning(t *testing.T) {
+// It used to stop every purpose in the catalog except the locked transactional
+// one, so a press also ended business correspondence: the contact who
+// unsubscribed from a newsletter stopped receiving replies to their own
+// enquiries. Nobody opted in to correspondence, so there was nothing there to
+// unsubscribe from — the sweep withdrew a consent that was never the basis for
+// those messages.
+//
+// Both credential families answer here now, which is why the test calls the
+// writer both routes share rather than a credential-only one.
+func TestAnUnsubscribeLeavesBusinessCorrespondenceRunning(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	for _, p := range []struct{ key, class string }{
@@ -426,15 +429,14 @@ func TestAnAllMarketingLinkLeavesBusinessCorrespondenceRunning(t *testing.T) {
 		}
 	}
 
-	stopped, err := e.store.WithdrawMarketingForCredential(e.ctx, e.contact)
+	stopped, err := e.store.PublicStopAllMarketing(e.ctx, e.contact)
 	if err != nil {
-		t.Fatalf("the credential's press failed: %v", err)
+		t.Fatalf("the press failed: %v", err)
 	}
 
 	for _, want := range []string{"newsletter_blast", "cold_calling"} {
 		if !slices.Contains(stopped, want) {
-			t.Errorf("the press left %q running, and a link that says all_marketing "+
-				"has to stop it", want)
+			t.Errorf("the press left %q running, and an unsubscribe has to stop it", want)
 		}
 	}
 	if slices.Contains(stopped, "business_correspondence") {

@@ -6322,9 +6322,9 @@ export const vi = {
   "prefs.wording.marketing_email":
     '"Hãy gửi cho tôi tin cập nhật sản phẩm & email tiếp thị thỉnh thoảng."',
   "prefs.wording.events": '"Hãy gửi cho tôi lời mời sự kiện & webinar."',
-  "prefs.unsubscribeAll": "Tắt mọi thứ tôi có thể tắt",
+  "prefs.unsubscribeAll": "Tắt toàn bộ tiếp thị",
   "prefs.unsubscribeAllHint":
-    "Thao tác này tắt mọi hàng phía trên có ô đánh dấu bạn dùng được. Các hàng ghi LUÔN BẬT vẫn bật — bạn cần chúng cho những việc chính bạn đã yêu cầu.",
+    "Thao tác này tắt mọi hàng tiếp thị phía trên. Thư trả lời cho chính câu hỏi của bạn, và những gì bạn đã yêu cầu, vẫn được gửi — không ai đăng ký giúp bạn những mục đó nên không có gì để tắt.",
   "prefs.oneClickDone":
     "Xong — bạn đã ra khỏi danh sách email tiếp thị. Việc này có hiệu lực ngay trên mọi chiến dịch.",
   "prefs.oneClickAlreadyOff": "Không cần làm gì — những mục này vốn đã tắt.",
