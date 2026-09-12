@@ -277,7 +277,20 @@ func (s *Store) offerChannelContact(ctx context.Context, tx pgx.Tx, in EnsureCha
 		FullName: name,
 		// A channel message arrived from them: the same act as an inbound
 		// mail, over a different transport.
-		Acquisition: Acquisition{Kind: AcquiredSubjectInitiated},
+		//
+		// The KIND is unchanged by the dating work and is not asserted here to
+		// be right: EnsureChannelRequest carries no direction, so this door
+		// cannot tell a message they sent from one sent to them, and it has
+		// always recorded the vocabulary's strongest claim. That is a question
+		// about channel ingestion, not about timing, and narrowing it needs a
+		// direction this seam does not have.
+		//
+		// The TIME is dated the same way the mail door dates it, from the
+		// earliest captured message rather than from this write. The
+		// corroborating email is what activity_participant is keyed by; where
+		// there is none the triggering activity still answers.
+		Acquisition: acquisitionFromCapture(ctx, tx,
+			AcquiredSubjectInitiated, in.CorroboratingEmail, in.ActivityID),
 		// The address the provider vouched for, written with the contact rather
 		// than after it, so the contact-create audit and event cover it — the
 		// mail path's own shape. An addressless record is one the next mail from
