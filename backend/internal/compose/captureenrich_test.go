@@ -8,7 +8,10 @@ package compose
 // and padding never counts as content.
 
 import (
+	"encoding/json"
 	"fmt"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -197,4 +200,116 @@ func TestTheirOwnSignatureIsRead(t *testing.T) {
 	if !signatureNamesContact("Viele Grüße\njudith@example.test", cand) {
 		t.Error("a signature carrying only their address was refused")
 	}
+}
+
+// The vocabulary is spelled four times — the gate map, the system prompt's
+// allowed list, the user prompt's field list and the reply schema's enum — and
+// the three the MODEL reads decide what it emits. A key present in one and
+// absent from another is not a compile error: the model picks the word it was
+// offered and the gate drops it, so a signature that stated the field reads as
+// a signature that stated nothing.
+//
+// The list is derived from enrichFieldNames rather than written out again here,
+// because a second copy in the test is the same defect the test exists to catch.
+func TestSignatureEnrichSpellsOneVocabularyEverywhere(t *testing.T) {
+	want := make([]string, 0, len(enrichFieldNames))
+	for name := range enrichFieldNames {
+		want = append(want, name)
+	}
+	sort.Strings(want)
+
+	cand := contacts.SignatureCandidate{
+		FullName:   "Bob Contact",
+		Email:      "bob@acme.example",
+		ActivityID: ids.NewV7(),
+		Body:       "Best,\nBob Contact\nCTO, Acme GmbH",
+	}
+	req := signatureEnrichRequest(cand, signatureBlock(cand.Body))
+
+	for _, spelling := range []struct {
+		where string
+		names []string
+	}{
+		{"the system prompt's allowed list", commaListAfter(req.System, "Allowed fields ONLY: ")},
+		{"the user prompt's field list", quotedListAfter(req.Messages[0].Content, "Fields to extract when stated: ")},
+		{"the reply schema's enum", schemaFieldEnum(t, signatureEnrichSchema())},
+	} {
+		got := append([]string(nil), spelling.names...)
+		sort.Strings(got)
+		if !slices.Equal(got, want) {
+			t.Errorf("%s names %v, but the gate admits %v — the model is offered a word the gate drops, or denied one it accepts",
+				spelling.where, got, want)
+		}
+	}
+}
+
+// A job title is one thing, and `title` is the word for it: it is the only key
+// contacts.observedFieldColumn mirrors onto contact.title. `role` named the same
+// thing and mirrored nothing, so whichever the model happened to pick decided
+// whether the screen showed the title or a dash.
+func TestSignatureEnrichOffersNoSecondWordForAJobTitle(t *testing.T) {
+	for _, synonym := range []string{"role", "position", "job_title"} {
+		if enrichFieldNames[synonym] {
+			t.Errorf("the vocabulary admits both %q and %q for a job title; only %q reaches contact.title",
+				fieldTitle, synonym, fieldTitle)
+		}
+	}
+	if !enrichFieldNames[fieldTitle] {
+		t.Fatalf("the vocabulary no longer admits %q, which is the key a job title is recorded under", fieldTitle)
+	}
+}
+
+// commaListAfter reads the comma-separated run that follows marker and ends at
+// the first period — the shape the system prompt states its vocabulary in.
+func commaListAfter(text, marker string) []string {
+	_, rest, found := strings.Cut(text, marker)
+	if !found {
+		return nil
+	}
+	list, _, found := strings.Cut(rest, ".")
+	if !found {
+		return nil
+	}
+	names := strings.Split(list, ",")
+	for i, name := range names {
+		names[i] = strings.TrimSpace(name)
+	}
+	return names
+}
+
+// quotedListAfter reads the JSON array of strings that follows marker.
+func quotedListAfter(text, marker string) []string {
+	_, rest, found := strings.Cut(text, marker)
+	if !found {
+		return nil
+	}
+	line, _, _ := strings.Cut(rest, "\n")
+	var names []string
+	if err := json.Unmarshal([]byte(line), &names); err != nil {
+		return nil
+	}
+	return names
+}
+
+// schemaFieldEnum reads the field key's permitted values out of the generated
+// reply schema, so the assertion reads what the provider is actually sent.
+func schemaFieldEnum(t *testing.T, raw json.RawMessage) []string {
+	t.Helper()
+	var doc struct {
+		Properties struct {
+			Fields struct {
+				Items struct {
+					Properties struct {
+						Field struct {
+							Enum []string `json:"enum"`
+						} `json:"field"`
+					} `json:"properties"`
+				} `json:"items"`
+			} `json:"fields"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("reading the signature-enrich reply schema: %v", err)
+	}
+	return doc.Properties.Fields.Items.Properties.Field.Enum
 }
