@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -112,7 +113,7 @@ func Metrics(in MetricsInput) http.HandlerFunc {
 
 		writeOutboxBacklog(ctx, out, in.Backlog)
 		writeRelayPublished(out, in.Published)
-		writePoolGauges(out, in.Pool)
+		writePoolMetrics(out, in.Pool)
 
 		if in.Extra != nil && !out.gone() {
 			in.Extra(out)
@@ -182,21 +183,114 @@ func writeRelayPublished(out *exposition, published func() uint64) {
 	out.printf("margince_relay_published_total %d\n", published())
 }
 
-// writePoolGauges renders this process's own connection pool.
+// writePoolMetrics renders this process's own connection pool.
 //
 // Omitted rather than zeroed when no pool was injected: a gauge reporting
 // connections it did not measure reads as an idle pool.
-func writePoolGauges(out *exposition, pool *pgxpool.Pool) {
+//
+// It renders every value pgxpool.Stat computes, and that is the point rather
+// than thoroughness. This section published four numbers for a long time and
+// they were all LEVELS — acquired, idle, total, max — while every value about
+// WAITING was dropped. A saturated pool and a busy one both read "acquired 15
+// of 16", so the board could not tell a queue from a healthy load, and at a
+// five-minute scrape an episode shorter than that was never sampled at all.
+// The waits are counters, so a scrape still integrates the episodes it did not
+// see.
+//
+// Held by: TestEveryPoolStatisticIsExported (backend/internal/platform/httpserver/poolstats_test.go)
+func writePoolMetrics(out *exposition, pool *pgxpool.Pool) {
 	if pool == nil || out.gone() {
 		return
 	}
 	stat := pool.Stat()
 	out.printf("# HELP margince_pgxpool_conns Connection pool state by class.\n")
 	out.printf("# TYPE margince_pgxpool_conns gauge\n")
-	out.printf("margince_pgxpool_conns{state=\"acquired\"} %d\n", stat.AcquiredConns())
-	out.printf("margince_pgxpool_conns{state=\"idle\"} %d\n", stat.IdleConns())
-	out.printf("margince_pgxpool_conns{state=\"total\"} %d\n", stat.TotalConns())
-	out.printf("margince_pgxpool_conns{state=\"max\"} %d\n", stat.MaxConns())
+	for _, level := range poolLevels {
+		out.printf("margince_pgxpool_conns{state=%s} %d\n", Label(level.state), level.read(stat))
+	}
+	for _, counter := range poolCounters {
+		out.printf("# HELP %s %s\n", counter.name, counter.help)
+		out.printf("# TYPE %s counter\n", counter.name)
+		out.printf("%s %s\n", counter.name, counter.render(stat))
+	}
+}
+
+// poolLevel is one state of the connection gauge, and the pgxpool.Stat method
+// that answers it. The method NAME is carried as data rather than only called,
+// because it is what lets the gate ask the pool what it computes instead of
+// keeping a second list of what it ought to.
+type poolLevel struct {
+	stat  string
+	state string
+	read  func(*pgxpool.Stat) int32
+}
+
+var poolLevels = []poolLevel{
+	{"AcquiredConns", "acquired", (*pgxpool.Stat).AcquiredConns},
+	{"IdleConns", "idle", (*pgxpool.Stat).IdleConns},
+	{"ConstructingConns", "constructing", (*pgxpool.Stat).ConstructingConns},
+	{"TotalConns", "total", (*pgxpool.Stat).TotalConns},
+	{"MaxConns", "max", (*pgxpool.Stat).MaxConns},
+}
+
+// poolCounter is one monotonic pool statistic. Durations are rendered in
+// seconds, which is the unit Prometheus expects and not the one pgx answers in.
+type poolCounter struct {
+	stat   string
+	name   string
+	help   string
+	render func(*pgxpool.Stat) string
+}
+
+func countOf(read func(*pgxpool.Stat) int64) func(*pgxpool.Stat) string {
+	return func(s *pgxpool.Stat) string { return strconv.FormatInt(read(s), 10) }
+}
+
+func secondsOf(read func(*pgxpool.Stat) time.Duration) func(*pgxpool.Stat) string {
+	return func(s *pgxpool.Stat) string { return strconv.FormatFloat(read(s).Seconds(), 'f', 6, 64) }
+}
+
+var poolCounters = []poolCounter{
+	{
+		"AcquireCount", "margince_pgxpool_acquire_total",
+		"Connections acquired from the pool since process start.",
+		countOf((*pgxpool.Stat).AcquireCount),
+	},
+	{
+		"EmptyAcquireCount", "margince_pgxpool_acquire_empty_total",
+		"Acquires that found no free connection and had to wait. Its rate is the waiting line.",
+		countOf((*pgxpool.Stat).EmptyAcquireCount),
+	},
+	{
+		"CanceledAcquireCount", "margince_pgxpool_acquire_canceled_total",
+		"Acquires whose caller gave up before a connection came free.",
+		countOf((*pgxpool.Stat).CanceledAcquireCount),
+	},
+	{
+		"AcquireDuration", "margince_pgxpool_acquire_seconds_total",
+		"Seconds spent inside acquire since process start, over every acquire.",
+		secondsOf((*pgxpool.Stat).AcquireDuration),
+	},
+	{
+		"EmptyAcquireWaitTime", "margince_pgxpool_acquire_wait_seconds_total",
+		"Seconds spent WAITING for a connection, over the acquires that had to. Over acquire_empty_total, the mean wait of a caller that queued.",
+		secondsOf((*pgxpool.Stat).EmptyAcquireWaitTime),
+	},
+	{
+		"NewConnsCount", "margince_pgxpool_conns_opened_total",
+		"Connections dialled since process start.",
+		countOf((*pgxpool.Stat).NewConnsCount),
+	},
+	{
+		"MaxLifetimeDestroyCount", "margince_pgxpool_conns_retired_lifetime_total",
+		"Connections closed for reaching pool_max_conn_lifetime.",
+		countOf((*pgxpool.Stat).MaxLifetimeDestroyCount),
+	},
+	{
+		"MaxIdleDestroyCount", "margince_pgxpool_conns_retired_idle_total",
+		"Connections closed for reaching pool_max_conn_idle_time.",
+		countOf((*pgxpool.Stat).MaxIdleDestroyCount),
+	},
 }
 
 // writeOverlayMetrics renders the overlay sync-health section — split

@@ -65,7 +65,7 @@ Operational endpoints (served next to `/v1`):
   2s, else 503 naming the unready dependency.
 - `/metrics` — Prometheus text format: the **HTTP section** below,
   `margince_outbox_unpublished`, `margince_relay_published_total`,
-  `margince_pgxpool_conns{state=…}`, the AI router's counters, the overlay
+  the **connection-pool section** below, the AI router's counters, the overlay
   sync-health section, and the **job-runtime section** below. Served openly by
   default, so an annotation-discovered scraper works with no configuration; set
   `--metrics-token` to require a Bearer credential where the port itself is not
@@ -116,6 +116,44 @@ Operational endpoints (served next to `/v1`):
 
   Mind the scrape interval when choosing that window: a rate needs several
   points, so a cluster scraping every 5m wants `[30m]` or wider.
+
+  The connection-pool section reports this process's own pool. It publishes
+  every value pgx computes, and the split between the two kinds is what makes
+  it readable:
+
+  | Family | Type | Labels |
+  |---|---|---|
+  | `margince_pgxpool_conns` | gauge | `state`: `acquired`, `idle`, `constructing`, `total`, `max` |
+  | `margince_pgxpool_acquire_total` | counter | — |
+  | `margince_pgxpool_acquire_empty_total` | counter | — |
+  | `margince_pgxpool_acquire_canceled_total` | counter | — |
+  | `margince_pgxpool_acquire_seconds_total` | counter | — |
+  | `margince_pgxpool_acquire_wait_seconds_total` | counter | — |
+  | `margince_pgxpool_conns_opened_total` | counter | — |
+  | `margince_pgxpool_conns_retired_lifetime_total` | counter | — |
+  | `margince_pgxpool_conns_retired_idle_total` | counter | — |
+
+  **The gauges cannot tell a queue from a busy pool, which is what the counters
+  are for.** `acquired` near `max` is what saturation looks like AND what a
+  healthy peak looks like; the series that separates them is
+  `acquire_empty_total`, an acquire that found nothing free and had to wait.
+  The gauges also only describe the instant they were scraped, so at a 5-minute
+  interval a queue that formed and drained between two scrapes leaves no trace
+  in them at all. The counters carry it into the next scrape regardless.
+
+  The waiting line, and the mean wait of a caller that joined it:
+
+  ```promql
+  rate(margince_pgxpool_acquire_empty_total[30m])
+
+  rate(margince_pgxpool_acquire_wait_seconds_total[30m])
+    / rate(margince_pgxpool_acquire_empty_total[30m])
+  ```
+
+  `acquire_seconds_total` is over EVERY acquire including the ones that waited
+  for nothing, so it measures what acquiring costs on average;
+  `acquire_wait_seconds_total` is over the ones that queued, and is the one that
+  answers how long anybody actually waited.
 - `GET /v1/admin/job-health` — the per-workspace read of the same job
   table, for an admin rather than a scrape. See
   [Reading the job surfaces](#reading-the-job-surfaces).
@@ -428,7 +466,7 @@ re-serves no fleet-wide reading:
 | `go_gc_duration_seconds` | GC pause quantiles — the stop-the-world cost, not merely the cycle count |
 | `process_cpu_seconds_total`, `process_resident_memory_bytes` | this process's CPU and RSS, which cAdvisor can only give per container |
 | `process_start_time_seconds` | uptime, and a crash loop that restarts between scrapes |
-| `margince_pgxpool_conns` | this process's own connection pool, by class |
+| `margince_pgxpool_*` | this process's own connection pool — see the connection-pool section |
 | `margince_relay_published_total` | outbox rows *this* relay has shipped since start |
 | `margince_ai_*` | the AI calls *this* process made — every Router in a binary increments one process-wide collector |
 
