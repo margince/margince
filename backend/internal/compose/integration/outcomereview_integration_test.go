@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // closedDeal seeds a deal and closes it as won, answering the deal and the
@@ -404,5 +405,41 @@ func TestReopeningADealKeepsTheReviewOfItsEarlierClosing(t *testing.T) {
 	}
 	if len(after) != 1 {
 		t.Fatalf("the reopened deal reports %d reviews, want 1 — a reopen is not an erasure", len(after))
+	}
+}
+
+// dealReaderNoNotesPerms may read deals and may not write activities — the
+// seat that separates "can open the record" from "may file an account of it".
+func dealReaderNoNotesPerms() principal.Permissions {
+	return principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects:  map[string]principal.ObjectGrant{"deal": {Read: true}},
+	}
+}
+
+// Reading a deal is not authority to file a review of it.
+//
+// A review is a note somebody wrote, so what it costs is the authority to
+// write a note — not the authority to read the deal it is about. deal is an
+// identity table: every seat that may read deals reads every one, so a gate
+// resting on the deal alone would let any seat in the workspace file an
+// account of any closing, signed with their name and counted as that deal's
+// review.
+func TestReadingADealIsNotAuthorityToReviewIt(t *testing.T) {
+	e := Setup(t)
+	deal, occurrence := closedDeal(t, e, "Read but not reviewable")
+	reviews := compose.NewOutcomeReviews(e.Pool)
+
+	reader := e.As(e.Rep3, []ids.UUID{e.Team2}, dealReaderNoNotesPerms())
+	_, err := reviews.Write(reader, deal, crmcontracts.CreateOutcomeReviewRequest{
+		ClosingOccurrenceId: openapi_types.UUID(occurrence),
+		SubmissionId:        openapi_types.UUID(ids.NewV7()),
+		Answers:             map[string]string{"why_we_won": "I only read it"},
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a seat that may only READ deals filed a review: %v", err)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_review_response WHERE deal_id = $1`, deal); got != 0 {
+		t.Fatalf("%d review(s) landed from a seat with no authority to write one", got)
 	}
 }

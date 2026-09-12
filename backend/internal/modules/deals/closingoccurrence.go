@@ -138,12 +138,14 @@ func (s *Store) HoldClosingOccurrenceTx(ctx context.Context, tx pgx.Tx, id ids.D
 	// means something else — one is a relation name, the other a permission's
 	// vocabulary — and passing the table here would tie a permission to a
 	// rename that has nothing to do with it.
-	// The RBAC OBJECT, spelled out. dealTable happens to read the same and
-	// means something else — one is a relation name, the other a permission's
-	// vocabulary — and passing the table here would tie a permission to a
-	// rename that has nothing to do with it.
 	//
-	// The row scope is the reader's own, below.
+	// And the object grant is the WHOLE row question here, which is worth
+	// saying because every sibling in this file reads as though a row probe
+	// were missing. deal is an identity table (auth.tableclass): a seat that
+	// may read deals reads every one, so nobody works an account another team
+	// already works, and there is no owner predicate for a probe to apply. A
+	// buyer holds no CRM authority at all and this call is where they are
+	// refused. What narrows the row is the lock below, which is LiveOnly.
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return ClosingOccurrence{}, err
 	}
