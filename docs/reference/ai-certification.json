@@ -21,13 +21,13 @@
       "sites_partial": 0,
       "sites_stale": 1,
       "runs": 444,
-      "passed": 384,
-      "reliability": 0.8648648648648649,
+      "passed": 387,
+      "reliability": 0.8716216216216216,
       "slowest_p95_ms": 4632,
       "bands": {
-        "certified": 16,
+        "certified": 17,
         "supported_degraded": 7,
-        "not_supported": 16
+        "not_supported": 15
       }
     },
     {
@@ -2837,17 +2837,17 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "not_supported",
+          "band": "certified",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "latency_p50_ms": 1471,
-          "latency_p95_ms": 1695,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1472,
+          "latency_p95_ms": 1756,
           "reported": {
-            "accepted": 0,
-            "wrong_answer": 3,
+            "accepted": 3,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -2889,8 +2889,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 749,
-          "latency_p95_ms": 1276,
+          "latency_p50_ms": 865,
+          "latency_p95_ms": 1713,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,

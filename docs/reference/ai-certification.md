@@ -156,7 +156,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 39 | 38 | 0 | 1 | 444 | 384 | 0.86 | 4632ms | 16 | 7 | 16 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 39 | 38 | 0 | 1 | 444 | 387 | 0.87 | 4632ms | 17 | 7 | 15 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 7 | 0 | 6 | 90 | 86 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
@@ -717,9 +717,9 @@ Records (3):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 1471ms | 1695ms | 0 | 3 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1472ms | 1756ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `supported_degraded` | 3 | 3 | 1.00 | 2469ms | 2500ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 749ms | 1276ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 865ms | 1713ms | 3 | 0 | 0 | 0 |
 
 ### `growth_fit`
 
