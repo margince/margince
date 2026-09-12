@@ -46,3 +46,12 @@
 .brief-feed-list > li + li > .panel-row:first-child::before {
   content: "";
 }
+
+/* What the remainder is made of, under the link that counts it. A block rather
+   than a second inline run: the count IS the link and this is a gloss on it,
+   and side by side a reader reads the two as one sentence and clicks the wrong
+   half. Meta size comes from `t-caption`; this owns only the interval. */
+.brief-feed-rest-kinds {
+  display: block;
+  margin-top: var(--space-1);
+}

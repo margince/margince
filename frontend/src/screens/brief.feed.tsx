@@ -9,6 +9,7 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { waitingRows } from "./brief.sentence";
 import { worklistLaneHref } from "./worklist.header";
 import type { Worklist, WorklistItem } from "./worklist.queries";
@@ -72,6 +73,7 @@ export function BriefFeed({
   const all = waitingRows(day);
   const drawn = all.slice(0, FEED);
   const rest = all.length - drawn.length;
+  const restKinds = overflowByKind(all.slice(FEED));
   // WHETHER THE LABELS SAY ANYTHING. A run-length label over a single section
   // names the whole panel a second time — "Today", then "Respond now" over
   // every row in it — and a heading that is true of everything under it tells a
@@ -120,12 +122,39 @@ export function BriefFeed({
             // The SAME cut this footer counted. `rest` comes off waitingRows,
             // which drops the approvals the Decisions deck above already draws,
             // so a bare `#/worklist` sent a rep told "11 more" to a list of 14.
-            <a
-              className="entity-link"
-              href={worklistLaneHref("except_decisions")}
-            >
-              {t("brief.feed.rest", { count: formatNumber(rest, locale) })}
-            </a>
+            <>
+              <a
+                className="entity-link"
+                href={worklistLaneHref("except_decisions")}
+              >
+                {plural("brief.feed.rest", rest, {
+                  count: formatNumber(rest, locale),
+                })}
+              </a>
+              {restKinds.length > 1 && (
+                // ONLY where the kinds differ. Over a remainder that is all one
+                // thing this would name what the line above just said, which is
+                // the "omit it if it repeats the cards" half of the rule.
+                //
+                // THE KINDS, WITHOUT COUNTS. A count beside a category label
+                // composes a noun phrase, and this product's category labels
+                // are singular nouns — so "2 Aufgabe" and "2 Kunde wartet" is
+                // what German rendered, ungrammatically, and Vietnamese and
+                // English were right only by accident of their own agreement
+                // rules. Making it correct needs a plural form per category per
+                // language, which is forty-two catalog entries for one caption.
+                // The kinds alone answer what the reader is deciding — whether
+                // the rest is more of the same or something else — and every
+                // label is already a correct standalone noun in all three.
+                <span className="brief-feed-rest-kinds t-caption">
+                  {restKinds
+                    .map(([category]) =>
+                      t(`worklist.category.${category}` as MessageKey),
+                    )
+                    .join(" · ")}
+                </span>
+              )}
+            </>
           ) : undefined
         }
       >
@@ -185,6 +214,28 @@ export function BriefFeed({
       />
     </section>
   );
+}
+
+/**
+ * What the rows past the fold are, by kind, in the order they are ranked.
+ *
+ * A COUNT OF ROWS IS NOT A DESCRIPTION OF WORK. "14 more on the worklist" tells
+ * a reader how much is left and nothing about whether it is one afternoon of
+ * customer replies or fourteen system notices they can clear in a minute — and
+ * those are the same number.
+ *
+ * First appearance decides the order, so this is the server's ranking and not a
+ * second one: the kinds come out in the order the queue first reaches them,
+ * which is the order the reader would meet them by scrolling.
+ */
+function overflowByKind(
+  rows: readonly WorklistItem[],
+): readonly (readonly [WorklistItem["category"], number])[] {
+  const counts = new Map<WorklistItem["category"], number>();
+  for (const row of rows) {
+    counts.set(row.category, (counts.get(row.category) ?? 0) + 1);
+  }
+  return [...counts];
 }
 
 /**
