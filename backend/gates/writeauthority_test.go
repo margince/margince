@@ -96,6 +96,19 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/deals:currentClosingOccurrence": "the probe that decides whether the deal's " +
+		"CLOSING MAY BE NAMED, never whether the caller may change the deal. It is read-only about " +
+		"a fact history already holds, and it writes nothing. Its callers on the write path have " +
+		"already taken their own gate before reaching it: the review seam holds the deal through " +
+		"HoldClosingOccurrenceTx after auth.Require(deal, read), and the write it precedes creates " +
+		"an ACTIVITY, gated on activity:create. Widening this to a write probe would refuse the " +
+		"deal read on the record page to a colleague who may perfectly well open the deal",
+	"internal/modules/activities:readOutcomeReview": "the disclosure decision for one review row: " +
+		"whether a caller may be handed a review that names this deal. It writes nothing, and it " +
+		"is reached on the write path only to read BACK the review just stored — by which point " +
+		"the activity write has already passed activity:create. Widening it would withhold a " +
+		"review from a colleague who can read the deal it is about, which is a worse answer rather " +
+		"than a safer one",
 	"internal/modules/assignments:ensureParentReadable": "the probe that decides whether an assignment ROW MAY BE SERVED, never whether the caller may change it. Its two callers are the list read, which is a read, and readAssignment, which every write verb calls at the END to hand back the row it just saved — by which point that caller has already passed auth.Require plus auth.HoldWritableLive on the same parent, so the write authority is held and this is the disclosure decision on top of it. Widening it to a write probe would change nothing about who may write and would make the LIST refuse a caller who may perfectly well read the record",
 	// Conflict and disclosure probes about a RIVAL row. Each answers "may this
 	// refusal NAME the incumbent I just collided with", never "may this caller

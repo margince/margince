@@ -161,5 +161,5 @@ func ModeFor(modes map[string]string, category commsauthz.Category) commsauthz.M
 // Definitions is consent's contribution to the settings registry; compose
 // concatenates each module's list.
 func Definitions() []settings.Definition {
-	return []settings.Definition{AuthorizationModes, ControllerIdentity}
+	return []settings.Definition{AuthorizationModes}
 }

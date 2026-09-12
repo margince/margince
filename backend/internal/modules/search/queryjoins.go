@@ -125,6 +125,10 @@ var notAnEdge = map[string]string{
 		"from a deal to a company through one: an assignment relates a record to the COLLEAGUE OR TEAM " +
 		"responsible for it, and that subject is an app_user or a team, neither of which a record " +
 		"hop searches for",
+	"activity_review_response": "activity_id and deal_id are the review's two HALVES, not a path " +
+		"between them: the activity IS the review and the deal is what it is about, so traversing " +
+		"the pair would answer \"which deal is this note about\" — which activity_link already " +
+		"answers, for every note rather than only for the ones carrying a review",
 	"activity_participant": "who capture MATCHED from an address, where activity_link is what it " +
 		"ASSERTED about the record — graphactivity.go ranks the assertion above the match for the " +
 		"same reason a hop should traverse it and not this",

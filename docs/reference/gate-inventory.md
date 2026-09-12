@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (109)
+## Parity (110)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -108,6 +108,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `planprosebounds_test.go` | H3 | A plan's prose columns are bounded twice, and the two numbers must agree. |
 | `pnpmversionpins_test.go` | H3 | One pnpm version, and package.json's "packageManager" field is it. |
 | `pollcadenceparity_test.go` | H3 | A connector that POSTPONES a tick on an unreachable provider asks to run again after a fixed delay, and that delay has to EQUAL the cadence its dispatcher already ticks at — and has to survive the seam's ceiling on the way to the queue. |
+| `preservedtableparity_test.go` | H3 | Two lists say which tables a wipe must leave alone, and this fails when they disagree. |
 | `previewauthority_test.go` | H2 | The authority levels a composer can receive are the ones the engine can send. |
 | `processingrecord_test.go` | H3 | The Art. 30 processing record names the code that enforces each entry, and this fails when that code is not there any more. |
 | `promptwindow_test.go` | H1 | runner.MinimumPromptWindow is the SUPPORTED FLOOR — the smallest prompt window any provider this build binds will carry — and this holds it equal to the adapter that owns the figure. |

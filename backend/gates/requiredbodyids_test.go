@@ -42,10 +42,11 @@ import (
 const generatedContract = "internal/contracts/api_gen.go"
 
 // probedRequiredIDBodies are the bodies whose mapping refuses an omitted id by
-// name today, proved by TestEveryRequiredBodyIDIsNamedWhenAbsent in the module
-// that owns the mapping.
+// name today, proved by a TestEveryRequired...BodyIDIsNamedWhenAbsent in the
+// module that owns the mapping.
 var probedRequiredIDBodies = map[string]bool{
 	"AssignLeadsRequest":                true,
+	"CreateOutcomeReviewRequest":        true,
 	"CreateDealRequest":                 true,
 	"AddDealRoomDocumentRequest":        true,
 	"CreateProjectRequest":              true,
