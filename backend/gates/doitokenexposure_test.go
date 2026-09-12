@@ -121,6 +121,8 @@ var ratifiedDestinations = map[string]string{
 	"stopForCredential": "resolves the token and records the stop it presses, returning nothing about the token itself",
 
 	"oneClickSubject": "resolves the press to the contact it acts for, trying both credential families, and returns that contact and the withdrawal scope — never the token",
+
+	"publicStopSubject": "resolves a stop request to the contact it acts for, trying both credential families, and returns that contact — never the token",
 }
 
 // launderers are the two functions whose OWN BODY this gate does not inspect,

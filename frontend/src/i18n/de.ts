@@ -6393,9 +6393,9 @@ export const de = {
   "prefs.wording.marketing_email":
     "„Schick mir Produkt-Updates und gelegentliche Marketing-E-Mails.“",
   "prefs.wording.events": "„Schick mir Einladungen zu Events und Webinaren.“",
-  "prefs.unsubscribeAll": "Alles abschalten, was ich abschalten kann",
+  "prefs.unsubscribeAll": "Alle Werbung abschalten",
   "prefs.unsubscribeAllHint":
-    "Das schaltet jede Zeile oben aus, die ein anklickbares Kästchen hat. Zeilen mit IMMER AN bleiben an — die brauchst du für Dinge, die du selbst angefordert hast.",
+    "Das schaltet jede Werbe-Zeile oben aus. Antworten auf deine eigenen Anfragen und alles, worum du gebeten hast, kommen weiter — dafür hat dich niemand angemeldet, also gibt es da nichts abzuschalten.",
   "prefs.oneClickDone":
     "Erledigt — du bekommst keine Marketing-E-Mails mehr von uns. Das gilt sofort für jede Kampagne.",
   "prefs.oneClickAlreadyOff": "Nichts zu tun — das war bereits abgeschaltet.",

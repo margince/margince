@@ -6566,9 +6566,9 @@ export const en = {
   "prefs.wording.marketing_email":
     '"Send me product updates & occasional marketing email."',
   "prefs.wording.events": '"Send me event & webinar invitations."',
-  "prefs.unsubscribeAll": "Stop everything I can switch off",
+  "prefs.unsubscribeAll": "Stop all marketing",
   "prefs.unsubscribeAllHint":
-    "This switches off every row above that has a checkbox you can use. Rows marked ALWAYS ON stay on — you need them for things you asked for.",
+    "This switches off every marketing row above. Replies to your own enquiries, and anything you asked us for, keep coming — nobody subscribed you to those, so there is nothing there to switch off.",
   "prefs.oneClickDone":
     "Done — you're off our marketing email. It takes effect immediately across every campaign.",
   "prefs.oneClickAlreadyOff": "Nothing to do — these were already off.",

@@ -262,8 +262,30 @@ func (s *Store) PublicWithdrawAll(
 	return changed, nil
 }
 
-// PublicWithdrawEverything stops every purpose a recipient can be stopped on,
-// choosing them inside the transaction that stops them.
+// PublicStopAllMarketing stops the MARKETING-CLASS purposes, choosing them
+// inside the transaction that stops them.
+//
+// WHAT AN UNSUBSCRIBE MEANS. The press it answers used to stop every purpose in
+// the catalog except the locked transactional one, which swept business
+// correspondence with it: a contact who unsubscribed from a newsletter stopped
+// receiving the replies to their own enquiries. Nobody opted in to
+// correspondence, so there was nothing there to unsubscribe from — the sweep
+// was withdrawing a consent that was never the basis for those messages.
+//
+// phone_outreach goes with marketing because it is marketing by another
+// channel. The two classes left standing, transactional and
+// business_correspondence, rest on the contract and on the subject's own
+// approach rather than on a subscription.
+//
+// A SUBJECT WHO WANTS EVERYTHING STOPPED still has a route, and it is a
+// different one: the stop-all-contact action records a subject_request
+// suppression, which is an Art. 21 objection rather than a withdrawal of
+// consent. Those are different legal acts and the record now tells them apart.
+//
+// ONE TRANSACTION, selection included, for the reason the sweep it replaces
+// gave: a purpose granted between reading the list and acting on it — a
+// confirmation round-trip landing on the press — would survive a stop that
+// reported itself done.
 //
 // The unnamed press used to read the recipient's purposes first and hand the
 // list to PublicWithdrawAll, which is a selection made in one transaction and
@@ -279,7 +301,7 @@ func (s *Store) PublicWithdrawAll(
 //
 // A grant that commits AFTER this transaction still stands, and should: it
 // post-dates the press rather than being missed by it.
-func (s *Store) PublicWithdrawEverything(
+func (s *Store) PublicStopAllMarketing(
 	ctx context.Context, contactID ids.ContactID,
 ) ([]string, error) {
 	var changed []string
@@ -287,7 +309,7 @@ func (s *Store) PublicWithdrawEverything(
 		if err := lockOneSubjectsConsent(ctx, tx, contactID); err != nil {
 			return err
 		}
-		keys, err := withdrawablePurposeKeysTx(ctx, tx)
+		keys, err := withdrawableMarketingPurposeKeysTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -300,12 +322,24 @@ func (s *Store) PublicWithdrawEverything(
 	return changed, nil
 }
 
-// withdrawablePurposeKeysTx reads the live purposes a recipient may be stopped
-// on. The catalog rather than a constant: an operator may define their own
-// purpose, and a press that only knew the seeded ones would leave it running.
-func withdrawablePurposeKeysTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
+// withdrawableMarketingPurposeKeysTx reads the live MARKETING-class purposes an
+// unsubscribe may stop.
+//
+// The catalog rather than a constant: an operator may define their own purpose,
+// and a press that only knew the seeded ones would leave it running. Filtered
+// by CLASS in the query rather than by key, for the same reason — a purpose
+// somebody named "quarterly_update" is marketing if its class says so, and no
+// list of key names would know that.
+//
+// LockedPurpose is still consulted below. It names the transactional purpose,
+// which this query already excludes, and keeping the check means a second
+// locked purpose added later is honoured here without anybody remembering to
+// come back.
+func withdrawableMarketingPurposeKeysTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT key FROM consent_purpose WHERE archived_at IS NULL ORDER BY key`)
+		`SELECT key FROM consent_purpose
+		  WHERE archived_at IS NULL AND class IN ('marketing', 'phone_outreach')
+		  ORDER BY key`)
 	if err != nil {
 		return nil, err
 	}

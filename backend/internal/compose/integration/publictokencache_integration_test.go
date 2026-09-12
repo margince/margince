@@ -37,6 +37,7 @@ package integration
 //   COVERS: GET /public/preferences/{token}
 //   COVERS: PUT /public/preferences/{token}
 //   COVERS: POST /public/preferences/{token}/unsubscribe
+//   COVERS: POST /public/preferences/{token}/stop
 //   COVERS: GET /public/confirm/{token}
 //   COVERS: POST /public/confirm/{token}
 
@@ -168,6 +169,21 @@ func TestEveryPreferenceAnswerIsUncacheable(t *testing.T) {
 		},
 		{"an empty token", "GET", "/v1/public/preferences/", nil},
 		{"a GET on the one-click verb", "GET", "/v1/public/preferences/" + live + "/unsubscribe", nil},
+		// The stronger stop: an Art. 21 objection rather than a withdrawal. Its
+		// answer names a receipt and whether this press changed anything, both
+		// of which are facts about one subject's request.
+		{
+			"a live token's objection", "POST", "/v1/public/preferences/" + live + "/stop",
+			AnyMap{"action": "stop_all_marketing"},
+		},
+		{
+			"a refused stop", "POST", "/v1/public/preferences/" + live + "/stop",
+			AnyMap{"action": "stop_some_of_it"},
+		},
+		{
+			"an unknown token's stop", "POST", "/v1/public/preferences/pref_does_not_exist/stop",
+			AnyMap{"action": "stop_all_contact"},
+		},
 	})
 	assertClaimed(t, driven, "/public/preferences/")
 

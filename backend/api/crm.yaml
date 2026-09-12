@@ -7404,11 +7404,15 @@ paths:
         (source `preference_center`) which the default-deny suppression gate honors on the very next send
         across every path (manual + agent). Idempotent. Only POST acts — a GET/prefetch by a mail scanner
         never unsubscribes anyone (the reason RFC 8058 mandates POST). With `purpose` only that purpose is
-        withdrawn (the one the message was sent under); without it every lane the recipient has not already
-        stopped is — read from their `choice`, not the raw stored state, so direct correspondence running on
-        no-objection is included rather than silently skipped.
+        withdrawn (the one the message was sent under); without it every MARKETING-class purpose is —
+        marketing and phone outreach, read from the live catalog so an operator's own purpose is included.
+        Business correspondence and transactional mail are NOT stopped: nobody subscribed to them, so there
+        is nothing there to unsubscribe from, and a recipient who unsubscribed from a newsletter still gets
+        the replies to their own enquiries and their invoices. A subject who wants ALL contact stopped uses
+        `/public/preferences/{token}/stop` with `stop_all_contact`, which records an Art. 21 objection
+        rather than withdrawing a consent that was never the basis for those messages.
       parameters:
-        - { name: purpose, in: query, required: false, schema: { type: string }, description: The consent purpose key to withdraw. Omit to withdraw every lane the recipient has not already stopped. }
+        - { name: purpose, in: query, required: false, schema: { type: string }, description: The consent purpose key to withdraw. Omit to withdraw every marketing-class purpose. }
       requestBody:
         required: false
         description: |
@@ -7440,6 +7444,67 @@ paths:
                       The purpose keys this call actually CHANGED. Empty on a replay, because the recipient was
                       already unsubscribed — which is how the page tells a first press from a second one instead
                       of showing a fresh confirmation for a no-op.
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /public/preferences/{token}/stop:
+    parameters:
+      - { name: token, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Public]
+      operationId: publicStopContact
+      security: []   # anonymous public page — the token is the capability
+      x-agent-access: human-only
+      summary: Ask us to stop contacting you (anonymous, token-authed, POST-only).
+      description: |
+        The route for a subject who wants MORE stopped than an unsubscribe stops. One-click unsubscribe
+        withdraws the marketing-class purposes, which is what a subscription link offers; this records an
+        Art. 21 objection instead, and the two are different legal acts rather than two sizes of the same
+        one. A withdrawal says the consent is gone. An objection says the processing must stop whether or
+        not consent was ever its basis, which is the only thing that reaches business correspondence.
+
+        `stop_all_marketing` records a marketing objection at the subject's own authority, so no seat can
+        lift it. `stop_all_contact` records a broad subject request, which binds every category except the
+        few that survive an Art. 18 restriction — a privacy notice, a security notice and the
+        acknowledgement of this very request, because a stop that silenced the confirmation that it worked
+        would leave the subject unable to tell whether anything happened.
+
+        Only POST acts, for the reason RFC 8058 gives: a mail scanner following links must not stop
+        somebody's mail. Idempotent — a replay records nothing new and reports the same receipt.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [stop_all_marketing, stop_all_contact]
+                statement:
+                  type: string
+                  maxLength: 500
+                  description: |
+                    The subject's own words, kept verbatim. An objection a controller has to answer for is
+                    weaker evidence when the record holds only our paraphrase of it.
+      responses:
+        '200':
+          description: Recorded (idempotent).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [recorded, receipt_reference]
+                properties:
+                  recorded:
+                    type: boolean
+                    description: |
+                      False on a replay, because the stop was already standing. The page tells a first press
+                      from a second one by this rather than by showing a fresh confirmation for a no-op.
+                  receipt_reference:
+                    type: string
+                    description: What the subject quotes when asking what happened to their request.
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 

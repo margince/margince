@@ -76,11 +76,28 @@ func TestAReplayedUnsubscribeReportsNothingChanged(t *testing.T) {
 	}
 }
 
-// The incident's own case. Direct business correspondence runs on
-// no-objection, so it has no 'granted' row — and an unsubscribe-all that
-// filtered on granted walked straight past the only lane the recipient
-// was actually receiving mail under, while reporting success.
-func TestUnsubscribeAllStopsALiveBusinessCorrespondenceLane(t *testing.T) {
+// TestUnsubscribeAllStopsAMarketingLaneWithNoGrantedRow is the incident's own
+// case, kept and re-aimed.
+//
+// The incident: an unsubscribe-all that filtered on 'granted' walked past a
+// lane with no row at all, while reporting success. No row is exactly the state
+// a contact is in when they have simply been written to, so filtering on their
+// stored state meant the press missed the lane the mail was going out under.
+// The fix was to let the CATALOG decide rather than the recipient's state, and
+// that is what this still guards.
+//
+// WHAT REVERSED, and why it is not a weakening. The original test used
+// business_correspondence as its unrowed lane and asserted the press stopped
+// it. An unsubscribe no longer reaches correspondence: nobody subscribed to it,
+// so there was nothing there to withdraw, and sweeping it meant a contact who
+// unsubscribed from a newsletter stopped receiving the replies to their own
+// enquiries. The scope moved; the defect this test names did not, so it is
+// asked here about a MARKETING lane with no row — which is the same shape of
+// mistake inside the new boundary.
+//
+// A subject who wants correspondence stopped has a route, and it is a different
+// legal act: PublicStop's Art. 21 objection, tested in publicstop_integration_test.go.
+func TestUnsubscribeAllStopsAMarketingLaneWithNoGrantedRow(t *testing.T) {
 	e := setupChannelConsent(t)
 	token := seedPreferenceToken(t, e)
 
@@ -89,6 +106,48 @@ func TestUnsubscribeAllStopsALiveBusinessCorrespondenceLane(t *testing.T) {
 	// default — so the lane this test is about does not otherwise exist,
 	// and a test that read it from the env would be testing a marketing
 	// purpose under a business name.
+	unrowed := ids.From[ids.PurposeKind](ids.NewV7())
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO consent_purpose (id, key, label, requires_double_opt_in, class)
+		 VALUES ($1, 'campaign_blast', 'Campaign blast', false, $2)`,
+		unrowed, ClassMarketing); err != nil {
+		t.Fatalf("seed the campaign purpose: %v", err)
+	}
+	// Nothing is seeded for it on purpose: no row at all is exactly the
+	// state a contact is in when they have simply been written to.
+	if got := consentStateOf(t, e, unrowed); got != "" {
+		t.Fatalf("precondition: campaign_blast = %q, want no row", got)
+	}
+
+	stopped := pressUnsubscribe(t, e, token, nil, "")
+
+	var sawCampaign bool
+	for _, key := range stopped {
+		if key == "campaign_blast" {
+			sawCampaign = true
+		}
+	}
+	if !sawCampaign {
+		t.Errorf("unsubscribe-all reported %v — it must stop the lane the mail was sent "+
+			"under, and a lane with no row is exactly the one a state filter walks past", stopped)
+	}
+	if got := consentStateOf(t, e, unrowed); got != string(StateWithdrawn) {
+		t.Errorf("campaign_blast = %q, want withdrawn", got)
+	}
+}
+
+// TestUnsubscribeAllLeavesBusinessCorrespondenceAlone is the other half, and it
+// is what the press reversing cost and gained.
+//
+// Nobody subscribed to correspondence, so an unsubscribe has nothing there to
+// withdraw. Sweeping it meant a contact who unsubscribed from a newsletter
+// stopped receiving the replies to their own enquiries — recorded, on top of
+// that, as a withdrawal of a consent that was never the basis for those
+// messages.
+func TestUnsubscribeAllLeavesBusinessCorrespondenceAlone(t *testing.T) {
+	e := setupChannelConsent(t)
+	token := seedPreferenceToken(t, e)
+
 	business := ids.From[ids.PurposeKind](ids.NewV7())
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO consent_purpose (id, key, label, requires_double_opt_in, class)
@@ -96,25 +155,15 @@ func TestUnsubscribeAllStopsALiveBusinessCorrespondenceLane(t *testing.T) {
 		business, ClassBusinessCorrespondence); err != nil {
 		t.Fatalf("seed the business_correspondence purpose: %v", err)
 	}
-	// Nothing is seeded for it on purpose: no row at all is exactly the
-	// state a contact is in when they have simply been written to.
-	if got := consentStateOf(t, e, business); got != "" {
-		t.Fatalf("precondition: business_correspondence = %q, want no row", got)
-	}
 
-	stopped := pressUnsubscribe(t, e, token, nil, "")
-
-	var sawBusiness bool
-	for _, key := range stopped {
+	for _, key := range pressUnsubscribe(t, e, token, nil, "") {
 		if key == "business_correspondence" {
-			sawBusiness = true
+			t.Fatal("unsubscribe-all withdrew business correspondence — the contact who " +
+				"unsubscribed from a newsletter stops receiving replies to their own enquiries")
 		}
 	}
-	if !sawBusiness {
-		t.Errorf("unsubscribe-all reported %v — it must stop the lane the mail was sent under", stopped)
-	}
-	if got := consentStateOf(t, e, business); got != string(StateWithdrawn) {
-		t.Errorf("business_correspondence = %q, want withdrawn", got)
+	if got := consentStateOf(t, e, business); got == string(StateWithdrawn) {
+		t.Error("business correspondence was withdrawn by an unsubscribe")
 	}
 }
 

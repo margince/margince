@@ -594,6 +594,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/projects/{id}/health-assessments/{assessment_id}/corrections": {Op: "correctProjectHealthAssessment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/booking/{host_slug}":                                   {Op: "bookPublicMeeting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/confirm/{token}":                                       {Op: "submitConfirmDetails", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/public/preferences/{token}/stop":                              {Op: "publicStopContact", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/preferences/{token}/unsubscribe":                       {Op: "oneClickUnsubscribe", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/rooms/exchange":                                        {Op: "exchangeDealRoomCredential", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/rooms/link-request":                                    {Op: "requestDealRoomLink", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
