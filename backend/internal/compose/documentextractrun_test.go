@@ -276,10 +276,11 @@ func TestABindingRefusingWhatItDeclaredFailsTheReading(t *testing.T) {
 
 var _ = model.ErrAttachmentUnsupported
 
-// carriesImagesOnly is the carriage of every wire this product points at an
-// operator-chosen endpoint: openai_compatible, vllm, ollama. It is the whole
-// reason the extraction lane exists, so it is named rather than spelled at each
-// case.
+// carriesImagesOnly is a wire with an image part and no document part — the
+// shape the extraction lane exists for. Named rather than spelled at each case.
+//
+// WHICH providers declare this is the ai module's question and is pinned there
+// (carriage_test.go); restating the list here would be a copy free to go stale.
 var carriesImagesOnly = []string{"image/*"}
 
 // invoicePDFBytes builds the document this feature reads: an order confirmation
@@ -305,7 +306,7 @@ func pdfAttachment() crmcontracts.Attachment {
 	return crmcontracts.Attachment{Filename: "order-confirmation.pdf", ContentType: &mime}
 }
 
-// The whole point of #1425, at the boundary an operator meets it: a binding on a
+// The case this lane exists for, at the boundary an operator meets it: a binding on a
 // wire with no document part still reads the PDF, because the PDF stopped being
 // a PDF before the router saw it.
 func TestAPDFOnAWireWithNoDocumentLaneIsReadAsItsOwnText(t *testing.T) {
@@ -369,7 +370,7 @@ func TestTheDocumentLaneAsksTheRouterItIsBoundTo(t *testing.T) {
 		return routerBrain{router: router, task: ai.TaskDocumentExtract}
 	}
 
-	t.Run("an undeclared binding carries the document and withholds nothing", func(t *testing.T) {
+	t.Run("an undeclared binding carries the document natively", func(t *testing.T) {
 		brain := brainFor(t, `profile: eu_hosted
 tiers:
   local_small: {provider: fake, model: m}
