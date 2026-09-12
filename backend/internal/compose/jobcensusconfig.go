@@ -191,6 +191,11 @@ type censusDocumentSeam struct{ censusSeam }
 
 func (censusDocumentSeam) AttachmentMIMEs() []string { return nil }
 
+// WithheldByBinding is false for the same reason AttachmentMIMEs is empty: there
+// is no binding here to have withheld anything, and answering true would report
+// an operator decision no configuration file made.
+func (censusDocumentSeam) WithheldByBinding(string) bool { return false }
+
 // EmbedIdentity answers a BOUND lane. The drift sweep registers nothing behind
 // an unbound one — an empty identity is what --ai-fake leaves, and there is
 // then no binding marker for the sweep to compare a row against — so a seam

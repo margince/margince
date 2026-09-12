@@ -88,6 +88,37 @@ func (r *Router) AttachmentMIMEs(task Task) []string {
 	return carried
 }
 
+// WithheldByBinding reports whether mime is absent from task's carriage because
+// an operator CLOSED that lane, rather than because no wire on the ladder ever
+// had one.
+//
+// The two are indistinguishable in AttachmentMIMEs and call for opposite
+// answers. A wire with no document part leaves a caller free to convert the
+// document into something the wire does carry. A binding whose `input:` dropped
+// a lane its wire has is a standing instruction about what may leave this
+// deployment — `inputmodality.go` names the intent as keeping scanned invoices
+// out of an egressing model — and converting the document then sends its
+// contents anyway, the control defeated while reporting success.
+//
+// A UNION over the rungs, where AttachmentMIMEs takes the intersection, and the
+// asymmetry is the safety property. Intersecting would let one un-narrowed rung
+// answer for a narrowed one, and the call walks the whole ladder: ONE rung whose
+// operator closed the lane is enough to make a conversion a disclosure they
+// refused.
+func (r *Router) WithheldByBinding(task Task, mime string) bool {
+	for _, tier := range taskLadders[task] {
+		client, bound := r.binding().clients[tier]
+		if !bound {
+			continue
+		}
+		caps := client.Caps()
+		if model.CarriesMIME(caps.WireAttachmentMIMEs, mime) && !model.CarriesMIME(caps.AttachmentMIMEs, mime) {
+			return true
+		}
+	}
+	return false
+}
+
 // PromptWindow is the largest prompt a caller may assemble for task, in tokens,
 // or 0 when no rung this task might land on declares a limit worth planning
 // around.

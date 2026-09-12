@@ -284,11 +284,18 @@ func (c *openAICompatClient) Caps() model.Capabilities {
 	// AttachmentMIMEs is the binding's declaration, not a constant: this one
 	// adapter serves whatever model the operator pointed it at, so the answer
 	// lives in the routing config and arrives at construction.
+	//
+	// WireAttachmentMIMEs is images and nothing else, and it is the honest
+	// ceiling rather than the ambition: openAICompatMessages builds `image_url`
+	// parts and has no document part at all, so no binding on this adapter can
+	// carry a PDF however it is configured. A caller reads this to learn that a
+	// PDF here is a wire that never had a lane — not an operator who closed one.
 	return model.Capabilities{
-		Streaming:       true,
-		EmbedDims:       0,
-		LocalOnly:       c.localOnly,
-		AttachmentMIMEs: c.attachmentMIMEs,
+		Streaming:           true,
+		EmbedDims:           0,
+		LocalOnly:           c.localOnly,
+		AttachmentMIMEs:     c.attachmentMIMEs,
+		WireAttachmentMIMEs: carriesImages,
 	}
 }
 

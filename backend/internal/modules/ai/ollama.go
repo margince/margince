@@ -342,8 +342,9 @@ func (c *ollamaClient) Caps() model.Capabilities {
 	// tree that declares a window — ollamaPromptWindow says why.
 	return model.Capabilities{
 		Streaming: true, EmbedDims: 0, LocalOnly: true,
-		AttachmentMIMEs: c.attachmentMIMEs,
-		PromptWindow:    ollamaPromptWindow,
+		AttachmentMIMEs:     c.attachmentMIMEs,
+		WireAttachmentMIMEs: carriesImages,
+		PromptWindow:        ollamaPromptWindow,
 	}
 }
 

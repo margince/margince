@@ -44,6 +44,10 @@ vendors:
   river:  { in: github.com/riverqueue/** }
   minio:  { in: github.com/minio/** }
   fpdf:   { in: github.com/go-pdf/** }
+  # pdftext's reader: the text layer a generated PDF already carries, so a wire
+  # with no document part can be handed what the document says. Pure Go, no cgo,
+  # and a READER only — fpdf above is the writer, and they share no code.
+  pdfread: { in: github.com/ledongthuc/** }
   # unicode transforms for the PO-PARAM-JW-2 dedupe preprocessing (casefold+unaccent)
   xtext:  { in: golang.org/x/text/** }
   # webread's crawl mechanics: the html tokenizer (link harvest from raw HTML)
@@ -136,7 +140,9 @@ deps:
     # wazero + brotli: licensecheck's runtime for the bundled validation
     # module, and the compression it is published in.
     # xsyswindows: ownedfile's DACL, the Windows half of an owner-only file.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus]
+    # pdfread + fpdf: pdftext reads a PDF's text layer, and its tests build the
+    # fixtures to read with the writer this tree already ships.
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus, pdfread, fpdf]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:
@@ -268,7 +274,10 @@ deps:
     # platform already owns, so it needs the same parser platform does.
     # emersion: the in-memory IMAP server the standing-connect transport
     # test drives; production compose reaches IMAP only through capture.
-    canUse: [pgx, chi, oapi, river, xtext, yaml, emersion, kinopenapi]
+    # fpdf: the document lane's TESTS build the PDF they then read, so the
+    # fixture is a real file rather than a string somebody believed was one.
+    # Production compose writes no PDF and reads one only via platform/pdftext.
+    canUse: [pgx, chi, oapi, river, xtext, yaml, emersion, kinopenapi, fpdf]
   # migrations depends on itself, which no production file can express: Go
   # forbids a package importing itself. It is reachable only from the external
   # test package this directory's tagged suites live in (package

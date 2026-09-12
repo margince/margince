@@ -194,6 +194,11 @@ func (f *FakeClient) Caps() model.Capabilities {
 		EmbedDims:       f.embedDims,
 		LocalOnly:       true,
 		AttachmentMIMEs: f.carriage,
+		// The stub stands in for whichever binding named it, so its wire claims
+		// the widest shape any adapter here has. A test that narrows the fake
+		// with `input:` then sees the same "the operator closed this lane"
+		// answer a real narrowed binding gives.
+		WireAttachmentMIMEs: carriesImagesAndPDF,
 	}
 }
 

@@ -228,7 +228,11 @@ func (c *anthropicClient) Caps() model.Capabilities {
 	// block exists, but which models accept one is a per-model fact this adapter
 	// cannot see, and advertising a lane a bound model refuses is worse than not
 	// advertising it at all.
-	return model.Capabilities{Streaming: true, EmbedDims: 0, LocalOnly: false, AttachmentMIMEs: c.attachmentMIMEs}
+	return model.Capabilities{
+		Streaming: true, EmbedDims: 0, LocalOnly: false,
+		AttachmentMIMEs:     c.attachmentMIMEs,
+		WireAttachmentMIMEs: anthropicCarries,
+	}
 }
 
 // post sends one non-streaming Messages call; postStream opens the SSE

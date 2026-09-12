@@ -374,6 +374,15 @@ type routerBrain struct {
 // task is never handed one simply never asks.
 func (b routerBrain) AttachmentMIMEs() []string { return b.router.AttachmentMIMEs(b.task) }
 
+// WithheldByBinding says whether a media type this lane will not take was closed
+// off by an operator's `input:` rather than absent from every wire on the ladder.
+// A caller that can convert the document into something the lane DOES carry has
+// to know the difference: converting past a closed lane sends the contents the
+// operator withheld.
+func (b routerBrain) WithheldByBinding(mime string) bool {
+	return b.router.WithheldByBinding(b.task, mime)
+}
+
 func (b routerBrain) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	prepared, err := prepareOrAnnounce(ctx, b.router, b.companyContext, b.task, req)
 	if err != nil {

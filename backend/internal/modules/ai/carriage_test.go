@@ -98,6 +98,102 @@ func TestDocumentMIMEsCoversEveryAdaptersDeclaration(t *testing.T) {
 	}
 }
 
+// wireCarriage is a SECOND copy of what the adapters declare, and a second copy
+// is only safe while something fails when the two disagree.
+//
+// They did disagree. `openai_compatible` and `vllm` were listed as carrying
+// `application/pdf` while no binding either word selects has ever carried one in
+// any configuration — openAICompatMessages builds `image_url` parts and has no
+// document part at all. Nothing computed a wrong answer from it, because
+// DocumentMIMEs is a union and three native adapters contribute PDF anyway; the
+// cost was a row a reader believes.
+//
+// The existing census could not see it: TestDocumentMIMEsCoversEveryAdaptersDeclaration
+// checks the union covers each ROW, never that a row matches a BINDING. So the
+// subject of this test is what SelectBrain actually constructs, and the map is
+// held against it in both directions — a row that overstates its wire fails, and
+// a provider the map forgets fails too.
+func TestWireCarriageIsWhatSelectBrainActuallyBuilds(t *testing.T) {
+	census := wireCarriage()
+	for _, provider := range knownProviders {
+		// An UNDECLARED binding: `input:` is what narrows AttachmentMIMEs, and
+		// the wire's own answer is the question here.
+		built := capsWireFor(t, provider)
+		declared, described := census[provider]
+		if !described {
+			t.Errorf("%s ships and wireCarriage does not answer for it", provider)
+			continue
+		}
+		if !slices.Equal(built, declared) {
+			t.Errorf("%s builds a client declaring wire carriage %v and wireCarriage says %v — "+
+				"the map is a second copy of the adapter's answer, and this is the drift that "+
+				"makes the copy worse than nothing", provider, built, declared)
+		}
+	}
+}
+
+// An undeclared binding's wire carriage IS its ordinary carriage, and a declared
+// one's is still the wire's. Both directions are asserted because the field only
+// earns its place if narrowing leaves it alone — a WireAttachmentMIMEs that moved
+// with `input:` would answer the same question AttachmentMIMEs already answers,
+// and could never tell a closed lane from an absent one.
+func TestNarrowingABindingLeavesItsWireDeclarationWhereItWas(t *testing.T) {
+	for _, provider := range knownProviders {
+		wire := capsWireFor(t, provider)
+		narrowed := capsWireForInput(t, provider, []string{"text"})
+		if !slices.Equal(wire, narrowed) {
+			t.Errorf("%s reports wire carriage %v undeclared and %v once narrowed; "+
+				"the wire does not change when an operator edits their config",
+				provider, wire, narrowed)
+		}
+		// And the narrowed binding really did lose something, or the check above
+		// passed by narrowing nothing.
+		if len(wire) > 0 && len(capsFor(t, provider, []string{"text"})) > 0 {
+			t.Errorf("%s declared `input: [text]` and still carries %v, so this case "+
+				"never exercised a narrowing", provider, capsFor(t, provider, []string{"text"}))
+		}
+	}
+}
+
+// capsWireFor builds a binding with no `input:` and reports the wire it declares.
+func capsWireFor(t *testing.T, provider string) []string {
+	t.Helper()
+	return capsWireForInput(t, provider, nil)
+}
+
+// capsWireForInput is capsWireFor with the declaration supplied. Through
+// SelectBrain like capsFor, so what it reports is what a configuration ships.
+func capsWireForInput(t *testing.T, provider string, input []string) []string {
+	t.Helper()
+	cfg := ProviderConfig{Provider: provider, Model: "m", Input: input}
+	if provider == providerOpenAICompatible {
+		cfg.BaseURL = "https://example.invalid" // the one provider that requires it
+	}
+	client, err := SelectBrain(cfg, allCloudKeys())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return client.Caps().WireAttachmentMIMEs
+}
+
+// A wire declaration must never be NARROWER than what the binding says it
+// carries: the whole point is that it is the ceiling, and a ceiling below the
+// floor would report a carried type as withheld and stop a caller converting a
+// document it was free to convert.
+func TestAWireNeverDeclaresLessThanTheBindingOnIt(t *testing.T) {
+	for _, provider := range knownProviders {
+		for _, input := range [][]string{nil, {"text"}, {"text", "image"}} {
+			wire, carried := capsWireForInput(t, provider, input), capsFor(t, provider, input)
+			for _, pattern := range carried {
+				if !model.CarriesMIME(wire, pattern) {
+					t.Errorf("%s with input %v carries %q and declares a wire of %v that does not admit it",
+						provider, input, pattern, wire)
+				}
+			}
+		}
+	}
+}
+
 // The types the wildcard used to admit and no vendor decodes — the failure this
 // whole change is about. Asserted at the boundary an operator actually meets:
 // a binding built the way production builds one.
