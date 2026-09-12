@@ -8,10 +8,10 @@ import { DealBrief } from "./dealbrief";
 // The human-authored brief on a deal page.
 //
 // The states worth seeing are the ones a dropped distinction would render the
-// same: an ABSENT brief against an empty-string one (both must draw nothing,
-// not an empty panel), and a long brief clamped against a short one shown
-// whole — a clamp applied to text that already fits offers a "Read more" that
-// reveals nothing.
+// same: an ABSENT brief against an empty-string one (both must say the field
+// is empty and offer to fill it, never render the whitespace as prose), and a
+// long brief clamped against a short one shown whole — a clamp applied to text
+// that already fits offers a "Read more" that reveals nothing.
 
 const meta: Meta<typeof DealBrief> = {
   title: "Records/Deal brief",
@@ -31,8 +31,11 @@ export default meta;
 
 type Story = StoryObj<typeof DealBrief>;
 
+const DEAL = { dealId: "11111111-1111-1111-1111-111111111111", version: 2 };
+
 export const Short: Story = {
   args: {
+    ...DEAL,
     brief:
       "They run payroll for about 400 seasonal staff and close the month by hand. They want the close down to two days.",
   },
@@ -40,6 +43,7 @@ export const Short: Story = {
 
 export const Long: Story = {
   args: {
+    ...DEAL,
     brief: [
       "They run payroll for about 400 seasonal staff across six sites.",
       "Month-end close is manual and takes nine working days.",
@@ -52,9 +56,18 @@ export const Long: Story = {
   },
 };
 
-// Renders NOTHING. An empty panel would say the deal has no brief where the
-// truth is that nobody wrote one, and it would sit on every unbriefed deal.
-export const Absent: Story = { args: { brief: null } };
+// Nobody has written one. The panel used to render NOTHING here, on the
+// reasoning that the record's edit form already offers the field — but a
+// reader cannot see a form they have not opened, so every unbriefed deal
+// looked like a product with no such field. It now names what it holds and
+// offers to fill it.
+export const Absent: Story = { args: { ...DEAL, brief: null } };
 
 // The same, for a stored empty string: whitespace is not a brief.
-export const Blank: Story = { args: { brief: "   " } };
+export const Blank: Story = { args: { ...DEAL, brief: "   " } };
+
+// A deal this reader may not write: archived, somebody else's, or a mirror.
+// The panel still says the field exists; only the verb goes.
+export const ReadOnly: Story = {
+  args: { ...DEAL, brief: "They close the month by hand.", readOnly: true },
+};
