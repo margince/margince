@@ -343,7 +343,10 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	// another offer is how it changes, and that path replaces the figure and
 	// its provenance together.
 	_, arrMoved := after[arrField]
-	if err := refuseManualArrEdit(current, resultingArr, arrMoved, currencyMoved); err != nil {
+	if err := refuseManualArrEdit(current, resultingArr, moneyMoved{
+		Arr:      arrMoved,
+		Currency: currencyMoved,
+	}); err != nil {
 		return err
 	}
 	if string(current.Status) != "open" && resultingAmount != nil && (amountMoved || currencyMoved) {

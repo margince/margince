@@ -116,6 +116,16 @@ type moneyRestatement struct {
 	Arr      bool
 }
 
+// moneyMoved says which of a deal's money fields one patch actually CHANGED —
+// the question moneyRestatement's neighbour asks about what a request carried.
+// Named for that type's own reason: `(true, false)` at a call site says nothing
+// about which field is which, and a transposed pair reads exactly like a
+// correct one.
+type moneyMoved struct {
+	Arr      bool
+	Currency bool
+}
+
 // CurrencyRestatementError names the figure the caller has to send again.
 type CurrencyRestatementError struct{ Field string }
 
@@ -160,9 +170,7 @@ func patchedMoney(after map[string]any, column string, current *int64) *int64 {
 //
 // Every other field stays editable. This is a lock on one figure, not on the
 // deal.
-func refuseManualArrEdit(current crmcontracts.Deal, resultingArr *int64,
-	arrMoved, currencyMoved bool,
-) error {
+func refuseManualArrEdit(current crmcontracts.Deal, resultingArr *int64, moved moneyMoved) error {
 	if current.ArrSourceOfferId == nil {
 		return nil
 	}
@@ -173,12 +181,12 @@ func refuseManualArrEdit(current crmcontracts.Deal, resultingArr *int64,
 	// euros. Without this the restatement rule lets exactly that through: it
 	// asks only that every figure be RESENT, and resending the same numeral
 	// under a new code satisfies it.
-	if !arrMoved && !currencyMoved {
+	if !moved.Arr && !moved.Currency {
 		return nil
 	}
 	return &ArrFromOfferError{
 		Offer:   current.ArrSourceOfferId.String(),
-		Cleared: arrMoved && resultingArr == nil,
+		Cleared: moved.Arr && resultingArr == nil,
 	}
 }
 
