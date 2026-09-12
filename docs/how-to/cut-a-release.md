@@ -52,6 +52,32 @@ Two release kinds live here, and they carry different versions:
 | Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
 | Carries | both desktop bundles | the incremental patch, SBOMs, role images |
 
+### What the incremental patch is cut from
+
+`release.yml`'s patch starts at the last revision that actually **published**,
+recorded as the moving `released` tag the lane writes once `publish-release`
+succeeds — not at the ref's previous tip.
+
+The two agree only while every lane publishes. A run that is cancelled (the
+release group holds one queued slot, so a merge evicts the run behind it) or
+that fails leaves a commit published by nobody; basing the next patch on the
+previous tip would then drop that commit's files from every patch a consumer
+ever applies, silently and indistinguishably from a correct run.
+
+Two things follow, and both are correct rather than surprising:
+
+- **the first patch after a skipped lane is wider than usual**, covering what
+  that lane dropped;
+- **a `released` tag that failed to move makes the next patch wider still**,
+  which a consumer applies without harm. The tag is a pointer at the dist
+  service's own record, written only after a success, so its failure mode is
+  the safe direction.
+
+`scripts/release-patch-base.sh` states the rule and its fallbacks — the first
+release of a repository has nothing behind it and draws no patch at all — and
+`make test-release-patch-base` walks the publish/skip/publish sequence that made
+this a defect.
+
 The dist service's version grammar (`pkg/version` in
 `gradionhq/margince-constellation`) rejects a `v`-prefixed string by
 construction, and its scheme is a product commitment — evergreen editions, LTS

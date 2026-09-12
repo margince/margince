@@ -83,6 +83,14 @@ env:
   # both draft into it; this becomes a per-ref selection when a production
   # constellation exists.
   MARGINCE_RELEASE_MANAGEMENT_DIST_URL: https://dist.test.margince.com
+  # The tag naming the last revision that actually PUBLISHED, moved by the job
+  # at the end of this file once publish-release has succeeded. It is what the
+  # next patch is cut from — a consumer's tree is the last release they
+  # received, not this ref's previous tip — and it is a cache of the dist
+  # service's own answer rather than a second authority: written only after a
+  # success, so the worst a lost write can do is make the next patch wider
+  # than necessary.
+  PUBLISHED_TAG: released
 
 jobs:
   draft:
@@ -139,28 +147,21 @@ jobs:
           # release, so nothing cut here can ever shadow one.
           version="1970.${GITHUB_RUN_NUMBER}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          # A push carries its previous tip in BEFORE; a manual dispatch carries
-          # nothing, so fall back to the parent commit. Two shapes of BEFORE
-          # mean there is no ancestor to diff from, and the release drafts
-          # without a patch: all-zeros (branch creation), and a commit the
-          # fetched history no longer reaches (a force-push discards its old
-          # tip, so even a full fetch of the new tip cannot resolve it).
-          # Ancestry is deliberately NOT required beyond that: a resolvable
-          # BEFORE that is no ancestor of AFTER (a force-push whose old tip
-          # another ref still reaches) still names the previously drafted
-          # state, and the tree diff from it is exactly the increment a
-          # consumer on that state needs.
-          base="$BEFORE"
-          if [ -z "$base" ]; then
-            base="$(git rev-parse --verify HEAD~1 2>/dev/null || true)"
-          fi
+          # The base is the last PUBLISHED revision, not this push's previous
+          # tip: a patch is applied by somebody whose tree is the last release
+          # they received, and the two agree only while every lane publishes.
+          # A cancelled or failed run leaves a commit published by nobody, and
+          # basing on BEFORE then drops its files from every patch a consumer
+          # will ever apply. scripts/release-patch-base.sh states the rule and
+          # its fallbacks, and its own test walks the three-commit sequence
+          # that made this a defect rather than a hazard.
+          base="$(bash scripts/release-patch-base.sh "$PUBLISHED_TAG" "$BEFORE" HEAD~1)"
           patch_args=()
           # The ref name is part of the patch filename; a branch name with a
           # slash would make it a path into a directory that does not exist
           # inside the CLI's mount, so flatten the separators.
           patch_file="${GITHUB_REF_NAME//\//-}-$AFTER.patch"
-          if [ -n "$base" ] && ! printf '%s' "$base" | grep -qE '^0+$' \
-            && git rev-parse --verify --quiet "$base^{commit}" >/dev/null; then
+          if [ -n "$base" ]; then
             # The image ENTRYPOINT is the CLI (WORKDIR /work); mount the checkout
             # there and diff it with -repo. The image's own user is non-root and
             # does not own the runner's checkout, so run as the runner's uid/gid —
@@ -362,3 +363,52 @@ jobs:
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
             "$RELEASE_MANAGEMENT_IMAGE" \
             publish-release -version "$VERSION"
+
+  # What was PUBLISHED, recorded where the next patch can read it.
+  #
+  # The patch a consumer applies has to start from the tree they are holding,
+  # which is the last release that actually reached them — and a lane that
+  # cancelled or failed published nothing while still moving this ref's tip. So
+  # the base cannot be the tip, and this job is what makes the true answer
+  # available to a later run: a moving tag on the revision publish-release just
+  # accepted.
+  #
+  # AFTER the publish, and only on its success, which is what makes a tag safe
+  # as a cache of the dist service's own record. A write that is lost leaves the
+  # next patch WIDER than it needs to be — a consumer applies it without harm —
+  # while a write that ran too early is the narrow patch this whole change
+  # exists to prevent.
+  #
+  # Its own job rather than a step in the publish, so `contents: write` does not
+  # join the job holding the dist publisher token. It carries no secrets of its
+  # own beyond the default token the push needs.
+  mark-published:
+    name: Record the published revision
+    timeout-minutes: 10
+    needs: [publish]
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+    steps:
+      # The whole history, because the move is ORDERED: the script refuses a
+      # revision the tag's current one does not lead to, and a shallow checkout
+      # cannot answer that question about anything.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Move the published tag
+        env:
+          PUBLISHED: ${{ github.sha }}
+        # The tag MOVES: it names one revision, the newest published one, and a
+        # reader asking "what does a consumer have" wants exactly that. The
+        # history of what was published lives in the dist service, which is its
+        # owner; this is a pointer.
+        #
+        # FORWARD ONLY, and in a script of its own so that rule has a test. This
+        # job is outside the publish concurrency group — it has to be, or a
+        # release would hold the group while tagging — so two releases in flight
+        # are serialized at the publish and not here, and an older one's move
+        # can land last. Moving the tag backward cuts every later patch from a
+        # base ahead of what consumers have, which is the defect this whole
+        # change is about, arriving by the other door.
+        run: bash scripts/publish-released-tag.sh "$PUBLISHED_TAG" "$PUBLISHED" origin
