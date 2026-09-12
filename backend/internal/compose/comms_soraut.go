@@ -29,13 +29,18 @@ import (
 // N provider round-trips on the approved path, and it would put the
 // system-of-record question in the tool rather than beside the write. This seam
 // is the one place REST, the MCP tools and the automation executors all reach
-// these writes through, and the mode it asks is one cached read for the whole
-// call.
+// these writes through, and the mode it asks is one workspace-row read for the
+// whole call.
 
 // externalSoR answers whether this workspace's system of record has moved
-// outside the installation. It is the Dispatcher's own cached mode read, passed
-// as a function so this seam has ONE definition of the question rather than a
-// second query beside it.
+// outside the installation. It is the Dispatcher's own mode read, passed as a
+// function so this seam has ONE definition of the question rather than a second
+// query beside it.
+//
+// It is the UNCACHED read, because this is a mutation boundary: the mode cache
+// is per-process, so a replica that did not commit the flip can answer 'native'
+// for the rest of its TTL, and a send leaving on that answer is not a stale
+// screen the next request corrects.
 type externalSoR func(context.Context) (bool, error)
 
 // refuseIfHeldElsewhere refuses a write whose records this installation no

@@ -159,3 +159,28 @@ func TestDispatcherReadVerbsStillUseTheCachedMode(t *testing.T) {
 		t.Errorf("cached reads re-queried overlay_mode.sor_mode %d time(s); avoiding that on every read is the whole reason the cache exists", *calls)
 	}
 }
+
+// TestTheCommsGuardIgnoresAStaleCachedMode holds the same window shut at the
+// seam comms.go guards its sends behind.
+//
+// IsExternalSoR is not a dispatched verb, so the verb census above cannot see
+// it — but it decides the same question for the same reason: a send, a message
+// and a booking are mutations, and one leaving on a stale 'native' answer is a
+// mail that went out on the authority of an ownership that had already moved.
+// Unlike a routed write, this one is not recoverable afterwards at all.
+func TestTheCommsGuardIgnoresAStaleCachedMode(t *testing.T) {
+	wsID := ids.NewV7()
+	d, calls := cachedModeDispatcher(wsID, modeNative)
+	ctx := principal.WithWorkspaceID(context.Background(), wsID)
+
+	external, err := d.IsExternalSoR(ctx)
+	if err != nil {
+		t.Fatalf("IsExternalSoR: %v", err)
+	}
+	if !external {
+		t.Error("answered native from the stale cache entry; the workspace row says overlay and a send would go out under an ownership that has moved")
+	}
+	if *calls != 1 {
+		t.Errorf("read the workspace row %d times, want exactly 1: the guard must not trust the cache, and must not cost a round trip per call either", *calls)
+	}
+}
