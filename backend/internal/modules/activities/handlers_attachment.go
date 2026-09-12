@@ -104,7 +104,7 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		httperr.Write(w, r, httperr.Validation("file", "required", "a file part is required"))
+		httperr.Write(w, r, httperr.Validation("file", codeRequired, "a file part is required"))
 		return
 	}
 	defer func(ctx context.Context) {

@@ -107,7 +107,7 @@ var (
 	// it is to already know it exists. The account send refuses an unlinked
 	// message for the same reason and in the same words.
 	errBookingLinksEmpty = &SchedulingArgumentError{
-		Field: "links", Code: "required",
+		Field: "links", Code: codeRequired,
 		Message: "`links` needs at least one entry: name the contact, company, deal, lead or " +
 			"project the meeting is about — one attached to nothing appears on no timeline",
 	}

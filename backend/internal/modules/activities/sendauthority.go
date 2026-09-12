@@ -81,7 +81,7 @@ func (e *NoRecipientsError) Error() string {
 // in: `to` is what the caller actually sent, on both transports, and an error
 // naming a field no request body has is an error nobody can act on.
 func (e *NoRecipientsError) FieldFault() (field, code, message string) {
-	return "to", "required", e.Error()
+	return "to", codeRequired, e.Error()
 }
 
 // ChannelNotSendCapableError refuses a channel send this installation already

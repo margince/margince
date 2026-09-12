@@ -222,7 +222,7 @@ func (h Handlers) bookingRequestIsWritable(
 	w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody,
 ) bool {
 	if req.Booker.Name == "" || req.Booker.Email == "" {
-		httperr.Write(w, r, httperr.Validation("booker", "required", "booker.name and booker.email are required"))
+		httperr.Write(w, r, httperr.Validation("booker", codeRequired, "booker.name and booker.email are required"))
 		return false
 	}
 	if !req.End.After(req.Start) {
@@ -230,11 +230,11 @@ func (h Handlers) bookingRequestIsWritable(
 		return false
 	}
 	if req.Consent.PolicyVersion == "" {
-		httperr.Write(w, r, httperr.Validation("consent.policy_version", "required", "the consent wording version shown to the booker is required"))
+		httperr.Write(w, r, httperr.Validation("consent.policy_version", codeRequired, "the consent wording version shown to the booker is required"))
 		return false
 	}
 	if req.Consent.Wording == nil || strings.TrimSpace(*req.Consent.Wording) == "" {
-		httperr.Write(w, r, httperr.Validation("consent.wording", "required", "the consent wording shown to the booker is required"))
+		httperr.Write(w, r, httperr.Validation("consent.wording", codeRequired, "the consent wording shown to the booker is required"))
 		return false
 	}
 	return true
@@ -345,12 +345,12 @@ func (h Handlers) admitBookingMarketing(w http.ResponseWriter, r *http.Request, 
 		return nil, true
 	}
 	if strings.TrimSpace(m.PolicyVersion) == "" {
-		httperr.Write(w, r, httperr.Validation("consent.marketing.policy_version", "required",
+		httperr.Write(w, r, httperr.Validation("consent.marketing.policy_version", codeRequired,
 			"the marketing wording version shown to the subject is required"))
 		return nil, false
 	}
 	if strings.TrimSpace(m.Wording) == "" {
-		httperr.Write(w, r, httperr.Validation("consent.marketing.wording", "required",
+		httperr.Write(w, r, httperr.Validation("consent.marketing.wording", codeRequired,
 			"the marketing wording shown to the subject is required"))
 		return nil, false
 	}
@@ -385,14 +385,14 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 		return false
 	}
 	if c.PolicyVersion == "" {
-		httperr.Write(w, r, httperr.Validation("consent.policy_version", "required",
+		httperr.Write(w, r, httperr.Validation("consent.policy_version", codeRequired,
 			"the consent wording version shown to the subject is required"))
 		return false
 	}
 	// Both halves of the proof row are settled before anything is written: a
 	// grant that cannot say what the subject read is not demonstrable.
 	if c.Wording == nil || strings.TrimSpace(*c.Wording) == "" {
-		httperr.Write(w, r, httperr.Validation("consent.wording", "required",
+		httperr.Write(w, r, httperr.Validation("consent.wording", codeRequired,
 			"the consent wording shown to the subject is required"))
 		return false
 	}

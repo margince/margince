@@ -326,7 +326,7 @@ func (e *BatchPinError) MessageFault() (code, message string) {
 // to hide and nothing to answer 403 about — the count says how many moved.
 func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkActivityInput) (RelinkBatchResult, error) {
 	if threadKey == "" {
-		return RelinkBatchResult{}, httperr.Validation("thread_key", "required",
+		return RelinkBatchResult{}, httperr.Validation("thread_key", codeRequired,
 			"thread_key names the conversation to move; it cannot be blank")
 	}
 	if err := refuseBatchPin(in); err != nil {
