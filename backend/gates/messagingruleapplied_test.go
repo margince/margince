@@ -39,7 +39,10 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -85,8 +88,7 @@ var unappliedRules = gatekit.Waive(map[string]string{
 		"activities.SendEmailInput.Subject is caller-supplied text — and no step " +
 		"between that and the provider consults the applicable rules, so an " +
 		"advertising message leaves unmarked whatever a pack declares",
-	"Disclosures": "nothing renders a disclosure into a message body. The kinds are a " +
-		"closed set and the merge keeps them, but no consumer turns one into text",
+	"Disclosures": "nothing puts a rendered disclosure INTO a message. consent's DisclosuresFor turns each declared obligation into the words that meet it and reports one the installation cannot meet rather than inventing it \u2014 so the particulars exist, an operator can state them, and the mapping from obligation to text is written. What is missing is the consumer: activities/sendcore.go composes the body and comms/sendseam.go hands it to the provider, and neither asks. Until one does, an advertising mail still leaves without the controller identity a pack demands",
 	"OptOutAcknowledgement": "no acknowledgement is sent. The controller lane is the only " +
 		"one that may write to somebody who has just suppressed themselves, and it " +
 		"registers no template for this",
@@ -103,7 +105,14 @@ func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {
 	readers := engineRuleReaders(t)
 
 	for _, field := range obligations {
-		if readers[field] {
+		// READ IS NOT APPLIED, and this gate used to conflate them. A function
+		// that reads an obligation satisfies a read-census perfectly while
+		// nothing calls it, so the field looks applied and no message changes —
+		// which is exactly what happened when DisclosuresFor was written and
+		// the register line deleted in the same change. unreachedReaders names
+		// the fields whose only reader is waiting for a caller, so they stay in
+		// the register below rather than passing on a read nobody makes.
+		if readers[field] && !unreachedReaders[field] {
 			continue
 		}
 		if unappliedRules.Waived(t, field) {
@@ -117,6 +126,69 @@ func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {
 			field, rulesEngineDir)
 	}
 	unappliedRules.AssertAllMatched(t)
+}
+
+// unreachedReaders are the obligations whose only engine reader has no caller.
+//
+// A field here is read and NOT applied: the mapping from obligation to text
+// exists and no message carries the result. It stays in unappliedRules, and
+// TestEveryRuleReaderIsReachableFromASend below names the function waiting.
+//
+// An entry leaves this map when a send path calls the reader, which is the same
+// moment its register line goes.
+var unreachedReaders = map[string]bool{"Disclosures": true}
+
+// ruleReaderCallers names each function that reads a declared obligation, and
+// the send path that calls it.
+//
+// An EMPTY value means not yet reached, and the field stays in unappliedRules
+// with the matching reason. The two entries are the same gap seen from two
+// sides: the register says the obligation is not applied, and this says which
+// function is waiting for a caller.
+//
+// gatekit:fixture the rule readers and the send paths that call them
+var ruleReaderCallers = map[string]string{"DisclosuresFor": ""}
+
+// TestEveryRuleReaderIsReachableFromASend closes this gate's own blind spot.
+//
+// The census above asks whether any engine code READS an obligation, which it
+// treats as applying it. A function that reads one and nothing calls satisfies
+// it perfectly — and that is not a hypothetical: consent.DisclosuresFor was
+// written, read Disclosures, let the register line be deleted, and had no
+// production caller. The obligation was exactly as unapplied as before, and the
+// register said it was done.
+//
+// Reading a rule is not applying it. Applying it means a message carries the
+// consequence, which requires somebody to ask.
+func TestEveryRuleReaderIsReachableFromASend(t *testing.T) {
+	t.Parallel()
+	for reader, caller := range ruleReaderCallers {
+		if caller == "" {
+			// Recorded rather than failed, because the register above carries
+			// the same gap and failing twice for one missing consumer would
+			// make the second failure noise. What this adds is the NAME of the
+			// function waiting, which the register cannot say.
+			t.Logf("%s reads a declared obligation and no send path calls it yet. "+
+				"A reader nothing calls satisfies the census above while changing no "+
+				"message, so the obligation is recorded as applied and is not. Either "+
+				"name the caller here once one exists.", reader)
+			continue
+		}
+		if !sendPathCalls(t, caller, reader) {
+			t.Errorf("%s no longer calls %s — the obligation stopped being applied and "+
+				"nothing else says so", caller, reader)
+		}
+	}
+}
+
+// sendPathCalls reports whether the named file calls the named function.
+func sendPathCalls(t *testing.T, file, fn string) bool {
+	t.Helper()
+	src, err := os.ReadFile(filepath.Join(repoRoot, file))
+	if err != nil {
+		t.Fatalf("reading %s: %v", file, err)
+	}
+	return strings.Contains(string(src), fn+"(")
 }
 
 // TestTheEngineReadsAtLeastOneRuleField is the positive control for the reader
