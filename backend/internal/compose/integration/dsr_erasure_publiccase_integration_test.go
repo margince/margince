@@ -25,8 +25,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -97,5 +100,39 @@ func TestFulfillingAnErasureCaseTheSubjectOpenedCompletes(t *testing.T) {
 			"the submission the case points at, and the case row FulfilErasure holds locked is the " +
 			"one that delete has to touch, so the fulfilment waits on itself and no subject who " +
 			"asked through their own link can ever be erased")
+	}
+
+	// AND THE CASE STOPS NAMING THEM. The erasure's own retirement skips this
+	// row — it cannot touch one the fulfilment holds locked — so the fulfilment
+	// tombstones it in the statement that closes it. Without that, the one case
+	// an erased subject is certain to have, the erasure request itself, would
+	// survive the erasure still carrying the identity they gave to make it.
+	var subjectRef, status string
+	var resolution, stillLinked *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT subject_ref, status, resolution, contact_id::text
+			  FROM data_subject_request WHERE id = $1`, caseID).
+			Scan(&subjectRef, &status, &resolution, &stillLinked)
+	}); err != nil {
+		t.Fatalf("reading the fulfilled case: %v", err)
+	}
+	if status != "fulfilled" {
+		t.Errorf("the case is %q, want fulfilled — the controller must be able to show it "+
+			"performed the erasure", status)
+	}
+	// subject_ref DELIBERATELY survives on this one row: a replayed fulfilment
+	// resolves the contact through it, and the replay must stay idempotent.
+	// finalizeErasureFulfil says so at the statement. What must not survive is
+	// the officer's prose and the contact link, both checked below.
+	if subjectRef == "" {
+		t.Error("the fulfilled case lost the reference a replayed fulfilment resolves through")
+	}
+	if stillLinked != nil {
+		t.Error("the fulfilled case still names the erased contact")
+	}
+	if resolution != nil && *resolution != "erased" {
+		t.Errorf("the fulfilled case carries the officer's prose %q, which can name or quote "+
+			"the subject", *resolution)
 	}
 }

@@ -113,7 +113,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 			return err
 		}
 
-		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails, identities)
+		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails, identities, reason)
 		if err != nil {
 			return err
 		}
@@ -292,7 +292,7 @@ func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []id
 // own audit spine.
 func anonymizeSubjectRows(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
-	emails []string, identities []channelIdentity,
+	emails []string, identities []channelIdentity, reason string,
 ) ([]ids.UUID, error) {
 	// Read BEFORE the contact row is anonymized below: the LinkedIn sweep at
 	// the end of this function matches on the subject's name, and by then the
@@ -332,7 +332,7 @@ func anonymizeSubjectRows(
 	if err := scrubSubjectFromGraph(ctx, tx, contactID, emails, identities, subjectName, linkedInHandles); err != nil {
 		return nil, err
 	}
-	if err := deleteConsentCapabilities(ctx, tx, contactID, emails); err != nil {
+	if err := deleteConsentCapabilities(ctx, tx, contactID, emails, reason); err != nil {
 		return nil, err
 	}
 	// Why this contact existed. It names one contact, records what they did or

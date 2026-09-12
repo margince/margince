@@ -357,7 +357,19 @@ var piiTables = map[string]piiHandling{
 	// they were acquired has been answered halfway.
 	"contact_acquisition_evidence": {erasureWrite: true, sarRead: true},
 	"privacy_notice_case":          {erasureWrite: true, sarRead: true},
-	"communication_decision":       {erasureWrite: true, sarRead: true},
+	// The subject's own rights requests. A controller holding the record of
+	// somebody's erasure request holds something about them, so it is erased
+	// with them and disclosed to them — a subject who asked to be erased and
+	// was refused could not otherwise see that the refusal exists, which is the
+	// one thing they need to appeal it.
+	"data_subject_request": {erasureWrite: true, sarRead: true},
+	// The unsubscribe links minted for a subject: a capability over their own
+	// record, carrying the address it was written to, living twenty-four
+	// months. Erased with them for that reason, and disclosed because "does the
+	// link in this old message still work" is a question only the export can
+	// answer. The token hash stays out of the package — see the section.
+	"withdrawal_credential":  {erasureWrite: true, sarRead: true},
+	"communication_decision": {erasureWrite: true, sarRead: true},
 	// The non-consent basis a message stood on — the thing that happened, its
 	// scope and its window. Same reasoning: erased with the subject, and
 	// disclosed, because "we wrote to you because you wrote to us on 2 May" is

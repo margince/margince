@@ -71,6 +71,22 @@ type SARPackage struct {
 	// package the subject authored rather than the workspace, which is exactly
 	// why an export that omitted it would be answering the wrong question.
 	ConfirmSubmissions []map[string]any `json:"confirm_submissions"`
+	// The rights requests this subject made, and what happened to them.
+	//
+	// Art. 15 asks what is held about somebody, and a controller holding a
+	// record of their erasure request holds something about them. Omitting it
+	// meant a subject who asked to be erased, and was refused, could not see
+	// that the refusal existed — the one thing they would need to appeal it.
+	RightsRequests []map[string]any `json:"rights_requests"`
+	// The unsubscribe links minted for this subject, which are capabilities
+	// over their own record and live two years.
+	//
+	// The TOKEN is never here: the row holds a hash and the plaintext exists
+	// only in the mail that carried it, which is the whole point of hashing it.
+	// What the subject learns is that links exist, what each can stop, and
+	// whether any has been used — the questions somebody asks after finding an
+	// old message and wondering whether the link in it still works.
+	WithdrawalCredentials []map[string]any `json:"withdrawal_credentials"`
 	// Why each message to this subject was permitted, what non-consent basis
 	// stood behind it, and every objection or restriction they recorded.
 	// Art. 15(1)(a)-(c): the purposes of the processing and its lawful ground,

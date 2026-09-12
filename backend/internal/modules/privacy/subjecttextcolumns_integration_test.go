@@ -41,7 +41,7 @@ var subjectRowWriters = map[string]func(context.Context, pgx.Tx, ids.ContactID, 
 		// No channel accounts: this suite drives the subject's own TEXT
 		// columns, and the account list reaches only the participant scrub —
 		// a graph structure, covered by its own erasure test.
-		_, err := anonymizeSubjectRows(ctx, tx, contact, emails, nil)
+		_, err := anonymizeSubjectRows(ctx, tx, contact, emails, nil, "test")
 		return err
 	},
 	"the retention sweep": func(ctx context.Context, tx pgx.Tx, contact ids.ContactID, emails []string) error {

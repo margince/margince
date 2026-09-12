@@ -45,7 +45,9 @@ import (
 // name arriving through a variable is invisible to both, so the tidier loop
 // turns two proven writes into two unproven ones and the gates go quietly
 // green. A third capability is added here as a third statement.
-func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string) error {
+func deleteConsentCapabilities(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, reason string,
+) error {
 	if _, err := tx.Exec(ctx, `DELETE FROM preference_token WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's preference-center token: %w", err)
 	}
@@ -94,6 +96,34 @@ func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, contactID ids.Con
 		       subject_id = NULL, subject_kind = NULL
 		 WHERE subject_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: retiring the subject's authorization decisions: %w", err)
+	}
+
+	// data_subject_request is the SAME SHAPE and the sharpest case of it: the
+	// erasure being performed here is usually the answer to one of these rows.
+	//
+	// Destroying the case would leave the controller unable to show it answered
+	// the request at all — including this one, and including a request it
+	// REFUSED, where the record is what an appeal or a supervisory authority
+	// would ask to see. Art. 5(2) wants that kept.
+	//
+	// So the identifying half goes and the accountability half stays. subject_ref
+	// is the free-text identity somebody typed or the link's own reference, and
+	// resolution is prose a colleague wrote that can name the subject or quote
+	// them. The kind, the status, the dates and the receipt reference survive as
+	// an unattributed record that a request of this kind arrived and was
+	// answered by its deadline.
+	//
+	// The receipt reference stays deliberately: it names no subject — it is a
+	// minted code — and it is what somebody quotes when asking what happened to
+	// their request, which they may still do after the erasure.
+	//
+	// TOMBSTONED, not nulled. dsr_resolution_shape requires a closed case to
+	// carry a resolution, and a null would refuse the erasure on exactly the
+	// rows that matter most: the fulfilled and rejected ones, which is every
+	// case an erasure is likely to find. The stand-in keeps the shape true
+	// while the prose goes.
+	if err := retireRightsCases(ctx, tx, contactID.UUID, fulfillingCase(reason)); err != nil {
+		return err
 	}
 
 	// A REVIEW IS UNFINISHED WORK, not accountability evidence, and that is why
@@ -212,4 +242,82 @@ func tombstoneExceptionExplanations(ctx context.Context, tx pgx.Tx, contactID id
 		return fmt.Errorf("privacy: scrubbing what a director wrote about the subject: %w", err)
 	}
 	return nil
+}
+
+// retireRightsCases takes the subject out of their own rights cases and leaves
+// the record that the cases happened.
+//
+// ONE WRITER for both acts. The erasure and the contact/anonymize sweep must
+// clear the same tables — a gate enforces it — and a retirement spelled twice
+// is two answers to what an anonymized subject keeps.
+//
+// TOMBSTONED, not nulled. dsr_resolution_shape requires a closed case to carry
+// a resolution, so a null would abort the whole act on exactly the closed cases
+// it is most likely to find. The stand-in keeps the shape true while the prose,
+// which a colleague wrote and which can name or quote the subject, goes.
+// BOTH KEYS, because only one of them is reliably set.
+//
+// A case opened through the subject's own confirm link carries contact_id. One
+// an officer opens by hand carries only subject_ref — CreateDSR never sets the
+// link, even when the reference IS a contact uuid — so keying on contact_id
+// alone left every officer-created case holding its subject forever. Matching
+// the reference as well reaches those, and reaches a case opened before a merge
+// whose link was never repointed.
+//
+// ONE ROW IS EXCLUDED BY NAME, and every other one waits for its lock.
+//
+// The erasure this runs inside is USUALLY being performed to fulfil one of
+// these cases. That transaction holds its row FOR UPDATE across this call, so
+// an unqualified update blocks on a lock its own caller holds and dies on the
+// statement timeout — which is what happened, caught by the compose lane.
+//
+// SKIP LOCKED was the first fix and it was too wide. It also skipped a case an
+// unrelated officer happened to be editing at that moment, and nothing retries:
+// that subject would survive in a case for no reason anybody could see, and the
+// erasure would report success. Naming the one row that CANNOT be waited for
+// keeps the rest blocking, which is the correct behaviour — a moment's wait for
+// an officer's save, then the retirement.
+//
+// The excluded row is not left naming its subject. finalizeErasureFulfil
+// (consent/dsr.go) clears it in the same statement that closes it, which is the
+// only place that can: no other transaction may touch a row this one holds.
+func retireRightsCases(ctx context.Context, tx pgx.Tx, contactID ids.UUID, fulfilling ids.UUID) error {
+	if _, err := tx.Exec(ctx, `
+		UPDATE data_subject_request
+		   SET subject_ref = 'erased+' || id,
+		       resolution = CASE WHEN resolution IS NULL THEN NULL ELSE 'erased' END,
+		       -- THE LINK SURVIVES on an OPEN case, and only there. A second
+		       -- erasure case for one subject must still be fulfillable after
+		       -- the first retires it, and the link is what FulfilErasure
+		       -- resolves through once the reference is tombstoned. On a closed
+		       -- case nothing will resolve it again, so the link goes.
+		       contact_id = CASE WHEN status IN ('open', 'in_progress')
+		                         THEN contact_id ELSE NULL END
+		 WHERE id IN (SELECT id FROM data_subject_request
+		               WHERE (contact_id = $1 OR subject_ref = $1::text)
+		                 AND id IS DISTINCT FROM $2
+		               FOR UPDATE)`, contactID, fulfilling); err != nil {
+		return fmt.Errorf("privacy: retiring the subject's rights cases: %w", err)
+	}
+	return nil
+}
+
+// fulfillingCase answers which rights case this erasure is being run to fulfil,
+// read off the reason its caller passed.
+//
+// "dsr:<uuid>" is the spelling FulfilErasure uses (consent/dsr.go), and it is
+// the ONE row retireRightsCases cannot wait for: that transaction holds it
+// locked across this whole call. Every other reason — an officer's manual
+// erasure, a retention sweep — names no case, and the zero uuid excludes
+// nothing.
+func fulfillingCase(reason string) ids.UUID {
+	const prefix = "dsr:"
+	if !strings.HasPrefix(reason, prefix) {
+		return ids.UUID{}
+	}
+	id, err := ids.Parse(strings.TrimPrefix(reason, prefix))
+	if err != nil {
+		return ids.UUID{}
+	}
+	return id
 }
