@@ -4626,6 +4626,15 @@ export const de = {
   "pipeline.default": "Standard",
   "pipeline.notDefault": "Kein Standard",
   "pipeline.position": "Position",
+  "pipeline.retired": "Stillgelegt",
+  "pipeline.retire": "Stilllegen",
+  "pipeline.retireConfirm":
+    "{name} stilllegen? Die Pipeline verschwindet aus den Auswahllisten und aus dem Anlegen neuer Deals. Deals, die bereits darauf liegen, behalten ihre Phase, ihre Historie und ihren Beitrag zur Prognose, und du kannst die Pipeline jederzeit zurückholen.",
+  "pipeline.retireBlocked":
+    "Dies ist die Standard-Pipeline, und neue Deals brauchen eine. Mach zuerst eine andere Pipeline zum Standard, dann kannst du diese stilllegen.",
+  "pipeline.retired.done": "{name} ist stillgelegt",
+  "pipeline.restore": "Wieder in Betrieb nehmen",
+  "pipeline.restored": "{name} ist wieder in Betrieb",
   "stage.new": "Neue Phase",
   "stage.edit": "Phase bearbeiten",
   "stage.name": "Name",

@@ -1,9 +1,9 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { PipelinesCard } from "./settings";
+import { PipelinesCard } from "./settings.pipelines";
 import { jsonResponse, PIPELINE_ADMIN, render } from "./settings.testkit";
 
 // The pipeline and stage editor the Data model entry carries. Each affordance
@@ -34,6 +34,10 @@ function settingsStub(opts: {
   // What the server answers a removal with, when the scenario is about a
   // refusal: a stage still holding deals, or the terminal pair.
   stageDeleteRefusal?: { status: number; body: unknown };
+  onPipelineWrite?: (call: { method: string; body: unknown }) => void;
+  onPipelineArchive?: (call: { url: string; ifMatch: string | null }) => void;
+  onPipelineRestore?: (call: { url: string; method: string }) => void;
+  onPipelineList?: (url: string) => void;
 }) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -43,14 +47,63 @@ function settingsStub(opts: {
         meFixture({ roles: opts.roles, allow: opts.allow ?? PIPELINE_ADMIN }),
       );
     }
+    if (url.includes("/pipelines/") && url.endsWith("/restore")) {
+      opts.onPipelineRestore?.({ url, method });
+      return jsonResponse({
+        id: "pl-old",
+        name: "Retired line",
+        is_default: false,
+        position: 1,
+        version: 4,
+      });
+    }
+    if (url.includes("/pipelines/") && method === "DELETE") {
+      opts.onPipelineArchive?.({
+        url,
+        ifMatch:
+          input instanceof Request ? input.headers.get("If-Match") : null,
+      });
+      return new Response(null, { status: 204 });
+    }
+    if (
+      url.includes("/pipelines") &&
+      (method === "POST" || method === "PATCH")
+    ) {
+      const raw = input instanceof Request ? await input.clone().text() : "";
+      const body = raw ? JSON.parse(raw) : {};
+      opts.onPipelineWrite?.({ method, body });
+      return jsonResponse({ id: "pl-new", name: "Enterprise", ...body });
+    }
     if (url.includes("/pipelines")) {
+      opts.onPipelineList?.(url);
       return jsonResponse({
         data: [
+          {
+            id: "pl-old",
+            name: "Retired line",
+            is_default: false,
+            position: 1,
+            version: 4,
+            archived_at: "2026-09-01T00:00:00Z",
+            stages: [],
+          },
+          // Live and NOT the default: the only shape that can actually be
+          // retired, so a fixture without one would let the retire case pass
+          // on a control the reader can never press.
+          {
+            id: "pl-live",
+            name: "Enterprise",
+            is_default: false,
+            position: 2,
+            version: 7,
+            stages: [],
+          },
           {
             id: "pl",
             name: "Sales",
             is_default: true,
             position: 0,
+            version: 3,
             stages: [
               {
                 id: "s1",
@@ -59,6 +112,26 @@ function settingsStub(opts: {
                 position: 1,
                 semantic: "open",
                 win_probability: 20,
+              },
+              // A ladder ends somewhere, and the two ends mean opposite
+              // things. Without them the fixture only ever exercised the
+              // middle, so what a reader is told a terminal stage IS went
+              // unasserted.
+              {
+                id: "s2",
+                pipeline_id: "pl",
+                name: "Closed won",
+                position: 2,
+                semantic: "won",
+                win_probability: 100,
+              },
+              {
+                id: "s3",
+                pipeline_id: "pl",
+                name: "Closed lost",
+                position: 3,
+                semantic: "lost",
+                win_probability: 0,
               },
             ],
           },
@@ -213,5 +286,193 @@ describe("PipelinesCard", () => {
         win_probability: 15,
       }),
     );
+  });
+  // The whole point of retiring a pipeline is that it stops being offered, so
+  // the settings card is the ONE reader that must still see it. That the other
+  // three readers do not is the claim below this one.
+  it("lists a retired pipeline and marks it retired", async () => {
+    vi.stubGlobal("fetch", settingsStub({ roles: ["admin"] }));
+    render(<PipelinesCard />);
+    expect(await screen.findByText("Retired line")).toBeTruthy();
+    expect(screen.getByText("Retired")).toBeTruthy();
+  });
+
+  // The deal board, the stage-automation picker and the lead qualifier read
+  // ["pipelines","all"] with no include_archived. If this card widened that
+  // entry instead of taking its own, a retirement would put the pipeline back
+  // in the three places it was retired FROM — silently, through a shared
+  // cache, with nothing on this screen to show for it.
+  it("asks for archived rows on a request of its own", async () => {
+    const listed: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      settingsStub({
+        roles: ["admin"],
+        onPipelineList: (url) => listed.push(url),
+      }),
+    );
+    render(<PipelinesCard />);
+    await screen.findByText("Retired line");
+    expect(listed.some((url) => url.includes("include_archived=true"))).toBe(
+      true,
+    );
+  });
+
+  // Retiring is pipeline:DELETE, the same verb stage removal takes and a
+  // different one from everything else this row offers.
+  it("withholds the retire verb from a principal holding update alone", async () => {
+    vi.stubGlobal(
+      "fetch",
+      settingsStub({
+        roles: ["admin"],
+        allow: { pipeline: ["read", "update"] },
+      }),
+    );
+    render(<PipelinesCard />);
+    await screen.findByText("Sales");
+    expect(screen.queryByRole("button", { name: "Retire" })).toBeNull();
+  });
+
+  // The default pipeline's control stays VISIBLE and disabled with the reason
+  // beside it. The server refuses it (default_pipeline_not_archivable) and the
+  // reason names a remedy the reader can take from this same row, so hiding
+  // the control would hide the only sentence that explains the state.
+  it("disables retire on the default pipeline and says why", async () => {
+    vi.stubGlobal(
+      "fetch",
+      settingsStub({
+        roles: ["admin"],
+        allow: { pipeline: ["read", "update", "delete"] },
+      }),
+    );
+    render(<PipelinesCard />);
+    await screen.findByText("Sales");
+    expect(
+      screen.getByText(/Make another pipeline the default first/),
+    ).toBeTruthy();
+  });
+
+  it("retires a pipeline through DELETE with its version, once confirmed", async () => {
+    const user = userEvent.setup();
+    const archived: { url: string; ifMatch: string | null }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      settingsStub({
+        roles: ["admin"],
+        allow: { pipeline: ["read", "update", "delete"] },
+        onPipelineArchive: (call) => archived.push(call),
+      }),
+    );
+    render(<PipelinesCard />);
+    await screen.findByText("Sales");
+    // Exactly one of the three can be retired, and saying so here is the
+    // claim: the retired one offers no Retire verb at all, and the default's
+    // is drawn and refused. Picking "the enabled one" is therefore a reading
+    // of the rule rather than a way around an ambiguous query.
+    const offered = screen
+      .getAllByRole("button", { name: "Retire" })
+      .filter((button) => !(button as HTMLButtonElement).disabled);
+    expect(offered).toHaveLength(1);
+    await user.click(offered[0]);
+    expect(screen.getByText(/keep their stage/).textContent).toContain(
+      "Enterprise",
+    );
+    // The dialog's own confirm, not the row's trigger: both carry the verb,
+    // which is the point — the dialog repeats the word the reader pressed.
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Retire",
+      }),
+    );
+    await waitFor(() => expect(archived).toHaveLength(1));
+    expect(archived[0].url).toContain("/pipelines/pl-live");
+    // The version travels: retiring a pipeline somebody else has just made
+    // default is a decision taken about a record the reader was not looking at.
+    expect(archived[0].ifMatch).toBe("7");
+  });
+
+  it("puts a retired pipeline back through restore", async () => {
+    const user = userEvent.setup();
+    const restored: { url: string; method: string }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      settingsStub({
+        roles: ["admin"],
+        onPipelineRestore: (call) => restored.push(call),
+      }),
+    );
+    render(<PipelinesCard />);
+    await user.click(
+      await screen.findByRole("button", { name: "Put back in use" }),
+    );
+    await waitFor(() => expect(restored).toHaveLength(1));
+    expect(restored[0].url).toContain("/pipelines/pl-old/restore");
+    // The VERB as well as the address. Restoring is a POST — the contract's
+    // own undo half — and a stub matching on the path alone would let a
+    // regression to GET or DELETE pass while still hitting the right row.
+    expect(restored[0].method).toBe("POST");
+  });
+  // Each stage says what it MEANS, not just what it is called. A ladder whose
+  // ends are drawn like its middle leaves a reader to infer from the name
+  // whether "Closed lost" counts as won — and a renamed stage takes that
+  // inference with it.
+  it("names each stage's outcome beside it", async () => {
+    vi.stubGlobal("fetch", settingsStub({ roles: ["admin"] }));
+    render(<PipelinesCard />);
+    await screen.findByText("Qualify");
+
+    expect(screen.getByText("Open")).toBeTruthy();
+    expect(screen.getByText("Won")).toBeTruthy();
+    expect(screen.getByText("Lost")).toBeTruthy();
+  });
+  // The card's own create verb, driven rather than merely asserted present.
+  it("creating a pipeline posts the name and an empty ladder", async () => {
+    const user = userEvent.setup();
+    const writes: { method: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      settingsStub({
+        roles: ["admin"],
+        onPipelineWrite: (w) => writes.push(w),
+      }),
+    );
+    render(<PipelinesCard />);
+    await user.click(await screen.findByText("New pipeline"));
+    await user.type(screen.getByLabelText(/Name/), "Partnerships");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0].method).toBe("POST");
+    // Stages are added afterwards, one at a time, through the row's own verb —
+    // a create that shipped a ladder would be a second way to build one.
+    expect(writes[0].body).toMatchObject({ name: "Partnerships", stages: [] });
+  });
+
+  // Renaming rides PATCH, and the row that carries it is the row it names.
+  it("renaming a pipeline patches that pipeline", async () => {
+    const user = userEvent.setup();
+    const writes: { method: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      settingsStub({
+        roles: ["admin"],
+        onPipelineWrite: (w) => writes.push(w),
+      }),
+    );
+    render(<PipelinesCard />);
+    await screen.findByText("Sales");
+    // An IconAction, so its accessible name is the label rather than text in
+    // the row. The first is the retired pipeline's — the live default is next.
+    await user.click(
+      screen.getAllByRole("button", { name: "Edit pipeline" })[0],
+    );
+    const name = screen.getByLabelText(/Name/);
+    await user.clear(name);
+    await user.type(name, "Renamed");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0].method).toBe("PATCH");
+    expect(writes[0].body).toMatchObject({ name: "Renamed" });
   });
 });

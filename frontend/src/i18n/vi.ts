@@ -4561,6 +4561,15 @@ export const vi = {
   "pipeline.default": "Mặc định",
   "pipeline.notDefault": "Không mặc định",
   "pipeline.position": "Vị trí",
+  "pipeline.retired": "Đã ngừng dùng",
+  "pipeline.retire": "Ngừng dùng",
+  "pipeline.retireConfirm":
+    "Ngừng dùng {name}? Quy trình này sẽ không còn xuất hiện trong các danh sách chọn và luồng tạo deal mới. Những deal đang nằm trên đó vẫn giữ nguyên giai đoạn, lịch sử và phần đóng góp vào dự báo, và bạn có thể đưa nó trở lại bất cứ lúc nào.",
+  "pipeline.retireBlocked":
+    "Đây là quy trình mặc định, và deal mới cần có một quy trình mặc định. Hãy đặt một quy trình khác làm mặc định trước, rồi mới ngừng dùng quy trình này.",
+  "pipeline.retired.done": "Đã ngừng dùng {name}",
+  "pipeline.restore": "Dùng lại",
+  "pipeline.restored": "{name} đã được dùng lại",
   "stage.new": "Giai đoạn mới",
   "stage.edit": "Sửa giai đoạn",
   "stage.name": "Tên",
