@@ -63,7 +63,27 @@ func (s *Store) recordAdmittedTx(
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return State{}, err
 	}
-	if current == in.NewState {
+	// AN UNCONFIRMED GRANT IS NOT THE SAME STATE, however the column reads.
+	//
+	// The row says `granted` and the send gate refuses it, because a
+	// double-opt-in purpose is only effective once the round trip happened
+	// (authorizelead.go). So a subject spending the confirmation link for a
+	// grant already sitting there unconfirmed was answered as an idempotent
+	// re-assertion — no proof row, no confirmation recorded — and the message
+	// they were confirming still never went.
+	//
+	// It is the shape a preference-centre grant used to leave behind, and
+	// exactly what resubscribe.go now mints a link to repair. Short-circuiting
+	// here would have made that repair a no-op.
+	reassertion := current == in.NewState
+	if reassertion && requiresDOI && in.NewState == string(StateGranted) {
+		confirmed, err := grantIsConfirmedTx(ctx, tx, sub, in.PurposeID)
+		if err != nil {
+			return State{}, err
+		}
+		reassertion = confirmed
+	}
+	if reassertion {
 		out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current, LawfulBasis: in.LawfulBasis}
 		return out, nil // idempotent re-assertion: no proof row, no event, no fresh token demanded (Changed stays false)
 	}

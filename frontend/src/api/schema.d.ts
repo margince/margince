@@ -30240,10 +30240,23 @@ export interface components {
             refused: {
                 purpose_key: string;
                 /**
-                 * @description cannot_grant: the subject is archived, so a fresh grant would re-open a capability their erasure destroyed.
+                 * @description Why this choice did not simply take effect.
+                 *
+                 *     `cannot_grant` — the subject is archived, so a fresh grant would re-open a
+                 *     capability their erasure destroyed.
+                 *
+                 *     `confirmation_sent` — the subscribe was taken and a confirmation link is on its
+                 *     way. This purpose needs a double opt-in, so the grant is recorded when the
+                 *     subject spends that link, not when they press the button. The page should say
+                 *     the answer is pending rather than done: a save reported as plain success leaves
+                 *     somebody expecting mail that will not come until they click.
+                 *
+                 *     `confirmation_unavailable` — the subscribe could not be started because this
+                 *     installation cannot mail the confirmation. About US rather than the subject, so
+                 *     a page must not tell them their choice was declined.
                  * @enum {string}
                  */
-                reason: "cannot_grant";
+                reason: "cannot_grant" | "confirmation_sent" | "confirmation_unavailable";
             }[];
             purposes: {
                 key: string;

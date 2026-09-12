@@ -30,7 +30,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -237,108 +236,33 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 	if err != nil {
 		return IssuedConfirm{}, err
 	}
-	var out IssuedConfirm
+	var minted mintedLink
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		deliveredTo, err := admitLinkTx(ctx, tx, linkRequest{
+		var err error
+		// An operator door. The re-solicitation guard applies: this is
+		// somebody else asking on the subject's behalf.
+		minted, err = s.issueLinkTx(ctx, tx, mintRequest{
 			contactID:       contactID,
+			kind:            kind,
 			purposeID:       purposeID,
 			expectedAddress: expectedAddress,
+			tokenHash:       hashPublicToken(token),
+			link:            s.confirmLink(token),
 		})
-		if err != nil {
-			return err
-		}
-		issued := s.now().UTC()
-		expires := issued.Add(confirmTokenTTL)
-		// Per KIND, and per purpose within a kind. A fresh record-confirmation
-		// link must not expire somebody's pending consent link and the other
-		// way round: they ask different questions and arrive in different
-		// mails, so superseding across them would silently kill an answer the
-		// subject was still coming back to.
-		if _, err := tx.Exec(ctx, `
-			UPDATE confirm_token SET expires_at = $2
-			WHERE contact_id = $1 AND consumed_at IS NULL AND expires_at > $2
-			  AND kind = $3 AND purpose_id IS NOT DISTINCT FROM $4`,
-			contactID, issued, kind, nullablePurpose(purposeID)); err != nil {
-			return err
-		}
-		// A confirm_token row is a security artifact, not a kernel entity, so
-		// the row id stays untyped — as consent_doi_token's does.
-		// THE QUESTION THIS LINK WILL ASK, pinned now rather than read back when
-		// the subject answers. The page renders in the installation's mail
-		// language, and both that and the question's version can change between
-		// the mail going out and the click coming back — so a grant resolving
-		// either at proof time would name wording the subject never saw.
-		//
-		// The language is resolved through the same call that renders the mail
-		// below, so the row and the page cannot disagree about which one.
-		questionLocale := s.mailLanguage(ctx, tx)
-		// WHICH question, decided from the link kind so the pin and the page
-		// cannot disagree about what the subject will be asked.
-		questionKey := QuestionKeyForLink(kind)
-		var tokenRowID ids.UUID
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO confirm_token (contact_id, token_hash, delivered_to, issued_at, expires_at, kind, purpose_id,
-			                           question_key, question_locale, question_version)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-			RETURNING id`,
-			contactID, hashPublicToken(token), deliveredTo, issued, expires,
-			kind, nullablePurpose(purposeID),
-			questionKey, questionLocale, marketingQuestionVersion).Scan(&tokenRowID); err != nil {
-			return err
-		}
-		// The address is audited because it is the evidence: a later reader
-		// asking why a grant counted needs to see which mailbox was reached.
-		// The plaintext token never lands in audit or outbox payloads.
-		if _, err := storekit.Audit(ctx, tx, "create", "confirm_token", tokenRowID, nil, map[string]any{
-			contactIDKey:   contactID,
-			"delivered_to": deliveredTo,
-			"expires_at":   expires,
-			auditKeyKind:   kind,
-		}); err != nil {
-			return err
-		}
-		out = IssuedConfirm{Token: token, ExpiresAt: expires, DeliveredTo: deliveredTo}
-		// The mail itself, on THIS transaction. The token row and the message
-		// that carries it commit together or not at all: a token minted without
-		// its mail is a link nobody was ever sent, and a mail staged without its
-		// token is a link that resolves to nothing.
-		staged, err := s.stageConfirmMail(ctx, tx, confirmMailInput{
-			contactID:  contactID,
-			recipient:  deliveredTo,
-			kind:       kind,
-			tokenRowID: tokenRowID,
-			link:       s.confirmLink(token),
-			expiresAt:  expires,
-		})
-		if err != nil {
-			return err
-		}
-		out.Staged = staged
-		// The mail that discharges a duty is what moves the duty. A
-		// record-confirmation link IS the Art. 14 disclosure route named in
-		// allowed_routes, so sending one settles the cases that named it —
-		// on this transaction, so a rolled-back mail leaves no duty marked
-		// handled by a message nobody sent.
-		//
-		// GATED ON `staged`, which is not the same guarantee as the
-		// transaction. An installation with no lane wired still mints the link
-		// and reports queued=false — a supported outcome, not an error, so it
-		// COMMITS. Discharging there would write an audit row saying a duty was
-		// met by a message that was never staged, and the cooldown would then
-		// suppress the genuine send once an operator fixed the relay.
-		if route, discharges := noticeRouteFor(kind); discharges && staged {
-			moved, err := dischargeNoticeCases(ctx, tx, contactID, route, issued)
-			if err != nil {
-				return err
-			}
-			out.NoticeCasesDischarged = moved
-		}
-		return nil
+		return err
 	})
 	if err != nil {
 		return IssuedConfirm{}, err
 	}
-	return out, nil
+	// The plaintext is attached HERE, outside the mint, so the token never
+	// crosses into a function that writes rows. See mintRequest.
+	return IssuedConfirm{
+		Token:                 token,
+		ExpiresAt:             minted.expiresAt,
+		DeliveredTo:           minted.deliveredTo,
+		Staged:                minted.staged,
+		NoticeCasesDischarged: minted.noticeCasesDischarged,
+	}, nil
 }
 
 // subjectOfConfirmTokenTx names whose link this is, without taking a row lock.

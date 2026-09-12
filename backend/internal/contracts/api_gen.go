@@ -10386,13 +10386,19 @@ func (e PreferenceCenterPurposesState) Valid() bool {
 
 // Defines values for PreferenceCenterRefusedReason.
 const (
-	PreferenceCenterRefusedReasonCannotGrant PreferenceCenterRefusedReason = "cannot_grant"
+	PreferenceCenterRefusedReasonCannotGrant             PreferenceCenterRefusedReason = "cannot_grant"
+	PreferenceCenterRefusedReasonConfirmationSent        PreferenceCenterRefusedReason = "confirmation_sent"
+	PreferenceCenterRefusedReasonConfirmationUnavailable PreferenceCenterRefusedReason = "confirmation_unavailable"
 )
 
 // Valid indicates whether the value is a known member of the PreferenceCenterRefusedReason enum.
 func (e PreferenceCenterRefusedReason) Valid() bool {
 	switch e {
 	case PreferenceCenterRefusedReasonCannotGrant:
+		return true
+	case PreferenceCenterRefusedReasonConfirmationSent:
+		return true
+	case PreferenceCenterRefusedReasonConfirmationUnavailable:
 		return true
 	default:
 		return false
@@ -31656,7 +31662,20 @@ type PreferenceCenter struct {
 	Refused []struct {
 		PurposeKey string `json:"purpose_key"`
 
-		// Reason cannot_grant: the subject is archived, so a fresh grant would re-open a capability their erasure destroyed.
+		// Reason Why this choice did not simply take effect.
+		//
+		// `cannot_grant` — the subject is archived, so a fresh grant would re-open a
+		// capability their erasure destroyed.
+		//
+		// `confirmation_sent` — the subscribe was taken and a confirmation link is on its
+		// way. This purpose needs a double opt-in, so the grant is recorded when the
+		// subject spends that link, not when they press the button. The page should say
+		// the answer is pending rather than done: a save reported as plain success leaves
+		// somebody expecting mail that will not come until they click.
+		//
+		// `confirmation_unavailable` — the subscribe could not be started because this
+		// installation cannot mail the confirmation. About US rather than the subject, so
+		// a page must not tell them their choice was declined.
 		Reason PreferenceCenterRefusedReason `json:"reason"`
 	} `json:"refused"`
 
@@ -31674,7 +31693,20 @@ type PreferenceCenterPurposesChoice string
 // PreferenceCenterPurposesState The raw stored state. Prefer `choice`, which reads it correctly for the purpose class.
 type PreferenceCenterPurposesState string
 
-// PreferenceCenterRefusedReason cannot_grant: the subject is archived, so a fresh grant would re-open a capability their erasure destroyed.
+// PreferenceCenterRefusedReason Why this choice did not simply take effect.
+//
+// `cannot_grant` — the subject is archived, so a fresh grant would re-open a
+// capability their erasure destroyed.
+//
+// `confirmation_sent` — the subscribe was taken and a confirmation link is on its
+// way. This purpose needs a double opt-in, so the grant is recorded when the
+// subject spends that link, not when they press the button. The page should say
+// the answer is pending rather than done: a save reported as plain success leaves
+// somebody expecting mail that will not come until they click.
+//
+// `confirmation_unavailable` — the subscribe could not be started because this
+// installation cannot mail the confirmation. About US rather than the subject, so
+// a page must not tell them their choice was declined.
 type PreferenceCenterRefusedReason string
 
 // PreviewAccountSendRequest PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
