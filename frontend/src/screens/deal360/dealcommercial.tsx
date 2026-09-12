@@ -1,5 +1,8 @@
+import { useState } from "react";
 import type { components } from "../../api/schema";
+import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { SurfaceState } from "../../design-system/surfacestate";
 import { formatMoney } from "../../format/format";
 import { monthlyEquivalent } from "../../format/recurring";
 import { useLocale, useT } from "../../i18n";
@@ -7,6 +10,7 @@ import {
   type AcquisitionSource,
   acquisitionLabel,
 } from "../acquisitionsources.queries";
+import { DealCommercialEdit } from "./dealcommercialedit";
 import { MOTION_OPTIONS, PRIORITY_OPTIONS } from "./dealcommercialfields";
 
 type Deal = components["schemas"]["Deal"];
@@ -16,17 +20,29 @@ type Deal = components["schemas"]["Deal"];
  * much a colleague says it matters, which channel brought it, and what it is
  * worth per year on a recurring basis.
  *
- * Renders nothing when all of them are unset. An empty panel would say the deal
- * has no commercial context when what is true is that nobody has recorded one,
- * and the difference matters on a page whose whole job is to show what is
- * known.
+ * An UNRECORDED deal shows the panel and says the fields are empty, rather
+ * than rendering nothing. It used to vanish, on the reasoning that an empty
+ * panel would claim the deal has no commercial context — but a reader cannot
+ * tell "nobody recorded this" from "this product has no such field" when there
+ * is nothing on the page at all, and the second is what they concluded. A
+ * panel that names what it holds is how somebody learns these fields exist.
  */
 export function DealCommercial({
   deal,
   sources,
-}: Readonly<{ deal: Deal; sources?: AcquisitionSource[] }>) {
+  readOnly = false,
+}: Readonly<{
+  deal: Deal;
+  sources?: AcquisitionSource[];
+  // The record's own write refusal — archived, or not this caller's to write.
+  // Deliberately NOT the advance verb's refusal, which also refuses a closed
+  // deal: correcting the motion on a deal lost last week is an ordinary edit
+  // the server accepts.
+  readOnly?: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
+  const [editing, setEditing] = useState(false);
   const motion = MOTION_OPTIONS.find(
     (o) => o.value && o.value === deal.commercial_motion,
   );
@@ -42,11 +58,40 @@ export function DealCommercial({
       ? { minor: deal.expected_arr_minor, currency: deal.currency }
       : null;
   const monthly = arr ? monthlyEquivalent(arr.minor) : null;
+  const editAction = readOnly ? undefined : (
+    <Button variant="ghost" onClick={() => setEditing(true)}>
+      {motion || priority || source || arr
+        ? t("deal.commercialEdit")
+        : t("deal.commercialAdd")}
+    </Button>
+  );
+  const editor = (
+    <DealCommercialEdit
+      open={editing}
+      onClose={() => setEditing(false)}
+      deal={deal}
+      sources={sources}
+    />
+  );
   if (!motion && !priority && !source && !arr) {
-    return null;
+    return (
+      <Panel title={t("deal.commercialContext")} actions={editAction}>
+        <PanelBody>
+          <SurfaceState
+            state="empty"
+            emptyLabel={t("deal.commercialEmpty")}
+            emptyDetail={t("deal.commercialEmptyDetail")}
+            loadingLabel={t("deal.commercialContext")}
+          >
+            {null}
+          </SurfaceState>
+        </PanelBody>
+        {editor}
+      </Panel>
+    );
   }
   return (
-    <Panel title={t("deal.commercialContext")}>
+    <Panel title={t("deal.commercialContext")} actions={editAction}>
       <PanelBody>
         {/* The same labelled-pair list the custom-field card and the company
             rail use, so a reader meets one shape for "field: value" across
@@ -93,6 +138,7 @@ export function DealCommercial({
           )}
         </dl>
       </PanelBody>
+      {editor}
     </Panel>
   );
 }

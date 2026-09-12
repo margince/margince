@@ -2609,6 +2609,16 @@ export const en = {
   "outcomeReview.noAnswer": "Not answered",
   "outcomeReview.notes": "Anything else",
   "deal.commercialContext": "Commercial context",
+  "deal.commercialEdit": "Edit",
+  "deal.commercialAdd": "Record the context",
+  "deal.commercialEditTitle": "Commercial context",
+  "deal.commercialSave": "Save context",
+  "deal.commercialEmpty": "Nothing recorded yet",
+  "deal.commercialEmptyDetail":
+    "Why this deal exists, how much it matters, where it came from, and what it is worth per year.",
+  "deal.arrHint": "The recurring value for a year, in {currency}.",
+  "deal.arrNeedsCurrency":
+    "Expected ARR needs a currency. Set the deal's value and currency in Edit deal first.",
   "deal.brief": "Deal brief",
   "deal.briefHint": "Customer need, scope and intended outcome.",
   "deal.briefMore": "Read more",
