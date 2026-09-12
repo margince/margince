@@ -27,16 +27,21 @@ type Contact360 = components["schemas"]["Contact360"];
 // Why the lead verb may not be pressed, in the reader's words, or undefined
 // when it may.
 //
-// TWO facts refuse it and they are never merged into one sentence: consent says
-// we may not write to this contact, reachability says there is nowhere to write
-// to. A rep who is told the wrong one goes looking in the wrong record.
+// ONE fact refuses it: reachability. There is nowhere to write to, so the
+// composer would have nothing to send on and could only fail at the send.
 //
-// Reachability is asked first because it is the unconditional half — with no
-// transport the composer has nothing to send on whatever consent says, and a
-// consent sentence there would describe a decision that is not what stops them.
-// A guard that has not answered yet refuses nothing: the button is disabled
-// without a reason until the verdict is in, because claiming a refusal the
-// server has not made is worse than a control that is briefly quiet.
+// CONSENT IS NOT ASKED HERE, and that is the decision rather than a gap. A
+// consent verdict is reached per PURPOSE, and which purpose applies is a fact
+// about the MESSAGE — which this page does not have. Disabling the verb on one
+// purpose's verdict told a rep with a lawful service message to send that the
+// product would not let them write at all, with no way to see that only
+// marketing was refused. The composer asks, because the composer is where the
+// purpose is chosen.
+//
+// So the two facts never merge into one sentence because only one of them is a
+// sentence here. Held by "opens the composer even where no purpose currently
+// permits writing" (contactpage.test.tsx), which asserts the verb carries no
+// refusal at all for a consent-blocked contact who is reachable.
 function writeRefusal(
   state: Readonly<{ transports: readonly Transport[] }>,
   t: ReturnType<typeof useT>,

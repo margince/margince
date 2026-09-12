@@ -325,10 +325,11 @@ const mailBlocked: ContactConsentGuardEntry = {
 };
 
 describe("the header's writing verb", () => {
-  // The two sentences a refusal can say. Held as constants because the point of
-  // the last case is that these two are never the same sentence.
+  // The ONE sentence this verb's refusal can say. There is no consent sentence
+  // to hold beside it, and that is the claim rather than an omission: the
+  // composer asks about consent, because consent is answered per PURPOSE and
+  // the purpose is a fact about the message.
   const NO_TRANSPORT = "No address, and no conversation to reply to.";
-  const CONSENT_REFUSED = "No purpose currently permits writing to them.";
 
   it("names mail when an address is the only way to reach them", async () => {
     mount("overview", view, [mailAllowed]);
@@ -398,7 +399,13 @@ describe("the header's writing verb", () => {
     await waitFor(() => {
       expect(lead.disabled).toBe(false);
     });
-    expect(screen.queryByText(CONSENT_REFUSED)).toBeNull();
+    // NO REFUSAL AT ALL, asserted on the control rather than by looking for a
+    // sentence. The sentence this used to look for was withdrawn from the copy
+    // catalogs with the behaviour, so `queryByText` for it could never find
+    // anything and the case passed whatever the button did. What cannot go
+    // vacuous is the button's own state: a refused verb is disabled and points
+    // at its reason, and this one does neither.
+    expect(lead.getAttribute("aria-describedby")).toBeNull();
     // The verb still names the transport it opens.
     expect(lead.querySelector(".lucide-mail")).toBeTruthy();
   });
