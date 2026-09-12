@@ -116,6 +116,56 @@ func TestEveryAllowlistKeepsItsOwnIndex(t *testing.T) {
 	}
 }
 
+// The file's own exemption channels — the ones belonging to no allowlist — are
+// reported from the DECODED policy, which is the correction this tool is, one
+// layer up: the consuming gate used to grep for these keys, and every shape
+// below defeats a line matcher while gitleaks honours it.
+func TestTheFileLevelExemptionsAreReadNotMatched(t *testing.T) {
+	fileFact := func(records []string, kind string) string {
+		for _, r := range records {
+			f := strings.Split(r, fieldSep)
+			if len(f) == 3 && f[0] == "0" && f[1] == kind {
+				return f[2]
+			}
+		}
+		return ""
+	}
+	for _, c := range []struct {
+		name, policy, kind, want string
+	}{{
+		name:   "useDefault under another table does not count",
+		policy: "[extend]\n\n[[allowlists]]\nuseDefault = true\npaths = ['''decoy/''']\n",
+		kind:   "use_default", want: "false",
+	}, {
+		name:   "a dotted key at the top level is still [extend]",
+		policy: "extend.useDefault = true\n",
+		kind:   "use_default", want: "true",
+	}, {
+		name:   "a quoted key is the same key",
+		policy: "[extend]\n\"useDefault\" = true\n",
+		kind:   "use_default", want: "true",
+	}, {
+		name:   "disabled rules are counted, not matched",
+		policy: "[extend]\nuseDefault = true\ndisabledRules = [\"generic-api-key\", \"github-pat\"]\n",
+		kind:   "disabled_rules", want: "2",
+	}, {
+		name:   "a stopword nested in a rule's allowlist counts",
+		policy: "[extend]\nuseDefault = true\n\n[[rules]]\nid = \"local\"\nregex = '''x'''\n\n[[rules.allowlists]]\nstopwords = [\"example\"]\n",
+		kind:   "stopwords", want: "1",
+	}, {
+		name:   "a stopword on a top-level allowlist counts too",
+		policy: "[extend]\nuseDefault = true\n\n[[allowlists]]\nstopwords = [\"fixture\", \"sample\"]\n",
+		kind:   "stopwords", want: "2",
+	}} {
+		t.Run(c.name, func(t *testing.T) {
+			if got := fileFact(decode(t, c.policy), c.kind); got != c.want {
+				t.Errorf("%s = %q, want %q — a gate reading this would refuse, or admit, the wrong file",
+					c.kind, got, c.want)
+			}
+		})
+	}
+}
+
 // A policy that does not decode must fail loudly. Carrying on would report
 // full coverage of nothing at all, which is the worst reading this suite can
 // produce: green over a policy nobody read.

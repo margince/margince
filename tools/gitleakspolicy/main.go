@@ -34,6 +34,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
@@ -48,17 +49,31 @@ const fieldSep = "\x1f"
 // allowlist is the slice of gitleaks' allowlist this suite plants against.
 // Deliberately not the whole type: `condition` and `regexTarget` shape how an
 // entry matches, and the script asks what the entry NAMES.
+//
+// Stopwords are read because they are an exemption channel of their own: a
+// match containing one is dropped, and no planted token proves that narrow.
 type allowlist struct {
 	Description string   `toml:"description"`
 	TargetRules []string `toml:"targetRules"`
 	Paths       []string `toml:"paths"`
 	Regexes     []string `toml:"regexes"`
+	Stopwords   []string `toml:"stopwords"`
 }
 
 // policyDoc is the file, to the depth exemptions can hide in. A rule's nested
 // allowlists are read for the reason the top-level ones are: they excuse
 // matches, and an excuse nobody plants against is an excuse nobody checked.
 type policyDoc struct {
+	// Extend is the half that turns detection ON and OFF wholesale. It is read
+	// here rather than grepped by the consuming script for the reason the whole
+	// tool exists: `useDefault` under the wrong table, a quoted key, a dotted
+	// `extend.useDefault` at the top level — all legal TOML, all invisible to a
+	// line matcher, and all decisions about what gets scanned at all.
+	Extend struct {
+		UseDefault    bool     `toml:"useDefault"`
+		DisabledRules []string `toml:"disabledRules"`
+		Stopwords     []string `toml:"stopwords"`
+	} `toml:"extend"`
 	Allowlists []allowlist `toml:"allowlists"`
 	Rules      []struct {
 		Allowlists []allowlist `toml:"allowlists"`
@@ -113,6 +128,14 @@ func unmarshalPolicy(raw []byte, p *policyDoc) error {
 // vouched for two exemptions.
 func render(p *policyDoc) string {
 	var out strings.Builder
+	// INDEX ZERO is the file itself, and allowlists count from one. These are
+	// the exemption channels that belong to no allowlist and that no planted
+	// token can prove narrow, so the script refuses them rather than planting
+	// against them — and it now refuses what the DECODER saw rather than what a
+	// line matcher found, which is the same correction this tool is.
+	write(&out, 0, "use_default", strconv.FormatBool(p.Extend.UseDefault))
+	write(&out, 0, "disabled_rules", strconv.Itoa(len(p.Extend.DisabledRules)))
+	write(&out, 0, "stopwords", strconv.Itoa(stopwordCount(p)))
 	index := 0
 	emit := func(a allowlist) {
 		index++
@@ -136,6 +159,24 @@ func render(p *policyDoc) string {
 		}
 	}
 	return out.String()
+}
+
+// stopwordCount adds up the stopwords a policy declares, across the three
+// places one can sit: the [extend] table, a top-level allowlist, or an
+// allowlist nested in a rule. A match containing a stopword is dropped by
+// gitleaks, so each is an exemption — and counting only the first of the three
+// would leave the other two unrefused.
+func stopwordCount(p *policyDoc) int {
+	n := len(p.Extend.Stopwords)
+	for _, a := range p.Allowlists {
+		n += len(a.Stopwords)
+	}
+	for _, rule := range p.Rules {
+		for _, a := range rule.Allowlists {
+			n += len(a.Stopwords)
+		}
+	}
+	return n
 }
 
 // write emits one record, refusing a value carrying the separator. Such a
