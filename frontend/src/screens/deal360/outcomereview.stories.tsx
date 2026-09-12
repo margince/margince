@@ -2,7 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../story-utils";
 import { OutcomeReviewPanel } from "./outcomereview";
 
 // The three states this panel has to keep apart, and only one of them is the
@@ -52,8 +57,11 @@ const review = (over: Record<string, unknown>) => ({
   ...over,
 });
 
-function backend(reviews: unknown[]) {
+// The grant is what decides whether a reader may write a review — the panel
+// asks `activity:create`, the same permission the server checks.
+function backend(reviews: unknown[], canWrite = true) {
   installFetchStub({
+    "GET /me": meRoute({ activity: canWrite ? ["read", "create"] : ["read"] }),
     "GET /deals/d-1/outcome-reviews": () => jsonResponse({ data: reviews }),
     "GET /activity-review-templates": () => jsonResponse({ data: [template] }),
   });
@@ -76,7 +84,6 @@ export const NoReviewYet: Story = {
           dealId="d-1"
           status="won"
           closingOccurrenceId={CLOSING}
-          writable
         />
       </StoryProviders>
     );
@@ -87,14 +94,13 @@ export const NoReviewYet: Story = {
 // than disabled: a disabled button invites a hunt for the reason.
 export const ReadOnly: Story = {
   render: () => {
-    backend([]);
+    backend([], false);
     return (
       <StoryProviders>
         <OutcomeReviewPanel
           dealId="d-1"
           status="won"
           closingOccurrenceId={CLOSING}
-          writable={false}
         />
       </StoryProviders>
     );
@@ -110,7 +116,6 @@ export const Written: Story = {
           dealId="d-1"
           status="won"
           closingOccurrenceId={CLOSING}
-          writable
         />
       </StoryProviders>
     );
@@ -130,7 +135,6 @@ export const AboutAnEarlierClosing: Story = {
           dealId="d-1"
           status="won"
           closingOccurrenceId={CLOSING}
-          writable
         />
       </StoryProviders>
     );

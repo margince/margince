@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
 import { OutcomeReviewPanel } from "./outcomereview";
 
@@ -46,15 +47,19 @@ const TEMPLATES = [
   },
 ];
 
-function stubFetch(reviews: unknown[]) {
+function stubFetch(reviews: unknown[], canWrite = true) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
         input instanceof Request ? input : new Request(String(input), init);
-      const body = req.url.includes("outcome-reviews")
-        ? { data: reviews }
-        : { data: TEMPLATES };
+      const body = req.url.endsWith("/v1/me")
+        ? meFixture({
+            allow: { activity: canWrite ? ["read", "create"] : ["read"] },
+          })
+        : req.url.includes("outcome-reviews")
+          ? { data: reviews }
+          : { data: TEMPLATES };
       return new Response(JSON.stringify(body), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -86,7 +91,6 @@ it("says nothing at all on an open deal", () => {
       dealId="d-1"
       status="open"
       closingOccurrenceId={null}
-      writable
     />,
   );
   // Absent, not empty. A deal still in flight has no outcome to review, and a
@@ -101,7 +105,6 @@ it("invites a review on a closed deal that has none", async () => {
       dealId="d-1"
       status="won"
       closingOccurrenceId={CLOSING}
-      writable
     />,
   );
   expect(await screen.findByText(/No review written yet/)).toBeTruthy();
@@ -109,13 +112,12 @@ it("invites a review on a closed deal that has none", async () => {
 });
 
 it("offers no way in without write access", async () => {
-  stubFetch([]);
+  stubFetch([], false);
   render(
     <OutcomeReviewPanel
       dealId="d-1"
       status="won"
       closingOccurrenceId={CLOSING}
-      writable={false}
     />,
   );
   expect(await screen.findByText(/No review written yet/)).toBeTruthy();
@@ -139,7 +141,6 @@ it("renders the questions frozen onto the review, not today's template", async (
       dealId="d-1"
       status="won"
       closingOccurrenceId={CLOSING}
-      writable
     />,
   );
   // The template is editable. Rendering today's wording over an old answer
@@ -155,7 +156,6 @@ it("marks a review written about an earlier closing", async () => {
       dealId="d-1"
       status="won"
       closingOccurrenceId={CLOSING}
-      writable
     />,
   );
   // Reopening and reclosing makes a new outcome. The old review stays readable
@@ -171,7 +171,6 @@ it("says which question went unanswered rather than dropping the row", async () 
       dealId="d-1"
       status="won"
       closingOccurrenceId={CLOSING}
-      writable
     />,
   );
   expect(await screen.findByText("Who else?")).toBeTruthy();

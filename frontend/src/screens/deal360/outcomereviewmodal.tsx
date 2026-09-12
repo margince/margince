@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button, Field, Modal, Textarea } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../common";
@@ -42,6 +42,11 @@ export function OutcomeReviewModal({
   // A deliberate second review means opening the modal again, which is when a
   // new id is minted.
   const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
+  // The id as it is RIGHT NOW, readable from a callback that closed over an
+  // older render. State would give submit() the value it captured when the
+  // click happened, which is the one question it must not ask.
+  const submissionIdRef = useRef(submissionId);
+  submissionIdRef.current = submissionId;
   const create = useCreateOutcomeReview(dealId);
   // Pulled out because the effect below depends on THIS function rather than on
   // the mutation object, which is a new object every render: depending on the
@@ -52,14 +57,27 @@ export function OutcomeReviewModal({
   // rather than remounted per open, so without this a second review would
   // reuse the first one's submission id and be answered with the first
   // review — silently, looking like a successful save.
+  // The closing the draft is ABOUT, captured when the modal opened rather than
+  // read at save time.
+  //
+  // A background refresh can move the deal onto a new closing while this modal
+  // sits open — it was reopened and reclosed elsewhere. Sending whatever the
+  // prop says by then would file answers written about the old outcome against
+  // the new one, and the server would accept them, because the id it was handed
+  // is current. Sending the captured one instead makes the server's own
+  // stale-closing refusal fire, which is the answer the reader needs: these
+  // questions were about a closing that is no longer the one in play.
+  const [draftClosing, setDraftClosing] = useState(closingOccurrenceId);
+
   useEffect(() => {
     if (open) {
       setAnswers({});
       setBody("");
       setSubmissionId(crypto.randomUUID());
+      setDraftClosing(closingOccurrenceId);
       resetCreate();
     }
-  }, [open, resetCreate]);
+  }, [open, closingOccurrenceId, resetCreate]);
 
   const missing = template.questions.filter(
     (q) => q.required && !answers[q.key]?.trim(),
@@ -71,13 +89,22 @@ export function OutcomeReviewModal({
   }
 
   async function submit() {
+    const submitted = submissionId;
     await create.mutateAsync({
-      closing_occurrence_id: closingOccurrenceId,
+      closing_occurrence_id: draftClosing,
       submission_id: submissionId,
       answers,
       body: body.trim() ? body : null,
     });
-    close();
+    // Only close the submission that actually landed. A save over a slow link
+    // can return AFTER the reader dismissed the modal and opened it again to
+    // write a second review — and an unconditional close there would wipe the
+    // new draft on the strength of the old request finishing. The id is minted
+    // per opening, so comparing it is exactly the question "is this still the
+    // review I was writing".
+    if (submitted === submissionIdRef.current) {
+      close();
+    }
   }
 
   return (

@@ -3942,7 +3942,6 @@ function DealOverviewPane({
         dealId={deal.id}
         status={deal.status}
         closingOccurrenceId={deal.closing_occurrence_id}
-        writable={deal.writable === true}
       />
       <CustomFieldsPanel object="deal" record={deal} />
       <RecordContextPanel entityType="deal" id={deal.id} />

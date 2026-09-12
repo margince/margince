@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCanWrite } from "../../app/capability";
 import { useRecordZone } from "../../app/recordzone";
 import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -30,7 +31,6 @@ export function OutcomeReviewPanel({
   dealId,
   status,
   closingOccurrenceId,
-  writable,
 }: Readonly<{
   dealId: string;
   status: string;
@@ -38,9 +38,15 @@ export function OutcomeReviewPanel({
   // recorded — those keep their reviews readable but take no new one, because
   // there is no occurrence to attach it to.
   closingOccurrenceId?: string | null;
-  writable: boolean;
 }>) {
   const t = useT();
+  // The permission the SERVER checks, asked the way the log-activity form beside
+  // this panel asks it. A review is written as an activity, so `activity:create`
+  // is the grant that decides it — not the deal's writability, which is neither
+  // necessary nor sufficient: a reader with a writable deal and no activity
+  // grant would meet a form the server refuses, and one with the grant on a
+  // deal they may only read would never see the button at all.
+  const canWrite = useCanWrite("activity", "create");
   const [adding, setAdding] = useState(false);
   const closed = status === "won" || status === "lost";
   const { data, isPending, isError } = useOutcomeReviews(dealId, closed);
@@ -52,10 +58,10 @@ export function OutcomeReviewPanel({
   const outcome = status === "won" ? "won" : "lost";
   const template = templateForOutcome(templates, outcome);
   // Reviewing needs three things to be true at once, and the button is absent
-  // rather than disabled when they are not: write access, a closing to hang the
-  // review on, and a template that asks the questions. A disabled button would
+  // rather than disabled when they are not: the grant to write an activity, a
+  // closing to hang the review on, and a template that asks the questions. A disabled button would
   // invite a reader to hunt for the reason.
-  const canAdd = writable && !!closingOccurrenceId && !!template;
+  const canAdd = canWrite && !!closingOccurrenceId && !!template;
   const current = reviews.filter(
     (r) => r.closing_occurrence_id === closingOccurrenceId,
   );
