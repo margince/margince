@@ -478,6 +478,24 @@ func (e ActivityReferenceKind) Valid() bool {
 	}
 }
 
+// Defines values for ActivityReviewTemplateOutcome.
+const (
+	ActivityReviewTemplateOutcomeLost ActivityReviewTemplateOutcome = "lost"
+	ActivityReviewTemplateOutcomeWon  ActivityReviewTemplateOutcome = "won"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReviewTemplateOutcome enum.
+func (e ActivityReviewTemplateOutcome) Valid() bool {
+	switch e {
+	case ActivityReviewTemplateOutcomeLost:
+		return true
+	case ActivityReviewTemplateOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AddConsumerMailDomainRequestKind.
 const (
 	AddConsumerMailDomainRequestKindExtra AddConsumerMailDomainRequestKind = "extra"
@@ -10183,6 +10201,24 @@ func (e OnboardingStateStep) Valid() bool {
 	}
 }
 
+// Defines values for OutcomeReviewOutcome.
+const (
+	OutcomeReviewOutcomeLost OutcomeReviewOutcome = "lost"
+	OutcomeReviewOutcomeWon  OutcomeReviewOutcome = "won"
+)
+
+// Valid indicates whether the value is a known member of the OutcomeReviewOutcome enum.
+func (e OutcomeReviewOutcome) Valid() bool {
+	switch e {
+	case OutcomeReviewOutcomeLost:
+		return true
+	case OutcomeReviewOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OverlayBudgetBand.
 const (
 	OverlayBudgetBandOk   OverlayBudgetBand = "ok"
@@ -11650,6 +11686,21 @@ func (e RetentionScope) Valid() bool {
 	case RetentionScopeDealwon:
 		return true
 	case RetentionScopeLeadunconverted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewQuestionType.
+const (
+	ReviewQuestionTypeText ReviewQuestionType = "text"
+)
+
+// Valid indicates whether the value is a known member of the ReviewQuestionType enum.
+func (e ReviewQuestionType) Valid() bool {
+	switch e {
+	case ReviewQuestionTypeText:
 		return true
 	default:
 		return false
@@ -18198,6 +18249,38 @@ type ActivityReferenceContentState string
 
 // ActivityReferenceKind What KIND of activity it is, so a client dispatches on it: an email opens the drawer, a task opens the task detail, anything else opens the activity itself.
 type ActivityReferenceKind string
+
+// ActivityReviewTemplate defines model for ActivityReviewTemplate.
+type ActivityReviewTemplate struct {
+	Active    bool               `json:"active"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+	Key       string             `json:"key"`
+	Label     string             `json:"label"`
+
+	// Outcome Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.
+	Outcome   ActivityReviewTemplateOutcome `json:"outcome"`
+	Questions []ReviewQuestion              `json:"questions"`
+
+	// System Shipped with the product. A system template can be retired but not deleted, so an old review always has a template to name.
+	System    bool      `json:"system"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
+	// not only overlay mode.
+	Version *RowVersion `json:"version,omitempty"`
+}
+
+// ActivityReviewTemplateOutcome Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.
+type ActivityReviewTemplateOutcome string
+
+// ActivityReviewTemplateListResponse defines model for ActivityReviewTemplateListResponse.
+type ActivityReviewTemplateListResponse struct {
+	Data []ActivityReviewTemplate `json:"data"`
+}
 
 // AddConsumerMailDomainRequest defines model for AddConsumerMailDomainRequest.
 type AddConsumerMailDomainRequest struct {
@@ -25670,32 +25753,6 @@ type ContractListResponse struct {
 	Page PageInfo   `json:"page"`
 }
 
-// ControllerParticulars What this installation must be able to say about itself when it writes to somebody.
-//
-// Every field is optional and every field is free text. A jurisdiction pack declares WHICH
-// disclosures a message carries; these are the words that meet them.
-type ControllerParticulars struct {
-	// AdvertiserContact How to reach the advertiser directly — a phone number, a website. A SEPARATE field from
-	// the postal address because the obligation is about reachability rather than about where
-	// somebody is registered, and answering it with a street address reports an unmet duty
-	// as met.
-	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
-
-	// LegalName Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020.
-	LegalName *string `json:"legal_name,omitempty"`
-
-	// ObjectionRoute How to say stop, free and without a barrier. §7(3) UWG requires it on every advertising
-	// message rather than only the first. The one-click unsubscribe this product mints is
-	// usually the honest answer; an installation whose recipients answer by phone says so here.
-	ObjectionRoute *string `json:"objection_route,omitempty"`
-
-	// PostalAddress Where they are, as a block of lines — including a register court and number where a business letter needs one.
-	PostalAddress *string `json:"postal_address,omitempty"`
-
-	// PrivacyContact How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.
-	PrivacyContact *string `json:"privacy_contact,omitempty"`
-}
-
 // ConversationClaim One thing said in a captured conversation, with the evidence it was read from.
 //
 // Grounded or absent: `source_activity_id` and `source_quote` are both required, because
@@ -26280,6 +26337,21 @@ type CreateOfferTemplateRequest struct {
 	Name      string                 `json:"name"`
 }
 
+// CreateOutcomeReviewRequest defines model for CreateOutcomeReviewRequest.
+type CreateOutcomeReviewRequest struct {
+	// Answers Keyed by question key. An answer to a question the template does not ask is refused 422, because the frozen questions beside it could not explain it.
+	Answers map[string]string `json:"answers"`
+
+	// Body Free prose for the note itself, beside the structured answers. Optional: the answers are the review.
+	Body *string `json:"body,omitempty"`
+
+	// ClosingOccurrenceId The closing being reviewed. Must be the one the deal is on now, else 409.
+	ClosingOccurrenceId openapi_types.UUID `json:"closing_occurrence_id"`
+
+	// SubmissionId The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
+	SubmissionId openapi_types.UUID `json:"submission_id"`
+}
+
 // CreatePipelineRequest defines model for CreatePipelineRequest.
 type CreatePipelineRequest struct {
 	IsDefault *bool  `json:"is_default,omitempty"`
@@ -26703,6 +26775,9 @@ type Deal struct {
 	// CloseDateProvisional True while the close date is a machine-computed replacement awaiting human confirmation (formulas §11 🟡 tier); a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.
 	CloseDateProvisional *bool      `json:"close_date_provisional,omitempty"`
 	ClosedAt             *time.Time `json:"closed_at,omitempty"`
+
+	// ClosingOccurrenceId Which CLOSING this deal is currently on, as the id of the stage-history row that made it. Null while the deal is open, and null on a closed deal whose history does not record the move that closed it — an imported row, typically, where manufacturing an occurrence would invite a review of a closing nobody can point at. Reopening and re-closing yields a new one: the old closing stays in history and stays readable, it simply stops being the one this deal is on.
+	ClosingOccurrenceId *openapi_types.UUID `json:"closing_occurrence_id,omitempty"`
 
 	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 	CommercialMotion *DealCommercialMotion `json:"commercial_motion,omitempty"`
@@ -31740,6 +31815,39 @@ type OpenDealRoomThreadRequest struct {
 	Source *string `json:"source,omitempty"`
 }
 
+// OutcomeReview defines model for OutcomeReview.
+type OutcomeReview struct {
+	// ActivityId The note this review was written as. It is where the prose, the author and the audience rules live.
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Answers Keyed by question key. Every key here has a question in `questions`.
+	Answers map[string]string `json:"answers"`
+
+	// ClosingOccurrenceId Which closing this review is about. Compare it against the deal's own `closing_occurrence_id` to tell whether it reviews the current outcome or an earlier one.
+	ClosingOccurrenceId openapi_types.UUID `json:"closing_occurrence_id"`
+	CreatedAt           time.Time          `json:"created_at"`
+	DealId              openapi_types.UUID `json:"deal_id"`
+	Id                  openapi_types.UUID `json:"id"`
+
+	// Outcome What the deal did, as the closing recorded it — not as the stage reads today. A stage can be renamed or reconfigured; what happened cannot.
+	Outcome OutcomeReviewOutcome `json:"outcome"`
+
+	// Questions The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked.
+	Questions       []ReviewQuestion `json:"questions"`
+	Revision        int              `json:"revision"`
+	TemplateKey     string           `json:"template_key"`
+	TemplateVersion int              `json:"template_version"`
+	UpdatedAt       time.Time        `json:"updated_at"`
+}
+
+// OutcomeReviewOutcome What the deal did, as the closing recorded it — not as the stage reads today. A stage can be renamed or reconfigured; what happened cannot.
+type OutcomeReviewOutcome string
+
+// OutcomeReviewListResponse defines model for OutcomeReviewListResponse.
+type OutcomeReviewListResponse struct {
+	Data []OutcomeReview `json:"data"`
+}
+
 // OverlayBudget The incumbent REST budget window's consumption and degradation band, its per-source breakdown, honest headroom, and the per-second Search window (overlay-budget.md "The budget read (wire shape)", OVB-AC-1/AC-5).
 type OverlayBudget struct {
 	// Band The degradation band of a budget window — healthy (`ok`), approaching the cap (`warn`), or at/over the shed threshold (`shed`). Shared by the REST and Search windows so both read the one band vocabulary.
@@ -34166,6 +34274,22 @@ type RetentionSettings struct {
 	// keep-everything obligation opts in.
 	RetainOnly bool `json:"retain_only"`
 }
+
+// ReviewQuestion defines model for ReviewQuestion.
+type ReviewQuestion struct {
+	// Key Stable within a template. An answer is filed under it and a frozen response keeps both, so rewording a label never orphans an answer.
+	Key string `json:"key"`
+
+	// Label What the question asks, worded as the reader sees it.
+	Label    string `json:"label"`
+	Required bool   `json:"required"`
+
+	// Type Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+	Type ReviewQuestionType `json:"type"`
+}
+
+// ReviewQuestionType Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+type ReviewQuestionType string
 
 // RightsCaseReceipt What a data subject is told to quote when asking after a request they sent through their confirm
 // link. Carries the reference and the right it was opened under, never the case id — the queue that
@@ -44987,6 +45111,9 @@ type AdvanceDealJSONRequestBody = AdvanceDealRequest
 // CreateOfferJSONRequestBody defines body for CreateOffer for application/json ContentType.
 type CreateOfferJSONRequestBody = CreateOfferRequest
 
+// CreateDealOutcomeReviewJSONRequestBody defines body for CreateDealOutcomeReview for application/json ContentType.
+type CreateDealOutcomeReviewJSONRequestBody = CreateOutcomeReviewRequest
+
 // DisposeDedupeCandidateJSONRequestBody defines body for DisposeDedupeCandidate for application/json ContentType.
 type DisposeDedupeCandidateJSONRequestBody = DedupeDispositionRequest
 
@@ -45160,9 +45287,6 @@ type CreatePipelineJSONRequestBody = CreatePipelineRequest
 
 // UpdatePipelineJSONRequestBody defines body for UpdatePipeline for application/json ContentType.
 type UpdatePipelineJSONRequestBody = UpdatePipelineRequest
-
-// SetControllerParticularsJSONRequestBody defines body for SetControllerParticulars for application/json ContentType.
-type SetControllerParticularsJSONRequestBody = ControllerParticulars
 
 // AssignNoticeCaseJSONRequestBody defines body for AssignNoticeCase for application/json ContentType.
 type AssignNoticeCaseJSONRequestBody = AssignNoticeCase
@@ -49128,6 +49252,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "closed_at")
 	}
 
+	if raw, found := object["closing_occurrence_id"]; found {
+		err = json.Unmarshal(raw, &a.ClosingOccurrenceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'closing_occurrence_id': %w", err)
+		}
+		delete(object, "closing_occurrence_id")
+	}
+
 	if raw, found := object["commercial_motion"]; found {
 		err = json.Unmarshal(raw, &a.CommercialMotion)
 		if err != nil {
@@ -49455,6 +49587,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["closed_at"], err = json.Marshal(a.ClosedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'closed_at': %w", err)
+		}
+	}
+
+	if a.ClosingOccurrenceId != nil {
+		object["closing_occurrence_id"], err = json.Marshal(a.ClosingOccurrenceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'closing_occurrence_id': %w", err)
 		}
 	}
 
@@ -55132,6 +55271,9 @@ type ServerInterface interface {
 	// One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
 	// (GET /activities/{id}/transcript-proposals/{readId})
 	GetTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID)
+	// The question sets an outcome review can ask.
+	// (GET /activity-review-templates)
+	ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request)
 	// What capture's judgement queues are holding, and in whose mailbox.
 	// (GET /admin/capture-health)
 	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
@@ -55993,6 +56135,12 @@ type ServerInterface interface {
 	// Create a draft offer under a deal (offer_number minted server-side).
 	// (POST /deals/{id}/offers)
 	CreateOffer(w http.ResponseWriter, r *http.Request, id Id, params CreateOfferParams)
+	// The reviews written about this deal's closings.
+	// (GET /deals/{id}/outcome-reviews)
+	ListDealOutcomeReviews(w http.ResponseWriter, r *http.Request, id Id)
+	// Write a review of how this deal's current closing went.
+	// (POST /deals/{id}/outcome-reviews)
+	CreateDealOutcomeReview(w http.ResponseWriter, r *http.Request, id Id)
 	// Read the buying roles out of what this deal's contacts have written.
 	// (POST /deals/{id}/role-proposals)
 	ProposeDealRoles(w http.ResponseWriter, r *http.Request, id Id)
@@ -56452,12 +56600,6 @@ type ServerInterface interface {
 	// Put a retired pipeline back in use.
 	// (POST /pipelines/{id}/restore)
 	RestorePipeline(w http.ResponseWriter, r *http.Request, id Id)
-	// What this installation says about itself in the messages it sends.
-	// (GET /privacy/controller-particulars)
-	GetControllerParticulars(w http.ResponseWriter, r *http.Request)
-	// State who this installation is.
-	// (PUT /privacy/controller-particulars)
-	SetControllerParticulars(w http.ResponseWriter, r *http.Request)
 	// Disclosure duties this installation owes, soonest deadline first.
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
@@ -57154,6 +57296,12 @@ func (_ Unimplemented) GetLatestTranscriptRead(w http.ResponseWriter, r *http.Re
 // One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
 // (GET /activities/{id}/transcript-proposals/{readId})
 func (_ Unimplemented) GetTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The question sets an outcome review can ask.
+// (GET /activity-review-templates)
+func (_ Unimplemented) ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58879,6 +59027,18 @@ func (_ Unimplemented) CreateOffer(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The reviews written about this deal's closings.
+// (GET /deals/{id}/outcome-reviews)
+func (_ Unimplemented) ListDealOutcomeReviews(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Write a review of how this deal's current closing went.
+// (POST /deals/{id}/outcome-reviews)
+func (_ Unimplemented) CreateDealOutcomeReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Read the buying roles out of what this deal's contacts have written.
 // (POST /deals/{id}/role-proposals)
 func (_ Unimplemented) ProposeDealRoles(w http.ResponseWriter, r *http.Request, id Id) {
@@ -59794,18 +59954,6 @@ func (_ Unimplemented) UpdatePipeline(w http.ResponseWriter, r *http.Request, id
 // Put a retired pipeline back in use.
 // (POST /pipelines/{id}/restore)
 func (_ Unimplemented) RestorePipeline(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// What this installation says about itself in the messages it sends.
-// (GET /privacy/controller-particulars)
-func (_ Unimplemented) GetControllerParticulars(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// State who this installation is.
-// (PUT /privacy/controller-particulars)
-func (_ Unimplemented) SetControllerParticulars(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62289,6 +62437,28 @@ func (siw *ServerInterfaceWrapper) GetTranscriptRead(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetTranscriptRead(w, r, id, readId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListActivityReviewTemplates operation middleware
+func (siw *ServerInterfaceWrapper) ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListActivityReviewTemplates(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -74435,6 +74605,74 @@ func (siw *ServerInterfaceWrapper) CreateOffer(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// ListDealOutcomeReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListDealOutcomeReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDealOutcomeReviews(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateDealOutcomeReview operation middleware
+func (siw *ServerInterfaceWrapper) CreateDealOutcomeReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateDealOutcomeReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ProposeDealRoles operation middleware
 func (siw *ServerInterfaceWrapper) ProposeDealRoles(w http.ResponseWriter, r *http.Request) {
 
@@ -80080,46 +80318,6 @@ func (siw *ServerInterfaceWrapper) RestorePipeline(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RestorePipeline(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetControllerParticulars operation middleware
-func (siw *ServerInterfaceWrapper) GetControllerParticulars(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetControllerParticulars(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetControllerParticulars operation middleware
-func (siw *ServerInterfaceWrapper) SetControllerParticulars(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetControllerParticulars(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -88589,6 +88787,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/activities/{id}/transcript-proposals/{readId}", wrapper.GetTranscriptRead)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activity-review-templates", wrapper.ListActivityReviewTemplates)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
 	})
 	r.Group(func(r chi.Router) {
@@ -89450,6 +89651,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/deals/{id}/offers", wrapper.CreateOffer)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/outcome-reviews", wrapper.ListDealOutcomeReviews)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/outcome-reviews", wrapper.CreateDealOutcomeReview)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/role-proposals", wrapper.ProposeDealRoles)
 	})
 	r.Group(func(r chi.Router) {
@@ -89907,12 +90114,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/pipelines/{id}/restore", wrapper.RestorePipeline)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/privacy/controller-particulars", wrapper.GetControllerParticulars)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/privacy/controller-particulars", wrapper.SetControllerParticulars)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/privacy/notice-cases", wrapper.ListNoticeCases)

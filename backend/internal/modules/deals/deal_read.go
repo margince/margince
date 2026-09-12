@@ -57,6 +57,13 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
+	// Which closing this deal is on, for the ONE-deal read only. It is a
+	// second query, so it is deliberately absent from the list path: a
+	// correlated subquery in dealColumns would run once per row on every page
+	// of every deal list, to answer a question only a record page asks.
+	if err := attachClosingOccurrence(ctx, tx, id, &d); err != nil {
+		return crmcontracts.Deal{}, err
+	}
 	return maskDealForCaller(ctx, tx, d)
 }
 

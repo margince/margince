@@ -75,6 +75,27 @@ var preservedResetTables = map[string]bool{
 	// `setting`: the migration seeds the built-ins and an administrator shapes
 	// the rest, and neither is a record of this workspace's customers.
 	"lead_source": true, "lead_disqualify_reason": true,
+	// The SDR handoff reasons, on the same footing and seeded the same way.
+	"sdr_handoff_reason": true,
+	// The two administered record vocabularies added with the standard-field
+	// work: where a deal came from, and what somebody is responsible for on a
+	// record. Both are installation configuration exactly as the lead
+	// vocabularies are — a migration seeds the built-ins and an administrator
+	// shapes the rest — and neither holds a record of this workspace's
+	// customers. A reset that emptied them would leave every deal naming an
+	// acquisition source the catalogue no longer has, and every assignment
+	// naming a role that no longer exists.
+	"deal_acquisition_source": true, "record_role": true,
+	// The questions an outcome review asks: installation configuration on the
+	// same footing as the lead vocabularies. A migration seeds the built-in
+	// win and loss templates and an administrator shapes the rest, and neither
+	// is a record of this workspace's customers.
+	//
+	// The RESPONSES are not here, and must not be: a filled-in review is
+	// somebody's account of a deal this workspace closed, which is exactly the
+	// data a reset exists to clear. They go with their activity through the
+	// FK's CASCADE, like every other note.
+	"activity_review_template": true,
 	// How many minor units each currency has, where that is not two: ISO
 	// reference data a migration seeds, not anybody's records. Two reasons it
 	// is here rather than swept and re-seeded, and either alone is sufficient.

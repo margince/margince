@@ -129,6 +129,7 @@ type Server struct {
 	strengthHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
+	outcomeReviewHandlers
 	overlayHandlers
 	embedReindexHandlers
 	rateRefreshHandlers

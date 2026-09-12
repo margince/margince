@@ -9494,58 +9494,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/privacy/controller-particulars": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * What this installation says about itself in the messages it sends.
-         * @description Every jurisdiction pack declares disclosures — who is writing, who answers about the data,
-         *     how to say stop — and none of them could be rendered, because nothing recorded who the
-         *     controller IS. This is where an installation states it.
-         *
-         *     FREE TEXT rather than a structured address, and deliberately. What each jurisdiction
-         *     demands differs in shape: a German business letter wants a register court and number, a
-         *     Vietnamese advertising mail wants a phone and a website. A field per jurisdiction would be
-         *     a form nobody outside that jurisdiction can fill in, so each of these is a block of words
-         *     written by somebody who knows what their own law requires.
-         *
-         *     A field left empty is a real answer, not an omission to be filled in later: the renderer
-         *     reports that disclosure as unmeetable rather than inventing one, which is what makes an
-         *     unconfigured installation visible instead of silently non-compliant.
-         *
-         *     NOTHING RENDERS THESE INTO A MESSAGE YET. The particulars are stated here and the mapping
-         *     from a jurisdiction's obligation to the words that meet it exists, but no step between
-         *     composing a body and handing it to a provider asks for them. The gap is recorded in
-         *     `backend/gates/messagingruleapplied_test.go`.
-         */
-        get: operations["getControllerParticulars"];
-        /**
-         * State who this installation is.
-         * @description Gated on `installation_settings` at `update`, which is where the trust sits: these words
-         *     are destined for the bottom of every message this installation sends, so changing them
-         *     changes what every recipient will be told.
-         *
-         *     READING them is deliberately ungated for the send path. A rep writing a reply, a worker
-         *     dispatching a scheduled send and the controller lane mailing a privacy notice all need the
-         *     disclosures, and none of those principals holds a settings grant — a gated read would mean
-         *     a message went out without its legally required disclosure because the sender lacked an
-         *     operator permission.
-         *
-         *     Each field is bounded at 500 characters. They appear in every message, and a footer nobody
-         *     reads is not a disclosure.
-         */
-        put: operations["setControllerParticulars"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/privacy/notice-cases": {
         parameters: {
             query?: never;
@@ -12211,6 +12159,67 @@ export interface paths {
          * @description Sets archived_at (soft-archive); hidden from the default list but still fetchable by id. Offers already carrying this template_id are unaffected — a template is never deleted out from under an existing offer.
          */
         delete: operations["archiveOfferTemplate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/outcome-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The reviews written about this deal's closings.
+         * @description Every review this deal carries, newest first, including reviews of EARLIER closings.
+         *     A deal that was closed, reopened and closed again has more than one thing to have an
+         *     opinion about, and an old review stays readable rather than being reattached to the
+         *     current closing or hidden.
+         *
+         *     Each review names the closing it is about, so a caller comparing against the deal's
+         *     own `closing_occurrence_id` can tell which one is current.
+         */
+        get: operations["listDealOutcomeReviews"];
+        put?: never;
+        /**
+         * Write a review of how this deal's current closing went.
+         * @description Writes a note against the deal and freezes the questions it was asked beside the
+         *     answers, in one transaction. The note is an ordinary activity: it carries the author,
+         *     the time and the audience rules, and it is where the review is read from afterwards.
+         *
+         *     `closing_occurrence_id` must be the closing the deal is on NOW. A deal that was
+         *     reopened and re-closed between opening the form and submitting it answers 409, because
+         *     the review would otherwise be filed against an outcome that is no longer the deal's
+         *     current one.
+         *
+         *     `submission_id` makes a retry safe: the same id from the same author returns the review
+         *     that already exists rather than writing a second one. A deliberate second review of the
+         *     same closing uses a new id.
+         */
+        post: operations["createDealOutcomeReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activity-review-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The question sets an outcome review can ask. */
+        get: operations["listActivityReviewTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -22516,6 +22525,11 @@ export interface components {
              * @description The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
              */
             readonly arr_source_offer_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Which CLOSING this deal is currently on, as the id of the stage-history row that made it. Null while the deal is open, and null on a closed deal whose history does not record the move that closed it — an imported row, typically, where manufacturing an occurrence would invite a review of a closing nobody can point at. Reopening and re-closing yields a new one: the old closing stays in history and stays readable, it simply stops being the one this deal is on.
+             */
+            readonly closing_occurrence_id?: string | null;
             /** @description The fields of THIS row the caller's role withholds (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Sorting or filtering the list by a masked field is refused (422). */
             readonly masked_fields?: string[];
             /** @description Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate. */
@@ -25766,6 +25780,96 @@ export interface components {
          * @enum {string}
          */
         LeadSourceIntent: "high" | "neutral" | "low";
+        ReviewQuestion: {
+            /** @description Stable within a template. An answer is filed under it and a frozen response keeps both, so rewording a label never orphans an answer. */
+            key: string;
+            /** @description What the question asks, worded as the reader sees it. */
+            label: string;
+            /**
+             * @description Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+             * @enum {string}
+             */
+            type: "text";
+            required: boolean;
+        };
+        ActivityReviewTemplate: {
+            /** Format: uuid */
+            id: string;
+            key: string;
+            label: string;
+            /**
+             * @description Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.
+             * @enum {string}
+             */
+            outcome: "won" | "lost";
+            questions: components["schemas"]["ReviewQuestion"][];
+            version: components["schemas"]["RowVersion"];
+            active: boolean;
+            /** @description Shipped with the product. A system template can be retired but not deleted, so an old review always has a template to name. */
+            system: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ActivityReviewTemplateListResponse: {
+            data: components["schemas"]["ActivityReviewTemplate"][];
+        };
+        OutcomeReview: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The note this review was written as. It is where the prose, the author and the audience rules live.
+             */
+            activity_id: string;
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * Format: uuid
+             * @description Which closing this review is about. Compare it against the deal's own `closing_occurrence_id` to tell whether it reviews the current outcome or an earlier one.
+             */
+            closing_occurrence_id: string;
+            /**
+             * @description What the deal did, as the closing recorded it — not as the stage reads today. A stage can be renamed or reconfigured; what happened cannot.
+             * @enum {string}
+             */
+            outcome: "won" | "lost";
+            template_key: string;
+            template_version: number;
+            /** @description The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked. */
+            questions: components["schemas"]["ReviewQuestion"][];
+            /** @description Keyed by question key. Every key here has a question in `questions`. */
+            answers: {
+                [key: string]: string;
+            };
+            revision: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        OutcomeReviewListResponse: {
+            data: components["schemas"]["OutcomeReview"][];
+        };
+        CreateOutcomeReviewRequest: {
+            /**
+             * Format: uuid
+             * @description The closing being reviewed. Must be the one the deal is on now, else 409.
+             */
+            closing_occurrence_id: string;
+            /**
+             * Format: uuid
+             * @description The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
+             */
+            submission_id: string;
+            /** @description Keyed by question key. An answer to a question the template does not ask is refused 422, because the frozen questions beside it could not explain it. */
+            answers: {
+                [key: string]: string;
+            };
+            /** @description Free prose for the note itself, beside the structured answers. Optional: the answers are the review. */
+            body?: string | null;
+        };
         /** @description One administered business channel a deal can be attributed to. */
         AcquisitionSource: {
             /** Format: uuid */
@@ -30414,33 +30518,6 @@ export interface components {
             resolution?: string | null;
             /** Format: date-time */
             created_at: string;
-        };
-        /**
-         * @description What this installation must be able to say about itself when it writes to somebody.
-         *
-         *     Every field is optional and every field is free text. A jurisdiction pack declares WHICH
-         *     disclosures a message carries; these are the words that meet them.
-         */
-        ControllerParticulars: {
-            /** @description Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020. */
-            legal_name?: string;
-            /** @description Where they are, as a block of lines — including a register court and number where a business letter needs one. */
-            postal_address?: string;
-            /** @description How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists. */
-            privacy_contact?: string;
-            /**
-             * @description How to say stop, free and without a barrier. §7(3) UWG requires it on every advertising
-             *     message rather than only the first. The one-click unsubscribe this product mints is
-             *     usually the honest answer; an installation whose recipients answer by phone says so here.
-             */
-            objection_route?: string;
-            /**
-             * @description How to reach the advertiser directly — a phone number, a website. A SEPARATE field from
-             *     the postal address because the obligation is about reachability rather than about where
-             *     somebody is registered, and answering it with a street address reports an unmet duty
-             *     as met.
-             */
-            advertiser_contact?: string;
         };
         /**
          * @description Where a disclosure duty stands.
@@ -49888,50 +49965,6 @@ export interface operations {
             };
         };
     };
-    getControllerParticulars: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The stated particulars. Empty fields where nothing has been said. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ControllerParticulars"];
-                };
-            };
-        };
-    };
-    setControllerParticulars: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ControllerParticulars"];
-            };
-        };
-        responses: {
-            /** @description The particulars as stored. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ControllerParticulars"];
-                };
-            };
-        };
-    };
     listNoticeCases: {
         parameters: {
             query?: {
@@ -54181,6 +54214,80 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listDealOutcomeReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's reviews. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutcomeReviewListResponse"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createDealOutcomeReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOutcomeReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The review as stored. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutcomeReview"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listActivityReviewTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every live template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityReviewTemplateListResponse"];
+                };
+            };
         };
     };
     listDealOffers: {

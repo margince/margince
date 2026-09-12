@@ -127,6 +127,10 @@ func (stubs) GetTranscriptRead(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "GetTranscriptRead")
 }
 
+func (stubs) ListActivityReviewTemplates(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListActivityReviewTemplates")
+}
+
 func (stubs) GetCaptureHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCaptureHealth")
 }
@@ -1275,6 +1279,14 @@ func (stubs) CreateOffer(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "CreateOffer")
 }
 
+func (stubs) ListDealOutcomeReviews(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListDealOutcomeReviews")
+}
+
+func (stubs) CreateDealOutcomeReview(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "CreateDealOutcomeReview")
+}
+
 func (stubs) ProposeDealRoles(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ProposeDealRoles")
 }
@@ -1885,14 +1897,6 @@ func (stubs) UpdatePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 
 func (stubs) RestorePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RestorePipeline")
-}
-
-func (stubs) GetControllerParticulars(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "GetControllerParticulars")
-}
-
-func (stubs) SetControllerParticulars(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "SetControllerParticulars")
 }
 
 func (stubs) ListNoticeCases(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticeCasesParams) {

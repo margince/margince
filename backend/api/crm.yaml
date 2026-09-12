@@ -13689,68 +13689,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
-  /privacy/controller-particulars:
-    get:
-      tags: [Compliance]
-      operationId: getControllerParticulars
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      summary: What this installation says about itself in the messages it sends.
-      description: |
-        Every jurisdiction pack declares disclosures — who is writing, who answers about the data,
-        how to say stop — and none of them could be rendered, because nothing recorded who the
-        controller IS. This is where an installation states it.
-
-        FREE TEXT rather than a structured address, and deliberately. What each jurisdiction
-        demands differs in shape: a German business letter wants a register court and number, a
-        Vietnamese advertising mail wants a phone and a website. A field per jurisdiction would be
-        a form nobody outside that jurisdiction can fill in, so each of these is a block of words
-        written by somebody who knows what their own law requires.
-
-        A field left empty is a real answer, not an omission to be filled in later: the renderer
-        reports that disclosure as unmeetable rather than inventing one, which is what makes an
-        unconfigured installation visible instead of silently non-compliant.
-
-        NOTHING RENDERS THESE INTO A MESSAGE YET. The particulars are stated here and the mapping
-        from a jurisdiction's obligation to the words that meet it exists, but no step between
-        composing a body and handing it to a provider asks for them. The gap is recorded in
-        `backend/gates/messagingruleapplied_test.go`.
-      responses:
-        '200':
-          description: The stated particulars. Empty fields where nothing has been said.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ControllerParticulars' }
-    put:
-      tags: [Compliance]
-      operationId: setControllerParticulars
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      summary: State who this installation is.
-      description: |
-        Gated on `installation_settings` at `update`, which is where the trust sits: these words
-        are destined for the bottom of every message this installation sends, so changing them
-        changes what every recipient will be told.
-
-        READING them is deliberately ungated for the send path. A rep writing a reply, a worker
-        dispatching a scheduled send and the controller lane mailing a privacy notice all need the
-        disclosures, and none of those principals holds a settings grant — a gated read would mean
-        a message went out without its legally required disclosure because the sender lacked an
-        operator permission.
-
-        Each field is bounded at 500 characters. They appear in every message, and a footer nobody
-        reads is not a disclosure.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ControllerParticulars' }
-      responses:
-        '200':
-          description: The particulars as stored.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ControllerParticulars' }
   /privacy/notice-cases:
     get:
       tags: [Compliance]
@@ -17697,6 +17635,78 @@ paths:
   # Totals (line and offer) are SERVER-COMPUTED from the line items (P11);
   # a client-supplied total is rejected 422. An offer is mutable only while
   # status=draft; sent is immutable — regenerate mints the next revision.
+  /deals/{id}/outcome-reviews:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: listDealOutcomeReviews
+      summary: The reviews written about this deal's closings.
+      description: |
+        Every review this deal carries, newest first, including reviews of EARLIER closings.
+        A deal that was closed, reopened and closed again has more than one thing to have an
+        opinion about, and an old review stays readable rather than being reattached to the
+        current closing or hidden.
+
+        Each review names the closing it is about, so a caller comparing against the deal's
+        own `closing_occurrence_id` can tell which one is current.
+      x-mcp-tool: { verb: read_record, record_type: deal, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The deal's reviews.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OutcomeReviewListResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Deals]
+      operationId: createDealOutcomeReview
+      summary: Write a review of how this deal's current closing went.
+      description: |
+        Writes a note against the deal and freezes the questions it was asked beside the
+        answers, in one transaction. The note is an ordinary activity: it carries the author,
+        the time and the audience rules, and it is where the review is read from afterwards.
+
+        `closing_occurrence_id` must be the closing the deal is on NOW. A deal that was
+        reopened and re-closed between opening the form and submitting it answers 409, because
+        the review would otherwise be filed against an outcome that is no longer the deal's
+        current one.
+
+        `submission_id` makes a retry safe: the same id from the same author returns the review
+        that already exists rather than writing a second one. A deliberate second review of the
+        same closing uses a new id.
+      # A review is somebody's own account of what happened, and colleagues
+      # read it as their judgement. An agent writing one would be inventing
+      # that account and signing it with their name.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOutcomeReviewRequest' }
+      responses:
+        '201':
+          description: The review as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OutcomeReview' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /activity-review-templates:
+    get:
+      tags: [Activities]
+      operationId: listActivityReviewTemplates
+      summary: The question sets an outcome review can ask.
+      x-mcp-tool: { verb: describe_query_vocabulary, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: Every live template.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivityReviewTemplateListResponse' }
+
   /deals/{id}/offers:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -31602,6 +31612,7 @@ components:
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.' }
         arr_source_offer_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer''s to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.' }
+        closing_occurrence_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'Which CLOSING this deal is currently on, as the id of the stage-history row that made it. Null while the deal is open, and null on a closed deal whose history does not record the move that closed it — an imported row, typically, where manufacturing an occurrence would invite a review of a closing nobody can point at. Reopening and re-closing yields a new one: the old closing stays in history and stays readable, it simply stops being the one this deal is on.' }
         masked_fields:
           type: array
           readOnly: true
@@ -35174,6 +35185,71 @@ components:
       enum: [high, neutral, low]
       x-enum-varnames: [LeadSourceIntentHigh, LeadSourceIntentNeutral, LeadSourceIntentLow]
       description: 'What the scorer makes of a lead from this source: high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither (formulas §3.1).'
+
+    ReviewQuestion:
+      type: object
+      required: [key, label, type, required]
+      properties:
+        key: { type: string, description: 'Stable within a template. An answer is filed under it and a frozen response keeps both, so rewording a label never orphans an answer.' }
+        label: { type: string, description: 'What the question asks, worded as the reader sees it.' }
+        type: { type: string, enum: [text], description: 'Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.' }
+        required: { type: boolean }
+
+    ActivityReviewTemplate:
+      type: object
+      required: [id, key, label, outcome, questions, version, active, system, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        key: { type: string }
+        label: { type: string }
+        outcome: { type: string, enum: [won, lost], description: 'Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.' }
+        questions: { type: array, items: { $ref: '#/components/schemas/ReviewQuestion' } }
+        version: { $ref: '#/components/schemas/RowVersion' }
+        active: { type: boolean }
+        system: { type: boolean, description: 'Shipped with the product. A system template can be retired but not deleted, so an old review always has a template to name.' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ActivityReviewTemplateListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/ActivityReviewTemplate' } }
+
+    OutcomeReview:
+      type: object
+      required: [id, activity_id, deal_id, closing_occurrence_id, outcome, template_key, template_version, questions, answers, revision, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        activity_id: { type: string, format: uuid, description: 'The note this review was written as. It is where the prose, the author and the audience rules live.' }
+        deal_id: { type: string, format: uuid }
+        closing_occurrence_id: { type: string, format: uuid, description: 'Which closing this review is about. Compare it against the deal''s own `closing_occurrence_id` to tell whether it reviews the current outcome or an earlier one.' }
+        outcome: { type: string, enum: [won, lost], description: 'What the deal did, as the closing recorded it — not as the stage reads today. A stage can be renamed or reconfigured; what happened cannot.' }
+        template_key: { type: string }
+        template_version: { type: integer }
+        questions:
+          type: array
+          items: { $ref: '#/components/schemas/ReviewQuestion' }
+          description: 'The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked.'
+        answers: { type: object, additionalProperties: { type: string }, description: 'Keyed by question key. Every key here has a question in `questions`.' }
+        revision: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    OutcomeReviewListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/OutcomeReview' } }
+
+    CreateOutcomeReviewRequest:
+      type: object
+      required: [closing_occurrence_id, submission_id, answers]
+      properties:
+        closing_occurrence_id: { type: string, format: uuid, description: 'The closing being reviewed. Must be the one the deal is on now, else 409.' }
+        submission_id: { type: string, format: uuid, description: 'The client''s own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.' }
+        answers: { type: object, additionalProperties: { type: string }, description: 'Keyed by question key. An answer to a question the template does not ask is refused 422, because the frozen questions beside it could not explain it.' }
+        body: { type: [string, 'null'], description: 'Free prose for the note itself, beside the structured answers. Optional: the answers are the review.' }
 
     AcquisitionSource:
       type: object
@@ -41131,42 +41207,6 @@ components:
         created_at: { type: string, format: date-time }
         # no `version`/If-Match: data_subject_request has no version column (data-model §12.5) and is a
         # single-assignee human-only workflow record (x-agent-access: human-only) — not optimistically concurrent.
-
-    ControllerParticulars:
-      type: object
-      description: |
-        What this installation must be able to say about itself when it writes to somebody.
-
-        Every field is optional and every field is free text. A jurisdiction pack declares WHICH
-        disclosures a message carries; these are the words that meet them.
-      properties:
-        legal_name:
-          type: string
-          maxLength: 500
-          description: 'Who is writing, as the law would name them. Art. 13(1)(a) GDPR''s identity of the controller, and the advertiser under Decree 91/2020.'
-        postal_address:
-          type: string
-          maxLength: 500
-          description: 'Where they are, as a block of lines — including a register court and number where a business letter needs one.'
-        privacy_contact:
-          type: string
-          maxLength: 500
-          description: 'How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.'
-        objection_route:
-          type: string
-          maxLength: 500
-          description: |
-            How to say stop, free and without a barrier. §7(3) UWG requires it on every advertising
-            message rather than only the first. The one-click unsubscribe this product mints is
-            usually the honest answer; an installation whose recipients answer by phone says so here.
-        advertiser_contact:
-          type: string
-          maxLength: 500
-          description: |
-            How to reach the advertiser directly — a phone number, a website. A SEPARATE field from
-            the postal address because the obligation is about reachability rather than about where
-            somebody is registered, and answering it with a street address reports an unmet duty
-            as met.
 
     NoticeCaseState:
       type: string

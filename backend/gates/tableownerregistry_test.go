@@ -162,6 +162,8 @@ var tableOwners = map[string]string{
 	"activity_reply_verdict_history": "internal/modules/activities",
 	"activity_sales_state":           "internal/modules/activities",
 	"activity_reader_state":          "internal/modules/activities",
+	"activity_review_template":       "internal/modules/activities",
+	"activity_review_response":       "internal/modules/activities",
 	"worklist_pin":                   "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of

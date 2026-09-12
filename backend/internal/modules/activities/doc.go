@@ -10,7 +10,22 @@
 // Tables owned: activity, activity_link, activity_audience_member,
 // activity_meeting_history, activity_retention_evidence, transcript_read,
 // attachment_extraction, deal_document_hide, activity_sales_state,
-// activity_reader_state, worklist_pin.
+// activity_reader_state, worklist_pin, activity_review_template,
+// activity_review_response.
+//
+// The two review tables are here rather than in deals because a review is
+// something somebody WROTE, and this module is where the product keeps those:
+// a response hangs off an activity, which already carries the author, the
+// time, the audience rules and the erasure treatment. A second store of human
+// prose beside the first would need every one of those again.
+//
+// They are two tables and not four. A template holds its questions as an
+// ordered array and a response freezes the questions it was asked, rather than
+// either pointing into a normalized question table — nothing queries across
+// questions, and two tables that have to be read together to mean anything are
+// one table wearing a join. The freezing is the point: a template is editable,
+// and an edit must not change what a review written last quarter appears to
+// have asked.
 //
 // activity_meeting_history is what activity.meeting_status cannot be: the
 // column says what a meeting IS, and a question about a period — how many did

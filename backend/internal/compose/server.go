@@ -260,6 +260,12 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// works wherever the readings do. An attachment that has never been read
 		// simply has no grounded field to accept, and the accept says so.
 		attachmentExtractionHandlers: attachmentExtractionHandlers{accept: NewExtractionAccept(pool)},
+		// A review joins two modules' halves, so the seam is constructed here
+		// rather than either module owning the other.
+		outcomeReviewHandlers: outcomeReviewHandlers{
+			reviews:    NewOutcomeReviews(pool),
+			activities: activities.NewStore(InstallationDB(pool)),
+		},
 		// Outbound webhooks (E10/S-E10.6): the read surface works
 		// unconditionally; create/rotate/replay need a deployment signing
 		// key, wired by WithWebhookSigningKey (the api role sources it from
