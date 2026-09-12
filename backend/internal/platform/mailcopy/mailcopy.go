@@ -255,6 +255,19 @@ type Copy struct {
 	// notice rather than a request.
 	NoticeIgnore string
 
+	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 16 owes a
+	// Vietnamese recipient who refuses further advertising: a confirmation
+	// that their refusal was received, within twenty-four hours.
+	//
+	// IT CARRIES NO LINK and no advertising of its own. This is the one message
+	// the product sends to somebody who has just told it to stop, so anything
+	// in it beyond "we heard you" would be the thing they asked not to receive
+	// — and a link asking them to do something more would read as a message
+	// that did not take the first answer.
+	OptOutAckSubject string
+	OptOutAckBody    string
+	OptOutAckIgnore  string
+
 	// The morning brief. Shorter than the weekly on purpose: it arrives every
 	// working day, so it names the top of the queue and links to the rest
 	// rather than restating a day a reader is about to open anyway.

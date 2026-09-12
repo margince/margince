@@ -314,7 +314,15 @@ func (s *Store) PublicStopAllMarketing(
 			return err
 		}
 		changed, err = s.withdrawPurposesTx(ctx, tx, contactID, keys)
-		return err
+		if err != nil {
+			return err
+		}
+		// THE ACKNOWLEDGEMENT THIS PRESS OWES, where a pack owes one. This is
+		// the ordinary refusal of advertising — the suppression door beside it
+		// is what a rep records and what the stronger public stop writes — so
+		// acknowledging only that one would answer the rarer act and stay
+		// silent on the common one.
+		return s.acknowledgeWithdrawalTx(ctx, tx, contactID, changed)
 	})
 	if err != nil {
 		return nil, err

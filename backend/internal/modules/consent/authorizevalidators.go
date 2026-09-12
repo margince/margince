@@ -97,10 +97,16 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation,
 		commsauthz.CategoryPrivacyNotice:
 		return validateConfirmation(ctx, tx, subject, category)
+	case commsauthz.CategoryOptoutConfirmation:
+		// A DIFFERENT EVIDENCE from the three above, which is why it is its own
+		// arm. Those carry a link and the live link is the evidence; an
+		// acknowledgement carries nothing to click, so what it shows is the
+		// standing stop it acknowledges.
+		return validateOptOutAcknowledgement(ctx, tx, subject, category)
 	default:
 		// Every other category — marketing, customer service, account notices,
-		// and the two subject-serving ones that carry no link — has no record
-		// evidence this file can read today. They stay unsupported and fall
+		// and the remaining subject-serving one that carries no link — has no
+		// record evidence this file can read today. They stay unsupported and fall
 		// through to the legacy verdict, which is exactly what they did before
 		// this file existed.
 		return unsupported, nil
