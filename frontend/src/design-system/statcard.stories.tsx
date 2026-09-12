@@ -207,7 +207,7 @@ export const ReadingsDensities: Story = {
           <StatCard
             label="Decisions waiting"
             value="8+"
-            detail="somebody is blocked until you answer"
+            detail="waiting on your answer"
             density={density}
           />
         </div>
