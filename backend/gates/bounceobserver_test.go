@@ -55,6 +55,35 @@ func TestTheBounceSinkCarriesTheObserverThatStopsTheAddress(t *testing.T) {
 	}
 }
 
+// TestABounceAlsoReopensTheDutyItFailedToDischarge.
+//
+// The same delivery report that proves an address dead may have been carrying
+// an Art. 13 or Art. 14 disclosure, whose case is sitting in `queued`. Without
+// the call the case stays there: the duty was not met, nobody was told, and the
+// queue shows work somebody handled. That reads BETTER than an open case while
+// being worse, so nobody looks at it again.
+//
+// Held here as well as by TestABouncedNoticeReopensItsCase, because the two
+// fail differently: that test needs a database and the whole bounce path wired,
+// while this reads one file. A refactor that moves the call somewhere this gate
+// cannot see it is told so in a second, and the integration test is what says
+// the call still does what it claims.
+func TestABounceAlsoReopensTheDutyItFailedToDischarge(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(repoRoot, "backend", "internal", "modules", "consent", "bouncesuppress.go")
+	src, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("bouncesuppress.go no longer exists — this gate names the writer that "+
+			"records a dead address, point it at what replaced it: %v", err)
+	}
+	if !strings.Contains(string(src), "MarkNoticeDeliveryFailedTx(") {
+		t.Error("recording a dead address no longer reopens the notice cases that message " +
+			"was carrying. A disclosure that bounced leaves its case in `queued`, which " +
+			"claims a message is on its way when it already died — so the case reads as " +
+			"handled, and nobody looks at it again.")
+	}
+}
+
 // TestOnlyOneWriterMakesABounceStop is the other half.
 //
 // A second writer would be free to disagree about the scope, the authority

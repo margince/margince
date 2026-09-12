@@ -40,6 +40,15 @@ type recordingStager struct {
 	calls int
 	seen  ConfirmationSend
 	fail  error
+	// stage writes a real comms_outbound row and answers its id. Nil means
+	// answer a bare uuid, which is right for the tests that only count calls
+	// and never let the id reach a foreign key.
+	//
+	// It exists because privacy_notice_case.delivery_id REFERENCES the ledger:
+	// a stager inventing an id is a fixture claiming a message that does not
+	// exist, and the database refuses it — correctly, since "show me the mail
+	// you say discharged this duty" is the whole reason the column is there.
+	stage func() ids.UUID
 }
 
 func (r *recordingStager) QueueConfirmationTx(_ context.Context, _ pgx.Tx, in ConfirmationSend) (ids.UUID, error) {
@@ -48,6 +57,9 @@ func (r *recordingStager) QueueConfirmationTx(_ context.Context, _ pgx.Tx, in Co
 		return ids.UUID{}, r.fail
 	}
 	r.seen = in
+	if r.stage != nil {
+		return r.stage(), nil
+	}
 	return ids.NewV7(), nil
 }
 

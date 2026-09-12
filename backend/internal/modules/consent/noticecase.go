@@ -67,6 +67,7 @@ const fieldRule = "rule"
 
 // The states a notice case rests in. Open is owed and untouched; assigned is
 // owed with somebody's name on it; queued means a disclosure is on its way;
+// delivery_failed means one went and did not arrive, so the duty is owed again;
 // blocked means we cannot send one yet and says why. Four states END a duty and
 // all four record when: completed is a disclosure that was sent and delivered,
 // provided_elsewhere and exempt_with_reason each say why no disclosure was
@@ -76,6 +77,13 @@ const (
 	NoticeOpen     NoticeState = "open"
 	NoticeAssigned NoticeState = "assigned"
 	NoticeQueued   NoticeState = "queued"
+	// NoticeDeliveryFailed — a disclosure this installation sent did not
+	// arrive. The duty is owed AGAIN: the subject was not told, so the case
+	// returns to the queue rather than resting in a state that reads like an
+	// outcome. Distinct from blocked, which says we cannot send at all — here
+	// we sent, and an operator answers it differently: correct the address,
+	// then send again.
+	NoticeDeliveryFailed NoticeState = "delivery_failed"
 	// NoticeCompleted — a disclosure this installation sent was delivered.
 	NoticeCompleted NoticeState = "completed"
 	// NoticeProvidedElsewhere — the subject already has the information, and
@@ -104,8 +112,8 @@ const (
 //
 // gatekit:fixture the notice-case state vocabulary, mirroring the table CHECK
 var noticeStates = []NoticeState{
-	NoticeOpen, NoticeAssigned, NoticeQueued, NoticeCompleted,
-	NoticeProvidedElsewhere, NoticeExemptWithReason,
+	NoticeOpen, NoticeAssigned, NoticeQueued, NoticeDeliveryFailed,
+	NoticeCompleted, NoticeProvidedElsewhere, NoticeExemptWithReason,
 	NoticeBlocked, NoticeNotRequired,
 }
 

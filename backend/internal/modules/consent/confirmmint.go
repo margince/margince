@@ -49,9 +49,14 @@ type mintRequest struct {
 
 // mintedLink is what the mint produces, also without the plaintext.
 type mintedLink struct {
-	expiresAt             time.Time
-	deliveredTo           string
-	staged                bool
+	expiresAt   time.Time
+	deliveredTo string
+	staged      bool
+	// deliveryID is the mail that carried the disclosure, zero when no lane was
+	// wired and nothing was staged. A discharged notice case keeps it, so an
+	// auditor asking "you say you told them, show me" has a message to open and
+	// a bounce on it can reopen the duty.
+	deliveryID            ids.UUID
 	noticeCasesDischarged int
 }
 
@@ -140,7 +145,7 @@ func (s *Store) issueLinkTx(
 		// that carries it commit together or not at all: a token minted without
 		// its mail is a link nobody was ever sent, and a mail staged without its
 		// token is a link that resolves to nothing.
-		staged, err := s.stageConfirmMail(ctx, tx, confirmMailInput{
+		deliveryID, err := s.stageConfirmMail(ctx, tx, confirmMailInput{
 			contactID:  contactID,
 			recipient:  deliveredTo,
 			kind:       kind,
@@ -151,7 +156,8 @@ func (s *Store) issueLinkTx(
 		if err != nil {
 			return err
 		}
-		out.staged = staged
+		out.staged = !deliveryID.IsZero()
+		out.deliveryID = deliveryID
 		// The mail that discharges a duty is what moves the duty. A
 		// record-confirmation link IS the Art. 14 disclosure route named in
 		// allowed_routes, so sending one settles the cases that named it —
@@ -164,8 +170,8 @@ func (s *Store) issueLinkTx(
 		// COMMITS. Discharging there would write an audit row saying a duty was
 		// met by a message that was never staged, and the cooldown would then
 		// suppress the genuine send once an operator fixed the relay.
-		if route, discharges := noticeRouteFor(kind); discharges && staged {
-			moved, err := dischargeNoticeCases(ctx, tx, contactID, route, issued)
+		if route, discharges := noticeRouteFor(kind); discharges && !deliveryID.IsZero() {
+			moved, err := dischargeNoticeCases(ctx, tx, contactID, route, issued, deliveryID)
 			if err != nil {
 				return err
 			}

@@ -34,13 +34,14 @@ import (
 // effort nobody made. Thirty days is the plan's number and long enough that a
 // genuine re-send after a bounce still falls outside it.
 //
-// The window is a FLOOR, not an exact interval, and the difference is worth
-// stating because the table has no "when was a disclosure last sent" column to
-// measure from. updated_at is the nearest thing, and it moves for any write: a
-// merge relinking the contact (contacts/mergerelink.go) touches it, which EXTENDS
-// somebody's cooldown by up to a month. That errs toward not re-sending, which
-// is the safe direction — the duty stays visible on the queue either way, and a
-// second mail to somebody who already got one is the harm this bounds.
+// The window is EXACT for any case discharged since last_sent_at existed, and a
+// floor for the rest. That column records when a disclosure was actually sent,
+// which is the question the cooldown is asking; updated_at moves for any write,
+// so a merge relinking the contact (contacts/mergerelink.go) used to extend
+// somebody's cooldown by up to a month. The coalesce keeps the old behaviour
+// for rows stamped before the column existed, which errs toward not re-sending
+// — the safe direction, since the duty stays visible on the queue either way
+// and a second mail to somebody who already got one is the harm this bounds.
 //
 // The attempts = 0 arm is what keeps the floor from swallowing the FIRST send:
 // a freshly opened case has had no disclosure at all, and one whose updated_at
@@ -86,7 +87,8 @@ const noticeResendCooldown = 30 * 24 * time.Hour
 // the cooldown counts a second attempt and stays queued — the duty was not
 // discharged by the first message, and the count is what says so.
 func dischargeNoticeCases(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, route string, now time.Time,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, route string,
+	now time.Time, deliveryID ids.UUID,
 ) (int, error) {
 	// The cooldown boundary is computed HERE, off the injected clock, rather
 	// than as SQL arithmetic on now(): the caller's `now` is what a test drives
@@ -99,16 +101,17 @@ func dischargeNoticeCases(
 	// then" cannot tell a discharge from a re-statement of one.
 	rows, err := tx.Query(ctx, `
 		UPDATE privacy_notice_case c
-		   SET state = $4, attempts = c.attempts + 1, updated_at = $3
+		   SET state = $4, attempts = c.attempts + 1, updated_at = $3,
+		       delivery_id = $7, last_sent_at = $3
 		  FROM privacy_notice_case prior
 		 WHERE prior.id = c.id
 		   AND c.contact_id = $1
 		   AND c.state = ANY($5)
 		   AND $2 = ANY(c.allowed_routes)
-		   AND (c.attempts = 0 OR c.updated_at <= $6)
+		   AND (c.attempts = 0 OR coalesce(c.last_sent_at, c.updated_at) <= $6)
 		RETURNING c.id, c.rule, c.attempts, prior.state, prior.attempts`,
 		contactID, route, now, string(NoticeQueued),
-		dischargeableNoticeStates(), restedSince)
+		dischargeableNoticeStates(), restedSince, deliveryID)
 	if err != nil {
 		return 0, fmt.Errorf("record that a disclosure was sent for this contact's open duties: %w", err)
 	}

@@ -34,12 +34,13 @@ import (
 
 // bounceEnv is one contact with one sent message, ready for a delivery report.
 type bounceEnv struct {
-	e         *Env
-	comms     *comms.Store
-	contactID ids.UUID
-	address   string
-	sender    context.Context
-	reporter  context.Context
+	e          *Env
+	comms      *comms.Store
+	contactID  ids.UUID
+	address    string
+	deliveryID ids.UUID
+	sender     context.Context
+	reporter   context.Context
 }
 
 // observedBounceStore is the comms store as COMPOSE builds it for the bounce
@@ -105,6 +106,7 @@ func setupBounce(t *testing.T, address string) *bounceEnv {
 	}); err != nil {
 		t.Fatalf("staging the send: %v", err)
 	}
+	env.deliveryID = deliveryID
 	if err := env.comms.RecordSent(env.sender, deliveryID, connector.SendReceipt{ProviderMessageID: "prov-1"}); err != nil {
 		t.Fatalf("recording the send: %v", err)
 	}
@@ -465,5 +467,197 @@ func TestTheExportTellsTheSubjectTheirAddressIsStopped(t *testing.T) {
 			"subject's own address: a stop naming no contact is invisible to a query keyed "+
 			"on the subject's ids, and Art. 15 owes them what is held",
 			len(pkg.CommunicationSuppression))
+	}
+}
+
+// TestABouncedNoticeReopensItsCase is the whole chain: a disclosure goes out, a
+// delivery report says it died, and the duty is owed again.
+//
+// Through the real bounce path rather than by calling the writer, because the
+// defect this closes is that nothing connected the two. A test reaching past
+// the seam would pass against a seam that was never wired.
+func TestABouncedNoticeReopensItsCase(t *testing.T) {
+	b := setupBounce(t, "anna@dead.example")
+	owner := OwnerConn(t)
+
+	// One acquisition that owes an Art. 14 disclosure, and a case for it whose
+	// disclosure was carried by the message about to bounce.
+	var acquisition ids.UUID
+	if err := owner.QueryRow(context.Background(), `
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, captured_by)
+		VALUES ($1, 'purchased_or_imported', 'test') RETURNING id`,
+		b.contactID).Scan(&acquisition); err != nil {
+		t.Fatalf("seeding the acquisition: %v", err)
+	}
+	var caseID ids.UUID
+	if err := owner.QueryRow(context.Background(), `
+		INSERT INTO privacy_notice_case
+		    (contact_id, acquisition_id, rule, due_at, allowed_routes, state,
+		     delivery_id, last_sent_at, attempts)
+		VALUES ($1, $2, 'art14', now() + interval '30 days',
+		        ARRAY['record_confirmation'], 'queued', $3, now(), 1)
+		RETURNING id`, b.contactID, acquisition, b.deliveryID).Scan(&caseID); err != nil {
+		t.Fatalf("seeding the queued notice case: %v", err)
+	}
+
+	if !b.report(t, connector.BounceHard) {
+		t.Fatal("the delivery report marked nothing")
+	}
+
+	var state string
+	if err := owner.QueryRow(context.Background(),
+		`SELECT state FROM privacy_notice_case WHERE id = $1`, caseID).Scan(&state); err != nil {
+		t.Fatalf("reading the case: %v", err)
+	}
+	if state != "delivery_failed" {
+		t.Errorf("the case rests in %q after the disclosure it was waiting on bounced, want "+
+			"delivery_failed: the subject was never told, so a case reading queued claims "+
+			"work that did not happen — and reads as handled, so nobody looks again", state)
+	}
+}
+
+// TestAControllerMailBounceIsMatched is the defect that made this whole feature
+// dead in production.
+//
+// A disclosure is CONTROLLER mail: the installation's own message, staged with
+// user_id NULL because it belongs to no seat. The bounce path matched on
+// `user_id = the reporting mailbox owner`, which a controller row can never
+// satisfy — so a genuine hard bounce on a real disclosure recorded nothing at
+// all. The ledger never marked it, the address was never stopped, and the
+// notice case sat in `queued` forever.
+//
+// The first version of the notice test missed this because it staged through
+// the USER path, where user_id is set. A test that reaches the feature by a
+// route production does not use proves nothing about production.
+func TestAControllerMailBounceIsMatched(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	const address = "anna@dead.example"
+
+	activityID := ids.New[ids.ActivityKind]()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO activity (id, kind, source, captured_by) VALUES ($1, 'email', 'test', 'system:x')`,
+		activityID); err != nil {
+		t.Fatalf("seeding the disclosure's activity: %v", err)
+	}
+	// Staged the way compose stages controller mail: no user_id, no consent
+	// purpose, carrying a template.
+	deliveryID := ids.NewV7()
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO comms_outbound
+		    (id, activity_id, provider, message_id, recipients, subject, body,
+		     status, sender_kind, template_key, template_version)
+		VALUES ($1, $2, 'operator_relay', $3, $4::jsonb, 'Your details', 'body',
+		        'sent', 'controller', 'record_confirmation', 1)`,
+		deliveryID, activityID, "disclosure@myco.test",
+		`["`+address+`"]`); err != nil {
+		t.Fatalf("staging the controller disclosure: %v", err)
+	}
+
+	reporter := principal.WithWorkspaceID(context.Background(), e.WS)
+	reporter = principal.WithActor(reporter, principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:gmail",
+		UserID: e.Rep1, OnBehalfOf: e.Rep1,
+	})
+	reporter = principal.WithCorrelationID(reporter, ids.NewV7())
+
+	marked, err := observedBounceStore(e).RecordBounce(reporter, connector.BounceReport{
+		MessageID: "disclosure@myco.test", Recipient: address,
+		Kind: connector.BounceHard, Reason: "550 5.1.1 user unknown",
+	})
+	if err != nil {
+		t.Fatalf("recording the bounce: %v", err)
+	}
+	if !marked {
+		t.Fatal("a bounced CONTROLLER mail marked nothing: the installation's own " +
+			"disclosures are staged with user_id NULL, so a match on the reporting " +
+			"mailbox owner can never find one — and the whole notice-failure path is " +
+			"unreachable in production")
+	}
+
+	var stopped int
+	if err := owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM communication_suppression
+		 WHERE lower(address) = lower($1) AND kind = 'hard_bounce' AND revoked_at IS NULL`,
+		address).Scan(&stopped); err != nil {
+		t.Fatal(err)
+	}
+	if stopped != 1 {
+		t.Errorf("the dead address carries %d stops after a controller-mail bounce, want 1", stopped)
+	}
+}
+
+// TestASecondDeliveryToADeadAddressStillReopensItsDuty.
+//
+// A dead mailbox refuses every message sent to it, so two outstanding
+// deliveries to the same address both bounce. The FIRST writes the address
+// stop; the second finds one already there and the writer returns early — which
+// used to skip the notice-case reopening with it, leaving the second
+// disclosure's duty in `queued` forever.
+//
+// The stop describes an ADDRESS, so one row covers every message to it. A duty
+// describes a MESSAGE, and there is one per delivery.
+func TestASecondDeliveryToADeadAddressStillReopensItsDuty(t *testing.T) {
+	b := setupBounce(t, "anna@dead.example")
+	owner := OwnerConn(t)
+
+	// The address is already known to be dead.
+	if err := database.WithWorkspaceTx(b.reporter, b.e.Pool, func(tx pgx.Tx) error {
+		return consent.RecordHardBounceTx(b.reporter, tx, consent.HardBounceFact{
+			Address: b.address, DeliveryID: b.deliveryID,
+		})
+	}); err != nil {
+		t.Fatalf("the first stop: %v", err)
+	}
+
+	// A SECOND delivery to the same address, carrying its own disclosure.
+	var acquisition ids.UUID
+	if err := owner.QueryRow(context.Background(), `
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, captured_by)
+		VALUES ($1, 'purchased_or_imported', 'test') RETURNING id`,
+		b.contactID).Scan(&acquisition); err != nil {
+		t.Fatalf("seeding the acquisition: %v", err)
+	}
+	second := ids.NewV7()
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO comms_outbound
+		    (id, activity_id, provider, message_id, recipients, subject, body,
+		     status, sender_kind, template_key, template_version)
+		VALUES ($1, (SELECT activity_id FROM comms_outbound WHERE id = $2),
+		        'operator_relay', 'second@myco.test', $3::jsonb, 'Your details', 'body',
+		        'sent', 'controller', 'record_confirmation', 1)`,
+		second, b.deliveryID, `["`+b.address+`"]`); err != nil {
+		t.Fatalf("staging the second disclosure: %v", err)
+	}
+	var caseID ids.UUID
+	if err := owner.QueryRow(context.Background(), `
+		INSERT INTO privacy_notice_case
+		    (contact_id, acquisition_id, rule, due_at, allowed_routes, state,
+		     delivery_id, last_sent_at, attempts)
+		VALUES ($1, $2, 'art14', now() + interval '30 days',
+		        ARRAY['record_confirmation'], 'queued', $3, now(), 1)
+		RETURNING id`, b.contactID, acquisition, second).Scan(&caseID); err != nil {
+		t.Fatalf("seeding the second queued case: %v", err)
+	}
+
+	// The second delivery bounces too. The stop already exists.
+	if err := database.WithWorkspaceTx(b.reporter, b.e.Pool, func(tx pgx.Tx) error {
+		return consent.RecordHardBounceTx(b.reporter, tx, consent.HardBounceFact{
+			Address: b.address, DeliveryID: second,
+		})
+	}); err != nil {
+		t.Fatalf("the second bounce: %v", err)
+	}
+
+	var state string
+	if err := owner.QueryRow(context.Background(),
+		`SELECT state FROM privacy_notice_case WHERE id = $1`, caseID).Scan(&state); err != nil {
+		t.Fatal(err)
+	}
+	if state != "delivery_failed" {
+		t.Errorf("the second disclosure's case rests in %q, want delivery_failed: the "+
+			"address stop covers every message to it while the duty is per message, so "+
+			"returning early "+
+			"on an existing stop leaves this duty claiming a message is on its way", state)
 	}
 }

@@ -30326,7 +30326,8 @@ export interface components {
          * @description Where a disclosure duty stands.
          *
          *     `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
-         *     on its way. `completed` is a disclosure this installation sent and delivered.
+         *     on its way; `delivery_failed` means one went and did not arrive, so the duty is owed again.
+         *     `completed` is a disclosure this installation sent and delivered.
          *     `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
          *     `blocked` names an obstacle. `not_required` is the older way of closing a case with no
          *     reason attached, kept so nothing already closed is reinterpreted.
@@ -30336,7 +30337,7 @@ export interface components {
          *     run.
          * @enum {string}
          */
-        NoticeCaseState: "open" | "assigned" | "queued" | "completed" | "provided_elsewhere" | "exempt_with_reason" | "blocked" | "not_required";
+        NoticeCaseState: "open" | "assigned" | "queued" | "delivery_failed" | "completed" | "provided_elsewhere" | "exempt_with_reason" | "blocked" | "not_required";
         /**
          * @description One Art. 13 or Art. 14 disclosure duty: whose it is, what put it there, and by when.
          *

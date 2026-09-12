@@ -18,6 +18,7 @@ export const NOTICE_STATES = [
   "open",
   "assigned",
   "queued",
+  "delivery_failed",
   "completed",
   "provided_elsewhere",
   "exempt_with_reason",
@@ -34,6 +35,11 @@ export const UNRESOLVED_NOTICE_STATES: readonly NoticeCaseState[] =
   NOTICE_STATES.filter((state) => !isNoticeResolved(state));
 
 // A duty that has ended, however it ended.
+//
+// `delivery_failed` is deliberately NOT here either, and for the sharper
+// reason: a disclosure that did not arrive left the duty exactly as owed as
+// before it was sent. The subject was not told. A case resting outside the
+// queue there would read as handled, so nobody would look at it again.
 //
 // `assigned` is deliberately NOT here. Somebody taking a case has not
 // discharged it, and a queue that dropped a claimed duty would leave it owed,
@@ -101,7 +107,8 @@ export function noticeOwner(row: NoticeCase): string | null {
 
 // The tone a state should read in.
 //
-// Only the two that need a reader to look: blocked names an obstacle, and the
+// Only the states that need a reader to look: blocked names an obstacle,
+// delivery_failed is a duty that came back and needs a second attempt, and the
 // excusing states are closures somebody has to be able to defend. `completed`
 // is quiet on purpose — a duty discharged by a delivered disclosure is the
 // outcome this queue exists to produce, and colouring it would make the
@@ -109,7 +116,7 @@ export function noticeOwner(row: NoticeCase): string | null {
 export function noticeStateTone(
   state: NoticeCaseState,
 ): "danger" | "warn" | undefined {
-  if (state === "blocked") {
+  if (state === "blocked" || state === "delivery_failed") {
     return "warn";
   }
   if (state === "exempt_with_reason" || state === "provided_elsewhere") {
