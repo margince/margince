@@ -171,11 +171,22 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 			return err
 		}
 		patch := contractPatch(existing, in)
+		// The cf_* values travel in the request's extension bag, so they are
+		// patched from it rather than from a named field. Without this a PATCH
+		// carrying custom fields succeeds and changes nothing.
+		storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties)
 		if patch.Empty() {
 			// The unchanged row still leaves the store, so it is masked like
-			// any other answer — `existing` is the write path's pre-image.
-			out, err = maskContractForCaller(ctx, tx, existing)
-			return err
+			// any other answer. It is re-read WITH the catalog rather than
+			// reusing the pre-image: writableContract reads with nil columns,
+			// so `existing` carries no custom values and answering with it
+			// would strip every one from the response.
+			unchanged, readErr := readContractForCaller(ctx, tx, id, s.today(), active)
+			if readErr != nil {
+				return readErr
+			}
+			out = unchanged
+			return nil
 		}
 		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract update"); err != nil {
 			return err

@@ -17,7 +17,6 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // renewalReminderObjects is the closed set of record types renewal_reminder
@@ -29,20 +28,18 @@ import (
 // catalog_triggers.go's own event-type constants are: "kept as constants
 // here because more than one automation surface... references the same
 // string" — this validator is that surface for the object vocabulary.
+// Contract is deliberately ABSENT, and it is the first custom-field target
+// that is. A renewal reminder fires an effect, and both halves of that effect
+// refuse a contract: the record provider answers UnsupportedEntityError for it
+// (taskeffect.go's owner read), and the preview's auth.ScopeClauseFor does not
+// know the table. Listing it here would offer an administrator a reminder that
+// silently never fires and a preview that errors — worse than not offering it.
 var renewalReminderObjects = []string{
 	string(datasource.EntityContact),
 	string(datasource.EntityCompany),
 	string(datasource.EntityDeal),
 	string(datasource.EntityLead),
 	string(datasource.EntityProject),
-	// Contract is a custom-field TARGET without being a datasource.EntityType:
-	// a field may hang off one, which is all a date reminder needs, while
-	// nothing asks a record provider about it. Spelled from the field-catalog
-	// vocabulary for that reason, and present here because the compose fitness
-	// test holds this list and customfields.FieldObjects to the identical set —
-	// a date field an administrator can create and then not build a reminder on
-	// would be the drift that test exists to catch.
-	string(fieldcatalog.TargetContract),
 }
 
 // RenewalReminderObjects exports renewalReminderObjects for the ONE

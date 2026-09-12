@@ -150,10 +150,17 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	if err := auth.EnsureLinkTarget(ctx, tx, projectTable, projectID.UUID); err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.ContractListResponse{}, err
-	}
+	// NO catalog fetch here, deliberately. This runs INSIDE a transaction the
+	// caller opened — the 360 assembly holds one across every section — and the
+	// catalog reader opens a second transaction of its own to answer. On a pool
+	// with one connection, or a busy one, that waits for a connection this
+	// caller is itself holding, which is a deadlock rather than a slow page.
+	//
+	// The cost is that the project page's contract rows carry no custom values.
+	// That is the right trade for a compact section listing title, value and
+	// dates: the full record is one click away and reads them through the
+	// handler path, which fetches the catalog before it opens anything.
+	var active []fieldcatalog.Column
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	asOfPos := arg(s.today())

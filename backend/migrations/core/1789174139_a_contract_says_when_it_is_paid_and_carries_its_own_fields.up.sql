@@ -26,11 +26,16 @@ ALTER TABLE contract
 -- value CAME FROM — a connector, an import, a crawl — and nothing writes
 -- contract values from any of those. Widening it would declare a capability no
 -- writer has, and the slice that adds one can widen it then.
+-- Written as IN (...) rather than = ANY (ARRAY[...]), which is equivalent to
+-- Postgres and NOT equivalent to the enum-sync gate: that gate's reader matches
+-- only the IN form, so the ANY spelling makes it silently stop comparing this
+-- constraint against its Go vocabulary. A gate that quietly checks nothing is
+-- worse than one that fails.
 ALTER TABLE custom_field DROP CONSTRAINT custom_field_object_check;
 ALTER TABLE custom_field
     ADD CONSTRAINT custom_field_object_check
-    CHECK (object = ANY (ARRAY[
+    CHECK (object IN (
         'contact', 'company', 'deal', 'lead',
         'activity', 'project', 'relationship', 'partner',
         'contract'
-    ]::text[]));
+    ));

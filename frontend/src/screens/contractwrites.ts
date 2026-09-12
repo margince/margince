@@ -48,6 +48,11 @@ export async function patchContract(
       notice_period_days: draft.noticePeriodDays
         ? Number(draft.noticePeriodDays)
         : null,
+      // Emptiness, not falsiness: 0 means due on receipt and is the answer a
+      // reader is most likely to have typed deliberately. A truthiness check
+      // here would send null and clear the very term they just set.
+      payment_term_days:
+        draft.paymentTermDays !== "" ? Number(draft.paymentTermDays) : null,
       signed_on: draft.signedOn || null,
     },
   });

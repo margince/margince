@@ -63,7 +63,12 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"attachment.entity_type":       {"internal/shared/ports/datasource", "EntityType"},
 	"embedding.entity_type":        {"internal/shared/ports/datasource", "EntityType"},
 	"field_provenance.object_type": {"internal/shared/ports/datasource", "EntityType"},
-	"custom_field.object":          {"internal/shared/ports/datasource", "EntityType"},
+	// NOT EntityType, and this is the one binding where the difference is the
+	// point. A custom field hangs off a TARGET; an EntityType is something a
+	// record provider can be asked about. Contract is the first member that is
+	// the former without being the latter, so the CHECK mirrors
+	// fieldcatalog.Target and the gate compares it against that.
+	"custom_field.object": {"internal/shared/ports/fieldcatalog", "Target"},
 }
 
 // checkInList captures CHECK (col IN ('a','b',…)) allowing an optional
