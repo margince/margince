@@ -137,7 +137,7 @@ func (s *Store) CurrentHealthTx(
 // list and is marked, rather than disappearing and leaving a gap nobody can
 // account for.
 func (s *Store) ListHealth(
-	ctx context.Context, id ids.ProjectID, limitIn *int,
+	ctx context.Context, id ids.ProjectID, limitIn *int, cursor *string,
 ) ([]crmcontracts.ProjectHealthAssessment, storekit.Page, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
@@ -154,12 +154,26 @@ func (s *Store) ListHealth(
 		if limitIn != nil && *limitIn > 0 && *limitIn <= 200 {
 			limit = *limitIn
 		}
-		rows, err := tx.Query(ctx, `
+		// The keyset is the whole sort key, not just the id: two judgements can
+		// share an instant, and a cursor carrying less than the ORDER BY would
+		// skip or repeat rows at exactly the page boundary.
+		args := []any{id}
+		where := ""
+		if cursor != nil && *cursor != "" {
+			after, err := storekit.DecodeOpaque[healthCursor](*cursor)
+			if err != nil {
+				return err
+			}
+			args = append(args, after.AssessedAt, after.CreatedAt, after.ID)
+			where = ` AND (a.assessed_at, a.created_at, a.id) < ($2, $3, $4)`
+		}
+		args = append(args, limit+1)
+		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT `+healthColumns+`
 			FROM project_health_assessment a
-			WHERE a.project_id = $1
+			WHERE a.project_id = $1%s
 			ORDER BY a.assessed_at DESC, a.created_at DESC, a.id DESC
-			LIMIT $2`, id, limit+1)
+			LIMIT $%d`, where, len(args)), args...)
 		if err != nil {
 			return fmt.Errorf("list project health assessments: %w", err)
 		}
@@ -177,8 +191,30 @@ func (s *Store) ListHealth(
 		if len(out) > limit {
 			out = out[:limit]
 			info.HasMore = true
+			// A continuation token, minted from the LAST row served. Promising
+			// more pages without one leaves the older history unreachable —
+			// which is what this list did before the token existed.
+			last := out[len(out)-1]
+			token, err := storekit.EncodeOpaque(healthCursor{
+				AssessedAt: last.AssessedAt,
+				CreatedAt:  *last.CreatedAt,
+				ID:         ids.UUID(last.Id),
+			})
+			if err != nil {
+				return err
+			}
+			info.NextCursor = token
 		}
 		return nil
 	})
 	return out, info, err
+}
+
+// healthCursor is the position a continuation token carries: the whole ORDER BY
+// key, so a page boundary lands in the same place twice even when two
+// judgements share an instant.
+type healthCursor struct {
+	AssessedAt time.Time `json:"a"`
+	CreatedAt  time.Time `json:"c"`
+	ID         ids.UUID  `json:"i"`
 }

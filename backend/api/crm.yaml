@@ -4745,6 +4745,7 @@ paths:
         in March rather than only what is true now. A superseded reading stays in the list and
         says so.
       parameters:
+        - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':

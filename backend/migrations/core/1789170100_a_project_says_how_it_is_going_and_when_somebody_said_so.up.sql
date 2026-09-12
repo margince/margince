@@ -75,3 +75,39 @@ CREATE UNIQUE INDEX uq_project_health_one_successor
 -- was written and then by id, so a page boundary lands in the same place twice.
 CREATE INDEX idx_project_health_current
     ON project_health_assessment (project_id, assessed_at DESC, created_at DESC, id DESC);
+
+
+-- Append-only in the DATABASE, not only in the Go that writes it.
+--
+-- Without this the runtime role can UPDATE an assessment in place, and every
+-- constraint above still passes: the history a delivery review reads would
+-- change under it with nothing to show that it had. Worse, updating a row to
+-- supersede its own successor builds a cycle that satisfies the unique index
+-- and the composite FK while leaving CurrentHealthTx with no current reading
+-- at all — a project that silently reports as never judged.
+--
+-- A judgement is withdrawn by superseding it, which is an INSERT. Nothing in
+-- this product edits one, so nothing legitimate is refused here.
+CREATE FUNCTION project_health_assessment_is_append_only() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  -- The CASCADE from project is the one legitimate removal, and it is
+  -- distinguishable: by the time this fires the parent is already gone, so a
+  -- surviving project means somebody deleted the assessment directly.
+  IF TG_OP = 'DELETE' THEN
+    IF EXISTS (SELECT 1 FROM project p WHERE p.id = OLD.project_id) THEN
+      RAISE EXCEPTION 'health assessment % is append-only: correct it by superseding it', OLD.id
+        USING ERRCODE = 'check_violation',
+              CONSTRAINT = 'project_health_assessment_append_only';
+    END IF;
+    RETURN OLD;
+  END IF;
+  RAISE EXCEPTION 'health assessment % is append-only: correct it by superseding it', OLD.id
+    USING ERRCODE = 'check_violation',
+          CONSTRAINT = 'project_health_assessment_append_only';
+END;
+$$;
+
+CREATE TRIGGER project_health_assessment_append_only
+    BEFORE DELETE OR UPDATE ON project_health_assessment
+    FOR EACH ROW EXECUTE FUNCTION project_health_assessment_is_append_only();

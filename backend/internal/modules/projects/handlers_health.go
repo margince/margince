@@ -18,7 +18,7 @@ func (h Handlers) ListProjectHealthAssessments(
 	w http.ResponseWriter, r *http.Request,
 	id crmcontracts.Id, params crmcontracts.ListProjectHealthAssessmentsParams,
 ) {
-	out, page, err := h.store.ListHealth(r.Context(), pathID[ids.ProjectKind](id), params.Limit)
+	out, page, err := h.store.ListHealth(r.Context(), pathID[ids.ProjectKind](id), params.Limit, params.Cursor)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -208,7 +209,11 @@ func checkHealthJudgement(
 		}
 	}
 	trimmed := trimmedOrNil(note)
-	if trimmed != nil && len(*trimmed) > healthMaxNote {
+	// RUNES, not bytes. The contract's maxLength and the SQL length() both count
+	// characters, so counting bytes here refuses a note those two accept — a
+	// 3,000-character German or Vietnamese note is well inside both limits and
+	// over 4,000 bytes.
+	if trimmed != nil && utf8.RuneCountInString(*trimmed) > healthMaxNote {
 		return nil, &values.ParseError{
 			Field: healthNoteColumn, Code: "note_too_long",
 			Message: fmt.Sprintf("a note is at most %d characters", healthMaxNote),
