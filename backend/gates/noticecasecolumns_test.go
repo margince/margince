@@ -5,11 +5,12 @@
 
 package gates
 
-// One SELECT list for the notice-case row.
+// One SELECT list per whole-row read in the consent package.
 //
-// noticeownership.go says its column list is the only one, which is a claim
-// about the whole package rather than about the file it sits in — and a claim
-// like that stops the next author looking. This is what makes it true.
+// noticeownership.go and submissionreview.go each say their column list is the
+// only one, which is a claim about the whole package rather than about the file
+// it sits in — and a claim like that stops the next author looking. This is
+// what makes both true.
 //
 // The drift it prevents is quiet: a second SELECT written for one new read
 // would not fail anything the day it lands. It fails months later, when
@@ -29,21 +30,32 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// wholeRowColumns is how many columns a query has to name before it counts as
-// reading the whole case rather than a projection of it. It is NoticeCase's
-// field count, stated here rather than reflected: the point is that adding a
-// field to the struct without widening the constant is exactly the drift, and a
-// reflected count would move with the struct and never notice.
-const wholeRowColumns = 16
+// wholeRowReads are the tables this file censuses, and how many columns a query
+// must name before it counts as reading the whole row rather than a projection
+// of it.
+//
+// The counts are the structs' field counts, stated here rather than reflected:
+// the point is that adding a field without widening the number is exactly the
+// drift, and a reflected count would move with the struct and never notice.
+var wholeRowReads = []struct {
+	table    string
+	columns  int
+	spelling string
+}{
+	{"privacy_notice_case", 16, "noticeCaseColumns"},
+	{"contact_confirm_submission", 10, "submissionColumns"},
+}
 
-// noticeCaseSelect finds a SELECT list over privacy_notice_case.
+// wholeRowSelect finds a SELECT list over one table.
 //
 // The list is captured so its width can be counted. gatekit's flattening turns
-// a spliced constant into a single space, so a query built from
-// noticeCaseColumns reads as `SELECT FROM privacy_notice_case` and names no
-// columns at all — which is precisely how this tells the two apart without
-// having to recognise the constant by name.
-var noticeCaseSelect = regexp.MustCompile(`(?is)\bSELECT\b(.*?)\bFROM\s+privacy_notice_case\b`)
+// a spliced constant into a single space, so a query built from the shared
+// constant reads as `SELECT FROM <table>` and names no columns at all — which
+// is precisely how this tells the two apart without having to recognise the
+// constant by name.
+func wholeRowSelect(table string) *regexp.Regexp {
+	return regexp.MustCompile(`(?is)\bSELECT\b(.*?)\bFROM\s+` + table + `\b`)
+}
 
 // TestOneSelectListSpellsTheNoticeCaseRow holds the claim in
 // noticeownership.go's noticeCaseColumns doc comment.
@@ -58,6 +70,24 @@ var noticeCaseSelect = regexp.MustCompile(`(?is)\bSELECT\b(.*?)\bFROM\s+privacy_
 // answering a narrower question and is left alone.
 func TestOneSelectListSpellsTheNoticeCaseRow(t *testing.T) {
 	t.Parallel()
+	for _, subject := range wholeRowReads {
+		assertOneSpelling(t, subject.table, subject.columns, subject.spelling)
+	}
+}
+
+// TestOneSelectListSpellsTheSubmissionRow holds the claim in
+// submissionreview.go's submissionColumns doc comment. It is the same census as
+// the one above, named separately so each claim's doc comment points at a test
+// somebody can run.
+func TestOneSelectListSpellsTheSubmissionRow(t *testing.T) {
+	t.Parallel()
+	assertOneSpelling(t, "contact_confirm_submission", 10, "submissionColumns")
+}
+
+// assertOneSpelling is the census both claims run.
+func assertOneSpelling(t *testing.T, table string, wholeRowColumns int, spelling string) {
+	t.Helper()
+	selectOver := wholeRowSelect(table)
 	dir := filepath.Join(repoRoot, "backend", "internal", "modules", "consent")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -83,7 +113,7 @@ func TestOneSelectListSpellsTheNoticeCaseRow(t *testing.T) {
 				return true
 			}
 			for _, sql := range gatekit.SQLStatementsOf(decl) {
-				match := noticeCaseSelect.FindStringSubmatch(sql)
+				match := selectOver.FindStringSubmatch(sql)
 				if match == nil {
 					continue
 				}
@@ -97,10 +127,10 @@ func TestOneSelectListSpellsTheNoticeCaseRow(t *testing.T) {
 		})
 	}
 	if len(offenders) > 0 {
-		t.Errorf("%d function(s) spell the notice-case row themselves instead of using "+
-			"noticeCaseColumns:\n\t%s\n\nOne SELECT list, or the two drift the next time a column "+
-			"is added: the reader that was updated sees it and the other does not, and what a case "+
-			"IS then depends on which path asked.",
-			len(offenders), strings.Join(offenders, "\n\t"))
+		t.Errorf("%d function(s) spell the %s row themselves instead of using %s:\n\t%s\n\n"+
+			"One SELECT list, or the two drift the next time a column is added: the reader that "+
+			"was updated sees it and the other does not, and what a row IS then depends on which "+
+			"path asked.",
+			len(offenders), table, spelling, strings.Join(offenders, "\n\t"))
 	}
 }

@@ -9932,6 +9932,66 @@ export interface paths {
         patch: operations["updateDataSubjectRequest"];
         trace?: never;
     };
+    "/confirm-submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List what subjects sent through their own confirm links.
+         * @description What a contact typed into the link we mailed them: a correction to a field we hold, or a
+         *     request to be removed. Nothing here has touched the CRM — the subject holds a bearer token
+         *     and sits outside every row-scope probe, so a submission is EVIDENCE OF WHAT THEY ASKED FOR
+         *     and never a write. This is the queue where somebody decides.
+         *
+         *     Unresolved first by default, oldest first within that: a correction somebody sent three
+         *     weeks ago is the one still waiting.
+         */
+        get: operations["listConfirmSubmissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/confirm-submissions/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept or decline what a subject proposed.
+         * @description Records the decision, and for an ACCEPTED correction writes the proposed value onto the
+         *     contact through the ordinary update path — so the same row scope, audit row and event that
+         *     govern any other edit to that field govern this one. A correction accepted by a route of
+         *     its own would be a second way to change a contact, answerable to nothing the first one is.
+         *
+         *     Rejecting records that somebody looked and said no. The proposal stays on the record: the
+         *     subject asked, and an export that showed the request without its answer would be telling
+         *     half of it.
+         *
+         *     Idempotent WITHOUT a key, which is why it declares none: the submission itself is the
+         *     identity, and a second decision on one already resolved returns the stored one unchanged.
+         *     A key would promise replay protection that the row's own state already gives, and the
+         *     replay machinery would then be keeping records for a promise nobody needed.
+         */
+        post: operations["resolveConfirmSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/data-subject-requests/{id}/package": {
         parameters: {
             query?: never;
@@ -30653,6 +30713,55 @@ export interface components {
              */
             acknowledged: boolean;
         };
+        /**
+         * @description What a subject typed into the confirm link we mailed them, and what somebody decided about
+         *     it. Nothing here has changed the CRM: the subject holds a bearer token and sits outside
+         *     every row-scope probe, so a submission records what they ASKED FOR.
+         */
+        ConfirmSubmission: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            contact_id: string;
+            /**
+             * @description `correction` proposes a new value for one field; `removal` asks to be taken off the
+             *     record entirely. A removal names no field.
+             */
+            kind: string;
+            /** @description Which field a correction is about. Null on a removal request. */
+            field?: string | null;
+            /**
+             * @description The subject's own words. Shown beside what the record currently holds, because a
+             *     correction is only reviewable as a comparison — "she says Schmidt, we hold Schmitt" is
+             *     the decision, and either half alone is not.
+             */
+            proposed_value?: string | null;
+            /**
+             * @description Who proposed it. A queue spanning every contact is unusable without it: two contacts
+             *     proposing the same title on the same day are indistinguishable, and accepting either
+             *     one changes a different record.
+             */
+            contact_name?: string | null;
+            /**
+             * @description What the record holds for that field right now. A correction is only reviewable as a
+             *     COMPARISON — "she says Schmidt, we hold Schmitt" is the decision, and either half
+             *     alone is not. Null for a removal request, which names no field.
+             */
+            current_value?: string | null;
+            /** Format: date-time */
+            submitted_at: string;
+            /**
+             * @description Null while it waits for somebody to decide.
+             * @enum {string|null}
+             */
+            resolution?: "accepted" | "rejected" | null;
+            /** Format: date-time */
+            resolved_at?: string | null;
+            /** @description Who decided, as the audit trail spells a principal. */
+            resolved_by?: string | null;
+            /** @description Why they decided that, when they said. */
+            note?: string | null;
+        };
         /** @description A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5). */
         DataSubjectRequest: {
             /** Format: uuid */
@@ -50517,6 +50626,77 @@ export interface operations {
                     "application/json": components["schemas"]["DataSubjectRequest"];
                 };
             };
+        };
+    };
+    listConfirmSubmissions: {
+        parameters: {
+            query?: {
+                /** @description Only this contact's submissions. Omit for the whole queue. */
+                contact_id?: string;
+                /** @description false for the queue, true for what has been decided. Omit for both. */
+                resolved?: boolean;
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description The submissions, bounded by the limit. NO CURSOR: this is a queue somebody works
+             *     through rather than an archive to page, and a cursor the handler did not read would
+             *     answer a wider page than the one that was asked for. When the queue grows past one
+             *     screen, the paging lands with the reader that needs it.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ConfirmSubmission"][];
+                    };
+                };
+            };
+        };
+    };
+    resolveConfirmSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    resolution: "accepted" | "rejected";
+                    /**
+                     * @description Why, for whoever reads this later. Required by nothing and worth writing on a
+                     *     decline, where "we did not change it" is the whole of what the record says
+                     *     otherwise.
+                     */
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Resolved (idempotent). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmSubmission"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     downloadDataSubjectPackage: {

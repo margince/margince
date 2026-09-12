@@ -4948,6 +4948,24 @@ func (e ComputedFieldKind) Valid() bool {
 	}
 }
 
+// Defines values for ConfirmSubmissionResolution.
+const (
+	ConfirmSubmissionResolutionAccepted ConfirmSubmissionResolution = "accepted"
+	ConfirmSubmissionResolutionRejected ConfirmSubmissionResolution = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the ConfirmSubmissionResolution enum.
+func (e ConfirmSubmissionResolution) Valid() bool {
+	switch e {
+	case ConfirmSubmissionResolutionAccepted:
+		return true
+	case ConfirmSubmissionResolutionRejected:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConnectChannelRequestProvider.
 const (
 	ConnectChannelRequestProviderTelegram ConnectChannelRequestProvider = "telegram"
@@ -16657,6 +16675,24 @@ func (e GetCompanyHierarchyRollupParamsScope) Valid() bool {
 	}
 }
 
+// Defines values for ResolveConfirmSubmissionJSONBodyResolution.
+const (
+	ResolveConfirmSubmissionJSONBodyResolutionAccepted ResolveConfirmSubmissionJSONBodyResolution = "accepted"
+	ResolveConfirmSubmissionJSONBodyResolutionRejected ResolveConfirmSubmissionJSONBodyResolution = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the ResolveConfirmSubmissionJSONBodyResolution enum.
+func (e ResolveConfirmSubmissionJSONBodyResolution) Valid() bool {
+	switch e {
+	case ResolveConfirmSubmissionJSONBodyResolutionAccepted:
+		return true
+	case ResolveConfirmSubmissionJSONBodyResolutionRejected:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListContactsParamsCapturedByKind.
 const (
 	ListContactsParamsCapturedByKindAgent     ListContactsParamsCapturedByKind = "agent"
@@ -24431,6 +24467,50 @@ type ConfirmRequestIssued struct {
 	// means nothing was attempted — the link exists and must be passed on by hand.
 	Sendable bool `json:"sendable"`
 }
+
+// ConfirmSubmission What a subject typed into the confirm link we mailed them, and what somebody decided about
+// it. Nothing here has changed the CRM: the subject holds a bearer token and sits outside
+// every row-scope probe, so a submission records what they ASKED FOR.
+type ConfirmSubmission struct {
+	ContactId openapi_types.UUID `json:"contact_id"`
+
+	// ContactName Who proposed it. A queue spanning every contact is unusable without it: two contacts
+	// proposing the same title on the same day are indistinguishable, and accepting either
+	// one changes a different record.
+	ContactName *string `json:"contact_name,omitempty"`
+
+	// CurrentValue What the record holds for that field right now. A correction is only reviewable as a
+	// COMPARISON — "she says Schmidt, we hold Schmitt" is the decision, and either half
+	// alone is not. Null for a removal request, which names no field.
+	CurrentValue *string `json:"current_value,omitempty"`
+
+	// Field Which field a correction is about. Null on a removal request.
+	Field *string            `json:"field,omitempty"`
+	Id    openapi_types.UUID `json:"id"`
+
+	// Kind `correction` proposes a new value for one field; `removal` asks to be taken off the
+	// record entirely. A removal names no field.
+	Kind string `json:"kind"`
+
+	// Note Why they decided that, when they said.
+	Note *string `json:"note,omitempty"`
+
+	// ProposedValue The subject's own words. Shown beside what the record currently holds, because a
+	// correction is only reviewable as a comparison — "she says Schmidt, we hold Schmitt" is
+	// the decision, and either half alone is not.
+	ProposedValue *string `json:"proposed_value,omitempty"`
+
+	// Resolution Null while it waits for somebody to decide.
+	Resolution *ConfirmSubmissionResolution `json:"resolution,omitempty"`
+	ResolvedAt *time.Time                   `json:"resolved_at,omitempty"`
+
+	// ResolvedBy Who decided, as the audit trail spells a principal.
+	ResolvedBy  *string   `json:"resolved_by,omitempty"`
+	SubmittedAt time.Time `json:"submitted_at"`
+}
+
+// ConfirmSubmissionResolution Null while it waits for somebody to decide.
+type ConfirmSubmissionResolution string
 
 // ConfirmSubmissionReceipt The answer to a confirm-link submission. `cases` names every rights request it opened — one per
 // corrected field under Art. 16, one for an erasure request under Art. 17. Empty when the submission
@@ -41326,6 +41406,30 @@ type ConfirmAnchorCompanySiteReadParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ListConfirmSubmissionsParams defines parameters for ListConfirmSubmissions.
+type ListConfirmSubmissionsParams struct {
+	// ContactId Only this contact's submissions. Omit for the whole queue.
+	ContactId *openapi_types.UUID `form:"contact_id,omitempty" json:"contact_id,omitempty"`
+
+	// Resolved false for the queue, true for what has been decided. Omit for both.
+	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ResolveConfirmSubmissionJSONBody defines parameters for ResolveConfirmSubmission.
+type ResolveConfirmSubmissionJSONBody struct {
+	// Note Why, for whoever reads this later. Required by nothing and worth writing on a
+	// decline, where "we did not change it" is the whole of what the record says
+	// otherwise.
+	Note       *string                                    `json:"note,omitempty"`
+	Resolution ResolveConfirmSubmissionJSONBodyResolution `json:"resolution"`
+}
+
+// ResolveConfirmSubmissionJSONBodyResolution defines parameters for ResolveConfirmSubmission.
+type ResolveConfirmSubmissionJSONBodyResolution string
+
 // ConnectorOAuthCallbackParams defines parameters for ConnectorOAuthCallback.
 type ConnectorOAuthCallbackParams struct {
 	// Code Provider authorization code (absent when the user denied consent).
@@ -45145,6 +45249,9 @@ type ConfirmAnchorCompanySiteReadJSONRequestBody = ConfirmCompanySiteReadRequest
 
 // MessageAnchorCompanySiteReadJSONRequestBody defines body for MessageAnchorCompanySiteRead for application/json ContentType.
 type MessageAnchorCompanySiteReadJSONRequestBody = CompanySiteReadMessageRequest
+
+// ResolveConfirmSubmissionJSONRequestBody defines body for ResolveConfirmSubmission for application/json ContentType.
+type ResolveConfirmSubmissionJSONRequestBody ResolveConfirmSubmissionJSONBody
 
 // StartConnectorBackfillJSONRequestBody defines body for StartConnectorBackfill for application/json ContentType.
 type StartConnectorBackfillJSONRequestBody = StartBackfillRequest
@@ -56011,6 +56118,12 @@ type ServerInterface interface {
 	// Ask Margince about a website read and receive reviewable company-field suggestions.
 	// (POST /company/site-reads/{readId}/messages)
 	MessageAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID)
+	// List what subjects sent through their own confirm links.
+	// (GET /confirm-submissions)
+	ListConfirmSubmissions(w http.ResponseWriter, r *http.Request, params ListConfirmSubmissionsParams)
+	// Accept or decline what a subject proposed.
+	// (POST /confirm-submissions/{id}/resolve)
+	ResolveConfirmSubmission(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List the calling user's capture connections + sync state.
 	// (GET /connectors)
 	ListConnectors(w http.ResponseWriter, r *http.Request)
@@ -58600,6 +58713,18 @@ func (_ Unimplemented) GetAnchorCompanySiteReadLogo(w http.ResponseWriter, r *ht
 // Ask Margince about a website read and receive reviewable company-field suggestions.
 // (POST /company/site-reads/{readId}/messages)
 func (_ Unimplemented) MessageAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List what subjects sent through their own confirm links.
+// (GET /confirm-submissions)
+func (_ Unimplemented) ListConfirmSubmissions(w http.ResponseWriter, r *http.Request, params ListConfirmSubmissionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Accept or decline what a subject proposed.
+// (POST /confirm-submissions/{id}/resolve)
+func (_ Unimplemented) ResolveConfirmSubmission(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -69799,6 +69924,103 @@ func (siw *ServerInterfaceWrapper) MessageAnchorCompanySiteRead(w http.ResponseW
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.MessageAnchorCompanySiteRead(w, r, readId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListConfirmSubmissions operation middleware
+func (siw *ServerInterfaceWrapper) ListConfirmSubmissions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListConfirmSubmissionsParams
+
+	// ------------- Optional query parameter "contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "contact_id", r.URL.Query(), &params.ContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "resolved" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "resolved", r.URL.Query(), &params.Resolved, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "resolved"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "resolved", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListConfirmSubmissions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveConfirmSubmission operation middleware
+func (siw *ServerInterfaceWrapper) ResolveConfirmSubmission(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveConfirmSubmission(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -89618,6 +89840,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads/{readId}/messages", wrapper.MessageAnchorCompanySiteRead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/confirm-submissions", wrapper.ListConfirmSubmissions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/confirm-submissions/{id}/resolve", wrapper.ResolveConfirmSubmission)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/connectors", wrapper.ListConnectors)

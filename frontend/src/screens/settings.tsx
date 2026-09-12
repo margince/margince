@@ -110,7 +110,6 @@ import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
-import { NoticeCasesCard } from "./noticecases";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OverlayCard } from "./overlay";
@@ -118,14 +117,12 @@ import { MirrorUserMapCard } from "./overlay-usermap";
 import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
-import { ConsentPurposesCard, PrivacyInboxCard } from "./privacy";
 import { ProductsAdmin } from "./products";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
-import { RestrictedRecordsCard } from "./restrictedrecords";
-import { RetentionCard } from "./retention";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import { PipelinesCard } from "./settings.pipelines";
+import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { TagVocabularyCard } from "./tagadmin";
@@ -347,26 +344,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
 
     // ---- governance ----
     case "privacy":
-      return (
-        <>
-          <ConsentPurposesCard />
-          {/* The retention ladder sits under the purpose catalogue and above
-              the DSR inbox: what the installation keeps by default, before the
-              requests that override it case by case. */}
-          <RetentionCard />
-          {/* What the ladder's statutory floor is holding right now, under the
-              ladder that explains why: an erasure that met a Handelsbrief
-              restricted it rather than destroying it, and the controller has
-              to be able to see that without opening the audit trail. */}
-          <RestrictedRecordsCard />
-          <PrivacyInboxCard />
-          {/* The disclosure duties last, under the requests somebody sent us:
-              a subject-request queue is work that was asked for, and this is
-              the work nobody asked for because they do not yet know we hold
-              their data. Same grant, same officer, different question. */}
-          <NoticeCasesCard />
-        </>
-      );
+      return <PrivacyLanes />;
     case "audit":
       // Split from the privacy page it used to end. The trail proves the
       // surfaces there were honoured, but it answers to `audit_log` where they

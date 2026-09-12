@@ -92,7 +92,14 @@ const CARDS_THE_REGISTER_REACHED = [
 
 describe("the split lost no card", () => {
   function renderedComponents(): Set<string> {
-    const source = readFileSync(join(here, "settings.tsx"), "utf8");
+    // BOTH FILES, because a page whose cards outgrew settings.tsx's frozen
+    // length moves them into a companion of its own — the privacy lanes did,
+    // and a scan reading only settings.tsx called four surviving cards lost.
+    // The question this asks is "does the product still render it", and the
+    // file a card is written in is not part of that question.
+    const source = ["settings.tsx", "settings.privacy.tsx"]
+      .map((file) => readFileSync(join(here, file), "utf8"))
+      .join("\n");
     // The WHOLE file, not just `tabContent`. Several pages dispatch to a tab
     // function that renders their cards — `AgentsTab`, `ConnectionsTab` — and
     // those functions sit below `tabContent`, so a window ending at its closing

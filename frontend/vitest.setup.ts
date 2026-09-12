@@ -4,25 +4,66 @@ import { takeUnroutedSessionProbes } from "./src/screens/unrouted-session";
 // Node ≥23 ships its own global Web Storage: a `localStorage` getter that
 // yields undefined unless the process was started with --localstorage-file.
 // Because the key already exists on the Node global, vitest's populateGlobal
-// keeps it instead of copying jsdom's Storage onto the test global (only keys
-// on vitest's own KEYS allowlist override an existing global, and the storage
-// keys are not on it). Tests in the jsdom environment then see undefined —
-// while a runtime without the Node global (Node 22, today's CI) gets jsdom's
-// working Storage and passes. Rebind the real jsdom Storage whenever the test
-// global disagrees with the jsdom window, so both runtimes behave like CI.
-const jsdomHost: { jsdom?: { window?: Record<string, unknown> } } = globalThis;
-const jsdomWindow = jsdomHost.jsdom?.window;
+// keeps it instead of copying the environment's Storage onto the test global
+// (only keys on vitest's own KEYS allowlist override an existing global, and
+// the storage keys are not on it).
+//
+// UNDER HAPPY-DOM THE WINDOW *IS* THE GLOBAL, so there is no second object to
+// rebind from — which is how the suite went red on Node 26 while staying green
+// on the Node 22 runner, where Node's getter does not exist and happy-dom's own
+// storage stands. 970 failures across 58 files, all of them "Cannot read
+// properties of undefined (reading 'setItem')".
+//
+// So this INSTALLS one rather than borrowing it: a Storage the tests can use,
+// per test file, cleared between files because each gets its own module
+// instance. It is deliberately the whole surface the DOM one has, because a
+// partial double fails as a puzzle rather than as a missing feature.
+class TestStorage implements Storage {
+  private entries = new Map<string, string>();
 
-if (jsdomWindow) {
-  for (const key of ["localStorage", "sessionStorage"]) {
-    const testGlobal: Record<string, unknown> = globalThis;
-    if (testGlobal[key] !== jsdomWindow[key]) {
-      Object.defineProperty(globalThis, key, {
-        get: () => jsdomWindow[key],
-        configurable: true,
-      });
-    }
+  get length(): number {
+    return this.entries.size;
   }
+
+  clear(): void {
+    this.entries.clear();
+  }
+
+  // EVERY ARGUMENT IS COERCED, because the real Storage does. A test calling
+  // setItem(1, x) and then setItem("1", y) has written one entry to a browser
+  // and would have written two here, which is a double that fails as a puzzle
+  // rather than as a missing feature.
+  getItem(key: string): string | null {
+    return this.entries.get(String(key)) ?? null;
+  }
+
+  key(index: number): string | null {
+    return [...this.entries.keys()][Math.trunc(Number(index)) || 0] ?? null;
+  }
+
+  removeItem(key: string): void {
+    this.entries.delete(String(key));
+  }
+
+  setItem(key: string, value: string): void {
+    this.entries.set(String(key), String(value));
+  }
+}
+
+for (const key of ["localStorage", "sessionStorage"] as const) {
+  const testGlobal: Record<string, unknown> = globalThis;
+  // WORKING STORAGE IS LEFT ALONE. A DOM that provided its own — jsdom does,
+  // and so does happy-dom on a runtime without Node's getter — keeps it, so
+  // this repair is invisible everywhere it is not needed.
+  const existing = testGlobal[key] as Storage | undefined;
+  if (existing && typeof existing.setItem === "function") {
+    continue;
+  }
+  const storage = new TestStorage();
+  Object.defineProperty(globalThis, key, {
+    get: () => storage,
+    configurable: true,
+  });
 }
 
 // The two DOM stubs below are guarded on there BEING a DOM: this setup file runs

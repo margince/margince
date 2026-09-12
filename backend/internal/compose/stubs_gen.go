@@ -867,6 +867,14 @@ func (stubs) MessageAnchorCompanySiteRead(w nethttp.ResponseWriter, r *nethttp.R
 	httperr.NotImplemented(w, r, "MessageAnchorCompanySiteRead")
 }
 
+func (stubs) ListConfirmSubmissions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListConfirmSubmissionsParams) {
+	httperr.NotImplemented(w, r, "ListConfirmSubmissions")
+}
+
+func (stubs) ResolveConfirmSubmission(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "ResolveConfirmSubmission")
+}
+
 func (stubs) ListConnectors(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListConnectors")
 }

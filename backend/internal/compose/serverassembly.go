@@ -414,5 +414,9 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).
 		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
-		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))
+		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
+		// The edge that writes an accepted correction, through contacts' own
+		// update path — so the subject's correction is governed by the same
+		// gates as any other edit to that field.
+		WithCorrectionApplier(correctionApplier{store: contacts.NewStore(InstallationDB(pool))})
 }

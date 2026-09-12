@@ -2621,6 +2621,8 @@ public.contact_confirm_submission acl=margince_owner=arwdDxt/margince_owner,marg
 public.contact_confirm_submission.contact_confirm_submission_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_confirm_submission.contact_confirm_submission_field_matches_kind CHECK ((((kind = 'correction'::text) AND (field IS NOT NULL)) OR ((kind = 'erasure_request'::text) AND (field IS NULL))))
 public.contact_confirm_submission.contact_confirm_submission_kind_check CHECK ((kind = ANY (ARRAY['correction'::text, 'erasure_request'::text])))
+public.contact_confirm_submission.contact_confirm_submission_note_length CHECK (((note IS NULL) OR (char_length(note) <= 500)))
+public.contact_confirm_submission.contact_confirm_submission_note_shape CHECK (((note IS NULL) OR (resolution IS NOT NULL)))
 public.contact_confirm_submission.contact_confirm_submission_pkey PRIMARY KEY (id)
 public.contact_confirm_submission.contact_confirm_submission_resolution_check CHECK (((resolution IS NULL) OR (resolution = ANY (ARRAY['accepted'::text, 'rejected'::text]))))
 public.contact_confirm_submission.contact_confirm_submission_resolved_together CHECK ((num_nonnulls(resolved_at, resolved_by, resolution) = ANY (ARRAY[0, 3])))
@@ -2629,6 +2631,7 @@ public.contact_confirm_submission.contact_id uuid NOT NULL gen=- def=-
 public.contact_confirm_submission.field text gen=- def=-
 public.contact_confirm_submission.id uuid NOT NULL gen=- def=uuidv7()
 public.contact_confirm_submission.kind text NOT NULL gen=- def=-
+public.contact_confirm_submission.note text gen=- def=-
 public.contact_confirm_submission.proposed_value text gen=- def=-
 public.contact_confirm_submission.resolution text gen=- def=-
 public.contact_confirm_submission.resolved_at timestamp with time zone gen=- def=-

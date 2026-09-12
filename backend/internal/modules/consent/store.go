@@ -47,7 +47,11 @@ type Store struct {
 	// issueLink reports as a link that was minted and not sent — never as a
 	// failure, because the token was still spent.
 	confirmSender ConfirmationSender
-	vault         ConfirmLinkVault
+	// corrections writes an accepted correction onto the contact record,
+	// through contacts' ordinary update path. Nil on every store that only
+	// records decisions.
+	corrections CorrectionApplier
+	vault       ConfirmLinkVault
 	// publicBaseURL is the canonical origin a confirm link is built on. It lives
 	// on the Store rather than on Handlers because the Store is what builds the
 	// link now: issueLink seals it into the vault inside its own transaction.
