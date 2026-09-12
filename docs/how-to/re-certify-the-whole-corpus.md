@@ -100,8 +100,8 @@ Re-read the report and compare it with the file from §1.
 
 **A band that dropped under a moved case is a new baseline, not a worse model.**
 This is the single most common misreading, and it is expensive both ways: it
-sends people hunting a regression that does not exist, and it hides the one that
-does. After a tree-wide rename expect nearly every row to sit under a moved
+sends a reader hunting a regression that does not exist, and it hides the one
+that does. After a tree-wide rename expect nearly every row to sit under a moved
 case — at which point the honest summary is *"new baselines"*, and only the rows
 that moved for another reason are worth a second look.
 
