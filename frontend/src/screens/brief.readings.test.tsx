@@ -12,6 +12,7 @@ import {
   boundedDecisions,
   boundedLeads,
   boundedMeetings,
+  decisionRow,
   leadRow,
   meetingRow,
   readingsDay,
@@ -725,6 +726,88 @@ describe("the pipeline period", () => {
     );
     expect(descriptions.every((text) => text.length > 0)).toBe(true);
     expect(new Set(descriptions).size).toBe(4);
+  });
+
+  // NOBODY IS BLOCKED BY A DUPLICATE PAIR. The strip said "somebody is blocked
+  // until you answer" under every pending decision, and most of them are
+  // contact hygiene the ranker deliberately puts BELOW a waiting customer. A
+  // line that claims a person is held up by a merge suggestion is the one a
+  // reader learns to discount.
+  it("claims nobody is blocked when no decision holds work up", () => {
+    draw(
+      { review: 2 },
+      [decisionRow("a1", false), decisionRow("a2", false)],
+      [wholeDecisions(2)],
+    );
+
+    expect(screen.getByText(en["brief.readings.decisionsBasis"])).toBeTruthy();
+    expect(screen.queryByText(/holding up customer work/)).toBeNull();
+  });
+
+  // And says so, with a count, where the server's own consequence says it is
+  // true. Counted off `work_blocked` rather than off the category, so the strip
+  // and the row a reader opens cannot disagree.
+  it("counts only the decisions that hold customer work up", () => {
+    draw(
+      { review: 3 },
+      [
+        decisionRow("a1", true),
+        decisionRow("a2", false),
+        decisionRow("a3", false),
+      ],
+      [wholeDecisions(3)],
+    );
+
+    expect(
+      screen.getByText(
+        en["brief.readings.decisionsBlocking_one"].replace("{count}", "1"),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["brief.readings.decisionsBasis"])).toBeNull();
+  });
+
+  // The COUNT, not just its presence. One blocker proves nothing about
+  // counting: an implementation returning 1 whenever any blocker exists passes
+  // a single-blocker test, and prints "1 holding up customer work" over three.
+  it("says how many decisions hold customer work up", () => {
+    draw(
+      { review: 4 },
+      [
+        decisionRow("a1", true),
+        decisionRow("a2", true),
+        decisionRow("a3", true),
+        decisionRow("a4", false),
+      ],
+      [wholeDecisions(4)],
+    );
+
+    expect(
+      screen.getByText(
+        en["brief.readings.decisionsBlocking_other"].replace("{count}", "3"),
+      ),
+    ).toBeTruthy();
+  });
+
+  // AND NOT AT ALL WHERE THE PAGE IS NOT THE WHOLE LANE. The figure beside it
+  // is counted over everything the read weighed; this one can only see the
+  // rows the page carries. On a day whose decisions run past page one, pairing
+  // them understates a block — so the claim is withheld rather than guessed.
+  it("claims no blocking count when the page is not the whole lane", () => {
+    draw(
+      { review: 30 },
+      [decisionRow("a1", true)],
+      [
+        {
+          category: "decisions",
+          considered: 30,
+          shown: 1,
+          more_available: false,
+        },
+      ],
+    );
+
+    expect(screen.getByText(en["brief.readings.decisionsBasis"])).toBeTruthy();
+    expect(screen.queryByText(/holding up customer work/)).toBeNull();
   });
 
   // A NAMED DOOR HAS TO GO WHERE ITS NAME SAYS. Distinct names and distinct

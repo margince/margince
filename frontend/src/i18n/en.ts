@@ -3113,7 +3113,13 @@ export const en = {
   "brief.readings.openDecisions": "Review decisions",
   "brief.readings.urgentBasis": "somebody waiting or a promise breaking",
   "brief.readings.decisions": "Decisions waiting",
-  "brief.readings.decisionsBasis": "somebody is blocked until you answer",
+  "brief.readings.decisionsBasis": "waiting on your answer",
+  // Only drawn where a decision on the page carries the server's own
+  // `work_blocked` consequence — a held SEND, not a duplicate pair. The basis
+  // above it claims nothing about who is waiting, because most decisions are
+  // contact hygiene and nobody is held up by one.
+  "brief.readings.decisionsBlocking_one": "1 holding up customer work",
+  "brief.readings.decisionsBlocking_other": "{count} holding up customer work",
   "brief.readings.pipeline": "Pipeline · {quarter}",
   // The same reading where the page cannot name a quarter: the read has not
   // landed, or its period start is not a month this calendar has.

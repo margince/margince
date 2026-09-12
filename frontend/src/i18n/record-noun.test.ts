@@ -255,7 +255,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "audit.unknownBuyer",
     "auth.unavailableBody",
     "blockedDomains.reasonHint",
-    "brief.readings.decisionsBasis",
     "brief.readings.urgentBasis",
     "captureExclusions.sub",
     "cf.col.addedBy",
