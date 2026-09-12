@@ -217,7 +217,13 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// the attachment count above and for the same reason. Flat in the size of
 	// the account — twenty emails and two cost the one statement — which is
 	// the property this budget protects rather than the absolute number.
-	const budget = 46
+	// 47 since a company says who receives its invoices (#5452): one read of
+	// the account's billing contacts, joined to the contacts it names so the
+	// panel has their titles and addresses without asking per row. Flat in the
+	// size of the account like every section above — an account naming three
+	// billing contacts costs the same one statement as one naming none, which
+	// is what the shape half of this test above has just confirmed.
+	const budget = 47
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}

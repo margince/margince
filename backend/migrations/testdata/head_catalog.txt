@@ -5251,8 +5251,6 @@ BEGIN
   END LOOP;
 END;
 
-public.rel_billing_contact_by_company CREATE INDEX rel_billing_contact_by_company ON public.relationship USING btree (company_id, role) WHERE ((kind = 'billing_contact'::text) AND (archived_at IS NULL))
-public.rel_billing_contact_by_contact CREATE INDEX rel_billing_contact_by_contact ON public.relationship USING btree (contact_id) WHERE ((kind = 'billing_contact'::text) AND (archived_at IS NULL))
 public.relationship acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.relationship.archived_at timestamp with time zone gen=- def=-
 public.relationship.captured_by text NOT NULL gen=- def=-
