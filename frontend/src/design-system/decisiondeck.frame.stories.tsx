@@ -40,7 +40,10 @@ const LABELS = {
   clearedTitle: "Deck clear",
   cleared: (count: number) => `${count} decisions sent`,
   clearedTime: () => "at 09:00",
+  skipped: (count: number) => `${count} skipped`,
+  edited: (count: number) => `${count} being edited`,
   staged: (count: number) => `${count} decisions staged`,
+  commitNothingToSend: "Finish these",
   commit: "Send staged decisions",
   unstage: "Undo the last one",
 } as unknown as DecisionDeckLabels;
@@ -49,7 +52,11 @@ const QUEUE = <p className="t-body">Three proposals, in whichever form.</p>;
 
 const TRAY = (
   <StagingTray
-    count={2}
+    staged={[
+      { id: "a", verdict: "accept" },
+      { id: "b", verdict: "reject" },
+      { id: "c", verdict: "skip" },
+    ]}
     labels={LABELS}
     commitState="idle"
     commitRef={null}
@@ -144,7 +151,11 @@ export const TheReadFailed: Story = {
 export const TheTraySending: Story = {
   render: () => (
     <StagingTray
-      count={3}
+      staged={[
+        { id: "a", verdict: "accept" },
+        { id: "b", verdict: "accept" },
+        { id: "c", verdict: "reject" },
+      ]}
       labels={LABELS}
       commitState="sending"
       commitRef={null}

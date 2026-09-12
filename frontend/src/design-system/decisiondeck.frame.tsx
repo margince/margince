@@ -3,7 +3,12 @@
 
 import { type ReactNode, type Ref, type RefObject, useEffect } from "react";
 import { Button, EmptyState, SectionHeader } from "./atoms";
-import type { DecisionDeckLabels, DeckFrame } from "./decisiondeck";
+import type {
+  DecisionDeckLabels,
+  DeckFrame,
+  StagedDecision,
+} from "./decisiondeck";
+import { verdictSends } from "./decisiondeck.verdicts";
 import {
   type SectionDetail,
   type SectionState,
@@ -142,14 +147,15 @@ export function DeckQueue({
 // staged verdict gets — a reader driving this from the keyboard has to hear that
 // their swipe landed somewhere.
 export function StagingTray({
-  count,
+  staged,
   labels,
   commitState,
   commitRef,
   onCommit,
   onUnstage,
 }: Readonly<{
-  count: number;
+  /** Everything the tray holds — split here, the way the commit splits it. */
+  staged: readonly StagedDecision[];
   labels: DecisionDeckLabels;
   commitState: "idle" | "sending" | "failed";
   // Handed down so the deck can move focus here when the last card leaves the
@@ -158,12 +164,39 @@ export function StagingTray({
   onCommit: () => void;
   onUnstage: () => void;
 }>) {
+  // Through the vocabulary's own answer, never a second spelling of it: a tray
+  // that decided for itself which verdicts send is how it comes to promise a
+  // send for one that never will.
+  //
+  // THREE COUNTS AND NOT TWO. `skip` and `edit` both send nothing, and they are
+  // not the same thing to a reader: a skip is an answer deferred to a later
+  // session, an edit is an answer being given on the queue's own form. Calling
+  // an edit "skipped" tells somebody their edit was dropped.
+  const count = staged.filter(verdictSends).length;
+  const skipped = staged.filter((entry) => entry.verdict === "skip").length;
+  const edited = staged.filter((entry) => entry.verdict === "edit").length;
   return (
     <div className="ddeck-tray" role="status">
-      <span className="ddeck-tray-count">{labels.staged(count)}</span>
+      {/* Two facts, never one: a tray holding two sends and a skip that says
+          "3 decisions staged" beside a Send button has told the reader their
+          skip is about to go somewhere. The skip line is drawn only when there
+          IS one — a zero would be the band explaining an absence. */}
+      <span className="ddeck-tray-count">
+        {[
+          count > 0 ? labels.staged(count) : null,
+          skipped > 0 ? labels.skipped(skipped) : null,
+          edited > 0 ? labels.edited(edited) : null,
+        ]
+          .filter((part) => part !== null)
+          .join(" · ")}
+      </span>
       <Button small onClick={onUnstage} disabled={commitState === "sending"}>
         {labels.unstage}
       </Button>
+      {/* A tray holding ONLY skips has nothing to send, and a Send button over
+          it would be a control whose press does nothing a reader can see. It
+          still commits — that is what clears the skips out of the deck — so it
+          is not disabled, but it says what it will actually do. */}
       <Button
         ref={commitRef}
         variant="primary"
@@ -171,7 +204,7 @@ export function StagingTray({
         pending={commitState === "sending"}
         onClick={onCommit}
       >
-        {labels.commit}
+        {count > 0 ? labels.commit : labels.commitNothingToSend}
       </Button>
     </div>
   );

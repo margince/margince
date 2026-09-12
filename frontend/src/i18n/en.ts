@@ -3178,6 +3178,19 @@ export const en = {
   "brief.deck.staged_one": "1 decision staged",
   "brief.deck.staged_other": "{count} decisions staged",
   "brief.deck.commit": "Send staged decisions",
+  // A TRAY HOLDS TWO KINDS OF THING. `staged` counts what the commit will
+  // SEND; a skip is held and sent nowhere, so counting it beside a Send button
+  // told a reader their skip was about to go somewhere and then dropped it.
+  "brief.deck.skipped_one": "1 skipped",
+  "brief.deck.skipped_other": "{count} skipped",
+  // The same control where the tray holds only skips: pressing it clears them
+  // out of the deck and sends nothing, so it does not say "Send".
+  "brief.deck.edited_one": "1 being edited",
+  "brief.deck.edited_other": "{count} being edited",
+  // The same control where NOTHING in the tray will be sent. It still commits —
+  // that is what moves the skips out of the deck and opens an edit on its own
+  // form — so it says what pressing it does rather than offering a send.
+  "brief.deck.commitNothingToSend": "Finish these",
   "brief.deck.unstage": "Undo the last one",
   "brief.deck.clearedTitle": "Deck clear",
   "brief.deck.cleared_one": "1 decision sent",

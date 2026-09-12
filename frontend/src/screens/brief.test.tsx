@@ -76,8 +76,13 @@ describe("BriefScreen — the deck stages, and only the commit sends", () => {
 
     // The whole point of the tray: three answers given, nothing sent. A
     // committed decision cannot be undone, so this is where the undo lives.
+    //
+    // And the tray says which of the three are which: two will be sent, and the
+    // "Later" is HELD. Counting all three as staged promised a send for a skip
+    // that the commit below then drops.
     expect(writes(calls)).toEqual([]);
-    expect(screen.getByText("3 decisions staged")).toBeTruthy();
+    expect(screen.getByText(/2 decisions staged/)).toBeTruthy();
+    expect(screen.getByText(/1 skipped/)).toBeTruthy();
 
     await user.click(
       screen.getByRole("button", { name: "Send staged decisions" }),
@@ -217,8 +222,18 @@ describe("BriefScreen — the deck stages, and only the commit sends", () => {
       screen.getByRole("button", { name: en["brief.deck.rowMore"] }),
     );
     await user.click(screen.getByRole("button", { name: "Edit" }));
+    // An edit sends nothing — it is answered on the queue's own form — so the
+    // tray holds nothing to send and the control does not offer one. It is
+    // named as an EDIT rather than a skip: the two both send nothing and mean
+    // opposite things to a reader.
+    expect(
+      screen.getByText(en["brief.deck.edited_one"].replace("{count}", "1")),
+    ).toBeTruthy();
+    expect(screen.queryByText(/skipped/)).toBeNull();
     await user.click(
-      screen.getByRole("button", { name: "Send staged decisions" }),
+      screen.getByRole("button", {
+        name: en["brief.deck.commitNothingToSend"],
+      }),
     );
 
     await waitFor(() => expect(window.location.hash).toBe("#/worklist"));
