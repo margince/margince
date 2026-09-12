@@ -146,6 +146,38 @@ func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit
 	return out, err
 }
 
+// GetNoticeCase reads one duty, for a surface that opens a single case rather
+// than working a page of them.
+//
+// Gated exactly as the queue is. There is deliberately no narrower read: a seat
+// that may not see the list may not see one of its rows either, and a detail
+// read that hid what the list showed would be a different answer to the same
+// question.
+//
+// It goes through noticeCaseColumns like every other whole-row read here, so a
+// column added to the row reaches the list and the detail together.
+//
+// Held by: TestOneSelectListSpellsTheNoticeCaseRow
+// (backend/gates/noticecasecolumns_test.go)
+func (s *Store) GetNoticeCase(ctx context.Context, id ids.UUID) (NoticeCase, error) {
+	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
+		return NoticeCase{}, err
+	}
+	var out NoticeCase
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = scanNoticeCase(tx.QueryRow(ctx, `
+			SELECT`+noticeCaseColumns+`
+			  FROM privacy_notice_case
+			 WHERE id = $1`, id))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		return err
+	})
+	return out, err
+}
+
 // noticeCaseListMax bounds the queue read. A privacy officer works a page at a
 // time, and an unbounded list over a table with one row per acquisition is a
 // read that grows with the contact book.

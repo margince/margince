@@ -4544,6 +4544,27 @@ export const en = {
   "privacy.purposeCreate": "Create purpose",
   "privacy.purposeAppendOnly":
     "A purpose cannot be renamed or removed once created — the catalogue is append-only. Choose the key carefully.",
+  "notice.title": "Disclosure duties",
+  "notice.sub":
+    "Contacts we obtained without asking them, and whether we have told them yet.",
+  "notice.facetLabel": "Which duties to show",
+  "notice.facetOwed": "Still owed",
+  "notice.facetAll": "All",
+  "notice.emptyOwed":
+    "Nothing is owed. Every contact we obtained has been told, or the duty was excused.",
+  "notice.readOnlyForPrivacy":
+    "These duties name contacts and how we obtained them, so they are shown to the privacy inbox only.",
+  "notice.dueAt": "Due {date}",
+  "notice.overdue": "Overdue",
+  "notice.claimed": "Claimed",
+  "notice.unclaimed": "Unclaimed",
+  "notice.excuse": "End without sending",
+  "notice.excuseTitle": "End this duty without sending a disclosure",
+  "notice.excuseWhich": "What are you recording?",
+  "notice.excuseProvided": "They were told somewhere else",
+  "notice.excuseExempt": "The duty does not apply",
+  "notice.excuseGround": "Why, in your own words",
+  "notice.excuseConfirm": "Record this",
   "privacy.facetAll": "All",
   "privacy.inboxAdminOnly":
     "Seeing subject requests needs permission your seat does not hold. They name the people who asked, so the queue is not open to everyone.",

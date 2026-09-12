@@ -1887,6 +1887,10 @@ func (stubs) ListNoticeCases(w nethttp.ResponseWriter, r *nethttp.Request, param
 	httperr.NotImplemented(w, r, "ListNoticeCases")
 }
 
+func (stubs) GetNoticeCase(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetNoticeCase")
+}
+
 func (stubs) AssignNoticeCase(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "AssignNoticeCase")
 }

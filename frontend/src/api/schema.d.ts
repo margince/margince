@@ -9529,6 +9529,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/privacy/notice-cases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * One disclosure duty.
+         * @description The same case the queue lists, read on its own, for a surface that opens one duty rather
+         *     than working a page of them.
+         *
+         *     Gated on `privacy_request` at `read`, exactly as the queue is — a single case says how a
+         *     named contact was obtained and whether we have told them, which is the same disclosure the
+         *     list makes about every row it carries. There is no narrower read here: a caller who may
+         *     not see the queue may not see one of its rows either.
+         *
+         *     Answers 404 for an id that names no case. Row-scoped narrowing is not applied, because the
+         *     queue itself is installation-wide: granting the read verb means trusting that seat with
+         *     every duty in the installation, and a detail read that hid rows the list showed would be
+         *     a different answer to the same question.
+         */
+        get: operations["getNoticeCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/privacy/notice-cases/{id}/assign": {
         parameters: {
             query?: never;
@@ -49626,6 +49659,28 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["NoticeCase"][];
                     };
+                };
+            };
+        };
+    };
+    getNoticeCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The case. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeCase"];
                 };
             };
         };

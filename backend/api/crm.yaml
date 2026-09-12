@@ -13724,6 +13724,34 @@ paths:
                 required: [data]
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/NoticeCase' } }
+  /privacy/notice-cases/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Compliance]
+      operationId: getNoticeCase
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: One disclosure duty.
+      description: |
+        The same case the queue lists, read on its own, for a surface that opens one duty rather
+        than working a page of them.
+
+        Gated on `privacy_request` at `read`, exactly as the queue is — a single case says how a
+        named contact was obtained and whether we have told them, which is the same disclosure the
+        list makes about every row it carries. There is no narrower read here: a caller who may
+        not see the queue may not see one of its rows either.
+
+        Answers 404 for an id that names no case. Row-scoped narrowing is not applied, because the
+        queue itself is installation-wide: granting the read verb means trusting that seat with
+        every duty in the installation, and a detail read that hid rows the list showed would be
+        a different answer to the same question.
+      responses:
+        '200':
+          description: The case.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NoticeCase' }
   /privacy/notice-cases/{id}/assign:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }

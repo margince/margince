@@ -12,6 +12,7 @@ package consent
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -348,5 +349,57 @@ func TestAReassignmentRecordsWhoHadItBefore(t *testing.T) {
 		t.Errorf("the reassignment's before-image names owner %v, want the seat it was taken "+
 			"from (%v): the state does not move on a reassignment, so the owner is the only "+
 			"fact the image has to carry", before[fieldOwner], e.user)
+	}
+}
+
+// TestOneDutyReadsTheSameAsItDoesInTheQueue. The detail read exists for a
+// surface that opens one case, and it has to agree with the list about what a
+// case is — which is why both go through noticeCaseColumns.
+func TestOneDutyReadsTheSameAsItDoesInTheQueue(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := officerCtx(e)
+	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
+	if _, err := e.store.AssignNoticeCase(ctx, id, e.user); err != nil {
+		t.Fatalf("taking the duty: %v", err)
+	}
+
+	one, err := e.store.GetNoticeCase(ctx, id)
+	if err != nil {
+		t.Fatalf("reading the duty: %v", err)
+	}
+	listed, err := e.store.ListNoticeCases(ctx, nil, 0)
+	if err != nil {
+		t.Fatalf("reading the queue: %v", err)
+	}
+	if len(listed) != 1 {
+		t.Fatalf("the queue holds %d cases, want the one seeded", len(listed))
+	}
+	if !reflect.DeepEqual(one, listed[0]) {
+		t.Errorf("the detail read answers %+v and the queue answers %+v: a surface opening "+
+			"one duty and a surface listing them must not disagree about what a case is",
+			one, listed[0])
+	}
+}
+
+// TestADutyThatDoesNotExistIsNotFound, rather than an empty case that reads as
+// one with no deadline.
+func TestADutyThatDoesNotExistIsNotFound(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := officerCtx(e)
+
+	if _, err := e.store.GetNoticeCase(ctx, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("reading a duty that does not exist answered %v, want not found", err)
+	}
+}
+
+// TestTheDetailReadIsGatedLikeTheQueue. A seat that may not see the list may
+// not see one of its rows either — a narrower detail read would be a different
+// answer to the same question.
+func TestTheDetailReadIsGatedLikeTheQueue(t *testing.T) {
+	e := setupChannelConsent(t)
+	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
+
+	if _, err := e.store.GetNoticeCase(e.ctx, id); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a rep reading one duty got %v, want permission denied", err)
 	}
 }
