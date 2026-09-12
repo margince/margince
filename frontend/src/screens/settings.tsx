@@ -124,6 +124,7 @@ import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
+import { ReviewTemplatesCard } from "./reviewtemplates";
 import { PipelinesCard } from "./settings.pipelines";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { SignInMethodsCard } from "./sign-in-methods";
@@ -259,6 +260,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
       );
     case "acquisition":
       return <AcquisitionSourcesCard />;
+    case "reviewtemplates":
+      return <ReviewTemplatesCard />;
     case "recordroles":
       return <RecordRolesCard />;
     case "fields":

@@ -119,6 +119,7 @@ import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealSeats } from "./deal360/dealseats";
 import { DEAL_OFFERS_ANCHOR, DealStrip } from "./deal360/dealstrip";
+import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { useDealRecipientAddress } from "./deal360/usedealrecipient";
 import { DealBulkBar } from "./dealbulk";
@@ -3934,6 +3935,14 @@ function DealOverviewPane({
         </RecordReadingPair>
       </RecordReading>
       <DealBrief brief={deal.description} />
+      {/* Under the brief, and only on a closed deal: the panel returns null
+          while the deal is still open, because there is no outcome to review
+          yet and inviting one would be asking for a verdict nobody can give. */}
+      <OutcomeReviewPanel
+        dealId={deal.id}
+        status={deal.status}
+        closingOccurrenceId={deal.closing_occurrence_id}
+      />
       <CustomFieldsPanel object="deal" record={deal} />
       <RecordContextPanel entityType="deal" id={deal.id} />
       <LogActivity entityType="deal" entityId={deal.id} />

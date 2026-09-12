@@ -105,6 +105,7 @@ describe("the scope each page declares", () => {
     stageautomation: "workspace",
     leads: "workspace",
     acquisition: "workspace",
+    reviewtemplates: "workspace",
     recordroles: "workspace",
     fields: "workspace",
     tags: "workspace",
@@ -219,6 +220,9 @@ describe("what each page lets a reader change", () => {
     // No delete arm: a source is retired through its switch, never removed.
     acquisition:
       "all(full-seat, any(any(custom_field:update, custom_field:create)))",
+    // No write of any kind: the templates endpoint serves them and accepts no
+    // edits, so reading them IS the action this page performs.
+    reviewtemplates: "same-as-requires",
     // No delete arm either: a role is retired through its switch, because an
     // assignment that carried it has to stay resolvable.
     recordroles:
@@ -922,6 +926,11 @@ describe("what the rail carries and what it leaves behind", () => {
       // update, which is what CompanyContextCard asks. Existing behaviour that
       // the rail is only now reporting — the card was always editable by them.
       "company",
+      // The outcome-review questions. A rep holds `custom_field:read`, and this
+      // page is read-only, so it is theirs to CONSULT — they are the ones asked
+      // these questions when a deal closes, and the page is where they can see
+      // what will be asked before it is.
+      "reviewtemplates",
       // Products and offer templates: a rep authors both.
       "products",
       // Capture rules, because a rep holds `company:update` and
