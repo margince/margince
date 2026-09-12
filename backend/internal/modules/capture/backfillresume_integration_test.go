@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // truncatedRun leaves the fixture's connection holding a run that ended on a
@@ -74,7 +75,7 @@ func runState(ctx context.Context, t *testing.T, backfillID ids.UUID) (status st
 func startFixtureBackfill(ctx context.Context, t *testing.T, reg *capture.Registry) {
 	t.Helper()
 	actor, _ := principal.Actor(ctx)
-	if _, err := reg.StartBackfill(ctx, "gmail", ids.From[ids.UserKind](actor.UserID), 3, 100,
+	if _, err := reg.StartBackfill(ctx, "gmail", ids.From[ids.UserKind](actor.UserID), 3, connector.BackfillEstimate{Messages: 100},
 		func(context.Context, pgx.Tx, ids.UUID) error { return nil }); err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}

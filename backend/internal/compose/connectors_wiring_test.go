@@ -52,7 +52,9 @@ func (o *recordingOAuth) AccessToken(context.Context, string) (string, error) { 
 
 type stubGmailAPI struct{}
 
-func (stubGmailAPI) EstimateAfter(context.Context, string, string) (int, error) { return 0, nil }
+func (stubGmailAPI) EstimateAfter(context.Context, string, string) (int, bool, error) {
+	return 0, false, nil
+}
 
 func (stubGmailAPI) ListAfter(context.Context, string, string, string, int) ([]string, string, error) {
 	return nil, "", nil

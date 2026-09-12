@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // codeWindowInvalid names the RFC 7807 code for a window outside {3m,6m,12m}.
@@ -221,22 +222,32 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 		})
 		return
 	}
-	messages, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months)
+	estimate, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months)
 	if err != nil {
 		h.writeBackfillError(w, r, err)
 		return
 	}
 	preview := crmcontracts.BackfillPreview{
 		Window:            crmcontracts.BackfillPreviewWindow(req.Window),
-		EstimatedMessages: messages,
+		EstimatedMessages: estimate.Messages,
 		ComputedAt:        time.Now().UTC(),
+	}
+	if estimate.Floor {
+		// Sent only when it is TRUE, which is the contract's own reading of
+		// absent: a count with nothing said about it is exact.
+		floor := true
+		preview.EstimateIsFloor = &floor
 	}
 	// The priced projection is advisory: cost is transparency, never a gate
 	// (ADR-0020, NEVER-4). A nil estimator (AI-unconfigured role) or a cost-read
 	// fault degrades to a message-count-only preview rather than blocking the
 	// backfill consent flow — the fault is logged, never swallowed silently.
 	if h.estimator != nil {
-		cost, err := h.estimator.EstimateBackfill(r.Context(), string(provider), userID, int64(messages))
+		// Priced from the counted number even when that is a floor. A floor
+		// prices low, which is the honest direction for a figure the mailbox owner
+		// is told is advisory: the alternative is inventing a multiplier for
+		// messages nobody counted.
+		cost, err := h.estimator.EstimateBackfill(r.Context(), string(provider), userID, int64(estimate.Messages))
 		if err != nil {
 			h.log.ErrorContext(r.Context(), "backfill preview cost estimate", "err", err)
 		} else {
@@ -293,9 +304,9 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 	// The preview's estimate rides along as the progress denominator; a
 	// client that skipped the preview starts with none (the bar shows counts
 	// only — honest, just less shaped).
-	estimate := 0
-	if messages, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months); err == nil {
-		estimate = messages
+	var estimate connector.BackfillEstimate
+	if previewed, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months); err == nil {
+		estimate = previewed
 	}
 	ws, ok := principal.WorkspaceID(r.Context())
 	if !ok {
@@ -397,6 +408,10 @@ func backfillStatusPayload(run *capture.BackfillRun) crmcontracts.BackfillStatus
 	}
 	if run.Estimate != nil {
 		st.EstimatedMessages = run.Estimate
+		if run.EstimateIsFloor {
+			floor := true
+			st.EstimateIsFloor = &floor
+		}
 	}
 	st.Counts = &struct {
 		Captured         *int `json:"captured,omitempty"`

@@ -20707,6 +20707,9 @@ type BackfillPreview struct {
 	// Currency ISO-4217; "USD" in v1.
 	Currency *string `json:"currency,omitempty"`
 
+	// EstimateIsFloor True when `estimated_messages` is a LOWER BOUND rather than a total — the window holds at least that many and how many more was not counted. Gmail counts by paging message ids under a cap, so a large mailbox hits it; Graph answers an exact `$count` and never does. A client MUST qualify the number when this is true ("at least 20,000"), because a floor shown as a count is short by multiples and a reader has no way to tell which kind they are looking at — and this is the number they are consenting to. Absent means the count is exact. It is NOT a reason to refuse: the scope being consented to is the mailbox and the period, and the count is supporting detail.
+	EstimateIsFloor *bool `json:"estimate_is_floor,omitempty"`
+
 	// EstimateQuality observed = priced from this workspace's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
 	EstimateQuality *BackfillPreviewEstimateQuality `json:"estimate_quality,omitempty"`
 
@@ -20716,7 +20719,7 @@ type BackfillPreview struct {
 	// EstimatedCostMinor USD minor units, estimated from observed ai_call history priced per served model at current ai_model_rate; absent when no rate applies (ADR-0068).
 	EstimatedCostMinor *int `json:"estimated_cost_minor,omitempty"`
 
-	// EstimatedMessages Provider-side message count for the window (Gmail resultSizeEstimate / Graph $count).
+	// EstimatedMessages Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number.
 	EstimatedMessages int                   `json:"estimated_messages"`
 	Window            BackfillPreviewWindow `json:"window"`
 }
@@ -20748,6 +20751,9 @@ type BackfillStatus struct {
 		MessagesScanned  *int `json:"messages_scanned,omitempty"`
 		Skipped          *int `json:"skipped,omitempty"`
 	} `json:"counts,omitempty"`
+
+	// EstimateIsFloor True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read.
+	EstimateIsFloor *bool `json:"estimate_is_floor,omitempty"`
 
 	// EstimatedMessages The previewed count the user consented to — the progress fraction's denominator.
 	EstimatedMessages *int `json:"estimated_messages,omitempty"`

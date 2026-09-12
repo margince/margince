@@ -60,7 +60,10 @@ type backfillFakeConnector struct {
 	messages    int
 	pageSize    int
 	estimateErr error
-	pageErr     error
+	// estimateFloor makes the fake answer the way Gmail does on a mailbox
+	// past the scan cap: the count is a bound, not a total.
+	estimateFloor bool
+	pageErr       error
 }
 
 func (f *backfillFakeConnector) Descriptor() connector.Descriptor {
@@ -86,11 +89,11 @@ func (f *backfillFakeConnector) Normalize(context.Context, connector.RawRecord) 
 
 func (f *backfillFakeConnector) HealthCheck(context.Context, connector.Auth) error { return nil }
 
-func (f *backfillFakeConnector) EstimateBackfill(context.Context, connector.Auth, time.Time) (int, error) {
+func (f *backfillFakeConnector) EstimateBackfill(context.Context, connector.Auth, time.Time) (connector.BackfillEstimate, error) {
 	if f.estimateErr != nil {
-		return 0, f.estimateErr
+		return connector.BackfillEstimate{}, f.estimateErr
 	}
-	return f.messages, nil
+	return connector.BackfillEstimate{Messages: f.messages, Floor: f.estimateFloor}, nil
 }
 
 func (f *backfillFakeConnector) BackfillPage(_ context.Context, _ connector.Auth, _ time.Time, pageToken string, _ connector.Sink) (connector.BackfillPageResult, error) {
@@ -258,6 +261,53 @@ func (f faultyEstimator) EstimateBackfill(context.Context, string, ids.UserID, i
 // all without first resolving the connection row setupBackfillWire wrote to the
 // migrated Postgres, so the fault path genuinely traverses that path. The count
 // itself comes from the fake connector, not the database.
+// A capped count is a FLOOR, and the wire has to say so — the client cannot
+// tell the two kinds of number apart by looking, and it is the number the
+// mailbox owner is consenting to. It has to SURVIVE the start too: the progress
+// denominator is read back long after the preview that produced it, and a bar
+// dividing by a bound runs past its own end.
+func TestAFlooredEstimateSaysSoOnThePreviewAndOnTheRun(t *testing.T) {
+	b := setupBackfillWire(t)
+	b.gmail.estimateFloor = true
+
+	var preview crmcontracts.BackfillPreview
+	code, _ := b.do(b.human, t, func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+	}, `{"window":"6m"}`, &preview)
+	if code != http.StatusOK {
+		t.Fatalf("preview = %d, want 200", code)
+	}
+	if preview.EstimateIsFloor == nil || !*preview.EstimateIsFloor {
+		t.Fatalf("a capped count came back as an exact one (%v), so a client would print it as a total",
+			preview.EstimateIsFloor)
+	}
+
+	var started crmcontracts.BackfillStatus
+	code, _ = b.do(b.human, t, func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.StartConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+	}, `{"window":"6m"}`, &started)
+	if code != http.StatusAccepted && code != http.StatusOK {
+		t.Fatalf("start = %d, want the run to be accepted", code)
+	}
+	if started.EstimateIsFloor == nil || !*started.EstimateIsFloor {
+		t.Fatalf("the run forgot that its denominator was a bound (%v)", started.EstimateIsFloor)
+	}
+
+	// And an EXACT count says nothing, which is the contract's own reading of
+	// absent — a field sent false on every ordinary preview would make the
+	// distinction invisible again by being always present.
+	b.gmail.estimateFloor = false
+	var exact crmcontracts.BackfillPreview
+	if code, _ := b.do(b.human, t, func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+	}, `{"window":"12m"}`, &exact); code != http.StatusOK {
+		t.Fatalf("preview of an exactly counted window = %d, want 200", code)
+	}
+	if exact.EstimateIsFloor != nil {
+		t.Errorf("an exact count carried estimate_is_floor = %v, want it absent", *exact.EstimateIsFloor)
+	}
+}
+
 func TestBackfillPreviewDegradesOnEstimatorFault(t *testing.T) {
 	b := setupBackfillWire(t)
 	var logbuf bytes.Buffer
@@ -773,7 +823,7 @@ func TestTheNightlyReconcileRestoresAPagerAndDoesNotDoubleOne(t *testing.T) {
 // row live with no pager — the state a lost attempt produces.
 func strandedBackfill(t *testing.T, b *backfillWireEnv) ids.UUID {
 	t.Helper()
-	run, err := b.registry.StartBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1), 6, 25,
+	run, err := b.registry.StartBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1), 6, connector.BackfillEstimate{Messages: 25},
 		func(context.Context, pgx.Tx, ids.UUID) error { return nil })
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)

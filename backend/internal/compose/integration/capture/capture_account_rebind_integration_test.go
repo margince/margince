@@ -65,7 +65,7 @@ func startImportReconnectingMidPage(t *testing.T, e *integration.SearchEnv, acco
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth(account)); err != nil {
 		t.Fatalf("connecting %s: %v", account, err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, 25, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -257,7 +257,7 @@ func TestANewAccountMayImportANarrowerWindowThanTheOldOne(t *testing.T) {
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 
 	connectAndSync(t, registry, e, "first@example.com")
-	wide, err := registry.StartBackfill(grantCtx, "gmail", rep, 12, 5, enqueueNothing)
+	wide, err := registry.StartBackfill(grantCtx, "gmail", rep, 12, connector.BackfillEstimate{Messages: 5}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("the first account's twelve-month import: %v", err)
 	}
@@ -274,7 +274,7 @@ func TestANewAccountMayImportANarrowerWindowThanTheOldOne(t *testing.T) {
 	// imported. The second mailbox has imported nothing, so there is nothing to
 	// narrow — refusing here would leave the human with no way to import it at
 	// all short of importing a year of a mailbox they just connected.
-	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 3, 5, enqueueNothing); err != nil {
+	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 3, connector.BackfillEstimate{Messages: 5}, enqueueNothing); err != nil {
 		if errors.Is(err, capturemod.ErrWindowNarrowing) {
 			t.Fatal("the new account inherited the previous account's import window")
 		}

@@ -17318,8 +17318,10 @@ export interface components {
         BackfillPreview: {
             /** @enum {string} */
             window: "none" | "3m" | "6m" | "12m" | "24m" | "60m";
-            /** @description Provider-side message count for the window (Gmail resultSizeEstimate / Graph $count). */
+            /** @description Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number. */
             estimated_messages: number;
+            /** @description True when `estimated_messages` is a LOWER BOUND rather than a total — the window holds at least that many and how many more was not counted. Gmail counts by paging message ids under a cap, so a large mailbox hits it; Graph answers an exact `$count` and never does. A client MUST qualify the number when this is true ("at least 20,000"), because a floor shown as a count is short by multiples and a reader has no way to tell which kind they are looking at — and this is the number they are consenting to. Absent means the count is exact. It is NOT a reason to refuse: the scope being consented to is the mailbox and the period, and the count is supporting detail. */
+            estimate_is_floor?: boolean;
             /** @description The estimator's input-anchored token figure across classify+enrich+embeddings for that count; absent on estimator fault (ADR-0068). */
             estimated_ai_tokens?: number;
             /** @description USD minor units, estimated from observed ai_call history priced per served model at current ai_model_rate; absent when no rate applies (ADR-0068). */
@@ -17351,6 +17353,8 @@ export interface components {
             window?: "3m" | "6m" | "12m" | "24m" | "60m" | null;
             /** @description The previewed count the user consented to — the progress fraction's denominator. */
             estimated_messages?: number | null;
+            /** @description True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read. */
+            estimate_is_floor?: boolean;
             counts?: {
                 messages_scanned?: number;
                 captured?: number;

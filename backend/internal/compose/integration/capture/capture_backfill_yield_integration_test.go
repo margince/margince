@@ -81,8 +81,8 @@ func (m *mailPageConnector) Normalize(context.Context, connector.RawRecord) ([]c
 
 func (m *mailPageConnector) HealthCheck(context.Context, connector.Auth) error { return nil }
 
-func (m *mailPageConnector) EstimateBackfill(context.Context, connector.Auth, time.Time) (int, error) {
-	return len(m.raws), nil
+func (m *mailPageConnector) EstimateBackfill(context.Context, connector.Auth, time.Time) (connector.BackfillEstimate, error) {
+	return connector.BackfillEstimate{Messages: len(m.raws)}, nil
 }
 
 func (m *mailPageConnector) BackfillPage(ctx context.Context, _ connector.Auth, _ time.Time, _ string, sink connector.Sink) (connector.BackfillPageResult, error) {
@@ -206,7 +206,7 @@ func TestBackfillCountsOnlyTheCounterpartiesItsOwnPagesCreated(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 3, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 3}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -275,7 +275,7 @@ func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 2, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -382,7 +382,7 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 2, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -449,7 +449,7 @@ func TestBackfillYieldsSurviveACancelUnderTheRunningPage(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 2, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -500,7 +500,7 @@ func TestBackfillYieldsAreCreditedOnceAtTheRetryCeiling(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 2, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -582,7 +582,7 @@ func TestTheReachIsACountRatherThanAnAccumulation(t *testing.T) {
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, 3, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 3}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -658,7 +658,7 @@ func TestALostCountIsRecoveredByTheNextCreation(t *testing.T) {
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	started, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, 10, enqueueNothing)
+	started, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 10}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -788,7 +788,7 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1),
-		6, counterparties, enqueueNothing)
+		6, connector.BackfillEstimate{Messages: counterparties}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -859,7 +859,7 @@ func TestACountTheLedgerCannotSeeIsKept(t *testing.T) {
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	started, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, 10, enqueueNothing)
+	started, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 10}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}

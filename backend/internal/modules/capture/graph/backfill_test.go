@@ -21,8 +21,13 @@ func TestEstimateBackfillAsksProviderForTheWindow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
-	if got != 4200 {
-		t.Errorf("estimate = %d, want the provider's count 4200", got)
+	if got.Messages != 4200 {
+		t.Errorf("estimate = %d, want the provider's count 4200", got.Messages)
+	}
+	// Never a floor here: Graph answers an exact $count, so there is no cap to
+	// bind and nothing for a surface to qualify.
+	if got.Floor {
+		t.Error("an exact $count was reported as a floor, which would make the preview hedge a number it knows")
 	}
 	if !api.estimateAfter.Equal(after) {
 		t.Errorf("estimate window boundary = %v, want %v", api.estimateAfter, after)

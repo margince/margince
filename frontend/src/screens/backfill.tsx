@@ -1,19 +1,14 @@
-import { Building2, CheckCircle2, History, Mail, Users } from "lucide-react";
+import { History } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
-import { Badge, Button } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
-import { CountUp } from "../design-system/countup";
-import {
-  formatDuration,
-  formatMoney,
-  formatNumber,
-  formatPercent,
-} from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { formatMoney, formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
+import { RunView } from "./backfillrunview";
 import { ProblemError, problemCode, problemMessageOf } from "./common";
 import "./backfill.css";
 
@@ -50,13 +45,11 @@ const WINDOWS: { value: ImportWindow; label: MessageKey }[] = [
   { value: "60m", label: "backfill.window60m" },
 ];
 
-// A run whose updated_at hasn't moved in this long is honestly "stuck", not
-// "in progress" — the contract's own doc comment on BackfillStatus.updated_at
-// calls this out ("a killed worker leaves this honest"). Long enough that
-// ordinary poll jitter or a slow provider batch never false-positives, short
-// enough that a genuinely dead worker surfaces within a couple of polls of
-// the threshold rather than staying "live" indefinitely.
-const STALE_AFTER_MS = 3 * 60_000;
+// windowLabel is the picker's own wording for a window, reused by the scope
+// sentence so the two cannot drift into two names for one period.
+function windowLabel(window: ImportWindow): MessageKey {
+  return WINDOWS.find((w) => w.value === window)?.label ?? "backfill.window3m";
+}
 
 // The contract pins v1 estimates to USD minor units and leaves `currency`
 // optional, so USD is the documented fallback rather than a guess. Named
@@ -90,24 +83,6 @@ function classifyBackfillErrors(
       previewCode === "connector_unsupported" ||
       startCode === "connector_unsupported",
     narrowing: startCode === "window_narrowing",
-  };
-}
-
-// A live run whose updated_at hasn't moved past STALE_AFTER_MS is honestly
-// "stuck", not "in progress" — the contract's own doc comment on
-// BackfillStatus.updated_at calls this out ("a killed worker leaves this
-// honest"). A done/error/cancelled run's updated_at is its finish stamp, not
-// a staleness signal, so this only applies to a live one.
-function staleness(
-  run: BackfillStatus,
-  live: boolean,
-): { stale: boolean; agoMs: number } {
-  const agoMs = run.updated_at
-    ? Math.max(0, Date.now() - new Date(run.updated_at).getTime())
-    : 0;
-  return {
-    stale: live && run.updated_at != null && agoMs > STALE_AFTER_MS,
-    agoMs,
   };
 }
 
@@ -255,6 +230,7 @@ function BackfillSetup({
       )}
       <EstimateCard
         preview={previewData}
+        window={window}
         counting={previewPending && !previewData}
         starting={startPending}
         onStart={onStart}
@@ -288,11 +264,14 @@ function BackfillSetup({
 // the estimator refused.
 function EstimateCard({
   preview,
+  window,
   counting,
   starting,
   onStart,
 }: {
   preview: components["schemas"]["BackfillPreview"] | undefined;
+  /** The period the reader picked — the scope the card leads with. */
+  window: ImportWindow;
   /** No estimate for this window yet and one is on its way. A refused estimate
    *  is neither: its sentence is already above the card. */
   counting: boolean;
@@ -300,15 +279,35 @@ function EstimateCard({
   onStart: () => void;
 }) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const costMinor = preview?.estimated_cost_minor ?? 0;
   return (
     <div className="backfill-estimate">
       {counting && <p className="t-caption">{t("backfill.previewLoading")}</p>}
-      {preview && (
-        <p>
-          {t("backfill.estimateMessages")}{" "}
-          <strong>~{formatNumber(preview.estimated_messages, locale)}</strong>
+      {/* THE WINDOW FIRST. What the mailbox owner consents to is a period of their own
+          mailbox; the count describes that period and is not the thing being
+          agreed to. It also degrades better — the scope sentence is true while
+          the count is still arriving, or when it never does. */}
+      <p>{t("backfill.scopeIs", { window: t(windowLabel(window)) })}</p>
+      {/* The count is its own line and its own condition. `estimated_messages`
+          is required on the wire, so an answer without it is a server too old
+          to send one or a response nothing routed — and the scope sentence
+          above is still true in both cases, which is the whole reason the
+          window leads. Rendering a count nobody produced is how `~undefined`
+          reaches a consent surface. */}
+      {typeof preview?.estimated_messages === "number" && (
+        <p className="t-caption">
+          {/* Selected on the RAW count and printed with the formatted one: a
+              mailbox with a single message in the window is a real answer, and
+              "1 messages" is the sentence a reader trusts least. */}
+          {plural(
+            preview.estimate_is_floor
+              ? "backfill.estimateMessagesAtLeast"
+              : "backfill.estimateMessagesExact",
+            preview.estimated_messages,
+            { count: formatNumber(preview.estimated_messages, locale) },
+          )}
         </p>
       )}
       {preview && costMinor > 0 && (
@@ -332,253 +331,4 @@ function EstimateCard({
       </Button>
     </div>
   );
-}
-
-// The three headline figures of a capture run — captured mail and the two
-// record kinds it grows. Each is a live persisted-row count. While the run is
-// still reading, the figure is a `CountUp`: a number still being earned climbs
-// to where the poll put it instead of jumping there. Once the run has settled
-// it is the plain number, because a figure the server has finished with has
-// nothing left to count towards.
-const CAPTURE_STATS: {
-  key: "captured" | "contacts_created" | "companies_created";
-  label: MessageKey;
-  icon: typeof Mail;
-}[] = [
-  { key: "captured", label: "backfill.statEmails", icon: Mail },
-  { key: "contacts_created", label: "backfill.statContacts", icon: Users },
-  {
-    key: "companies_created",
-    label: "backfill.statCompanies",
-    icon: Building2,
-  },
-];
-
-function CaptureStat({
-  value,
-  label,
-  icon: Icon,
-  locale,
-  counting,
-}: {
-  value: number;
-  label: string;
-  icon: typeof Mail;
-  locale: Locale;
-  counting: boolean;
-}) {
-  return (
-    <div className="capture-stat">
-      <span className="capture-stat-glyph" aria-hidden>
-        <Icon />
-      </span>
-      <b className="capture-stat-value t-display">
-        {counting ? (
-          <CountUp value={value} locale={locale} />
-        ) : (
-          formatNumber(value, locale)
-        )}
-      </b>
-      <span className="capture-stat-label">{label}</span>
-    </div>
-  );
-}
-
-function RunView({
-  run,
-  cancelling,
-  cancelError,
-  onCancel,
-  onRestart,
-}: {
-  run: BackfillStatus;
-  cancelling: boolean;
-  cancelError: string | null;
-  onCancel: () => void;
-  // Put the window picker back in front of the reader. Offered on every run
-  // that has stopped, which is every state this view draws that is not live:
-  // stopping an import is a decision about this run, never about the mailbox.
-  onRestart: () => void;
-}) {
-  const t = useT();
-  const { locale } = useLocale();
-  const counts = run.counts;
-  const scanned = counts?.messages_scanned ?? 0;
-  const live = isLiveRun(run.state);
-  const done = run.state === "done";
-  const { stale, agoMs } = staleness(run, live);
-  // The card wears the AI family only while the machine is actually reading:
-  // indigo is a claim about who is doing the work, so a queued run that has
-  // not started and a stalled one that has stopped both stay on plain ground.
-  const reading = run.state === "running" && !stale;
-  // A percentage needs a denominator that is still true. The provider-side
-  // count is a FLOOR — Gmail's exact count is capped at a page budget, and a
-  // multi-year window reaches that cap far more often than a 12-month one —
-  // so a run can scan past its own estimate. Clamping to 100% there would
-  // show a full bar for an hour while the import kept going; the honest move
-  // is the absolute counts this screen already falls back to when there is no
-  // estimate at all, because at that moment there effectively is none. A run
-  // that is not moving forward does not get a bar that implies otherwise.
-  const denominator = run.estimated_messages ?? 0;
-  const fraction =
-    live && !stale && denominator > 0 && scanned <= denominator
-      ? scanned / denominator
-      : null;
-  const heroClass = ["capture-hero", done && "done", reading && "reading"]
-    .filter(Boolean)
-    .join(" ");
-
-  return (
-    <div className={heroClass}>
-      <RunHead state={run.state} reading={reading} />
-      <div className="capture-stats">
-        {CAPTURE_STATS.map((stat) => (
-          <CaptureStat
-            key={stat.key}
-            value={counts?.[stat.key] ?? 0}
-            label={t(stat.label)}
-            icon={stat.icon}
-            locale={locale}
-            counting={reading}
-          />
-        ))}
-      </div>
-      <RunProgress
-        scanned={scanned}
-        fraction={fraction}
-        staleForMs={stale ? agoMs : null}
-      />
-      {run.state === "error" && (
-        <p className="t-caption backfill-error">
-          {t("backfill.errorNote")}
-          {run.last_error_class ? ` (${run.last_error_class})` : ""}
-        </p>
-      )}
-      <div className="backfill-foot">
-        {live ? (
-          <Button small disabled={cancelling} onClick={onCancel}>
-            {t("backfill.cancel")}
-          </Button>
-        ) : (
-          <Button small onClick={onRestart}>
-            {t("backfill.restart")}
-          </Button>
-        )}
-      </div>
-      {live && cancelError && (
-        <p className="t-caption backfill-error">{cancelError}</p>
-      )}
-      {run.state === "cancelled" && (
-        <p className="t-caption">{t("backfill.cancelledNote")}</p>
-      )}
-    </div>
-  );
-}
-
-// The state's glyph on its disc, the title, and — only while the machine is
-// reading — the pill that says so in words, because the indigo the card wears
-// then is a claim about who is doing the work and colour is never the only
-// signal.
-function RunHead({
-  state,
-  reading,
-}: {
-  state: BackfillStatus["state"];
-  reading: boolean;
-}) {
-  const t = useT();
-  return (
-    <div className="capture-head" aria-live="polite">
-      <span className="capture-mark" aria-hidden>
-        {state === "done" ? (
-          <CheckCircle2 />
-        ) : (
-          <History className={reading ? "spin-slow" : ""} />
-        )}
-      </span>
-      <h3 className="backfill-h">{t(stateTitle(state))}</h3>
-      {reading && (
-        <span className="capture-head-tag">
-          <Badge tone="ai">{t("backfill.readingBadge")}</Badge>
-        </span>
-      )}
-    </div>
-  );
-}
-
-// Either the bar or the staleness note over the scanned line, never both: a run
-// that is not moving forward does not get to keep the bar that implies
-// otherwise. The percentage rides the line only when the bar is drawn — the two
-// state one number twice, in a shape and in words.
-function RunProgress({
-  scanned,
-  fraction,
-  staleForMs,
-}: {
-  scanned: number;
-  fraction: number | null;
-  // How long a live run has gone without moving, or null while it moves.
-  staleForMs: number | null;
-}) {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <>
-      {staleForMs !== null && (
-        <p className="t-caption backfill-stale">
-          {t("backfill.staleUpdated", {
-            duration: formatDuration(staleForMs, locale),
-          })}
-        </p>
-      )}
-      {fraction !== null && <RunBar fraction={fraction} />}
-      <p className="t-caption capture-scanned" aria-live="polite">
-        <span>
-          {t("backfill.countScanned")} {formatNumber(scanned, locale)}
-        </span>
-        {fraction !== null && (
-          <span className="capture-pct">{formatPercent(fraction, locale)}</span>
-        )}
-      </p>
-    </>
-  );
-}
-
-// The bar draws the fraction the line under it states in words, and exposes
-// the same number to assistive tech through the progressbar role rather than
-// through a native `<progress>`, whose track and fill are the browser's colours
-// and the one thing on this card no token could reach.
-function RunBar({ fraction }: { fraction: number }) {
-  const t = useT();
-  const percent = Math.round(fraction * 100);
-  return (
-    <div
-      className="capture-bar"
-      role="progressbar"
-      aria-label={t("backfill.progressLabel")}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={percent}
-    >
-      <span
-        className="capture-bar-fill"
-        style={{ inlineSize: `${percent}%` }}
-      />
-    </div>
-  );
-}
-
-function stateTitle(state: BackfillStatus["state"]): MessageKey {
-  switch (state) {
-    case "queued":
-      return "backfill.queuedTitle";
-    case "running":
-      return "backfill.runningTitle";
-    case "error":
-      return "backfill.errorTitle";
-    case "cancelled":
-      return "backfill.cancelledTitle";
-    default:
-      return "backfill.doneTitle";
-  }
 }
