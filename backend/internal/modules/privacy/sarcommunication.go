@@ -28,7 +28,9 @@ import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 // subject's own history. A contact-keyed section would silently withhold the
 // earliest part of their record, which is the half they are least likely to
 // know about and most likely to be asking after.
-func sarCommunicationSections(pkg *SARPackage, leads, identities []ids.UUID) []sarSection {
+func sarCommunicationSections(
+	pkg *SARPackage, emails []string, leads, identities []ids.UUID,
+) []sarSection {
 	return []sarSection{
 		// EVERY IDENTITY here too, for the reason the bases and suppressions
 		// below take it: a decision taken about a record that was later merged
@@ -62,11 +64,18 @@ func sarCommunicationSections(pkg *SARPackage, leads, identities []ids.UUID) []s
 			[]any{identities, leads},
 		},
 		{
+			// BY ADDRESS AS WELL, because a machine-written stop names no
+			// subject. The hard bounce consent/bouncesuppress.go records
+			// deliberately carries no contact_id — a contact-scoped row would
+			// refuse every address that record has — so a query keyed on the
+			// subject's ids alone tells them nothing about an address of theirs
+			// this installation has stopped writing to.
 			&pkg.CommunicationSuppression, `SELECT kind, source, address, recorded_at, revoked_at,
 		          decided_by_level
 		   FROM communication_suppression
-		   WHERE contact_id = ANY($1) OR lead_id = ANY($2)`,
-			[]any{identities, leads},
+		   WHERE contact_id = ANY($1) OR lead_id = ANY($2)
+		      OR lower(address) = ANY($3)`,
+			[]any{identities, leads, lowerAll(emails)},
 		},
 		// REACHED THROUGH THE REVIEW, because an instruction names no subject
 		// directly: it answers a refusal, and the refusal is what named the

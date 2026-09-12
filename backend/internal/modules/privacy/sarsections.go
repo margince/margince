@@ -24,7 +24,7 @@ func sarSections(pkg *SARPackage, contactID ids.ContactID, emails []string, lead
 	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
-	sections = append(sections, sarCommunicationSections(pkg, leads, identities)...)
+	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
 	return append(sections, sarProvenanceSections(pkg)...)
 }
 

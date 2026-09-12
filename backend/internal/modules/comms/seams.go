@@ -101,6 +101,45 @@ type ConsentGate interface {
 	AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitRequest) (commsauthz.TransmitTicket, error)
 }
 
+// BounceObserver is told when a delivery report says an address is permanently
+// gone, so the module that owns communication policy can stop writing to it.
+//
+// Declared HERE, by the consumer, and implemented by consent: comms owns the
+// send ledger and knows a message died, and it must not know what a
+// suppression is. The edge is injected in compose/, like every other
+// cross-module edge.
+//
+// It runs in the SAME transaction as the bounce mark, so the stop and the
+// failure that earned it commit together. A stop written against a report that
+// rolled back would refuse mail on the strength of a failure that never
+// happened, and a bounce marked without its stop would leave the address dead
+// on the record and live to the send path — which is the state this whole seam
+// exists to end.
+//
+// An error FAILS the bounce recording. That is deliberate and is the safe
+// direction: the alternative is a marked bounce whose stop silently did not
+// land, and the report is redelivered by the provider, so failing costs a
+// retry while swallowing costs a dead address nobody stops writing to.
+type BounceObserver interface {
+	HardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) error
+}
+
+// HardBounceFact is one permanently failed delivery, as the observer needs it.
+//
+// It carries the address rather than the whole report: the reason text is
+// external input already stored on the comms_outbound row, and handing it
+// across the seam would invite a second copy of unbounded remote text into
+// another module's tables.
+// It carries NO contact id, deliberately. Resolving an address to the record
+// that owns it is a question about contacts, and the observer's own module
+// already reads contact_email to answer questions like it — asking comms to do
+// it would put a cross-module read in the ledger that has no other reason to
+// know records exist.
+type HardBounceFact struct {
+	Address    string
+	DeliveryID ids.UUID
+}
+
 // SeatAuthority answers whether the human whose mailbox is about to transmit
 // is still a live, mutation-capable seat, and if not, why. Deactivating a
 // user revokes their sessions and passports, but a delivery staged before

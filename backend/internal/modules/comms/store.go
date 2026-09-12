@@ -69,17 +69,39 @@ type Store struct {
 	// under an identity that exists nowhere on the wire, and duplicates it on
 	// the timeline, silently.
 	identity MessageIdentityReconciler
+	// bounce is told when a delivery dies permanently, so the module owning
+	// communication policy can stop writing to the address. An OPTION rather
+	// than a required parameter, unlike identity beside it: a store without one
+	// behaves exactly as it did before the seam existed, which is what keeps
+	// the dozen test stores and the read-only roles from having to know that
+	// suppressions exist. The production wiring is in compose/, and a gate
+	// holds that it is present there.
+	bounce BounceObserver
+}
+
+// StoreOption adjusts a store after construction.
+type StoreOption func(*Store)
+
+// WithBounceObserver hands the store the seam that stops a dead address.
+func WithBounceObserver(observer BounceObserver) StoreOption {
+	return func(s *Store) { s.bounce = observer }
 }
 
 // NewStore builds the store. The clock is injected so age arithmetic is asserted
 // by advancing time, never by sleeping.
 // NewStore opens this module's store on a handle already bound to the
 // workspace it serves.
-func NewStore(db *database.DB, now func() time.Time, identity MessageIdentityReconciler) *Store {
+func NewStore(
+	db *database.DB, now func() time.Time, identity MessageIdentityReconciler, opts ...StoreOption,
+) *Store {
 	if now == nil {
 		now = time.Now
 	}
-	return &Store{db: db, now: now, identity: identity}
+	store := &Store{db: db, now: now, identity: identity}
+	for _, opt := range opts {
+		opt(store)
+	}
+	return store
 }
 
 // StageInput is one message staged for transmission, written in the caller's

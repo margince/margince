@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -87,7 +88,21 @@ func (s *Store) RecordBounce(ctx context.Context, report connector.BounceReport)
 			report.MessageID, s.now().UTC(), string(report.Kind), reason,
 			actor.UserID, report.Recipient).Scan(&id, &activityID)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
+			// Nothing to mark. Usually a report about mail this installation
+			// never sent, or a redelivery of one already marked.
+			//
+			// It is ALSO how a SECOND RECIPIENT of the same message arrives: the
+			// row carries one bounced_at, so once the first recipient's report
+			// has set it, the second matches nothing above. Their address is
+			// just as dead, and tying the stop to whether the ledger still had a
+			// mark to set would leave the second dead mailbox live.
+			//
+			// So the stop is still considered — but only behind the SAME THREE
+			// CHECKS the mark is, re-asked without the bounced_at clause. Every
+			// field on a report is attacker-writable, and a fallback that
+			// skipped them would let anyone post a report-shaped message naming
+			// any address and have this installation stop writing to it.
+			return s.stopVerifiedHard(ctx, tx, report, actor.UserID)
 		}
 		if err != nil {
 			return fmt.Errorf("comms: recording the bounce: %w", err)
@@ -101,13 +116,90 @@ func (s *Store) RecordBounce(ctx context.Context, report connector.BounceReport)
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, activityID.UUID, crmcontracts.PublicEventCommsDeliveryBounced{
+		if err := storekit.EmitEvent(ctx, tx, auditID, activityID.UUID, crmcontracts.PublicEventCommsDeliveryBounced{
 			MessageId: report.MessageID,
 			Kind:      crmcontracts.PublicEventCommsDeliveryBouncedKind(report.Kind),
 			Reason:    reasonPtr(reason),
-		})
+		}); err != nil {
+			return err
+		}
+		// ONLY A HARD BOUNCE stops the address. A soft one is a full mailbox or
+		// a greylisting server, and the next message may well arrive — stopping
+		// on one would silence a live address because its owner went on holiday
+		// with a full inbox.
+		//
+		// In the SAME transaction as the mark, so the stop and the failure that
+		// earned it commit together, and the error is returned rather than
+		// swallowed: a marked bounce whose stop silently did not land leaves the
+		// address dead on the record and live to the send path, which is exactly
+		// the state this exists to end. The provider redelivers reports, so
+		// failing costs a retry.
+		return s.stopIfHard(ctx, tx, report, id)
 	})
 	return marked, err
+}
+
+// stopVerifiedHard stops an address whose report named a message this
+// installation really sent, when the ledger had no mark left to set.
+//
+// It re-asks the two checks that make a report trustworthy — the message is a
+// row this store sent to the mailbox owner who is reporting, and the address is
+// one that message actually went to — and drops only `bounced_at IS NULL`,
+// which is the clause that makes a second recipient's report look like nothing.
+// Without the checks this would be an open door: anyone can post a
+// report-shaped message into a captured mailbox.
+func (s *Store) stopVerifiedHard(
+	ctx context.Context, tx pgx.Tx, report connector.BounceReport, owner ids.UUID,
+) error {
+	if s.bounce == nil || report.Kind != connector.BounceHard {
+		return nil
+	}
+	var deliveryID ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM comms_outbound
+		 WHERE message_id = $1 AND status IN ('pending', 'sent')
+		   AND user_id = $2
+		   AND EXISTS (
+			SELECT 1 FROM jsonb_array_elements_text(
+				recipients || coalesce(cc, '[]'::jsonb) || coalesce(bcc, '[]'::jsonb)
+			) AS went(addr) WHERE lower(went.addr) = lower($3))
+		 LIMIT 1`, report.MessageID, owner, report.Recipient).Scan(&deliveryID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// The report names no message this installation sent to this address.
+		// Nothing is stopped, which is the same silence an unverifiable report
+		// has always earned.
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("comms: verifying the bounce that named no markable row: %w", err)
+	}
+	return s.stopIfHard(ctx, tx, report, deliveryID)
+}
+
+// stopIfHard tells the observer that this address is permanently gone.
+//
+// ONLY A HARD BOUNCE stops an address. A soft one is a full mailbox or a
+// greylisting server, and the next message may well arrive — stopping on one
+// would silence a live address because its owner went away with a full inbox.
+//
+// Reached from BOTH arms of RecordBounce, which is the point. The marked arm is
+// the ordinary case; the unmarked arm is a second recipient of a message whose
+// row is already marked, or a report for a message this ledger cannot mark. The
+// address is dead either way, and tying the stop to whether the LEDGER had a
+// row left to mark would leave the second dead mailbox live.
+//
+// Both callers hand it a real delivery id: the marked arm the row it just
+// marked, the unmarked arm the row stopVerifiedHard found and verified.
+func (s *Store) stopIfHard(
+	ctx context.Context, tx pgx.Tx, report connector.BounceReport, deliveryID ids.UUID,
+) error {
+	if s.bounce == nil || report.Kind != connector.BounceHard {
+		return nil
+	}
+	return s.bounce.HardBounceTx(ctx, tx, HardBounceFact{
+		Address:    strings.ToLower(report.Recipient),
+		DeliveryID: deliveryID,
+	})
 }
 
 // reasonPtr keeps an empty reason ABSENT from the payload rather than

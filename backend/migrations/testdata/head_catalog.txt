@@ -1865,6 +1865,7 @@ public.communication_suppression.revoked_at timestamp with time zone gen=- def=-
 public.communication_suppression.source text NOT NULL gen=- def=-
 public.communication_suppression_live_address CREATE INDEX communication_suppression_live_address ON public.communication_suppression USING btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_live_contact CREATE INDEX communication_suppression_live_contact ON public.communication_suppression USING btree (contact_id) WHERE ((contact_id IS NOT NULL) AND (revoked_at IS NULL))
+public.communication_suppression_one_live_bounce CREATE UNIQUE INDEX communication_suppression_one_live_bounce ON public.communication_suppression USING btree (lower(address)) WHERE ((kind = 'hard_bounce'::text) AND (address IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_pkey CREATE UNIQUE INDEX communication_suppression_pkey ON public.communication_suppression USING btree (id)
 public.company acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company.address_city text gen=- def=-
