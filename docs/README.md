@@ -148,6 +148,8 @@ budget rather than keeping its own list of which pages are generated.
 - [write-backbone.md](explanation/write-backbone.md) — storekit, `audit_log`, the outbox, and who consumes the events.
 - [composition-layer.md](explanation/composition-layer.md) — how `internal/compose/` boots and where every cross-module edge is wired.
 - [job-fleet.md](explanation/job-fleet.md) — the job contract: declaration before code, dispatchers vs workspace workers, why args name rows, and the failure vocabulary.
+- [prompt-shape.md](explanation/prompt-shape.md) — how a prompt is built: the per-call data fence, why prompt caching cannot help us, what the repeated instructions cost, and the test for whether a task asks about one item per call or several.
+- [ai-prompts.md](reference/ai-prompts.md) — **generated**: every instruction this build sends a model, read off real requests, with how many untrusted spans each call carried.
 - [raw-capture-part-slimming.md](explanation/raw-capture-part-slimming.md) — why the stored original keeps its attachments by reference: proof before removal, why the strip is by byte offset rather than by parsing, and the guarantee it narrows.
 - [custom-fields.md](explanation/custom-fields.md) — the one runtime `ALTER TABLE` chokepoint: the closed type/object sets, the privilege boundary, and the `fieldcatalog` seam.
 
