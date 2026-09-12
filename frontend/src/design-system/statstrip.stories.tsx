@@ -173,7 +173,7 @@ export const SlotsWithDoors: Story = {
       <StatCard
         label="Decisions waiting"
         value="8+"
-        detail="somebody is blocked until you answer"
+        detail="waiting on your answer"
         density="compact"
         onOpen={() => {}}
       />
@@ -236,7 +236,7 @@ export const CompactFoldsToRows: Story = {
       <StatCard
         label="Decisions waiting"
         value="4+"
-        detail="somebody is blocked until you answer"
+        detail="waiting on your answer"
         density="compact"
         onOpen={() => {}}
       />
