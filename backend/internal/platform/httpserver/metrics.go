@@ -258,7 +258,7 @@ var poolCounters = []poolCounter{
 	},
 	{
 		"EmptyAcquireCount", "margince_pgxpool_acquire_empty_total",
-		"Acquires that found no free connection and had to wait. Its rate is the waiting line.",
+		"Acquires that found no free connection, waited, and GOT one. Its rate is the waiting line. A caller that gave up while queued is not here — it is in acquire_canceled_total.",
 		countOf((*pgxpool.Stat).EmptyAcquireCount),
 	},
 	{
@@ -268,12 +268,12 @@ var poolCounters = []poolCounter{
 	},
 	{
 		"AcquireDuration", "margince_pgxpool_acquire_seconds_total",
-		"Seconds spent inside acquire since process start, over every acquire.",
+		"Seconds spent inside acquire since process start, over every acquire that SUCCEEDED. A caller that gave up contributes none of its wait.",
 		secondsOf((*pgxpool.Stat).AcquireDuration),
 	},
 	{
 		"EmptyAcquireWaitTime", "margince_pgxpool_acquire_wait_seconds_total",
-		"Seconds spent WAITING for a connection, over the acquires that had to. Over acquire_empty_total, the mean wait of a caller that queued.",
+		"Seconds spent WAITING for a connection, over the acquires that had to and then got one. Over acquire_empty_total, the mean wait of a caller that queued AND WAS SERVED — the ones that gave up are counted nowhere in this series, so read it beside acquire_canceled_total or it reports the queue as shorter than it was.",
 		secondsOf((*pgxpool.Stat).EmptyAcquireWaitTime),
 	},
 	{

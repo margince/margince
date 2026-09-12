@@ -141,6 +141,16 @@ Operational endpoints (served next to `/v1`):
   interval a queue that formed and drained between two scrapes leaves no trace
   in them at all. The counters carry it into the next scrape regardless.
 
+  **The three wait series count acquires that SUCCEEDED.** pgx increments
+  `EmptyAcquireCount`, `EmptyAcquireWaitTime` and `AcquireDuration` when a
+  caller eventually gets a connection; one that gives up while queued — a
+  cancelled context, a request that went away — lands only in
+  `acquire_canceled_total` and contributes none of its wait. That is the
+  opposite of an academic distinction during the incident these exist for: the
+  callers who gave up are the requests that FAILED, so a mean wait read alone
+  averages over the survivors and reports a shorter queue than the one callers
+  actually stood in. Read the two together.
+
   The waiting line, and the mean wait of a caller that joined it:
 
   ```promql
@@ -150,10 +160,10 @@ Operational endpoints (served next to `/v1`):
     / rate(margince_pgxpool_acquire_empty_total[30m])
   ```
 
-  `acquire_seconds_total` is over EVERY acquire including the ones that waited
-  for nothing, so it measures what acquiring costs on average;
-  `acquire_wait_seconds_total` is over the ones that queued, and is the one that
-  answers how long anybody actually waited.
+  `acquire_seconds_total` is over every SUCCESSFUL acquire including the ones
+  that waited for nothing, so it measures what acquiring costs on average;
+  `acquire_wait_seconds_total` is over the ones that queued and were then
+  served, and is the one that answers how long anybody actually waited.
 - `GET /v1/admin/job-health` — the per-workspace read of the same job
   table, for an admin rather than a scrape. See
   [Reading the job surfaces](#reading-the-job-surfaces).
