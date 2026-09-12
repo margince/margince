@@ -56,7 +56,7 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/contacteditmergearchive.tsx DELETE /contacts/{id}",
   "screens/contactrail.tsx DELETE /relationships/{id}",
   "screens/relationships.tsx DELETE /relationships/{id}",
-  "screens/contractform.tsx PATCH /contracts/{id}",
+  "screens/contractwrites.ts PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",
   // The two FACT writes stay: CompanyFact carries no version on the wire,
   // so no caller can pin one. Its sibling, CompanyProfileField, now does — the

@@ -64,13 +64,12 @@ export function isTerminalContractStatus(status: Contract["status"]): boolean {
 
 function renewDraftOf(predecessor: Contract): ContractDraft {
   return {
-    // Title and basis are the two fields the successor is likeliest to keep,
-    // and both are required by the wire request — prefilled so renewing an
-    // unchanged agreement does not mean retyping what it was already called.
-    // Everything else the predecessor does NOT hand down: RenewContractRequest
-    // inherits only the counterparty (the server derives that), because a
-    // renewal is usually a fresh negotiation and an inherited amount or term
-    // would be a number nobody actually agreed to this time.
+    // Title and basis are the two the successor is likeliest to keep, and the
+    // wire requires both — prefilled so renewing an unchanged agreement does
+    // not mean retyping its own name. Nothing else is handed down: the request
+    // inherits only the counterparty, which the server derives, because a
+    // renewal is a fresh negotiation and an inherited amount, notice period or
+    // payment term would be a number nobody agreed to this time.
     title: predecessor.title,
     contractNumber: "",
     valueMinor: 0,
@@ -80,6 +79,7 @@ function renewDraftOf(predecessor: Contract): ContractDraft {
     endsOn: "",
     renewalOn: "",
     noticePeriodDays: "",
+    paymentTermDays: "",
     signedOn: "",
   };
 }

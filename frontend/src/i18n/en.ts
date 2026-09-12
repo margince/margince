@@ -1324,6 +1324,9 @@ export const en = {
   "contracts.form.noticeDays": "Notice period (days)",
   "contracts.form.noticeDaysHint":
     "How much notice a cancellation needs. The renewal warning fires before this deadline, not before the renewal date.",
+  "contracts.form.paymentTerms": "Payment terms (days)",
+  "contracts.form.paymentTermsHint":
+    "How long the customer has to pay. 0 means due on receipt; leave blank if nobody has agreed terms.",
   "contracts.form.signedOn": "Signed",
   "contracts.form.signedOnHint":
     "Only when a human knows it was signed \u2014 never taken from a deal's close date.",

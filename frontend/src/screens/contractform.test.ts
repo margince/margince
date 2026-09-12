@@ -11,6 +11,7 @@ const DRAFT = {
   endsOn: "",
   renewalOn: "",
   noticePeriodDays: "",
+  paymentTermDays: "",
   signedOn: "",
 };
 
