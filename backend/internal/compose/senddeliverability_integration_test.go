@@ -67,7 +67,7 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 	adapter := newCommsAdapter(e.Pool, nil, SendPath{
 		PublicBaseURL: toolSurfaceBaseURL,
 		Delivery:      stager,
-	})
+	}, nativeSoR)
 
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 	if _, err := adapter.SendEmail(ctx, anchorID, agents.SendEmailArgs{

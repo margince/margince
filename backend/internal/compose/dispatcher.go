@@ -107,6 +107,17 @@ var _ datasource.SystemOfRecordProvider = (*Dispatcher)(nil)
 // e.g. a workflow starter running outside any one tenant's request) has
 // no per-workspace mode to look up either — it honestly answers false
 // (native), the mode every workspace starts in.
+// IsExternalSoR answers whether this workspace's records are held outside the
+// installation, as the externalSoR seam comms.go takes.
+//
+// Exported for that seam alone, and it is the SAME cached read every dispatched
+// verb already makes — the point of passing it rather than letting a caller
+// query the mode itself, which would be a second spelling of the question and
+// free to answer differently.
+func (d *Dispatcher) IsExternalSoR(ctx context.Context) (bool, error) {
+	return d.isOverlay(ctx)
+}
+
 func (d *Dispatcher) isOverlay(ctx context.Context) (bool, error) {
 	wsID, ok := principal.WorkspaceID(ctx)
 	if !ok {

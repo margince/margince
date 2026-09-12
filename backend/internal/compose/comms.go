@@ -59,6 +59,11 @@ type commsAdapter struct {
 	// The activities store excludes participants with a seat; a colleague
 	// without one is only recognisable by domain, and that set is capture's.
 	own *capture.OwnDomainStore
+	// externalSoR answers whether this workspace's records have moved to an
+	// external system of record. See comms_soraut.go: refusing at staging is
+	// not enough on its own, because the mode can flip while an approval waits
+	// in somebody's inbox.
+	externalSoR externalSoR
 }
 
 var _ agents.Comms = commsAdapter{}
@@ -215,6 +220,13 @@ func (c commsAdapter) SendAccountEmail(
 func (c commsAdapter) send(
 	ctx context.Context, origin activities.SendOrigin, in agents.SendEmailArgs,
 ) (agents.SendEmailResult, error) {
+	// FIRST, before the message is composed or a consent decision is recorded:
+	// a record this installation no longer holds is not one to file a send
+	// against, and the staging gate that already said so ran before the
+	// approval waited in somebody's inbox (comms_soraut.go).
+	if err := c.refuseIfHeldElsewhere(ctx, "send mail"); err != nil {
+		return agents.SendEmailResult{}, err
+	}
 	sched, err := agentSchedule(in)
 	if err != nil {
 		return agents.SendEmailResult{}, err
@@ -275,6 +287,9 @@ func agentSchedule(in agents.SendEmailArgs) (*activities.SendSchedule, error) {
 // resolution and the RBAC check cannot differ by transport. The recipient is
 // absent from the arguments by design: the store resolves it from the anchor.
 func (c commsAdapter) SendMessage(ctx context.Context, anchor ids.UUID, in agents.SendMessageArgs) (agents.SendMessageResult, error) {
+	if err := c.refuseIfHeldElsewhere(ctx, "send a message"); err != nil {
+		return agents.SendMessageResult{}, err
+	}
 	input, err := activities.ApplyChannelContext(activities.SendMessageInput{
 		Body:           in.Body,
 		ConsentPurpose: in.ConsentPurpose,
@@ -376,6 +391,9 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 }
 
 func (c commsAdapter) BookMeeting(ctx context.Context, in agents.BookMeetingArgs) (json.RawMessage, error) {
+	if err := c.refuseIfHeldElsewhere(ctx, "book a meeting"); err != nil {
+		return nil, err
+	}
 	hostID, err := defaultHost(ctx, in.HostUserID)
 	if err != nil {
 		return nil, err

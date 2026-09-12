@@ -347,8 +347,11 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 // The automation executors pass a zero SendPath, which is a statement rather
 // than an omission: only DraftEmail is reachable through automation.Comms, so
 // that surface has no send to configure.
-func newCommsAdapter(pool *pgxpool.Pool, drafter activities.EmailDrafter, send SendPath) commsAdapter {
+func newCommsAdapter(
+	pool *pgxpool.Pool, drafter activities.EmailDrafter, send SendPath, sor externalSoR,
+) commsAdapter {
 	return commsAdapter{
+		externalSoR:   sor,
 		store:         sendStore(pool, send),
 		gate:          consentGateFor(pool),
 		draft:         drafter,

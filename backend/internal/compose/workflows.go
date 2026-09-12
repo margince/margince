@@ -67,7 +67,9 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		// configure. What an automation composes waits as a held draft, and
 		// THAT release sends through the fully-wired store the send path builds
 		// (lateApprovalEffects) rather than anything configured here.
-		Comms: newCommsAdapter(db.Pool(), drafter, SendPath{}),
+		// nil system-of-record seam, for reconcile.go's reason: the automation
+		// executors reach DraftEmail alone.
+		Comms: newCommsAdapter(db.Pool(), drafter, SendPath{}, nil),
 		// The notify transport is the durable notice row (noticesseam.go):
 		// recording one is delivering one, so the engine's success record
 		// is finally a true sentence rather than a skipped run.

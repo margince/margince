@@ -43,7 +43,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 	adapter := newCommsAdapter(e.Pool, nil, SendPath{
 		PublicBaseURL: "https://crm.margince.test",
 		Delivery:      realDeliveryStager(t, e),
-	})
+	}, nativeSoR)
 
 	admin := e.Admin()
 	contactID := e.SeedContact(t, "Opt Out Target", &e.Rep1)

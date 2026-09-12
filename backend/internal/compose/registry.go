@@ -339,7 +339,11 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterNetworkTools(registry, whoKnowsLister(pool), coverageReader(pool, contacts.NewStore(InstallationDB(pool))),
 		nativeOnlyIntroPath(sorMode, introPathLister(pool)),
 		nativeOnlyAtRisk(sorMode, atRiskLister(pool, contacts.NewStore(InstallationDB(pool)))))
-	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)
+	// The seam is the DISPATCHER'S own cached mode read, not a second query
+	// beside it: one definition of "has this workspace's system of record
+	// moved", asked by the tool surface's writes as well as by its reads.
+	agents.RegisterCommsTools(registry,
+		newCommsAdapter(pool, drafter, send, provider.IsExternalSoR), provider)
 	// The location check (🟢), and the verb the probe card hangs off. It reads
 	// no record and takes no seam, so it registers unconditionally.
 	//
