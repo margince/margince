@@ -1,0 +1,49 @@
+# Copy to terraform.tfvars and fill in the values with no default below.
+
+# ---- Required, no default ----------------------------------------------------
+
+# ARN of an ACM certificate covering the host in public_base_url. Request/
+# validate it separately (DNS validation needs your own zone).
+acm_certificate_arn = "arn:aws:acm:eu-central-1:123456789012:certificate/00000000-0000-0000-0000-000000000000"
+
+# MARGINCE_PUBLIC_BASE_URL — the canonical external scheme+host.
+public_base_url = "https://crm.example.com"
+
+# MARGINCE_ADMIN_PASSWORD for the first boot. Rotate/remove per
+# docs/deployment.md once the organization exists.
+admin_bootstrap_password = "change-me-before-first-boot"
+
+# A real release version — a git SHA, MARGINCE_RELEASE_VERSION, anything but
+# "latest". The ECR repos are image_tag_mutability = IMMUTABLE (ecs.tf): the
+# first push of a tag succeeds, every push after it to the same tag is
+# refused, so "latest" only ever works once. No default on purpose.
+image_tag = "2026.09.01"
+
+# ---- Optional — shown with their defaults ------------------------------------
+
+# aws_region               = "eu-central-1"
+# name_prefix              = "margince"
+# environment              = "production"  # stamped as the Environment tag on every resource
+# vpc_cidr                 = "10.20.0.0/16"
+# az_count                 = 2
+# cpu_architecture         = "ARM64"  # or "X86_64" if your own build only pushes amd64, see variables.tf
+# api_desired_count        = 2
+# worker_desired_count     = 1
+# api_autoscaling_max_count    = 4
+# worker_autoscaling_max_count = 3
+# web_desired_count        = 2
+# api_cpu                  = 512
+# api_memory               = 1024
+# worker_cpu               = 512
+# worker_memory            = 1024
+# web_cpu                  = 256
+# web_memory               = 512
+# db_instance_class        = "db.t4g.medium"
+# db_allocated_storage_gb  = 50
+# db_engine_version        = "16.4"
+# db_multi_az              = true
+# db_backup_retention_days = 7
+# redis_node_type          = "cache.t4g.small"
+# log_retention_days       = 30
+# ecr_tagged_image_retain_count = 30
+# license_token            = ""
