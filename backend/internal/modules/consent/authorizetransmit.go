@@ -93,11 +93,25 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 			return err
 		}
 		modeFor := func(c commsauthz.Category) commsauthz.Mode { return ModeFor(modes, c) }
+		// WHICH RULES ARE ABOUT TO JUDGE THIS, read ONCE and before any of them
+		// do, so the row records the ruleset the decisions were actually taken
+		// under.
+		//
+		// Asking again after decideRecipients would let an installation that
+		// changed its declared country mid-transmit record a pack that judged
+		// nothing: the frequency ceiling would have been applied under the old
+		// country while the row named the new one. The reads are separate
+		// unlocked SELECTs under READ COMMITTED, so sharing this transaction
+		// does not make two of them agree — asking once does.
+		stamp, err := g.rulesetStamp(ctx, tx)
+		if err != nil {
+			return err
+		}
 		set, err := g.decideRecipients(ctx, tx, req, legacyAllowed, modeFor)
 		if err != nil {
 			return err
 		}
-		written, err := g.recordDecisions(ctx, tx, req, setID, set)
+		written, err := g.recordDecisions(ctx, tx, req, setID, set, stamp)
 		if err != nil {
 			return err
 		}

@@ -88,6 +88,13 @@ var erasureColumnBaseline = map[string][]string{
 		// it here would destroy the controller's ability to say which evidence
 		// it relied on for a send it has already made.
 		"evidence",
+		// ISO 3166-1 alpha-2 codes naming which jurisdictions' rules judged the
+		// message — "de", "vn". The installation's own, never the subject's:
+		// applicableRules resolves the country the INSTALLATION declares, and
+		// the recipient's is not read at all. Clearing it would leave a sent
+		// message with no record of the law it was judged under, which is the
+		// accountability half Art. 5(2) requires the erasure to keep.
+		"ruleset_codes",
 	},
 	"activity": {
 		"audience",

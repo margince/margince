@@ -28,7 +28,7 @@ import (
 // exists so a later reader can tell whether the message that went is the
 // message that was authorized, and storing the words themselves would make the
 // decision a second copy of the mail.
-func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet) ([]commsauthz.Decision, error) {
+func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet, ruleset rulesetStampValue) ([]commsauthz.Decision, error) {
 	var written []commsauthz.Decision
 	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
@@ -61,8 +61,8 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, legacy_verdict, mode, actor,
-			   execution_authority, instruction_id)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+			   execution_authority, instruction_id, ruleset_version, ruleset_codes)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
 			req.DeliveryID, req.Attempt, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), string(d.Resolved), string(d.Verdict),
@@ -71,7 +71,8 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			// Named on the REFUSED rows only, as at staging: a message allowed
 			// for one recipient and directed for another did not go out on
 			// somebody's decision for both.
-			authorityFor(authority, d.Verdict), instructionFor(instruction, d.Verdict))
+			authorityFor(authority, d.Verdict), instructionFor(instruction, d.Verdict),
+			ruleset.Version, ruleset.Codes)
 		if err != nil {
 			return nil, fmt.Errorf("consent: record the transmit decision: %w", err)
 		}

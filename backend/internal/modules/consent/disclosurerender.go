@@ -85,7 +85,7 @@ func (s *Store) Disclosures(
 func (s *Store) DisclosuresFor(
 	ctx context.Context, tx pgx.Tx, category commsauthz.Category,
 ) ([]DisclosureLine, error) {
-	rules, found, err := s.applicableRules(ctx, tx)
+	rules, _, found, err := s.applicableRules(ctx, tx)
 	if err != nil || !found {
 		return nil, err
 	}
