@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The pre-push gates: diff-scoped craftsmanship (ADR-0045, `craft static`), the
-# sub-second whole-tree greps, and — for a push that changes backend Go — the
-# integration lane. Everything but the lane answers in seconds; the lane is the
-# one deliberate exception and the tail of this file says what buys it.
+# sub-second whole-tree greps, and — for a push that changes backend Go OR SQL —
+# the integration lane. Everything but the lane answers in seconds; the lane is
+# the one deliberate exception and its own comment below says what buys it.
 #
 # Runs the deterministic craftsmanship linter on the Go files that THIS push
 # changes vs origin/main — backend/, extensions/, fixtures/ and desktop/ alike,
@@ -69,7 +69,15 @@ if [[ -n "$lane_paths" ]]; then
 	# push with the stack down would be blocked on the stack rather than on the
 	# code, and a hook nobody can push past is a hook that gets turned off. So
 	# the absence is reported at the same volume and the push continues.
-	if nc -z localhost 15432 >/dev/null 2>&1; then
+	#
+	# READINESS, not a port. `nc -z` accepts any TCP listener — another service
+	# on the port, or a Postgres still starting up — and the lane's first act is
+	# to build a template, so a not-yet-ready server turns the skip path into a
+	# failed push blamed on the code. pg_isready answers the question actually
+	# being asked. It ships with libpq rather than with the OS, so its ABSENCE is
+	# treated as "cannot tell" and takes the same skip path: a contributor
+	# without it gets the lane's cost only once they install it, never a block.
+	if command -v pg_isready >/dev/null 2>&1 && pg_isready -h localhost -p 15432 >/dev/null 2>&1; then
 		echo "integration lane: backend changed — running (minutes; the only lane that sees it)…"
 		if ! make -C "$root" -s test-integration; then
 			echo ""
@@ -79,11 +87,16 @@ if [[ -n "$lane_paths" ]]; then
 			echo "AGENTS.md rather than pushing past it."
 			exit 1
 		fi
-	else
-		echo "integration lane: SKIPPED — nothing answers on localhost:15432."
+	elif command -v pg_isready >/dev/null 2>&1; then
+		echo "integration lane: SKIPPED — Postgres is not ready on localhost:15432."
 		echo "  This push changed backend Go or SQL, which is what the lane checks."
 		echo "  Start it with \`make db-up\` and push again, or accept that CI is"
 		echo "  the first thing to run these tests."
+	else
+		echo "integration lane: SKIPPED — no pg_isready, so readiness cannot be told."
+		echo "  This push changed backend Go or SQL, which is what the lane checks."
+		echo "  pg_isready ships with libpq (\`brew install libpq\`); until it is on"
+		echo "  PATH this hook skips rather than guessing, and CI runs these first."
 	fi
 fi
 
