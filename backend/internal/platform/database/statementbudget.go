@@ -66,3 +66,38 @@ func BoundStatement(ctx context.Context, tx pgx.Tx, budget time.Duration) error 
 	}
 	return nil
 }
+
+// StatementCeiling is how long ANY one statement may hold a connection when
+// nothing tighter has been asked for. It is the floor under every query this
+// product writes, not a budget any surface reasons about: a statement still
+// running at this point has stopped making progress, and the connection it
+// holds is the resource the next request needs.
+//
+// Thirty seconds is two orders of magnitude above what this product measures —
+// the slowest published server budget is 300 ms (PERF-7, context-graph
+// assembly) and the slowest measured p95 is 76 ms (PERF-3, search) — and six
+// times CallerPredicateBudget, the ceiling given to the one query shape that is
+// deliberately unbounded. So it cannot cut a statement that is merely large; it
+// can only cut one that is not going to finish. A ceiling tight enough to
+// argue about would have to be argued about per query, and the number that
+// needs no argument is the one that gets set.
+//
+// It reaches Postgres as a connection runtime parameter rather than a
+// statement before each transaction, because the read paths this protects run
+// tens of transactions per request and a round trip apiece to say "still
+// thirty seconds" would cost more than the pathology it catches. A transaction
+// that needs a different ceiling says so with BoundStatement, which overrides
+// it for that transaction alone.
+const StatementCeiling = 30 * time.Second
+
+// IdleTransactionCeiling is how long a transaction may sit OPEN with no
+// statement running before Postgres ends the session holding it.
+//
+// It is the other half of StatementCeiling and not a duplicate of it: a
+// statement timeout bounds a query that runs too long and says nothing about a
+// transaction that stopped issuing them. Given this product's write shape —
+// domain row, audit row and outbox row in one transaction, with only Go code
+// composing the next statement in between — a gap of a minute is not a slow
+// transaction. It is an abandoned one, and the connection under it will not
+// come back on its own.
+const IdleTransactionCeiling = time.Minute

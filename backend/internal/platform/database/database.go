@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -71,18 +72,45 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	// so a rep pays it on a query an unbounded admin runs for free. JIT
 	// earns its keep on long analytical scans; this product runs none on
 	// the request path. A DSN that names jit itself still wins.
-	if !strings.Contains(dsn, "jit") {
-		if cfg.ConnConfig.RuntimeParams == nil {
-			cfg.ConnConfig.RuntimeParams = map[string]string{}
-		}
-		cfg.ConnConfig.RuntimeParams["jit"] = "off"
-	}
+	setRuntimeParam(cfg, dsn, "jit", "off")
+	// Nothing else bounds how long one statement may hold a connection.
+	// http.Server's WriteTimeout ends the RESPONSE without cancelling the
+	// handler, so a query that has stopped making progress keeps its slot in a
+	// pool of sixteen until Postgres or the operator ends it — and the routes
+	// that cost the most slots per request are exactly the ones a user waits
+	// on. The ceilings and their sizing live beside CallerPredicateBudget,
+	// which is the tighter ceiling the caller-written predicates ask for.
+	setDurationParam(cfg, dsn, "statement_timeout", StatementCeiling)
+	setDurationParam(cfg, dsn, "idle_in_transaction_session_timeout", IdleTransactionCeiling)
 	// Typed entity ids ride uuid/uuid[] on every connection.
 	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		RegisterIDTypes(conn)
 		return nil
 	}
 	return cfg, nil
+}
+
+// setRuntimeParam fills in a Postgres runtime parameter the DSN left unset.
+// Same rule as every pool limit above: an operator who named the parameter in
+// the DSN meant it, so a DSN-provided value always wins — including a zero,
+// which Postgres reads as no bound at all and is how a role that must not be
+// bounded says so.
+func setRuntimeParam(cfg *pgxpool.Config, dsn, name, value string) {
+	if strings.Contains(dsn, name) {
+		return
+	}
+	if cfg.ConnConfig.RuntimeParams == nil {
+		cfg.ConnConfig.RuntimeParams = map[string]string{}
+	}
+	cfg.ConnConfig.RuntimeParams[name] = value
+}
+
+// setDurationParam is setRuntimeParam in the unit Postgres reads a bare
+// duration in. The conversion lives here rather than at each ceiling, because
+// one off by a factor of a thousand either never fires or fires on everything,
+// and the config it was written into looks the same either way.
+func setDurationParam(cfg *pgxpool.Config, dsn, name string, value time.Duration) {
+	setRuntimeParam(cfg, dsn, name, strconv.FormatInt(value.Milliseconds(), 10))
 }
 
 // NewPool opens a pgxpool on PoolConfig's terms and proves it can reach the

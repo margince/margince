@@ -71,6 +71,7 @@ var unboundedPoolDoors = map[string][]string{
 // bound. Each is a file whose SUBJECT is the pool itself.
 var laneBudgetExempt = gatekit.Waive(map[string]string{
 	"internal/platform/database/idtypes_integration_test.go":      "the constructor's own test: its subject is that NewPool registers the uuid and uuid[] OIDs on every connection it hands out, which only NewPool can be asked — a pool opened through testdb would prove testdb's wrapper instead",
+	"internal/platform/database/poolceilings_integration_test.go": "the ceilings' own test: its subject is what NewPool puts on a connection and what a DSN that names a ceiling itself does to that, neither of which a pool opened through testdb can be asked — and package database cannot import testdb, which imports it. The pools it opens carry pool_max_conns=2, the one connection each assertion needs",
 	"internal/platform/testdb/pool_integration_test.go":           "the ceiling's own test: it asserts what testdb.Pool does to a DSN, which it can only do by opening one the other way and comparing",
 	"internal/platform/testdb/laneconnbudget_integration_test.go": "the lane arithmetic's own test — it opens pools to count them, which is the measurement",
 	"internal/platform/testdb/quiesce_integration_test.go":        "the quiesce probe's own test: it needs a pool it can leave busy, which the shared one must never be",
