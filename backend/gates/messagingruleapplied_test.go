@@ -93,10 +93,6 @@ var rulesIdentityFields = []string{"Jurisdiction", "Instruments"}
 // struct no longer declares, because the arm below asks Waived only about a
 // field it has already found unapplied.
 var unappliedRules = gatekit.Waive(map[string]string{
-	"SubjectPrefix": "nothing prepends it. A send composes its own subject — " +
-		"activities.SendEmailInput.Subject is caller-supplied text — and no step " +
-		"between that and the provider consults the applicable rules, so an " +
-		"advertising message leaves unmarked whatever a pack declares",
 	"OptOutAcknowledgement": "no acknowledgement is sent. The controller lane is the only " +
 		"one that may write to somebody who has just suppressed themselves, and it " +
 		"registers no template for this",
