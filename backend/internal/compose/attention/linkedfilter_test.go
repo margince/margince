@@ -11,6 +11,7 @@ package attention
 // answer, and each test states the wrong number it stops.
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -616,4 +617,74 @@ func rankedIDs(rows []ranked) []string {
 		out = append(out, row.item.Id)
 	}
 	return out
+}
+
+// TestTheChangedCountMatchesWhatTheLaneOpens is the defect #5362 reported,
+// stated as the property that makes it impossible.
+//
+// The strip's number and the door beside it are one question asked twice, and
+// they used to be answered in two places: the browser tallied the flag over the
+// rows it received — one page of an unfiltered read — while the link opened
+// every row this filter admits. The gap was whatever ranked past the cut, and it
+// only ever ran one way: a busy morning read as a quiet one.
+//
+// So the count is taken where the filter lives, over `considered`, and this
+// holds the two to each other. The set here is deliberately larger than any
+// page: the point is that the figure does not stop at one.
+func TestTheChangedCountMatchesWhatTheLaneOpens(t *testing.T) {
+	t.Parallel()
+
+	cutoff := rankInstant.Add(-time.Hour)
+	fresh := cutoff.Add(time.Minute)
+	stale := cutoff.Add(-time.Minute)
+	var lanes []crmcontracts.AttentionItem
+	for at := range 40 {
+		when := stale
+		if at%2 == 0 {
+			when = fresh
+		}
+		lanes = append(lanes,
+			item(strconv.Itoa(at), "deal_at_risk", withOccurred(when)))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: lane(lanes...)}
+
+	considered := markChangedSinceBrief(classifyDay(day, rankInstant, dayMoney{}), cutoff)
+	readings := readingsOf(considered, nil, nil)
+	opened := keepFiltered(considered, filterChangedSinceBrief)
+
+	if got, want := int(readings.ChangedSinceBrief), len(opened); got != want {
+		t.Fatalf("the strip says %d and its own lane opens %d — the number and the door it labels are one question", got, want)
+	}
+	// And the figure reaches past a page, which is the half a count taken from
+	// the drawn rows could never satisfy.
+	if readings.ChangedSinceBrief != 20 {
+		t.Fatalf("counted %d of 20 fresh rows — a figure that stops at the page is the defect this replaced",
+			readings.ChangedSinceBrief)
+	}
+}
+
+// TestTheChangedCountLeavesOutWhatTheDeckAlreadyDrew keeps the count on the
+// filter's own rule rather than a second reading of it. A row already on screen
+// as a card is not also news, and a count that forgot the exclusion would
+// overstate the door by exactly the decisions the deck is drawing.
+func TestTheChangedCountLeavesOutWhatTheDeckAlreadyDrew(t *testing.T) {
+	t.Parallel()
+
+	cutoff := rankInstant.Add(-time.Hour)
+	fresh := cutoff.Add(time.Minute)
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("decision", "approval", withKind("send_email"), withOccurred(fresh)),
+		},
+		AtRisk: lane(item("risk", "deal_at_risk", withOccurred(fresh))),
+	}
+
+	considered := markChangedSinceBrief(classifyDay(day, rankInstant, dayMoney{}), cutoff)
+	readings := readingsOf(considered, nil, nil)
+
+	if readings.ChangedSinceBrief != 1 {
+		t.Fatalf("counted %d, want 1 — the approval is already a card and the strip does not name it twice",
+			readings.ChangedSinceBrief)
+	}
 }

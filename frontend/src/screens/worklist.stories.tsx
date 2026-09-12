@@ -73,6 +73,7 @@ export const AFullDay: Story = {
       reach: [],
       // A full day: money drifting, buyers waiting, a decision pile.
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: 384_500_00,
         revenue_currency: "EUR",
         buyer_replies: 14,
@@ -203,6 +204,7 @@ export const WorkDueLater: Story = {
       sources_unavailable: [],
       reach: [],
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: 0,
         revenue_currency: "EUR",
         buyer_replies: 0,
@@ -294,6 +296,7 @@ export const NothingWaiting: Story = {
       reach: [],
       // Nothing waiting: every figure honestly zero, and the money priced.
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: 0,
         revenue_currency: "EUR",
         buyer_replies: 0,
@@ -327,6 +330,7 @@ export const PartlyUnread: Story = {
       reach: [],
       // Partly unread: the figures are floors, so the strip says so.
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: 42_000_00,
         revenue_currency: "EUR",
         buyer_replies: 2,
@@ -364,6 +368,7 @@ export const ALeadsDay: Story = {
       reach: [],
       // A leads day: prospecting carries it, and nothing at risk could be priced.
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: null,
         buyer_replies: 1,
         prospecting: 9,
@@ -412,6 +417,7 @@ export const ATeamBiggerThanTheBoardCanCount: Story = {
         reach: [],
         // A team bigger than the board can count: every figure a floor.
         readings: {
+          changed_since_brief: 0,
           revenue_at_risk_minor: 1_250_000_00,
           revenue_currency: "EUR",
           buyer_replies: 61,
@@ -453,6 +459,7 @@ export const WhatWentWrong: Story = {
       sources_unavailable: [],
       reach: [],
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: 0,
         revenue_currency: "EUR",
         buyer_replies: 0,

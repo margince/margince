@@ -752,6 +752,7 @@ export function readingsDay(
     reach: [],
     counts,
     readings: {
+      changed_since_brief: 0,
       revenue_at_risk_minor: null,
       buyer_replies: 3,
       prospecting: 2,

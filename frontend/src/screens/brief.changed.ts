@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { waitingRows } from "./brief.sentence";
 import { worklistLaneHref } from "./worklist.header";
 import type { Worklist } from "./worklist.queries";
 
@@ -48,14 +47,17 @@ import type { Worklist } from "./worklist.queries";
 export function changedSinceBrief(
   day: Worklist | undefined,
 ): Readonly<{ count: number; href: string }> | undefined {
-  // waitingRows, not the raw queue: it drops the approvals the Decisions deck
-  // already answers, and it is the ONE spelling of "what this page is
-  // answerable for". Counting `day.queue` here reported a decision the deck was
-  // drawing as a card at the same moment. It also answers [] for a payload with
-  // no queue, so it is the null guard too.
-  const count = waitingRows(day).filter(
-    (item) => item.changed_since_brief === true,
-  ).length;
+  // THE SERVER'S COUNT, not a tally of the rows this page received.
+  //
+  // Counting here read one page of an unfiltered worklist — twenty-five rows —
+  // while the door below opens every row the same freshness test admits. The
+  // two then disagreed by whatever ranked past the cut, and only ever in the
+  // direction that makes a busy morning look quiet: a strip saying five over a
+  // list of seven. The figure is taken over every candidate the read weighed,
+  // before the fold and before the page, and it runs the same predicate the
+  // filter runs — including dropping the rows the Decisions deck already draws
+  // as cards, which this file used to spell for itself through waitingRows.
+  const count = day?.readings?.changed_since_brief ?? 0;
   if (count === 0) {
     return undefined;
   }

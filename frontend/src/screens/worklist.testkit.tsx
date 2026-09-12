@@ -165,6 +165,7 @@ export function day(over: Partial<Worklist> = {}): Worklist {
     reach: [],
     counts: [],
     readings: {
+      changed_since_brief: 0,
       revenue_at_risk_minor: null,
       buyer_replies: 0,
       prospecting: 0,

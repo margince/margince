@@ -60,6 +60,7 @@ function day(queue: WorklistItem[]): Worklist {
     },
     sources_unavailable: [],
     readings: {
+      changed_since_brief: 0,
       revenue_at_risk_minor: null,
       buyer_replies: 0,
       prospecting: 0,
