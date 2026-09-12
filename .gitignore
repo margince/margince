@@ -172,6 +172,10 @@ workspace/
 /backend/tools/gen-perfdoc/gen-perfdoc.exe
 /backend/tools/contract-overlay/contract-overlay
 /backend/tools/contract-overlay/contract-overlay.exe
+# Same debris, one tree up: gitleakspolicy is its own module at the repository
+# root rather than under backend/, so the prefix above does not reach it.
+/tools/gitleakspolicy/gitleakspolicy
+/tools/gitleakspolicy/gitleakspolicy.exe
 
 # e2e-llm run artifacts. The lane writes a transcript per run (hundreds of KB
 # each) plus a small verdict file. The TRANSCRIPTS are evidence for the run that
