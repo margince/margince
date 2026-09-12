@@ -44,7 +44,7 @@ export function boundedCategories(day: Worklist): ReadonlySet<string> {
 // about a SEND at the blocking level and contact hygiene — capturing a
 // counterparty, merging two records — a level below it, because a queue of
 // identical contact questions must never read as a customer waiting
-// (classifydecision.go). Claiming a person is held up by a duplicate pair is
+// (classifydecision.go). Claiming somebody is held up by a duplicate pair is
 // the sentence that teaches a reader to discount the line.
 //
 // Counted off the rows' own `work_blocked` consequence, which is the server's

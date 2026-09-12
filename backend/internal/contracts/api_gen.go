@@ -14617,6 +14617,7 @@ const (
 	WorklistFilterMeetings          WorklistFilter = "meetings"
 	WorklistFilterSystem            WorklistFilter = "system"
 	WorklistFilterTasks             WorklistFilter = "tasks"
+	WorklistFilterUrgent            WorklistFilter = "urgent"
 )
 
 // Valid indicates whether the value is a known member of the WorklistFilter enum.
@@ -14641,6 +14642,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterSystem:
 		return true
 	case WorklistFilterTasks:
+		return true
+	case WorklistFilterUrgent:
 		return true
 	default:
 		return false
@@ -17452,6 +17455,7 @@ const (
 	GetWorklistParamsFilterMeetings          GetWorklistParamsFilter = "meetings"
 	GetWorklistParamsFilterSystem            GetWorklistParamsFilter = "system"
 	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
+	GetWorklistParamsFilterUrgent            GetWorklistParamsFilter = "urgent"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
@@ -17476,6 +17480,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case GetWorklistParamsFilterSystem:
 		return true
 	case GetWorklistParamsFilterTasks:
+		return true
+	case GetWorklistParamsFilterUrgent:
 		return true
 	default:
 		return false
@@ -43997,9 +44003,18 @@ type GetWorklistParams struct {
 
 	// Filter Narrow the queue. Omitted means everything, which is the default view.
 	//
-	// Most values name ONE kind of work. Two do not, and exist because a surface
+	// Most values name ONE kind of work. Three do not, and exist because a surface
 	// counted a population this vocabulary could not then ask for — a count whose
 	// link lands on a different population is a number that lies about where it goes.
+	//
+	// `urgent` is the population `WorklistSummary.urgent` counts: somebody waiting
+	// or a promise breaking, which is levels 0 to 2. It is a LEVEL and not a
+	// category, so it crosses every lane — a customer waiting, an overdue promise
+	// and a failed approved action are one question about the morning, and the
+	// figure that asks it had no door of its own until this value existed. Read
+	// from the row's own level, never the one a pin overwrote: a reader who pins
+	// hygiene to the top of their morning has made nothing urgent, so the pin moves
+	// neither this list nor the count above it.
 	//
 	// `except_decisions` is everything a decisions-drawing surface has NOT already
 	// answered: every row whose SOURCE is not `approval`. Not a kind of work, and

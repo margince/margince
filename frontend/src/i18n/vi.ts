@@ -9075,6 +9075,8 @@ export const vi = {
   "worklist.filter.tasks": "Công việc",
   "worklist.filter.decisions": "Quyết định",
   "worklist.filter.system": "Hệ thống",
+  "worklist.filter.linked.urgent":
+    "Chỉ việc gấp: đang có bên chờ, hoặc một cam kết sắp trễ.",
   "worklist.filter.linked.except_decisions":
     "Hiển thị mọi thứ trừ các quyết định mà bản tóm tắt của bạn đã hỏi.",
   "worklist.filter.linked.changed_since_brief":
