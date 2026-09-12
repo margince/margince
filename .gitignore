@@ -217,6 +217,7 @@ dump.rdb
 /backend/tools/gen-recordfields/gen-recordfields
 /backend/tools/gen-stubs/gen-stubs
 /backend/tools/gen-workflow/gen-workflow
+/tools/gitleakspolicy/gitleakspolicy
 # Python bytecode. e2e/llm/check.py is imported by its own test harness, which
 # leaves a __pycache__ beside it — build residue, never product.
 __pycache__/
