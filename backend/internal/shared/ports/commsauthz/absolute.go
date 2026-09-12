@@ -31,6 +31,23 @@ const (
 	ReasonLegacyTransactionalUnevidenced = "legacy_transactional_unevidenced"
 	// ReasonUnknownPurpose is a purpose key nothing defines.
 	ReasonUnknownPurpose = "unknown_purpose"
+	// ReasonClaimContradictsResolution is a caller naming what a message IS
+	// against what the RECORD says it is.
+	//
+	// Not a verdict about the recipient: it is the engine declining to answer a
+	// request that asks two things at once. Reconciling the two is what let
+	// promotional mail ride the correspondence lane — the claim went in the
+	// column that records what somebody asked for, the record's own reading
+	// took the column that decides what a suppression binds, and an objection
+	// to direct marketing was never put to the message at all.
+	//
+	// The record reads the message two ways and the disagreement is the same
+	// either way: a legacy purpose key whose class says something else, or
+	// evidence — a reply in the thread, a live deal on the links — that bears
+	// out a category the caller did not name. Naming the SOURCE in this code
+	// would have made the second kind look like a different refusal, and the
+	// second kind is where the bypass actually survived a first fix.
+	ReasonClaimContradictsResolution = "claim_contradicts_resolution"
 	// ReasonNoSubject is a recipient that resolves to nobody, or to two contacts.
 	ReasonNoSubject = "recipient_resolves_to_no_single_subject"
 	// ReasonNoMarketingConsent is marketing without a grant or an exception.
@@ -86,6 +103,14 @@ var absoluteDenials = map[string]bool{
 	// the same message becomes lawful — so refusing costs a delay rather than
 	// the message.
 	ReasonFrequencyCapReached: true,
+	// A request that claims one category and names a purpose meaning another
+	// is here for the reason ReasonNoSubject is: it is not a refusal ABOUT
+	// somebody, it is the engine saying it cannot answer. Softening it does not
+	// fall back to a weaker reading of the same message — it falls back to the
+	// old gate, which answers on the PURPOSE KEY alone and so authorizes
+	// exactly the message this refusal exists to stop, past an objection that
+	// binds the category the caller themselves claimed.
+	ReasonClaimContradictsResolution: true,
 }
 
 // Absolute reports whether this reason denies regardless of Mode.

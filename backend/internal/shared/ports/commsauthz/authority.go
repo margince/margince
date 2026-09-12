@@ -122,7 +122,7 @@ func LevelForReason(reasonCode string) AuthorityLevel {
 		return LevelSubject
 
 	// EVERYTHING ELSE IS THE ENGINE READING AN INCOMPLETE RECORD, and a seat
-	// may know better. That includes four refusals that BIND ABSOLUTELY but are
+	// may know better. That includes five refusals that BIND ABSOLUTELY but are
 	// nobody's decision, so being overrulable is the right answer for each:
 	//
 	//   - a hard bounce is a mailbox fact, cleared by correcting the address;
@@ -133,7 +133,12 @@ func LevelForReason(reasonCode string) AuthorityLevel {
 	//     wishes;
 	//   - an unconfirmed double opt-in is the absence of the subject's act
 	//     rather than an act, and an installation holding a paper opt-in needs
-	//     a way to say so.
+	//     a way to say so;
+	//   - a purpose contradicting the claim is a malformed REQUEST, corrected
+	//     by sending it with a purpose that means what the caller said. Nothing
+	//     about the recipient refuses it, and an admin who knows which of the
+	//     two the message really is can say so — by sending it again, which is
+	//     the remedy, not by overruling the recipient's wishes.
 	//
 	// Absolute and overrulable are different axes, and Absolute() already
 	// carries the first. Collapsing them here would make an admin stare at a

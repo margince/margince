@@ -83,6 +83,33 @@ func allowOn(d commsauthz.Decision, res resolution) commsauthz.Decision {
 	return d
 }
 
+// contradictsClaim answers whether the caller named a category the record does
+// not bear out.
+//
+// ONE spelling, because the two paths that ask it would otherwise be two
+// answers to one question — and the first fix here proved that: the guard lived
+// on the legacy path alone, so a message whose thread or live deal resolved a
+// category the caller had not claimed went through with the claim never put to
+// anything. An empty claim is not a contradiction: naming nothing is how a
+// caller says the record should decide.
+func contradictsClaim(claimed, resolved commsauthz.Category) bool {
+	return claimed != "" && claimed != resolved
+}
+
+// denyContradiction is the refusal both paths give, with Resolved carrying the
+// RECORD's reading rather than the claim. An unproven claim must never reach
+// that column: it selects the rollout mode and decides whether the advertising
+// ceiling is counted, so a caller who set it would hold both
+// (TestAnUnsupportedClaimIsRecordedButNeverResolvedTo). The claim is already in
+// Requested, so the row still says what was asked for, what the record read,
+// and that the two disagree.
+func denyContradiction(d commsauthz.Decision, resolved commsauthz.Category) commsauthz.Decision {
+	d.Resolved = resolved
+	d.Verdict = commsauthz.VerdictDeny
+	d.ReasonCode = commsauthz.ReasonClaimContradictsResolution
+	return d
+}
+
 // decideResolved answers about a contact once nothing suppresses them: what the
 // record says this message is, and whether that is supported.
 //
@@ -115,6 +142,16 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 		d.Evidence = req.Evidence
 	}
 	if res.Supported {
+		// The claim first, because the record bearing out a category is not the
+		// same as the caller having named it. A sender who says "this is
+		// marketing" about a thread the subject replied into is asking for two
+		// things at once, and the withdrawal read below would be asked about
+		// reply_to_inbound — so a live objection to direct marketing would
+		// never be put to a message its own sender called marketing.
+		if contradictsClaim(req.Context, res.Category) {
+			d.Requested = req.Context
+			return denyContradiction(d, res.Category), nil
+		}
 		// The record bears the category out — and the subject may still have
 		// said stop. The evidence arms never read contact_consent, so this is
 		// the only place a withdrawal is put to them.
@@ -153,7 +190,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, res, d, suppressed)
+	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, req.Context, res, d, suppressed)
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no
@@ -164,7 +201,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // answering with one body of code about one contact. A second implementation
 // here would be a second answer, and the one that stopped matching would look
 // exactly like the one that still did.
-func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, res resolution, d commsauthz.Decision, suppressed bool) (commsauthz.Decision, error) {
+func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, suppressed bool) (commsauthz.Decision, error) {
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, err
@@ -182,7 +219,35 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purpo
 	// there alone would keep it out. Neither is redundant — they fail in
 	// different directions, and a decision that never reaches this function
 	// (the supported arm) is covered only by the first.
-	d.Resolved = resolutionForClass(purpose.Class).Category
+	fromPurpose := resolutionForClass(purpose.Class).Category
+
+	// A CLAIM AND A PURPOSE THAT DISAGREE ARE REFUSED, never reconciled.
+	//
+	// The caller said what this message IS and named a purpose key meaning
+	// something else. Taking the purpose's reading is not a conservative
+	// fallback, it is a downgrade the caller did not ask for and cannot see: a
+	// send claiming `marketing` under the `business_correspondence` key
+	// resolved to reply_to_inbound, which the correspondence arm authorizes on
+	// any recent exchange with that contact — not evidence that THIS message is
+	// a reply to anything. The message then went out as correspondence
+	// carrying promotional content.
+	//
+	// And it went out past the subject. An Art. 21 objection binds
+	// CategoryMarketing and is tested against Resolved, so a message remapped
+	// to reply_to_inbound was never put to it: the stop was recorded, appeared
+	// in the subject's own export, and did not stop the mail.
+	//
+	// Resolved still takes the PURPOSE'S reading, not the claim. An unproven
+	// claim must never reach that column — it selects the rollout mode and
+	// decides whether the advertising ceiling is counted, so a caller who set
+	// it would hold both (TestAnUnsupportedClaimIsRecordedButNeverResolvedTo).
+	// The claim is already in Requested, which is the column that exists for
+	// it, so the row still says both things: what was asked for, what it would
+	// have been read as, and that the two disagree.
+	d.Resolved = fromPurpose
+	if contradictsClaim(claimed, fromPurpose) {
+		return denyContradiction(d, fromPurpose), nil
+	}
 
 	w, err := g.store.packRulesFor(ctx, tx)
 	if err != nil {
