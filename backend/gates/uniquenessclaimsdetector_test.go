@@ -314,6 +314,10 @@ var claimedTrees = []claimedTree{
 	{root: "../extensions"},
 	{root: "../fixtures"},
 	{root: "../desktop"},
+	// The repo-root tool modules. Small and outside the Go workspace on
+	// purpose, which is exactly why they are swept: a module nobody's lane
+	// compiles is the one where a claim can be written and never read again.
+	{root: "../tools"},
 }
 
 // claim is one uniqueness assertion: where it is, what it sits on, and the

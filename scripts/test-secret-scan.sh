@@ -66,49 +66,76 @@ fail() {
 # invalid, pattern.
 SEP=$(printf '\037')
 
-# --- 0. the policy is in the form this script can actually read ---------------
-# Refuse first, parse second.
+# --- 0. the policy, decoded rather than parsed -------------------------------
+# One record per field: <index><SEP><kind><SEP><value>. Index ZERO is the file
+# itself — the exemption channels that belong to no allowlist — and allowlists
+# count from one, MONOTONIC across the whole file and never resetting, so no two
+# can merge into one record set.
+#
+# Decoded by tools/gitleakspolicy rather than read here, and the reason is the
+# failure this suite exists to prevent. The derivation is what makes the gate
+# self-maintaining — every allowlist owes a plant, with no hand-kept list to go
+# stale — so an entry the reader cannot SEE owes no plant and the ledger still
+# reports full coverage. A hand parser reads only the shapes it was taught;
+# review of the awk that stood here demonstrated seven legal TOML forms it could
+# not read, each hiding a real credential while the suite printed ok.
+#
+# DECODE FIRST, REFUSE SECOND, which is the other way round from the awk era.
+# Refusing first made sense while the reader was fragile: the file was held to a
+# form the parser could manage. The refusals below are about what the POLICY
+# says, so they are made against what was decoded — asking a line matcher would
+# be the same mistake one layer up, and `useDefault` under the wrong table or
+# behind a quoted key is exactly the shape that mistake hides.
+read_policy() {
+	# GOWORK=off and a module of its own: see tools/gitleakspolicy/go.mod for
+	# why the decoder is not a package under backend/tools.
+	( cd "$root/tools/gitleakspolicy" && GOWORK=off go run . "$root/.gitleaks.toml" )
+}
+
+POLICY="$(read_policy)"
+if [[ -z "$POLICY" ]]; then
+	echo "test-secret-scan: .gitleaks.toml declares no allowlists this suite can read — it is gating nothing" >&2
+	exit 1
+fi
+
+field() { printf '%s\n' "$POLICY" | awk -F"$SEP" -v i="$1" -v k="$2" '$1 == i && $2 == k { print $3 }'; }
+# The allowlists, which is index zero EXCLUDED: that record set is the file's
+# own shape and owes no plant.
+indices() { printf '%s\n' "$POLICY" | awk -F"$SEP" '$1 != 0 { print $1 }' | sort -un; }
+
+# --- 1. the exemption channels this suite cannot plant against ----------------
+#
+# WHAT THIS GATE IS FOR. Everything below is a POLICY decision: a way to excuse
+# a match that no planted token can prove is narrow, whatever reads the file.
+# Three rules that used to sit here were PARSER limitations wearing policy's
+# clothes — an indented table header, a `[[rules]]` block, a mixed-quote array —
+# and they left with the awk. TOML admits all three, gitleaks honours all three,
+# and the decoder reads all three, including the `[[rules.allowlists]]` the awk
+# could not see at all. Refusing a legal file was this suite's own shape showing
+# through as a rule about the policy.
 shape_gate() {
-	local policy="$root/.gitleaks.toml" line n bad=0
+	local bad=0
 	note() {
 		fail "$1"
 		bad=1
 	}
 
-	# TOML tolerates leading whitespace on a table header and on a key; the
-	# parser below anchors at column 0. An indented `[[allowlists]]` was
-	# demonstrated to exempt a whole directory while this suite printed ok.
-	if grep -nE '^[ \t]+(\[|(description|targetRules|paths|regexes|condition|regexTarget|stopwords)[ \t]*=)' "$policy"; then
-		note "the lines above are indented. Every table header and key in .gitleaks.toml sits at column 0 — an indented one is valid TOML this suite cannot see."
+	# [extend] turns the default rules ON. Read from the DECODED policy, so
+	# `useDefault` in another table, under a quoted key, or written dotted at
+	# the top level answers what gitleaks would answer rather than what a line
+	# matcher happens to find.
+	if [[ "$(field 0 use_default)" != "true" ]]; then
+		note ".gitleaks.toml must set useDefault = true under [extend]; the decoded policy says otherwise."
 	fi
-
-	# Only two table kinds. A `[[rules]]` block carries a nested allowlist of
-	# its own, which is an exemption channel nothing here reads.
-	while IFS= read -r line; do
-		case "$line" in
-		"[extend]" | "[[allowlists]]") ;;
-		*) note "unsupported table '$line' in .gitleaks.toml. This suite gates [[allowlists]] only; a [[rules]] block carries exemptions of its own that nothing here would plant against." ;;
-		esac
-	done < <(grep -E '^\[' "$policy")
-
-	# [extend] turns rules ON. `disabledRules` turns whole detectors OFF, which
-	# is an exemption with no allowlist to plant against.
-	n="$(grep -cE '^useDefault[ \t]*=[ \t]*true$' "$policy" || true)"
-	if [[ "$n" -ne 1 ]]; then
-		note ".gitleaks.toml must carry exactly one 'useDefault = true'; found $n."
+	# `disabledRules` turns whole detectors off, and a `stopwords` list drops
+	# any match containing one. Both are exemptions with no allowlist to plant
+	# against, wherever they sit — the count covers [extend], a top-level
+	# allowlist and one nested in a rule.
+	if [[ "$(field 0 disabled_rules)" != "0" ]]; then
+		note ".gitleaks.toml disables $(field 0 disabled_rules) rule(s) outright; nothing here plants against a detector that never runs."
 	fi
-	if grep -nE '^(disabledRules|stopwords)[ \t]*=' "$policy"; then
-		note "the keys above disable detection outside any allowlist, so nothing here plants against them."
-	fi
-
-	# One quoting style per key, because the array reader splits on ONE
-	# delimiter: a mixed-quote array silently drops the entries in the other
-	# style, and a dropped path owes no plant.
-	if grep -nE "^(description|targetRules)[ \t]*=.*'''" "$policy"; then
-		note "description and targetRules use \"basic strings\"; the lines above mix in ''' literals."
-	fi
-	if grep -nE '^(paths|regexes)[ \t]*=.*"' "$policy"; then
-		note "paths and regexes use '''literal strings'''; the lines above mix in \" basic strings."
+	if [[ "$(field 0 stopwords)" != "0" ]]; then
+		note ".gitleaks.toml declares $(field 0 stopwords) stopword(s); a match containing one is dropped, and no planted token proves that narrow."
 	fi
 
 	# gitleaks honours a repo-root .gitleaksignore: a fingerprint exemption list
@@ -122,83 +149,29 @@ shape_gate() {
 
 if ! shape_gate; then
 	echo "" >&2
-	echo "test-secret-scan: .gitleaks.toml is in a form this suite cannot fully read," >&2
-	echo "  so it cannot promise every allowlist was planted against. Fix the shape, or" >&2
-	echo "  teach scripts/test-secret-scan.sh the new one — do not leave it unread." >&2
+	echo "test-secret-scan: .gitleaks.toml carries an exemption this suite cannot plant" >&2
+	echo "  against, so it cannot promise every allowlist is narrow. Remove it, or teach" >&2
+	echo "  scripts/test-secret-scan.sh how to prove it — do not leave it unproven." >&2
 	exit 1
 fi
 
-# --- 1. the policy, read rather than restated --------------------------------
-# One record per field: <index><SEP><kind><SEP><value>, kind in desc|rule|path|
-# regex. The index is MONOTONIC across the whole file and never resets, so no
-# two allowlists can merge into one record set.
-read_policy() {
-	awk -v sep="$SEP" '
-		# The text of a line with its quoted entries removed. The `]` that ends
-		# an array is the one OUTSIDE a quoted entry: a path like
-		# \x27\x27\x27\\.(test|spec)\\.[jt]sx?$\x27\x27\x27 carries one inside a character class, and
-		# treating it as the terminator ended the array early — the entries
-		# after it were dropped, owed no plant, and the ledger still reported
-		# full coverage, which is the fail-open this suite exists to prevent.
-		function unquoted(text,   out, parts, n, i, q) {
-			for (q = 1; q <= 2; q++) {
-				out = ""
-				n = split(text, parts, (q == 1) ? "\x27\x27\x27" : "\"")
-				for (i = 1; i <= n; i += 2) out = out parts[i]
-				text = out
-			}
-			return text
-		}
-		function flush(   n, i, parts, q, kind) {
-			if (key == "") return
-			q = (key == "paths" || key == "regexes") ? "\x27\x27\x27" : "\""
-			kind = (key == "targetRules") ? "rule" : \
-			       (key == "paths") ? "path" : \
-			       (key == "regexes") ? "regex" : "desc"
-			n = split(buf, parts, q)
-			for (i = 2; i <= n; i += 2) print idx sep kind sep parts[i]
-			key = ""; buf = ""
-		}
-		/^\[\[allowlists\]\]/ { flush(); idx++; inside = 1; next }
-		/^\[/                 { flush(); inside = 0; next }
-		!inside               { next }
-		{
-			if (key == "") {
-				if ($0 !~ /^(description|targetRules|paths|regexes)[ \t]*=/) next
-				key = $0; sub(/[ \t]*=.*/, "", key)
-				buf = $0; sub(/^[^=]*=[ \t]*/, "", buf)
-			} else {
-				buf = buf "\n" $0
-			}
-			if (buf !~ /^\[/ || unquoted(buf) ~ /\]/) flush()
-		}
-		END { flush() }
-	' "$root/.gitleaks.toml"
-}
-
-POLICY="$(read_policy)"
-if [[ -z "$POLICY" ]]; then
-	echo "test-secret-scan: .gitleaks.toml declares no allowlists this suite can read — it is gating nothing" >&2
+# An INDEPENDENT witness that the decoder saw every allowlist the file declares.
+# A table header is line-oriented in TOML, so it can be counted without parsing
+# anything, and the count is true whatever the decoder did with the contents.
+#
+# It counts TABLES where the awk's own witness counted quoted ENTRIES — that one
+# leaned on paths and regexes being triple-quoted, which was a rule the parser
+# needed and the shape gate used to enforce. With both gone the entry witness
+# would refuse a legal file, and a witness that constrains its subject is not
+# independent of it.
+DECLARED="$(grep -cE '^[ \t]*\[\[(allowlists|rules\.allowlists)\]\]' "$root/.gitleaks.toml" || true)"
+READ_LISTS="$(indices | grep -c . || true)"
+if [[ "$DECLARED" -ne "$READ_LISTS" ]]; then
+	echo "test-secret-scan: .gitleaks.toml declares $DECLARED allowlist(s) and this suite read $READ_LISTS." >&2
+	echo "  An allowlist it cannot see owes no plant, and the coverage ledger cannot tell" >&2
+	echo "  that apart from full coverage." >&2
 	exit 1
 fi
-
-# The parser read every entry the file declares. `paths` and `regexes` are the
-# triple-quoted keys, so the number of \x27\x27\x27 delimiters in the policy fixes how many
-# entries there are, independently of how the parser walked them. An entry the
-# parser drops owes no plant and the ledger still reports full coverage — the
-# exact fail-open the shape gate exists to prevent, and the one a `]` inside a
-# character class caused by ending its array early.
-QUOTED="$(grep -o "'''" "$root/.gitleaks.toml" | grep -c . || true)"
-READ_ENTRIES="$(printf '%s\n' "$POLICY" | awk -F"$SEP" '$2 == "path" || $2 == "regex"' | grep -c . || true)"
-if [[ $((QUOTED / 2)) -ne "$READ_ENTRIES" ]]; then
-	echo "test-secret-scan: .gitleaks.toml declares $((QUOTED / 2)) quoted path/regex entries" >&2
-	echo "  and this suite read $READ_ENTRIES of them. An entry it cannot see owes no plant," >&2
-	echo "  and the coverage ledger cannot tell that apart from full coverage." >&2
-	exit 1
-fi
-
-field() { printf '%s\n' "$POLICY" | awk -F"$SEP" -v i="$1" -v k="$2" '$1 == i && $2 == k { print $3 }'; }
-indices() { printf '%s\n' "$POLICY" | awk -F"$SEP" '{ print $1 }' | sort -un; }
 
 # Every allowlist must end the run having been planted against. This ledger is
 # the backstop for a shape the gate above did not anticipate: whatever the

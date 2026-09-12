@@ -568,12 +568,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # No install step: scripts/gitleaks-pin.sh fetches the version- and
-      # checksum-pinned binary itself, so this job runs the scanner an engineer
-      # runs, resolved by the same code. The official gitleaks action is
-      # deliberately not used — its licence is free only for a personal
-      # account's repositories, and this one is not, so it would cost a key this
-      # gate must not need.
+      # The SCANNER needs no install step: scripts/gitleaks-pin.sh fetches the
+      # version- and checksum-pinned binary itself, so this job runs the scanner
+      # an engineer runs, resolved by the same code. The official gitleaks
+      # action is deliberately not used — its licence is free only for a
+      # personal account's repositories, and this one is not, so it would cost a
+      # key this gate must not need.
+      #
+      # The suite that PROVES the policy is narrow does need Go: it derives its
+      # plants by decoding .gitleaks.toml (tools/gitleakspolicy) rather
+      # than hand-parsing it, because a hand parser reads only the shapes it was
+      # taught and an allowlist it cannot see owes no planted token. Declared
+      # here rather than inherited from the runner's ambient toolchain, which is
+      # the same dependency with nothing stating it.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: tools/gitleakspolicy/go.sum
       - name: secret scan
         working-directory: .
         run: make secret-scan
