@@ -39,12 +39,12 @@ import {
 } from "../i18n";
 import { throwProblem, useSorMode } from "./common";
 import { ContactAccess } from "./contactaccess";
+import { ContactBillingRoles } from "./contactbillingroles";
 import { ConsentAndChannels } from "./contactconsentpanel";
 import { Employers } from "./contactemployers";
 import { daysSinceInbound, isQuiet } from "./contactquiet";
 import { contactTabRoute } from "./contacttab";
 import { CounterpartyHoldRow } from "./counterparty-hold";
-import { ContactBillingRoles } from "./contactbillingroles";
 import { TagsPanel } from "./tagspanel";
 
 // The right rail (concept §5.11): SEPARATE panels, each answering one question

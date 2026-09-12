@@ -14,8 +14,8 @@ package contacts
 // projection reads it through compose, which cannot see the unexported kinds.
 //
 // It anchors on the COMPANY, unlike employment, which shares its endpoints.
-// Whose fact is it that Acme's invoices go to this person — Acme's, or the
-// person's? It is Acme's: the same person is a billing contact at one customer
+// Whose fact is it that Acme's invoices go to this contact — Acme's, or the
+// contact's? It is Acme's: one contact is a billing contact at one customer
 // and nothing at the next, and the reader who maintains the list is looking at
 // the company's finance tab. So the company's write authority governs the edge,
 // and a caller who may see a contact but not change the customer cannot quietly
