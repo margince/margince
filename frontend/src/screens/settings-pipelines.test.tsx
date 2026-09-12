@@ -34,6 +34,7 @@ function settingsStub(opts: {
   // What the server answers a removal with, when the scenario is about a
   // refusal: a stage still holding deals, or the terminal pair.
   stageDeleteRefusal?: { status: number; body: unknown };
+  onPipelineWrite?: (call: { method: string; body: unknown }) => void;
   onPipelineArchive?: (call: { url: string; ifMatch: string | null }) => void;
   onPipelineRestore?: (url: string) => void;
   onPipelineList?: (url: string) => void;
@@ -63,6 +64,15 @@ function settingsStub(opts: {
           input instanceof Request ? input.headers.get("If-Match") : null,
       });
       return new Response(null, { status: 204 });
+    }
+    if (
+      url.includes("/pipelines") &&
+      (method === "POST" || method === "PATCH")
+    ) {
+      const raw = input instanceof Request ? await input.clone().text() : "";
+      const body = raw ? JSON.parse(raw) : {};
+      opts.onPipelineWrite?.({ method, body });
+      return jsonResponse({ id: "pl-new", name: "Enterprise", ...body });
     }
     if (url.includes("/pipelines")) {
       opts.onPipelineList?.(url);
@@ -102,6 +112,26 @@ function settingsStub(opts: {
                 position: 1,
                 semantic: "open",
                 win_probability: 20,
+              },
+              // A ladder ends somewhere, and the two ends mean opposite
+              // things. Without them the fixture only ever exercised the
+              // middle, so what a reader is told a terminal stage IS went
+              // unasserted.
+              {
+                id: "s2",
+                pipeline_id: "pl",
+                name: "Closed won",
+                position: 2,
+                semantic: "won",
+                win_probability: 100,
+              },
+              {
+                id: "s3",
+                pipeline_id: "pl",
+                name: "Closed lost",
+                position: 3,
+                semantic: "lost",
+                win_probability: 0,
               },
             ],
           },
@@ -377,5 +407,68 @@ describe("PipelinesCard", () => {
     );
     await waitFor(() => expect(restored).toHaveLength(1));
     expect(restored[0]).toContain("/pipelines/pl-old/restore");
+  });
+  // Each stage says what it MEANS, not just what it is called. A ladder whose
+  // ends are drawn like its middle leaves a reader to infer from the name
+  // whether "Closed lost" counts as won — and a renamed stage takes that
+  // inference with it.
+  it("names each stage's outcome beside it", async () => {
+    vi.stubGlobal("fetch", settingsStub({ roles: ["admin"] }));
+    render(<PipelinesCard />);
+    await screen.findByText("Qualify");
+
+    expect(screen.getByText("Open")).toBeTruthy();
+    expect(screen.getByText("Won")).toBeTruthy();
+    expect(screen.getByText("Lost")).toBeTruthy();
+  });
+  // The card's own create verb, driven rather than merely asserted present.
+  it("creating a pipeline posts the name and an empty ladder", async () => {
+    const user = userEvent.setup();
+    const writes: { method: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      settingsStub({
+        roles: ["admin"],
+        onPipelineWrite: (w) => writes.push(w),
+      }),
+    );
+    render(<PipelinesCard />);
+    await user.click(await screen.findByText("New pipeline"));
+    await user.type(screen.getByLabelText(/Name/), "Partnerships");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0].method).toBe("POST");
+    // Stages are added afterwards, one at a time, through the row's own verb —
+    // a create that shipped a ladder would be a second way to build one.
+    expect(writes[0].body).toMatchObject({ name: "Partnerships", stages: [] });
+  });
+
+  // Renaming rides PATCH, and the row that carries it is the row it names.
+  it("renaming a pipeline patches that pipeline", async () => {
+    const user = userEvent.setup();
+    const writes: { method: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      settingsStub({
+        roles: ["admin"],
+        onPipelineWrite: (w) => writes.push(w),
+      }),
+    );
+    render(<PipelinesCard />);
+    await screen.findByText("Sales");
+    // An IconAction, so its accessible name is the label rather than text in
+    // the row. The first is the retired pipeline's — the live default is next.
+    await user.click(
+      screen.getAllByRole("button", { name: "Edit pipeline" })[0],
+    );
+    const name = screen.getByLabelText(/Name/);
+    await user.clear(name);
+    await user.type(name, "Renamed");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0].method).toBe("PATCH");
+    expect(writes[0].body).toMatchObject({ name: "Renamed" });
   });
 });
