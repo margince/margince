@@ -2327,13 +2327,13 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `enrich` / `signature`
 
-`system 1,069 B (~267 tok)` — rules 795 B · boundary 274 B · after boundary 0 B · **cacheable 74%**
+`system 1,092 B (~273 tok)` — rules 818 B · boundary 274 B · after boundary 0 B · **cacheable 74%**
 
 <details><summary>system prompt</summary>
 
 ```
-You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone, role,
-linkedin, company_name, address, website. Emit a field ONLY if the signature lines state it verbatim; the snippet
+You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone,
+linkedin, company_name, address, website. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
 must appear character-for-character in the supplied text. Ignore quoted replies, legal
 disclaimers, and marketing taglines. Phone numbers verbatim, never normalized.
 Emit address as the single line the signature prints it on. Emit website only for the
@@ -2366,7 +2366,6 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "enum": [
               "title",
               "phone",
-              "role",
               "linkedin",
               "company_name",
               "address",
