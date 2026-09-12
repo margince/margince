@@ -108,6 +108,7 @@ export const vi = {
   "history.edge.marker": "Liên kết",
   "history.field.address": "Địa chỉ",
   "history.field.amount_minor": "Giá trị",
+  "history.field.expected_arr_minor": "ARR dự kiến",
   "history.field.assignee_id": "Người phụ trách",
   "history.field.body": "Ghi chú",
   "history.field.emails": "Địa chỉ email",
@@ -1217,6 +1218,8 @@ export const vi = {
   "contracts.form.number": "S\u1ed1 h\u1ee3p \u0111\u1ed3ng",
   "contracts.form.value": "Gi\u00e1 tr\u1ecb",
   "contracts.form.basis": "Gi\u00e1 tr\u1ecb n\u00e0y l\u00e0",
+  "contracts.form.arr": "Doanh thu định kỳ hằng năm",
+  "contracts.form.arrMonthly": "Tương đương hàng tháng:",
   "contracts.basis.total":
     "t\u1ed5ng gi\u00e1 tr\u1ecb c\u1ea3 k\u1ef3 h\u1ea1n",
   "contracts.basis.annual":
@@ -2495,6 +2498,9 @@ export const vi = {
   "deal.priorityMedium": "Trung bình",
   "deal.priorityLow": "Thấp",
   "deal.acquisitionSource": "Nguồn tiếp cận",
+  "deal.expectedArr": "ARR dự kiến",
+  "deal.monthlyEquivalent": "Tương đương hàng tháng",
+  "deal.monthlyApproximate": "khoảng",
   "assignments.title": "Phụ trách",
   "assignments.noAccessNote":
     "Ghi nhận ai chịu trách nhiệm. Nó không cấp quyền truy cập vào bản ghi này.",

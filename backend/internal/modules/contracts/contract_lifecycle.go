@@ -57,10 +57,15 @@ func (e *ContractCheckError) Error() string { return e.Reason }
 // never learns our schema from an error.
 func contractCheckError(constraint string) error {
 	switch constraint {
-	case "contract_value_pair":
+	case "contract_money_currency_pair":
 		return &ContractCheckError{
 			Field:  "value_minor",
-			Reason: "a contract value needs its currency, and a currency needs its value",
+			Reason: "a contract figure needs its currency, and a currency needs a value or an ARR to price",
+		}
+	case "contract_arr_nonnegative":
+		return &ContractCheckError{
+			Field:  "arr_minor",
+			Reason: "recurring revenue cannot be negative",
 		}
 	case "contract_fx_pair":
 		return &ContractCheckError{

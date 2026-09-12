@@ -194,9 +194,22 @@ func (s *Store) writeContributions(
 				w := row.WeightedMinor
 				weighted = &w
 			}
+			// The currency belongs to the AMOUNT here, and the contribution's
+			// own CHECK says the two are null together. A deal priced only on
+			// its recurring value carries a currency with no one-off amount:
+			// legal on the deal, where the code answers for two figures, and
+			// meaningless on a contribution row that records only the one. The
+			// currency is dropped rather than the row, because the deal still
+			// counts toward the period even where this snapshot has no figure
+			// for it — and sending the code beside a null amount would abort
+			// the whole snapshot transaction for every other deal in it.
+			currency := nullIfEmpty(row.Currency)
+			if row.AmountMinor == nil {
+				currency = nil
+			}
 			return []any{
 				snapshotID, dealID, nullableID(row.Owner), row.AmountMinor,
-				nullIfEmpty(row.Currency), row.BaseMinor, nil, nil,
+				currency, row.BaseMinor, nil, nil,
 				row.EffectiveClose, row.CloseProvisional, nullIfEmpty(row.Category),
 				nullableInt(row.StageProbability), nullableID(row.StageID), weighted,
 				row.InWon, row.InEvidence, row.InBestCase, row.InOpen,

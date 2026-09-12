@@ -22380,6 +22380,11 @@ export interface components {
             /** Format: int64 */
             amount_minor?: number | null;
             currency?: string | null;
+            /**
+             * Format: int64
+             * @description Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.
+             */
+            expected_arr_minor?: number | null;
             /** @description The fields of THIS row the caller's role withholds (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Sorting or filtering the list by a masked field is refused (422). */
             readonly masked_fields?: string[];
             /** @description Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate. */
@@ -22492,6 +22497,11 @@ export interface components {
             /** Format: int64 */
             amount_minor?: number | null;
             currency?: string | null;
+            /**
+             * Format: int64
+             * @description Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
+             */
+            expected_arr_minor?: number | null;
             /** Format: uuid */
             pipeline_id: string;
             /** Format: uuid */
@@ -22543,6 +22553,11 @@ export interface components {
             /** Format: int64 */
             amount_minor?: number | null;
             currency?: string | null;
+            /**
+             * Format: int64
+             * @description Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
+             */
+            expected_arr_minor?: number | null;
             /** Format: uuid */
             company_id?: string | null;
             /**
@@ -22757,6 +22772,11 @@ export interface components {
             value_minor?: number | null;
             currency?: string | null;
             /**
+             * Format: int64
+             * @description Annual recurring revenue in minor units of `currency`. Null means the agreement carries no recurring component, which is not the same as zero. `currency` is present exactly when `value_minor` or `arr_minor` is.
+             */
+            arr_minor?: number | null;
+            /**
              * @description What `value_minor` measures (CONTRACT-PARAM-2). An open-ended agreement has
              *     no finite total, so it records twelve months and says so. Figures on
              *     different bases are never summed — thirty-six months plus twelve months is
@@ -22845,6 +22865,11 @@ export interface components {
             value_minor?: number | null;
             currency?: string | null;
             /**
+             * Format: int64
+             * @description Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
+             */
+            arr_minor?: number | null;
+            /**
              * @default total
              * @enum {string}
              */
@@ -22875,6 +22900,11 @@ export interface components {
             /** Format: int64 */
             value_minor?: number | null;
             currency?: string | null;
+            /**
+             * Format: int64
+             * @description Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
+             */
+            arr_minor?: number | null;
             /** @enum {string} */
             value_basis?: "total" | "annualized_12m";
             /** Format: date */
@@ -22927,6 +22957,11 @@ export interface components {
             /** Format: int64 */
             value_minor?: number | null;
             currency?: string | null;
+            /**
+             * Format: int64
+             * @description Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
+             */
+            arr_minor?: number | null;
             /**
              * @description Stated explicitly rather than inherited: an open-ended agreement becoming a fixed term changes what its value measures.
              * @enum {string}

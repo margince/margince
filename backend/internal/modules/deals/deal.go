@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ensureOpenBirthStage guards create: deals are born open — AdvanceDeal
@@ -122,6 +121,11 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 	}
 	if moved(current.Currency, in.Currency) {
 		p.Set(currencyField, current.Currency, *in.Currency)
+	}
+	// ARR moves the forecast the same way the one-off amount does, so it is
+	// assigned under the same "only where it actually moved" rule.
+	if moved(current.ExpectedArrMinor, in.ExpectedArrMinor) {
+		p.Set(arrField, current.ExpectedArrMinor, *in.ExpectedArrMinor)
 	}
 	if err := applyDealLinkPatches(ctx, tx, current, in, p, clearPartner,
 		s.installation.EnsurePartner, s.ensureProjectAttachable); err != nil {
@@ -294,23 +298,23 @@ func validPartnerAttribution(v string) error {
 func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch,
 ) error {
-	resultingAmount := current.AmountMinor
-	if in.AmountMinor != nil {
-		resultingAmount = in.AmountMinor
-	}
+	// Read off the PATCH, not off the request. A clear writes its null into the
+	// patch before this runs and never appears on the input struct at all, so a
+	// resulting row derived from `in` alone would still hold every figure the
+	// caller just cleared — and the pairing would then be checked against a row
+	// that is not the one about to be written.
+	after := p.After()
+	resultingAmount := patchedMoney(after, amountField, current.AmountMinor)
+	resultingArr := patchedMoney(after, arrField, current.ExpectedArrMinor)
 	resultingCurrency := current.Currency
-	if in.Currency != nil {
-		resultingCurrency = in.Currency
-	}
-	if (resultingAmount == nil) != (resultingCurrency == nil) {
-		return &AmountCurrencyPairError{Missing: missingMoneyHalf(resultingAmount == nil)}
-	}
-	if resultingAmount != nil {
-		// One spelling of "a valid amount+currency" (values.Money), the
-		// same rule the schema CHECKs repeat.
-		if _, err := values.NewMoney(*resultingAmount, string(*resultingCurrency)); err != nil {
-			return err
+	if v, ok := after[currencyField]; ok {
+		resultingCurrency = nil
+		if code, isString := v.(string); isString {
+			resultingCurrency = &code
 		}
+	}
+	if err := moneyPairError(resultingAmount, resultingArr, resultingCurrency); err != nil {
+		return err
 	}
 
 	// Keyed on what the PATCH carries for the MONEY, not on what the request
@@ -320,6 +324,16 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	// rate is supposed to answer for the close.
 	_, amountMoved := p.After()[amountField]
 	_, currencyMoved := p.After()[currencyField]
+	// Restatement is judged on what the REQUEST carried, not on what the patch
+	// wrote. A caller who sends the same numeral back under a new currency has
+	// restated the figure deliberately — they are saying 5000 is still the
+	// price, now in yen — and the patch records no move for it because the
+	// integer did not change. Judging on the patch would refuse exactly that
+	// caller, who did the one thing this rule asks for.
+	if err := currencyRestatementError(current, resultingCurrency, currencyMoved,
+		in.AmountMinor != nil, in.ExpectedArrMinor != nil); err != nil {
+		return err
+	}
 	if string(current.Status) != "open" && resultingAmount != nil && (amountMoved || currencyMoved) {
 		// deal_closed_at guarantees ClosedAt on a non-open row.
 		rateBefore, rateDateBefore := frozenBefore(current)
@@ -401,6 +415,11 @@ const currencyField = "currency"
 // amountField is the other half of a money value.
 const amountField = "amount_minor"
 
+// arrField is the recurring figure. It shares the currency with amountField
+// rather than carrying one of its own: a deal quoting its one-off price in one
+// currency and its subscription in another is not a deal anyone can forecast.
+const arrField = "expected_arr_minor"
+
 // closeDateField names the column a slipped forecast moves.
 const closeDateField = "expected_close_date"
 
@@ -413,32 +432,6 @@ const (
 	fxRateDateColumn = "fx_rate_date"
 	baseAmountColumn = "amount_minor_base"
 )
-
-// missingMoneyHalf names whichever half of the pair was left out.
-func missingMoneyHalf(amountMissing bool) string {
-	if amountMissing {
-		return amountField
-	}
-	return currencyField
-}
-
-// AmountCurrencyPairError refuses a half-specified money value. Missing names
-// the half that was NOT supplied, because that is the input the caller adds —
-// telling someone who sent a currency to fix the currency is no guidance.
-type AmountCurrencyPairError struct{ Missing string }
-
-func (e *AmountCurrencyPairError) Error() string {
-	return "amount_minor and currency come together or not at all"
-}
-
-// FieldFault refuses an amount without its currency (or the reverse) — the pair is atomic.
-func (e *AmountCurrencyPairError) FieldFault() (field, code, message string) {
-	field = e.Missing
-	if field == "" {
-		field = currencyField
-	}
-	return field, "amount_currency_pair", e.Error()
-}
 
 // The two things a partner can have done for a deal. Sourced means they
 // brought it; influenced means they helped one we already had. Commission

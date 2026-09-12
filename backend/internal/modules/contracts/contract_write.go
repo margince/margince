@@ -28,12 +28,15 @@ import (
 // absent by design: an agreement is born a draft and leaves that state only
 // through an asserted transition.
 type CreateContractInput struct {
-	CompanyID        ids.CompanyID
-	DealID           *ids.DealID
-	ProjectID        *ids.ProjectID
-	ContractNumber   *string
-	Title            string
-	ValueMinor       *int64
+	CompanyID      ids.CompanyID
+	DealID         *ids.DealID
+	ProjectID      *ids.ProjectID
+	ContractNumber *string
+	Title          string
+	ValueMinor     *int64
+	// ArrMinor is the recurring half of the agreement's worth, in the same
+	// currency as ValueMinor.
+	ArrMinor         *int64
 	Currency         *string
 	ValueBasis       string
 	StartsOn         *time.Time
@@ -91,13 +94,15 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 		id, in.CompanyID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
 		in.ValueMinor, in.Currency, in.ValueBasis, in.StartsOn, in.EndsOn, in.RenewalOn,
 		in.AutoRenew, in.NoticePeriodDays, in.PaymentTermDays, in.SignedOn, in.Source, by,
+		in.ArrMinor,
 	})
 	_, err := tx.Exec(ctx,
 		`INSERT INTO contract (id, company_id, deal_id, project_id, contract_number, title,
 		                       value_minor, currency, value_basis, starts_on, ends_on, renewal_on,
 		                       auto_renew, notice_period_days, payment_term_days, signed_on,
-		                       source, captured_by`+cfCols+`)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18`+cfHolders+`)`,
+		                       source, captured_by, arr_minor`+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+		         $19`+cfHolders+`)`,
 		args...)
 	if err != nil {
 		if storekit.IsForeignKeyViolation(err) {
@@ -165,6 +170,9 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		}
 		if err := ensureLinksShareCompany(ctx, tx, anchor,
 			uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
+			return err
+		}
+		if err := refuseARedenominatedDraft(existing, in); err != nil {
 			return err
 		}
 		if err := refuseRepricingAFrozenContract(existing, in); err != nil {
@@ -274,6 +282,40 @@ func (s *Store) ArchiveContract(ctx context.Context, id ids.ContractID) error {
 	})
 }
 
+// refuseARedenominatedDraft holds for a DRAFT what the frozen-rate guard below
+// holds for everything else: a currency changed under a figure nobody restated
+// silently reprices the agreement.
+//
+// A draft is still the human's to re-price, so the currency may move — but the
+// stored numeral carries no unit, and moving the code alone turns 12,000 EUR
+// into 12,000 JPY with nothing in the row or its audit diff saying the value
+// changed. Requiring every populated figure to be sent again in the same
+// request makes the reprice explicit and puts it in the diff.
+//
+// Re-sending the currency the draft already holds is not a change and asks for
+// nothing.
+func refuseARedenominatedDraft(existing crmcontracts.Contract, in crmcontracts.UpdateContractRequest) error {
+	if in.Currency == nil || statusOf(existing) != StatusDraft {
+		return nil
+	}
+	if existing.Currency == nil || *existing.Currency == *in.Currency {
+		return nil
+	}
+	if existing.ValueMinor != nil && in.ValueMinor == nil {
+		return &ContractCheckError{
+			Field:  "value_minor",
+			Reason: "changing the currency requires restating the value in the new currency, because the stored number carries no unit of its own",
+		}
+	}
+	if existing.ArrMinor != nil && in.ArrMinor == nil {
+		return &ContractCheckError{
+			Field:  "arr_minor",
+			Reason: "changing the currency requires restating the recurring value in the new currency, because the stored number carries no unit of its own",
+		}
+	}
+	return nil
+}
+
 // refuseRepricingAFrozenContract keeps a contract's currency and its frozen
 // conversion rate describing the same money.
 //
@@ -323,6 +365,9 @@ func contractPatch(existing crmcontracts.Contract, in crmcontracts.UpdateContrac
 	}
 	if in.ValueMinor != nil {
 		patch.Set("value_minor", existing.ValueMinor, *in.ValueMinor)
+	}
+	if in.ArrMinor != nil {
+		patch.Set("arr_minor", existing.ArrMinor, *in.ArrMinor)
 	}
 	if in.Currency != nil {
 		patch.Set("currency", existing.Currency, *in.Currency)

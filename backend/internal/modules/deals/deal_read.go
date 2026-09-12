@@ -389,7 +389,7 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 		" AND EXISTS (SELECT 1 FROM company pref WHERE pref.id = partner_company_id AND %s)", scope), nil
 }
 
-const dealColumns = `id, name, amount_minor, currency, pipeline_id, stage_id,
+const dealColumns = `id, name, amount_minor, expected_arr_minor, currency, pipeline_id, stage_id,
 	company_id, project_id, owner_id, partner_company_id, partner_attribution, status, lost_reason,
 	won_without_contract_reason, won_without_contract_detail,
 	description, commercial_motion, priority, acquisition_source,
@@ -427,7 +427,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var wonReason *string
 	var motion, priority *string
 	dests := []any{
-		&id, &d.Name, &d.AmountMinor, &d.Currency, &pipelineID, &stageID,
+		&id, &d.Name, &d.AmountMinor, &d.ExpectedArrMinor, &d.Currency, &pipelineID, &stageID,
 		&companyID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
 		&wonReason, &d.WonWithoutContractDetail,
 		&d.Description, &motion, &priority, &d.AcquisitionSource,

@@ -12,7 +12,9 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { uploadAttachment } from "./attachmentupload";
 import { problemMessageOf } from "./common";
+import { ContractArrField } from "./contractarr";
 import { paperState, useContractPaper } from "./contractpaper";
+import { contractTermsBody } from "./contracttermsbody";
 import { createContract, patchContract } from "./contractwrites";
 
 // Recording an agreement.
@@ -42,6 +44,10 @@ export type ContractDraft = {
   title: string;
   contractNumber: string;
   valueMinor: number;
+  // The recurring half of what the agreement is worth, annual, in the same
+  // currency as valueMinor. Zero means "not priced recurring", which is what
+  // the paired money columns hold as NULL.
+  arrMinor: number;
   currency: string;
   valueBasis: ValueBasis;
   startsOn: string;
@@ -56,6 +62,7 @@ const EMPTY_DRAFT: ContractDraft = {
   title: "",
   contractNumber: "",
   valueMinor: 0,
+  arrMinor: 0,
   // No currency of its own. There is no currency control on this form, so
   // whatever stands here is written to the record unseen — and a literal would
   // label every installation's agreements in one country's money. The unit
@@ -216,6 +223,7 @@ function draftOf(contract: Contract | undefined): ContractDraft {
     title: contract.title,
     contractNumber: contract.contract_number ?? "",
     valueMinor: contract.value_minor ?? 0,
+    arrMinor: contract.arr_minor ?? 0,
     // A recorded agreement keeps its OWN currency. The two money columns are
     // paired by the database, so an agreement carrying none carries no amount
     // either: it is being priced here for the first time, exactly like a new
@@ -323,6 +331,12 @@ export function ContractTermsFields({
           />
         )}
       </Field>
+
+      <ContractArrField
+        arrMinor={draft.arrMinor}
+        currency={currency}
+        onChangeMinor={(arrMinor) => setDraft({ ...draft, arrMinor })}
+      />
 
       {/* The basis is asked HERE, next to the amount, because it changes what
           the amount means. An open-ended agreement has no finite total, so it
@@ -592,6 +606,7 @@ export type ContractTermsFragment = Pick<
   components["schemas"]["CreateContractRequest"],
   | "contract_number"
   | "value_minor"
+  | "arr_minor"
   | "currency"
   | "starts_on"
   | "ends_on"
@@ -600,41 +615,6 @@ export type ContractTermsFragment = Pick<
   | "payment_term_days"
   | "signed_on"
 >;
-
-export function contractTermsBody(draft: ContractDraft): ContractTermsFragment {
-  const body: ContractTermsFragment = {};
-  if (draft.contractNumber.trim() !== "") {
-    body.contract_number = draft.contractNumber.trim();
-  }
-  if (draft.valueMinor > 0) {
-    body.value_minor = draft.valueMinor;
-    if (draft.currency !== "") {
-      body.currency = draft.currency;
-    }
-  }
-  if (draft.startsOn !== "") {
-    body.starts_on = draft.startsOn;
-  }
-  if (draft.endsOn !== "") {
-    body.ends_on = draft.endsOn;
-  }
-  if (draft.renewalOn !== "") {
-    body.renewal_on = draft.renewalOn;
-  }
-  if (draft.noticePeriodDays !== "") {
-    body.notice_period_days = Number(draft.noticePeriodDays);
-  }
-  // Emptiness, not falsiness: 0 is a real answer here and means due on
-  // receipt, so a truthiness check would silently drop the one term a
-  // reader is most likely to have typed deliberately.
-  if (draft.paymentTermDays !== "") {
-    body.payment_term_days = Number(draft.paymentTermDays);
-  }
-  if (draft.signedOn !== "") {
-    body.signed_on = draft.signedOn;
-  }
-  return body;
-}
 
 export function contractBody(
   companyId: string,

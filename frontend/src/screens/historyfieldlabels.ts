@@ -23,6 +23,7 @@ import type { MessageKey } from "../i18n/en";
 const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["address", "history.field.address"],
   ["amount_minor", "history.field.amount_minor"],
+  ["expected_arr_minor", "history.field.expected_arr_minor"],
   ["assignee_id", "history.field.assignee_id"],
   ["body", "history.field.body"],
   ["candidate_company_key", "history.field.candidate_company_key"],

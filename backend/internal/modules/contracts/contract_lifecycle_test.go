@@ -74,7 +74,8 @@ func TestRenewingASupersededContractIsRefused(t *testing.T) {
 // look at and a sentence about their agreement — never our constraint name.
 func TestConstraintRefusalsNameTheFieldAndNotTheSchema(t *testing.T) {
 	cases := map[string]string{
-		"contract_value_pair":               "value_minor",
+		"contract_money_currency_pair":      "value_minor",
+		"contract_arr_nonnegative":          "arr_minor",
 		"contract_fx_pair":                  "fx_rate_to_base",
 		"contract_term_order":               "ends_on",
 		"contract_cancellation_within_term": "cancellation_effective_on",

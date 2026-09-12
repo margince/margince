@@ -56,17 +56,53 @@ func clearableDealColumns(current crmcontracts.Deal) map[string]storekit.Clearab
 // the other. A restore reverting a partner-add names both halves as null, and
 // refusing either would leave that reversal impossible to express.
 //
+// text (gates/clearablefields_test.go), so a constant here is invisible to it
+// and the census reports fewer clearable fields than the store clears while
+// still passing — see clearableDealColumns, which carries the same waiver
+//
 // Routing these through clearableDealColumns instead would set a single column
 // and earn a constraint violation from the database rather than a decision from
 // the store.
+//
+//nolint:goconst // the clearable census reads these literals out of the source
 func dealClearPairs(current crmcontracts.Deal) map[string][]storekit.Clearable {
 	partner := []storekit.Clearable{
 		{Column: "partner_company_id", Current: current.PartnerCompanyId},
 		{Column: "partner_attribution", Current: current.PartnerAttribution},
 	}
+	// Clearing the recurring figure.
+	//
+	// It writes ONE column where the deal still carries a one-off amount: the
+	// currency stays because the amount still needs denominating. It writes
+	// TWO where the ARR is the only figure, because a currency left behind
+	// with nothing to price is the state deal_money_currency_pair refuses.
+	//
+	// This is what makes the offer-accept refusal actionable. That refusal
+	// tells a caller to settle the ARR before accepting an offer in another
+	// currency, and an ARR that could not be cleared would be advice with no
+	// move behind it.
+	// Written as one literal per branch rather than appended into: the
+	// clearable census walks every composite literal in this function, and a
+	// struct literal built outside the slice reads to it as a map whose keys
+	// it cannot parse.
+	clearArr := []storekit.Clearable{
+		{Column: "expected_arr_minor", Current: current.ExpectedArrMinor},
+	}
+	if current.AmountMinor == nil {
+		clearArr = []storekit.Clearable{
+			{Column: "expected_arr_minor", Current: current.ExpectedArrMinor},
+			{Column: "currency", Current: current.Currency},
+		}
+	}
+	// ONE composite literal, with literal keys. The clearable census reads
+	// these keys out of the source text, so a key added by assignment — or
+	// written as a constant — is invisible to it, and the census then reports
+	// fewer clearable fields than the store actually clears while still
+	// passing. That is the failure it exists to catch.
 	return map[string][]storekit.Clearable{
 		"partner_company_id":  partner,
 		"partner_attribution": partner,
+		"expected_arr_minor":  clearArr,
 	}
 }
 

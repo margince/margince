@@ -35,6 +35,7 @@ type UpdateDealInput struct {
 	Trail            storekit.AuditTrail
 	Name             *string
 	AmountMinor      *int64
+	ExpectedArrMinor *int64
 	Currency         *string
 	CompanyID        *ids.CompanyID
 	ProjectID        *ids.ProjectID

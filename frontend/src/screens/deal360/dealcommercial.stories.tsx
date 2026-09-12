@@ -94,5 +94,38 @@ export const RetiredSource: Story = {
   args: { deal: deal({ acquisition_source: "roadshow" }), sources },
 };
 
-// Renders nothing at all when no one has recorded any of the three.
+// Recurring revenue with an EXACT monthly reading — 12,000.00 a year divides
+// into 1,000.00 a month with nothing left over, so no approximation marker.
+export const RecurringExact: Story = {
+  args: {
+    deal: deal({
+      commercial_motion: "renewal",
+      expected_arr_minor: 1_200_000,
+      currency: "EUR",
+    }),
+    sources,
+  },
+};
+
+// The same panel where the division does NOT come out even. 100.00 a year is
+// 8.33 a month and change, so the monthly row is marked approximate: a reader
+// who multiplies it back will not reach the annual figure.
+export const RecurringApproximate: Story = {
+  args: {
+    deal: deal({ expected_arr_minor: 10_000, currency: "EUR" }),
+    sources,
+  },
+};
+
+// A subscription deal with no one-off amount at all. This row was illegal
+// before the money pairing was rewritten, and it is the shape the whole slice
+// exists for.
+export const RecurringOnlyInAZeroDigitCurrency: Story = {
+  args: {
+    deal: deal({ expected_arr_minor: 1_000_000, currency: "JPY" }),
+    sources,
+  },
+};
+
+// Renders nothing at all when no one has recorded any of them.
 export const Unset: Story = { args: { deal: deal({}), sources } };
