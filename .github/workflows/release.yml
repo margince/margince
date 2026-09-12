@@ -390,15 +390,25 @@ jobs:
     permissions:
       contents: write
     steps:
+      # The whole history, because the move is ORDERED: the script refuses a
+      # revision the tag's current one does not lead to, and a shallow checkout
+      # cannot answer that question about anything.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Move the published tag
         env:
           PUBLISHED: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          git tag -f "$PUBLISHED_TAG" "$PUBLISHED"
-          # --force because the tag MOVES: it names one revision, the newest
-          # published one, and a reader asking "what does a consumer have"
-          # wants exactly that. The history of what was published lives in the
-          # dist service, which is its owner; this is a pointer.
-          git push --force origin "refs/tags/$PUBLISHED_TAG"
+        # The tag MOVES: it names one revision, the newest published one, and a
+        # reader asking "what does a consumer have" wants exactly that. The
+        # history of what was published lives in the dist service, which is its
+        # owner; this is a pointer.
+        #
+        # FORWARD ONLY, and in a script of its own so that rule has a test. This
+        # job is outside the publish concurrency group — it has to be, or a
+        # release would hold the group while tagging — so two releases in flight
+        # are serialized at the publish and not here, and an older one's move
+        # can land last. Moving the tag backward cuts every later patch from a
+        # base ahead of what consumers have, which is the defect this whole
+        # change is about, arriving by the other door.
+        run: bash scripts/publish-released-tag.sh "$PUBLISHED_TAG" "$PUBLISHED" origin
