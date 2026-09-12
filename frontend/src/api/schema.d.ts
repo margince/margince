@@ -21628,7 +21628,7 @@ export interface components {
          *     card.
          * @enum {string}
          */
-        ContactMomentRule: "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "open_promise" | "role_change" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
+        ContactMomentRule: "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "open_promise" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
         /** @description One thing that actually happened, which the reader can open. */
         ContactMomentEvidence: {
             /** @enum {string} */

@@ -297,9 +297,9 @@ const goneQuietMoment: components["schemas"]["ContactMoment"] = {
   ],
 };
 
-// The eight rungs of the ladder LeadMoment/LeadMomentWarning above never
+// The seven rungs of the ladder LeadMoment/LeadMomentWarning above never
 // reach: ContactToday renders one ContactMomentRule per fixture, and a gallery
-// with only meeting_prep and gone_quiet on screen hides the other eight the
+// with only meeting_prep and gone_quiet on screen hides the other seven the
 // component can render. Spread across them: two evidence items (the
 // "sources" plural), a `will_confirm` action, a `blocked` one with its
 // reason, and a freshness older than the moment's own headline date.
@@ -392,30 +392,6 @@ const overduePromiseMoment: components["schemas"]["ContactMoment"] = {
   recommended_action: {
     kind: "draft_reply",
     label: "Send the quote",
-    state: "available",
-  },
-};
-
-const roleChangeMoment: components["schemas"]["ContactMoment"] = {
-  claim_key: "role_change:p-1",
-  evidence_fingerprint: "fp-rolechange-1",
-  rule: "role_change",
-  rule_version: "v1",
-  headline: "Dana's recorded buying role moved from influencer to champion.",
-  why_now: "A committee seat changed, the pitch to her changes with it.",
-  confidence: "observed_fact",
-  freshness_at: "2026-08-12T09:00:00Z",
-  evidence: [
-    {
-      type: "relationship_change",
-      label: "Buying role updated: champion",
-      observed_at: "2026-08-12T09:00:00Z",
-    },
-  ],
-  recommended_action: {
-    kind: "open_record",
-    label: "Open the deal",
-    destination: { surface: "record", entity_type: "deal" },
     state: "available",
   },
 };
@@ -846,16 +822,15 @@ export const LeadMomentWarning: Story = {
   ),
 };
 
-// The eight rungs LeadMoment and LeadMomentWarning above don't reach, stacked
-// rather than split into eight near-identical stories: each one differs only
+// The seven rungs LeadMoment and LeadMomentWarning above don't reach, stacked
+// rather than split into seven near-identical stories: each one differs only
 // in its moment, so a designer scanning this gallery sees the whole ladder in
-// one scroll instead of hunting eight sidebar entries for the same panel.
+// one scroll instead of hunting seven sidebar entries for the same panel.
 const REMAINING_MOMENTS: ReadonlyArray<components["schemas"]["ContactMoment"]> =
   [
     reEngagedMoment,
     jobChangeMoment,
     overduePromiseMoment,
-    roleChangeMoment,
     publicSignalMoment,
     missingNextStepMoment,
     thinRelationshipMoment,

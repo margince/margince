@@ -5763,7 +5763,6 @@ const (
 	ContactMomentRuleOverduePromise   ContactMomentRule = "overdue_promise"
 	ContactMomentRulePublicSignal     ContactMomentRule = "public_signal"
 	ContactMomentRuleReEngaged        ContactMomentRule = "re_engaged"
-	ContactMomentRuleRoleChange       ContactMomentRule = "role_change"
 	ContactMomentRuleThinRelationship ContactMomentRule = "thin_relationship"
 )
 
@@ -5787,8 +5786,6 @@ func (e ContactMomentRule) Valid() bool {
 	case ContactMomentRulePublicSignal:
 		return true
 	case ContactMomentRuleReEngaged:
-		return true
-	case ContactMomentRuleRoleChange:
 		return true
 	case ContactMomentRuleThinRelationship:
 		return true

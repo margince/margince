@@ -27,8 +27,8 @@ import (
 //
 // Below gone_quiet on purpose: a promise with no clock on it can wait for a
 // day, a contact who stopped answering is already costing something. Above
-// role_change and everything under it, because a thing we said we would do
-// outranks a thing we might do next.
+// missing_next_step and everything under it, because a thing we said we would
+// do outranks a thing we might do next.
 //
 // BOTH SOURCES, like the overdue rung above it. A promise read out of a
 // conversation and one somebody typed are the same debt, so a claim that is

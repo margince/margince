@@ -20,41 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
-	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
-
-// roleChangeMoment: the relationship crossed a threshold. Derived from what the
-// page already read, never from a fresh query.
-//
-// The rule id is role_change and the only change it reads is replied_after_gap,
-// which is not a role change — relstrength emits four kinds and none of them is
-// one. So the headline states what the evidence actually shows. Naming the rung
-// for a signal the system does not produce is a contract question, tracked
-// separately; what must not happen meanwhile is the page telling a rep that
-// somebody's seat moved on the strength of a reply.
-func roleChangeMoment(_ context.Context, _ time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
-	change, ok := findChange(page, relstrength.ChangeRepliedAfterGap)
-	if !ok {
-		return crmcontracts.ContactMoment{}, false
-	}
-	evidence := []crmcontracts.ContactMomentEvidence{{
-		Type:       crmcontracts.ContactMomentEvidenceTypeRelationshipChange,
-		Label:      "They replied after a long gap",
-		ObservedAt: &change.At,
-	}}
-	return crmcontracts.ContactMoment{
-		ClaimKey:            "moment:role_change",
-		Rule:                crmcontracts.ContactMomentRuleRoleChange,
-		RuleVersion:         ptr(ruleVersion),
-		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            "They answered after a long silence",
-		WhyNow:              "A relationship that had gone quiet has moved. The window where a reply is expected is now.",
-		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
-		Evidence:            evidence,
-		FreshnessAt:         &change.At,
-		RecommendedAction:   openDeal(page),
-	}, true
-}
 
 // withheld reports whether any of these sections was kept from this reader.
 //
@@ -180,29 +146,6 @@ func dealRecord(dealID openapi_types.UUID) *crmcontracts.ContactMomentDestinatio
 	}
 }
 
-// openDeal offers the deal this record has open, when the reader can see one.
-//
-// The relationship change names no deal, so the destination comes from the
-// commercial section - and that section is absent for a reader without the
-// deal grant. Blocked there rather than available: an action pointing at a
-// record this caller cannot open would navigate them to a 404, which is worse
-// than a control that says why it is off.
-func openDeal(page *crmcontracts.Contact360) crmcontracts.ContactMomentAction {
-	action := crmcontracts.ContactMomentAction{
-		Kind:  crmcontracts.ContactMomentActionKindOpenRecord,
-		Label: "Open the deal",
-		State: crmcontracts.ContactMomentActionStateAvailable,
-	}
-	if page.Commercial == nil || page.Commercial.Deal == nil {
-		reason := "No open deal is visible on this record"
-		action.State = crmcontracts.ContactMomentActionStateBlocked
-		action.BlockedReason = &reason
-		return action
-	}
-	action.Destination = dealRecord(page.Commercial.Deal.DealId)
-	return action
-}
-
 // bookMeeting offers the move this rung is actually about, and blocks it.
 //
 // Pointing "Book a meeting" at the deal record would satisfy every check —
@@ -255,21 +198,6 @@ func directionEvidence(page *crmcontracts.Contact360, at time.Time, fallback str
 		}
 	}
 	return evidence
-}
-
-// findChange looks up one derived relationship change on the page. It answers
-// false when the section was omitted for want of a grant, which is what keeps
-// a moment from disclosing something the page itself is withholding.
-func findChange(page *crmcontracts.Contact360, kind string) (crmcontracts.ContactRelationshipChange, bool) {
-	if page.RelationshipChanges == nil {
-		return crmcontracts.ContactRelationshipChange{}, false
-	}
-	for _, c := range *page.RelationshipChanges {
-		if string(c.Kind) == kind {
-			return c, true
-		}
-	}
-	return crmcontracts.ContactRelationshipChange{}, false
 }
 
 // findActivityAt finds the timeline row for an instant the page reported

@@ -8552,7 +8552,6 @@ export const en = {
   "contact.moment.rule.overdue_promise": "Promise overdue",
   "contact.moment.rule.gone_quiet": "Gone quiet",
   "contact.moment.rule.open_promise": "You owe them",
-  "contact.moment.rule.role_change": "Role changed",
   "contact.moment.rule.public_signal": "Said in public",
   "contact.moment.rule.missing_next_step": "Nothing scheduled",
   "contact.moment.rule.thin_relationship": "One thread only",
