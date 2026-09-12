@@ -193,6 +193,23 @@ type Copy struct {
 	ConfirmRecordBody     string
 	ConfirmConsentSubject string
 	ConfirmConsentBody    string
+	// The PRIVACY NOTICE, which asks for nothing.
+	//
+	// It is a separate message from the record confirmation beside it because
+	// the two do different jobs and only one of them is owed. Art. 14 requires
+	// telling somebody we hold their data; it requires no answer from them. The
+	// record confirmation discharges that duty and ALSO asks whether they want
+	// to hear from us — a marketing question riding a legal obligation, which
+	// is the arrangement a supervisory authority reads as consent obtained
+	// under pressure.
+	//
+	// It also reaches contacts the other one cannot. A contact who asked us to
+	// stop is still owed their disclosure, and only the privacy-notice category
+	// survives that stop (consent/authorizesuppression.go's
+	// survivesARestriction). Before this template existed the duty was owed and
+	// undeliverable.
+	NoticeSubject string
+	NoticeBody    string
 	// ConfirmMarketingAsk is the QUESTION ON THE PAGE, not in the mail — the
 	// sentence beside the yes/no a subject actually answers.
 	//
@@ -233,6 +250,10 @@ type Copy struct {
 	// permission until they answer.
 	ConfirmRecordIgnore  string
 	ConfirmConsentIgnore string
+	// The privacy notice's closing line. It asks for nothing, so it says so:
+	// a reader who does nothing has lost nothing, which is what makes this a
+	// notice rather than a request.
+	NoticeIgnore string
 
 	// The morning brief. Shorter than the weekly on purpose: it arrives every
 	// working day, so it names the top of the queue and links to the rest

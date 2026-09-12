@@ -112,14 +112,22 @@ func (s *Store) stageConfirmMail(
 
 // templateForLinkKind maps a token kind to the wording that carries it.
 //
-// Total over the two link kinds, and it returns the record-confirmation wording
-// for anything else rather than an error: every caller passes one of the two
-// Link* constants, and a wrong template would be caught at staging anyway —
-// comms refuses one whose placeholder count disagrees with the material it was
-// staged with.
+// Total over the three link kinds, and the record confirmation is the fallback
+// rather than an error: every caller passes a Link* constant, and comms refuses
+// a template whose placeholder count disagrees with the material it was staged
+// with, so a wrong one cannot go out silently.
+//
+// The PRIVACY NOTICE arm is not a nicety. Falling through to the record
+// confirmation would send a message asking whether the reader wants to hear
+// from us, under a category that a stopped contact's suppression refuses — so
+// the notice would either ask a question it must not ask, or not be sent at
+// all, and both failures are quiet.
 func templateForLinkKind(kind string) string {
-	if kind == LinkConsentConfirmation {
+	switch kind {
+	case LinkConsentConfirmation:
 		return TemplateConsentConfirmation
+	case LinkPrivacyNotice:
+		return TemplatePrivacyNotice
 	}
 	return TemplateRecordConfirmation
 }

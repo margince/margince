@@ -34,6 +34,15 @@ const (
 	TemplateRecordConfirmation = "record_confirmation"
 	// TemplateConsentConfirmation carries the double-opt-in link.
 	TemplateConsentConfirmation = "consent_confirmation"
+	// TemplatePrivacyNotice tells a contact what is held about them and asks
+	// for nothing.
+	//
+	// Separate from the record confirmation because the two do different jobs
+	// and only one of them is owed: Art. 14 requires telling somebody, not
+	// asking them anything. It also reaches contacts the record confirmation
+	// cannot — a contact who asked us to stop is still owed their disclosure,
+	// and only CategoryPrivacyNotice survives that stop.
+	TemplatePrivacyNotice = "privacy_notice"
 )
 
 // Rendered is one template resolved into the words that will be sent.
@@ -109,6 +118,15 @@ var controllerTemplates = map[string]controllerTemplate{
 		subject:  func(w mailcopy.Copy) string { return w.ConfirmConsentSubject },
 		intro:    func(w mailcopy.Copy) string { return w.ConfirmConsentBody },
 		closing:  func(w mailcopy.Copy) string { return w.ConfirmConsentIgnore },
+	},
+	// Version 1, because this wording has never shipped. The two above are at 2
+	// for changes made after they had.
+	TemplatePrivacyNotice: {
+		version:  1,
+		category: commsauthz.CategoryPrivacyNotice,
+		subject:  func(w mailcopy.Copy) string { return w.NoticeSubject },
+		intro:    func(w mailcopy.Copy) string { return w.NoticeBody },
+		closing:  func(w mailcopy.Copy) string { return w.NoticeIgnore },
 	},
 }
 

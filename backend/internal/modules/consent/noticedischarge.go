@@ -184,9 +184,17 @@ func dischargeableNoticeStates() []string {
 // A consent link discharges nothing: it asks whether the subject wants
 // marketing, which is a different question from telling them we hold their
 // data. Answering it leaves the Art. 14 duty exactly as owed as before.
+//
+// A PRIVACY NOTICE discharges one, and is the only route that reaches a contact
+// who has asked us to stop: the disclosure duty survives that stop, and the
+// engine lets CategoryPrivacyNotice through where it refuses the record
+// confirmation's category.
 func noticeRouteFor(linkKind string) (string, bool) {
-	if linkKind == LinkRecordConfirmation {
+	switch linkKind {
+	case LinkRecordConfirmation:
 		return noticeRouteRecordConfirmation, true
+	case LinkPrivacyNotice:
+		return noticeRoutePrivacyNotice, true
 	}
 	return "", false
 }

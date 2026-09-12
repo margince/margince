@@ -94,11 +94,12 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 		return validateContract(ctx, tx, req, subject)
 	case commsauthz.CategoryPrecontractQuote:
 		return validateQuote(ctx, tx, req, subject)
-	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation:
+	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation,
+		commsauthz.CategoryPrivacyNotice:
 		return validateConfirmation(ctx, tx, subject, category)
 	default:
 		// Every other category — marketing, customer service, account notices,
-		// and the three subject-serving ones that carry no link — has no record
+		// and the two subject-serving ones that carry no link — has no record
 		// evidence this file can read today. They stay unsupported and fall
 		// through to the legacy verdict, which is exactly what they did before
 		// this file existed.

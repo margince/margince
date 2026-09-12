@@ -127,6 +127,7 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 			}
 			return s.recordLinkedPurposeTx(ctx, tx, ref, in)
 		}
+
 		// The clock runs from ARRIVAL, and one timestamp serves every case
 		// this submit opens: a subject who corrects two fields and asks for
 		// erasure made one request, and three deadlines a few microseconds
@@ -314,6 +315,28 @@ func (s *Store) recordLinkedPurposeTx(ctx context.Context, tx pgx.Tx, ref Confir
 // link a capability the mail never described — and a mailed link is only
 // evidence because what it can do is what the subject was told it would do.
 func refuseWiderThanTheMail(kind string, in ConfirmSubmission) error {
+	// A PRIVACY NOTICE described nothing at all. Its mail says what is held and
+	// closes with "you do not need to reply or do anything", so the page it
+	// opens may accept no submission whatever — not a correction, not an
+	// erasure request, not a marketing answer. A reader who wants any of those
+	// has the rights the notice itself names, through doors that ask them to
+	// identify themselves.
+	//
+	// The strictest arm, and deliberately so: this is the one link a contact
+	// who asked us to stop still receives, and it must not become the
+	// re-engagement surface the stop exists to prevent.
+	if kind == LinkPrivacyNotice {
+		// EVERY submission, including an empty one. There is no form on that
+		// page, so nothing legitimate posts to it — and an empty POST would
+		// otherwise SPEND the link, because the token is consumed before the
+		// kind is known. A reader who refreshed into a stray request would lose
+		// the disclosure they were sent, and the page would answer not-found
+		// for a duty the installation still owes them.
+		return &ValidationError{
+			Field:  correctionsField,
+			Reason: "this link tells you what is held and takes no answer",
+		}
+	}
 	if kind != LinkConsentConfirmation {
 		return nil
 	}

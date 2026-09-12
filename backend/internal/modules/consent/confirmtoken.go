@@ -123,6 +123,25 @@ func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID) 
 	return s.issueLink(ctx, contactID, LinkRecordConfirmation, ids.PurposeID{}, "")
 }
 
+// IssuePrivacyNotice mints the link that tells a contact what is held about
+// them, and asks nothing.
+//
+// The SAME mechanism as the two links beside it — the address is derived from
+// the contact's own record, only the hash is stored, the plaintext is mailed
+// and never returned — with one difference that matters: spending this link
+// grants nothing and records no answer. It is a read, so the mailbox proof it
+// carries is protecting a disclosure rather than a permission.
+//
+// It exists because the record confirmation could not do this job. That message
+// discharges the same duty and ALSO asks whether the reader wants to hear from
+// us, which puts a marketing question inside a legal obligation. And it cannot
+// reach a contact who has asked us to stop: the disclosure duty survives that
+// stop, and only CategoryPrivacyNotice survives it in the engine. Before this
+// the duty was owed to exactly those contacts and undeliverable to them.
+func (s *Store) IssuePrivacyNotice(ctx context.Context, contactID ids.ContactID) (IssuedConfirm, error) {
+	return s.issueLink(ctx, contactID, LinkPrivacyNotice, ids.PurposeID{}, "")
+}
+
 // IssueConsentLink mints the link a double-opt-in purpose is confirmed by.
 //
 // It is the SAME mechanism as the record-confirmation link beside it, and that
@@ -356,7 +375,8 @@ func hashPublicToken(token string) string {
 // spelling, because three call sites write it.
 const auditKeyKind = "kind"
 
-// The two questions a mailed link can carry.
+// What a mailed link carries. Two of them ask a question; the third asks
+// nothing and exists to tell somebody something.
 const (
 	// LinkRecordConfirmation asks the subject to check what is held about them.
 	LinkRecordConfirmation = "record_confirmation"
@@ -364,6 +384,10 @@ const (
 	// is the double opt-in, and spending the link is the only thing that
 	// completes one.
 	LinkConsentConfirmation = "consent_confirmation"
+	// LinkPrivacyNotice shows what is held about the subject, where it came
+	// from, and the rights they have over it. It grants nothing and takes no
+	// answer: spending it changes no record.
+	LinkPrivacyNotice = "privacy_notice"
 )
 
 // nullablePurpose keeps the column NULL for a record link, which is what the

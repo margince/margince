@@ -10601,6 +10601,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/consent/privacy-notice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail this contact the Art. 14 disclosure, which asks them for nothing.
+         * @description Tells a contact that the installation holds data about them, where it came from, what it is
+         *     used for, and the rights they have over it. It asks for no answer, and the page the link
+         *     opens accepts none.
+         *
+         *     It is a DIFFERENT message from `confirm-request` beside it, and the difference is the point.
+         *     That one discharges the same duty and also asks whether the contact wants to hear from us —
+         *     a marketing question inside a legal obligation, which is the arrangement a supervisory
+         *     authority reads as consent obtained under pressure. It also shows the contact their whole
+         *     file: name, employer, address, phone, provenance. This shows the source, the purposes and
+         *     the rights, because that is what the duty asks for.
+         *
+         *     THIS IS THE ROUTE THAT REACHES SOMEBODY WHO ASKED US TO STOP. The disclosure duty survives
+         *     a subject request, and only the `privacy_notice` category survives it in the send engine —
+         *     so before this door existed, the duty was owed to exactly those contacts and undeliverable
+         *     to them. A hard-bounced address still refuses it, because a dead mailbox receives nothing.
+         *
+         *     The address is derived from the contact's own live primary email, never taken from the
+         *     caller, and the token is never returned. Both properties are the same ones
+         *     `confirm-request` rests on and for the same reasons.
+         */
+        post: operations["sendPrivacyNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/consent/confirm-request": {
         parameters: {
             query?: never;
@@ -30553,7 +30594,48 @@ export interface components {
          *     Branch on `kind`. Adding a variant here is a contract change; adding one in the handler
          *     without one is the defect this union closes.
          */
-        ConfirmPage: components["schemas"]["RecordConfirmationPage"] | components["schemas"]["SubscriptionConfirmationPage"];
+        ConfirmPage: components["schemas"]["RecordConfirmationPage"] | components["schemas"]["SubscriptionConfirmationPage"] | components["schemas"]["PrivacyInformationPage"];
+        /**
+         * @description The answer for a privacy-notice link: what the installation holds about this contact, where
+         *     it came from, what it is used for, and the rights the contact has over it.
+         *
+         *     It TAKES NO ANSWER. The mail that carried this link asks nothing and says so, and the submit
+         *     path refuses any correction, erasure request or marketing choice arriving on it. A reader
+         *     who wants to exercise a right has the doors this page names.
+         *
+         *     That strictness is the point rather than caution. This is the one link a contact who asked
+         *     us to stop still receives — the disclosure duty survives their stop — so it must not become
+         *     the re-engagement surface the stop exists to prevent.
+         *
+         *     It carries LESS than the record page: the acquisition and the purposes, not the contact's
+         *     employer, phone, address or provenance trail. Telling somebody what is held is a different
+         *     act from showing them their file, and this message promised the first.
+         */
+        PrivacyInformationPage: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "privacy_notice";
+            /**
+             * @description How this contact was obtained, in the closed vocabulary
+             *     `contact_acquisition_evidence.kind` uses. It is what Art. 14(2)(f) requires: the source
+             *     the data came from.
+             */
+            acquired_as: string;
+            /**
+             * Format: date-time
+             * @description When the acquisition happened, absent where the door could not say.
+             */
+            acquired_at?: string | null;
+            /** @description What the installation uses this contact's data for, by published name. */
+            purposes?: string[];
+            /**
+             * @description The rights the contact holds over this data, as codes a page renders in its own
+             *     language. Art. 14(2)(c)-(e) requires naming them.
+             */
+            rights: ("access" | "rectification" | "erasure" | "restriction" | "objection" | "complain_to_authority")[];
+        };
         /**
          * @description The answer for a consent link: one named subscription and the contact's current answer to it.
          *
@@ -51157,6 +51239,32 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    sendPrivacyNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notice issued, and what became of the delivery. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmRequestIssued"];
+                };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];

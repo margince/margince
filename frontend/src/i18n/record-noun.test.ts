@@ -242,6 +242,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.withdrawn",
   ],
   vi: [
+    // "Người khác" — SOMEBODY ELSE, a third party who passed on this reader's
+    // details. The privacy notice is addressed to a human being and says so:
+    // the sentence is about who handed the data over, not about a record type,
+    // and "liên hệ khác" would say another CONTACT gave us your details, which
+    // is a different and usually false claim.
+    "privacynotice.source.referral",
     // Names this rename leaves alone: Settings → People, which heads the SEATS
     // group beside Company and Sales, not this record type.
     "tab.relationships",

@@ -4364,6 +4364,43 @@ export const vi = {
     "Những nghĩa vụ này nêu tên liên hệ và cách chúng ta có được họ, nên chỉ hiển thị trong hộp thư quyền riêng tư.",
   "notice.dueAt": "Đến hạn {date}",
   "notice.overdue": "Quá hạn",
+  "privacynotice.title": "Chúng tôi lưu giữ thông tin gì về quý vị",
+  "privacynotice.intro":
+    "Chúng tôi thông báo điều này vì pháp luật yêu cầu. Quý vị không cần trả lời hay làm gì cả.",
+  "privacynotice.source.title": "Thông tin của quý vị đến từ đâu",
+  "privacynotice.source.when": "Nhận được vào ngày {date}",
+  "privacynotice.source.subjectInitiated":
+    "Quý vị đã viết cho chúng tôi trước.",
+  "privacynotice.source.customerContract":
+    "Quý vị là liên hệ trong một quan hệ kinh doanh với chúng tôi.",
+  "privacynotice.source.requested":
+    "Quý vị đã hỏi chúng tôi về báo giá hoặc một cuộc hẹn.",
+  "privacynotice.source.inPerson":
+    "Ai đó đã ghi lại một cuộc trò chuyện với quý vị.",
+  "privacynotice.source.referral":
+    "Người khác đã cung cấp thông tin của quý vị cho chúng tôi.",
+  "privacynotice.source.eventOrForm":
+    "Quý vị đã điền một biểu mẫu hoặc đăng ký tham gia điều gì đó.",
+  "privacynotice.source.publicSource":
+    "Chúng tôi tìm thấy thông tin của quý vị từ nguồn công khai hoặc nguồn doanh nghiệp, chẳng hạn danh bạ hoặc trang web công ty.",
+  "privacynotice.source.purchasedOrImported":
+    "Thông tin của quý vị đến từ một danh sách được mua hoặc nhập vào.",
+  "privacynotice.source.unknown":
+    "Chúng tôi không thể nói thông tin của quý vị đến với chúng tôi bằng cách nào.",
+  "privacynotice.purposes.title": "Chúng tôi dùng để làm gì",
+  "privacynotice.rights.title": "Quyền của quý vị đối với thông tin này",
+  "privacynotice.rights.how":
+    "Để sử dụng bất kỳ quyền nào, hãy trả lời tin nhắn đã đưa quý vị đến đây, hoặc liên hệ với chúng tôi qua địa chỉ trên trang web.",
+  "privacynotice.right.access":
+    "Yêu cầu một bản sao những gì chúng tôi lưu giữ về quý vị.",
+  "privacynotice.right.rectification":
+    "Yêu cầu chúng tôi sửa những gì chưa đúng.",
+  "privacynotice.right.erasure": "Yêu cầu chúng tôi xóa đi.",
+  "privacynotice.right.restriction":
+    "Yêu cầu chúng tôi ngừng sử dụng khi có điều gì đang tranh chấp.",
+  "privacynotice.right.objection": "Phản đối cách chúng tôi sử dụng.",
+  "privacynotice.right.complain":
+    "Khiếu nại với cơ quan bảo vệ dữ liệu của quý vị.",
   "notice.claimed": "Đã nhận",
   "notice.unclaimed": "Chưa ai nhận",
   "notice.excuse": "Kết thúc mà không gửi",
