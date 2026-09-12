@@ -38,10 +38,10 @@ func TestTheServedInventedDraftIsRefusedAtEveryBand(t *testing.T) {
 			if len(findings) == 0 {
 				t.Fatalf("the served draft passed clean at band %s", band)
 			}
-			if !hasRule(findings, "invented-conversation") {
+			if !hasRule(findings, RuleInventedConversation) {
 				t.Errorf("the invented call was not caught at band %s: %+v", band, findings)
 			}
-			if !hasRule(findings, "attributed-claim") {
+			if !hasRule(findings, RuleAttributedClaim) {
 				t.Errorf("the invented attribution was not caught at band %s: %+v", band, findings)
 			}
 		})
@@ -142,7 +142,7 @@ func TestGermanInventionIsCaught(t *testing.T) {
 	}
 }
 
-func hasRule(findings []Finding, rule string) bool {
+func hasRule(findings []Finding, rule Rule) bool {
 	for _, f := range findings {
 		if f.Rule == rule {
 			return true
