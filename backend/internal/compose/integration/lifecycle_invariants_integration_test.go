@@ -421,9 +421,14 @@ func TestRepricingAClosedDealRefreezesFx(t *testing.T) {
 		t.Fatal("closed deal gained an amount but no frozen FX — deal_closed_fx would have 500ed before the fix")
 	}
 
-	// Switching the closed deal's currency re-freezes for the NEW pair.
+	// Switching the closed deal's currency re-freezes for the NEW pair. The
+	// amount is restated alongside it — the stored numeral carries no unit,
+	// so a currency move requires every populated figure to be resent in the
+	// same request rather than silently re-denominating 48000 EUR as 48000
+	// USD.
 	usd := "USD"
-	if _, err := e.Deals.UpdateDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.UpdateDealInput{Currency: &usd}); err != nil {
+	if _, err := e.Deals.UpdateDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)),
+		deals.UpdateDealInput{Currency: &usd, AmountMinor: &amount}); err != nil {
 		t.Fatalf("re-currencying a closed deal: %v", err)
 	}
 	rate, _ = readFx()

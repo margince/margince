@@ -179,9 +179,13 @@ func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 		t.Fatalf("pricing an active contract that froze no rate answered %v, want a refusal on currency", err)
 	}
 
-	// A draft has frozen nothing, so its currency is still the human's to fix.
+	// A draft has frozen nothing, so its currency is still the human's to fix
+	// — but the stored value carries no unit, so the move restates it rather
+	// than silently re-denominating 250,000 USD as 250,000 EUR.
 	draft := draftInCurrency(t, e, company, "USD")
-	moved, err := e.Contracts.UpdateContract(e.Admin(), draft, crmcontracts.UpdateContractRequest{Currency: &eur}, nil)
+	restated := int64(250_000)
+	moved, err := e.Contracts.UpdateContract(e.Admin(), draft,
+		crmcontracts.UpdateContractRequest{Currency: &eur, ValueMinor: &restated}, nil)
 	if err != nil {
 		t.Fatalf("correcting a draft's currency: %v", err)
 	}

@@ -160,9 +160,7 @@ func patchedMoney(after map[string]any, column string, current *int64) *int64 {
 //
 // Every other field stays editable. This is a lock on one figure, not on the
 // deal.
-func refuseManualArrEdit(current crmcontracts.Deal, resultingArr *int64,
-	arrMoved, currencyMoved bool,
-) error {
+func refuseManualArrEdit(current crmcontracts.Deal, resultingArr *int64, moved arrEditMove) error {
 	if current.ArrSourceOfferId == nil {
 		return nil
 	}
@@ -173,13 +171,22 @@ func refuseManualArrEdit(current crmcontracts.Deal, resultingArr *int64,
 	// euros. Without this the restatement rule lets exactly that through: it
 	// asks only that every figure be RESENT, and resending the same numeral
 	// under a new code satisfies it.
-	if !arrMoved && !currencyMoved {
+	if !moved.Arr && !moved.Currency {
 		return nil
 	}
 	return &ArrFromOfferError{
 		Offer:   current.ArrSourceOfferId.String(),
-		Cleared: arrMoved && resultingArr == nil,
+		Cleared: moved.Arr && resultingArr == nil,
 	}
+}
+
+// arrEditMove says which of the two moves that can invalidate an
+// offer-derived ARR the request made. Named rather than two bare bools at the
+// call site, where `(true, false)` says nothing about which field moved and a
+// transposed pair reads exactly like a correct one.
+type arrEditMove struct {
+	Arr      bool
+	Currency bool
 }
 
 // ArrFromOfferError refuses a manual edit to an offer-derived recurring figure.

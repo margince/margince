@@ -120,6 +120,13 @@ var preservedResetTables = map[string]bool{
 	// is entitled to clear it, in which case the trigger needs the
 	// row-conditional shape activity_retention_evidence's own guard has).
 	"communication_instruction": true,
+	// A project's health history (migration 1789170100), on the same footing
+	// as activity_retention_evidence above: the row goes only with the
+	// project it judged, through the FK's CASCADE — the trigger refuses every
+	// other delete, superseding being the one legitimate withdrawal and that
+	// is an INSERT. `project` is not preserved, so a reset still clears these
+	// rows; preserved here means "not a target", never "kept".
+	"project_health_assessment": true,
 }
 
 // resetTargetTables lists every public base table a reset sweeps: all of them,
