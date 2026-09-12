@@ -6486,11 +6486,12 @@ func (e CreateContractRequestValueBasis) Valid() bool {
 
 // Defines values for CreateCustomFieldRequestObject.
 const (
-	CreateCustomFieldRequestObjectCompany CreateCustomFieldRequestObject = "company"
-	CreateCustomFieldRequestObjectContact CreateCustomFieldRequestObject = "contact"
-	CreateCustomFieldRequestObjectDeal    CreateCustomFieldRequestObject = "deal"
-	CreateCustomFieldRequestObjectLead    CreateCustomFieldRequestObject = "lead"
-	CreateCustomFieldRequestObjectProject CreateCustomFieldRequestObject = "project"
+	CreateCustomFieldRequestObjectCompany  CreateCustomFieldRequestObject = "company"
+	CreateCustomFieldRequestObjectContact  CreateCustomFieldRequestObject = "contact"
+	CreateCustomFieldRequestObjectContract CreateCustomFieldRequestObject = "contract"
+	CreateCustomFieldRequestObjectDeal     CreateCustomFieldRequestObject = "deal"
+	CreateCustomFieldRequestObjectLead     CreateCustomFieldRequestObject = "lead"
+	CreateCustomFieldRequestObjectProject  CreateCustomFieldRequestObject = "project"
 )
 
 // Valid indicates whether the value is a known member of the CreateCustomFieldRequestObject enum.
@@ -6499,6 +6500,8 @@ func (e CreateCustomFieldRequestObject) Valid() bool {
 	case CreateCustomFieldRequestObjectCompany:
 		return true
 	case CreateCustomFieldRequestObjectContact:
+		return true
+	case CreateCustomFieldRequestObjectContract:
 		return true
 	case CreateCustomFieldRequestObjectDeal:
 		return true
@@ -6975,11 +6978,12 @@ func (e CreateVoiceBuildRequestReason) Valid() bool {
 
 // Defines values for CustomFieldObject.
 const (
-	CustomFieldObjectCompany CustomFieldObject = "company"
-	CustomFieldObjectContact CustomFieldObject = "contact"
-	CustomFieldObjectDeal    CustomFieldObject = "deal"
-	CustomFieldObjectLead    CustomFieldObject = "lead"
-	CustomFieldObjectProject CustomFieldObject = "project"
+	CustomFieldObjectCompany  CustomFieldObject = "company"
+	CustomFieldObjectContact  CustomFieldObject = "contact"
+	CustomFieldObjectContract CustomFieldObject = "contract"
+	CustomFieldObjectDeal     CustomFieldObject = "deal"
+	CustomFieldObjectLead     CustomFieldObject = "lead"
+	CustomFieldObjectProject  CustomFieldObject = "project"
 )
 
 // Valid indicates whether the value is a known member of the CustomFieldObject enum.
@@ -6988,6 +6992,8 @@ func (e CustomFieldObject) Valid() bool {
 	case CustomFieldObjectCompany:
 		return true
 	case CustomFieldObjectContact:
+		return true
+	case CustomFieldObjectContract:
 		return true
 	case CustomFieldObjectDeal:
 		return true
@@ -16257,11 +16263,12 @@ func (e SuppressContactJSONBodyKind) Valid() bool {
 
 // Defines values for ListCustomFieldsParamsObject.
 const (
-	ListCustomFieldsParamsObjectCompany ListCustomFieldsParamsObject = "company"
-	ListCustomFieldsParamsObjectContact ListCustomFieldsParamsObject = "contact"
-	ListCustomFieldsParamsObjectDeal    ListCustomFieldsParamsObject = "deal"
-	ListCustomFieldsParamsObjectLead    ListCustomFieldsParamsObject = "lead"
-	ListCustomFieldsParamsObjectProject ListCustomFieldsParamsObject = "project"
+	ListCustomFieldsParamsObjectCompany  ListCustomFieldsParamsObject = "company"
+	ListCustomFieldsParamsObjectContact  ListCustomFieldsParamsObject = "contact"
+	ListCustomFieldsParamsObjectContract ListCustomFieldsParamsObject = "contract"
+	ListCustomFieldsParamsObjectDeal     ListCustomFieldsParamsObject = "deal"
+	ListCustomFieldsParamsObjectLead     ListCustomFieldsParamsObject = "lead"
+	ListCustomFieldsParamsObjectProject  ListCustomFieldsParamsObject = "project"
 )
 
 // Valid indicates whether the value is a known member of the ListCustomFieldsParamsObject enum.
@@ -16270,6 +16277,8 @@ func (e ListCustomFieldsParamsObject) Valid() bool {
 	case ListCustomFieldsParamsObjectCompany:
 		return true
 	case ListCustomFieldsParamsObjectContact:
+		return true
+	case ListCustomFieldsParamsObjectContract:
 		return true
 	case ListCustomFieldsParamsObjectDeal:
 		return true

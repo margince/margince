@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // renewalReminderObjects is the closed set of record types renewal_reminder
@@ -34,6 +35,14 @@ var renewalReminderObjects = []string{
 	string(datasource.EntityDeal),
 	string(datasource.EntityLead),
 	string(datasource.EntityProject),
+	// Contract is a custom-field TARGET without being a datasource.EntityType:
+	// a field may hang off one, which is all a date reminder needs, while
+	// nothing asks a record provider about it. Spelled from the field-catalog
+	// vocabulary for that reason, and present here because the compose fitness
+	// test holds this list and customfields.FieldObjects to the identical set —
+	// a date field an administrator can create and then not build a reminder on
+	// would be the drift that test exists to catch.
+	string(fieldcatalog.TargetContract),
 }
 
 // RenewalReminderObjects exports renewalReminderObjects for the ONE

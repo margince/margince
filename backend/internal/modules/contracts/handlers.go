@@ -222,6 +222,7 @@ func createInput(req crmcontracts.CreateContractRequest) (CreateContractInput, e
 	}
 	in.NoticePeriodDays = req.NoticePeriodDays
 	in.PaymentTermDays = req.PaymentTermDays
+	in.CustomFields = req.AdditionalProperties
 	in.StartsOn = timePtr(req.StartsOn)
 	in.EndsOn = timePtr(req.EndsOn)
 	in.RenewalOn = timePtr(req.RenewalOn)
@@ -254,6 +255,7 @@ func renewInput(req crmcontracts.RenewContractRequest) CreateContractInput {
 	}
 	in.NoticePeriodDays = req.NoticePeriodDays
 	in.PaymentTermDays = req.PaymentTermDays
+	in.CustomFields = req.AdditionalProperties
 	in.StartsOn = timePtr(req.StartsOn)
 	in.EndsOn = timePtr(req.EndsOn)
 	in.RenewalOn = timePtr(req.RenewalOn)

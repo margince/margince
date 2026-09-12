@@ -27871,7 +27871,7 @@ export interface components {
              * @description The existing core object this field is added to (CUSTOM-FIELDS-PARAM-2).
              * @enum {string}
              */
-            object: "contact" | "company" | "deal" | "lead" | "project";
+            object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
             /** @description Display label; the only thing a rename updates. */
             label: string;
             /** @description Admin-facing key the column_name derives from. */
@@ -27919,7 +27919,7 @@ export interface components {
          */
         CreateCustomFieldRequest: {
             /** @enum {string} */
-            object: "contact" | "company" | "deal" | "lead" | "project";
+            object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
             label: string;
             /** @enum {string} */
             type: "text" | "number" | "date" | "currency" | "picklist" | "boolean";
@@ -49836,7 +49836,7 @@ export interface operations {
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Target core object (CUSTOM-FIELDS-PARAM-2). */
-                object: "contact" | "company" | "deal" | "lead" | "project";
+                object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
                 /** @description Filter to one lifecycle state. Omitted returns both active and retired — this admin list intentionally does not default-exclude retired rows. */
                 status?: "active" | "retired";
             };

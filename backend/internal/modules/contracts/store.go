@@ -159,7 +159,11 @@ func underContractSQL(asOfPos int) string {
 	)`, asOfPos)
 }
 
-func scanContract(row pgx.Row) (crmcontracts.Contract, error) {
+// scanContract reads one row. `active` is the custom-field columns the caller
+// asked for, appended to the select list in the same order — the values land
+// between the core columns and the derived under-contract flag, which is why
+// the flag's destination goes last rather than beside its neighbours.
+func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
 	var (
 		c             crmcontracts.Contract
 		underContract bool
@@ -179,14 +183,18 @@ func scanContract(row pgx.Row) (crmcontracts.Contract, error) {
 		effectiveOn   *time.Time
 		fxDate        *time.Time
 	)
-	err := row.Scan(&id, &companyID, &dealID, &projectID, &c.ContractNumber, &c.Title,
+	dests := []any{&id, &companyID, &dealID, &projectID, &c.ContractNumber, &c.Title,
 		&c.ValueMinor, &c.Currency, &basis, &c.FxRateToBase, &fxDate,
 		&startsOn, &endsOn, &renewalOn, &c.AutoRenew, &c.NoticePeriodDays, &c.PaymentTermDays,
 		&status, &signedOn, &noticeOn, &effectiveOn,
 		&supersededBy, &c.Source, &capturedBy, &c.Version, &c.CreatedAt, &c.UpdatedAt,
-		&c.ArchivedAt, &underContract)
-	if err != nil {
+		&c.ArchivedAt}
+	cf := storekit.ScanDests(active)
+	if err := row.Scan(append(append(dests, cf...), &underContract)...); err != nil {
 		return crmcontracts.Contract{}, err
+	}
+	if values := storekit.ExtractValues(active, cf); len(values) > 0 {
+		c.AdditionalProperties = values
 	}
 	c.Id = openapi_types.UUID(id)
 	c.CompanyId = uuidPtr(&companyID)
@@ -240,13 +248,17 @@ func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 
 // GetContract reads one agreement.
 func (s *Store) GetContract(ctx context.Context, id ids.ContractID) (crmcontracts.Contract, error) {
+	active, err := s.catalogColumns(ctx)
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	var out crmcontracts.Contract
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = readContractForCaller(ctx, tx, id, s.today())
+		out, err = readContractForCaller(ctx, tx, id, s.today(), active)
 		return err
 	})
 	return out, err
@@ -255,7 +267,7 @@ func (s *Store) GetContract(ctx context.Context, id ids.ContractID) (crmcontract
 // readContract reads one agreement inside the caller's transaction, applying
 // the inherited row-scope gate. A row the caller cannot see answers ErrNotFound
 // rather than a denial, so a contract's existence stays hidden.
-func readContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.Time) (crmcontracts.Contract, error) {
+func readContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.Time, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)
@@ -271,9 +283,9 @@ func readContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.T
 	}
 
 	row := tx.QueryRow(ctx, storekit.SQLf(
-		`SELECT %s, %s FROM contract WHERE %s`,
-		contractColumns, underContractSQL(asOfPos), where), args...)
-	out, err := scanContract(row)
+		`SELECT %s%s, %s FROM contract WHERE %s`,
+		contractColumns, storekit.SelectSuffix(active), underContractSQL(asOfPos), where), args...)
+	out, err := scanContract(row, active)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Contract{}, apperrors.ErrNotFound
 	}

@@ -64,13 +64,15 @@ import (
 // agreement they may not even know exists, for the length of their own
 // transaction.
 func writableContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.Time) (crmcontracts.Contract, error) {
-	if _, err := readContract(ctx, tx, id, asOf); err != nil {
+	// nil columns: this reads only to PROVE visibility and throws the row
+	// away, so fetching custom values here would be work nobody reads.
+	if _, err := readContract(ctx, tx, id, asOf, nil); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if _, err := storekit.LockRow(ctx, tx, contractTable, id.UUID, storekit.IncludeArchived); err != nil {
 		return crmcontracts.Contract{}, err
 	}
-	existing, err := readContract(ctx, tx, id, asOf)
+	existing, err := readContract(ctx, tx, id, asOf, nil)
 	if err != nil {
 		return crmcontracts.Contract{}, err
 	}
