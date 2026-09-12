@@ -92,11 +92,15 @@ var rulesIdentityFields = []string{"Jurisdiction", "Instruments"}
 // AssertAllMatched sees both a field that has since gained a reader and one the
 // struct no longer declares, because the arm below asks Waived only about a
 // field it has already found unapplied.
-var unappliedRules = gatekit.Waive(map[string]string{
-	"OptOutAcknowledgement": "no acknowledgement is sent. The controller lane is the only " +
-		"one that may write to somebody who has just suppressed themselves, and it " +
-		"registers no template for this",
-})
+// IT IS EMPTY, and that is the point rather than an oversight. Every obligation
+// the shipped packs declare now has an engine reader reachable from a send:
+// the disclosures, the subject prefix, the ruleset version, the frequency cap,
+// the windows and — last to land — the opt-out acknowledgement.
+//
+// An empty register is not a claim that no gap can exist. It says none is
+// RECORDED, and the test below fails the moment a pack declares something the
+// engine does not read, which is what puts the next entry here.
+var unappliedRules = gatekit.Waive(map[string]string{})
 
 func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {
 	t.Parallel()

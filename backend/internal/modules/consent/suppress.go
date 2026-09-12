@@ -277,11 +277,17 @@ func (s *Store) suppressAdmittedTx(
 	// occasion somebody asked, and the reason they gave may differ. The live
 	// index makes a duplicate harmless — liveSuppression takes the strongest
 	// row — so the honest answer is to record both.
-	if _, err = tx.Exec(ctx, `
+	// RETURNING the row id, which the acknowledgement below derives its message
+	// id from. One stop is one row is one message, so a second stop recorded
+	// for the same subject cannot stage a second acknowledgement under an id
+	// the ledger already holds.
+	var stopID ids.UUID
+	if err = tx.QueryRow(ctx, `
 		INSERT INTO communication_suppression
 		    (`+sub.column+`, kind, source, captured_by, decided_by_level)
-		VALUES ($1, $2, $3, $4, $5)`,
-		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level)); err != nil {
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id`,
+		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level)).Scan(&stopID); err != nil {
 		return fmt.Errorf("consent: recording the suppression: %w", err)
 	}
 
@@ -300,6 +306,20 @@ func (s *Store) suppressAdmittedTx(
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
 		map[string]any{auditFieldSuppressionKind: in.Kind, "decided_by_level": string(level)})
 	if err != nil {
+		return err
+	}
+	// THE ACKNOWLEDGEMENT THIS STOP OWES, on the same transaction.
+	//
+	// Decree 91/2020 Art. 16 owes a Vietnamese recipient a confirmation that
+	// their refusal was received. Staging it here rather than from a consumer
+	// of the event below makes the stop and its acknowledgement one fact: a
+	// separate consumer would have to answer what happens when the stop commits
+	// and the queue write does not, and every answer is worse than not having
+	// the question.
+	//
+	// Answers nothing where no pack owes one, which is every installation but a
+	// Vietnamese one today.
+	if err := s.acknowledgeOptOutTx(ctx, tx, sub, in.Kind, stopID); err != nil {
 		return err
 	}
 	// EmitEvent, because the payload declares a STATIC entity: this door writes

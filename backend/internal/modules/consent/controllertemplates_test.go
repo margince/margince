@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // TestEveryControllerTemplateCarriesExactlyOnePlaceholder holds the rendered
@@ -34,10 +35,20 @@ func TestEveryControllerTemplateCarriesExactlyOnePlaceholder(t *testing.T) {
 			if err != nil {
 				t.Fatalf("rendering %q in %s: %v", key, language, err)
 			}
-			if got := strings.Count(rendered.Body, linkPlaceholder); got != 1 {
-				t.Errorf("template %q in %s carries %d link placeholder(s), want exactly 1: comms "+
+			// THE COUNT MUST MATCH THE MATERIAL, which is comms' own rule
+			// (checkPlaceholder): a template staged with a link carries exactly
+			// one placeholder, and one staged with none carries zero. Demanding
+			// one of every template would refuse the acknowledgement, which has
+			// nothing to click by design — it goes to somebody who has just
+			// asked the product to stop.
+			want := 1
+			if controllerTemplates[key].linkless {
+				want = 0
+			}
+			if got := strings.Count(rendered.Body, linkPlaceholder); got != want {
+				t.Errorf("template %q in %s carries %d link placeholder(s), want exactly %d: comms "+
 					"refuses a body whose count disagrees with its material, so this template can "+
-					"never be sent", key, language, got)
+					"never be sent", key, language, got, want)
 			}
 			if rendered.Subject == "" {
 				t.Errorf("template %q renders no subject line in %s", key, language)
@@ -70,9 +81,9 @@ func TestEveryControllerTemplateResolvesToASubjectServingCategory(t *testing.T) 
 				"to send the five categories a caller may not claim; a template resolving to an "+
 				"ordinary one is the installation asking the engine the wrong question", key, category)
 		}
-		if _, evidenced := confirmKindFor(category); !evidenced {
-			t.Errorf("template %q resolves to %q, which validateConfirmation cannot evidence, so "+
-				"every message from this template falls through to the legacy verdict and is denied",
+		if !evidencedCategory(category) {
+			t.Errorf("template %q resolves to %q, which no validator can evidence, so every "+
+				"message from this template falls through to the legacy verdict and is denied",
 				key, category)
 		}
 	}
@@ -167,15 +178,19 @@ func TestTheRenderedBodyNeverCarriesTheLink(t *testing.T) {
 //
 // gatekit:fixture the sha256 of each registered template's rendered wording
 var pinnedWording = map[string]string{
-	"privacy_notice@1@de":       "f22fd4fc7fe4e266bd6f19566cf1c168d9981106ee8bfe64d7d43758b1bd8b3a",
-	"privacy_notice@1@en":       "9bcfa68cac9cece7974e57c71472434f4baf865a4a0c8e12970fe0b3f1212dd4",
-	"privacy_notice@1@vi":       "5fc479c528b31e79df080e9f07cbfedd15e6e67373ed73776b29b7513da9bef2",
-	"record_confirmation@2@en":  "ae6261f551d0f39945b720db03b9ef2f51a36516b88eeff0b1afae80808e0c28",
-	"record_confirmation@2@de":  "3ba76e0c75f2dd619ad4666d3452607b87a638ea1183e3188ace7bd7d4ac6b06",
-	"record_confirmation@2@vi":  "28894b02130d640779a9fd4550a2f987a4925c04aaf2749679d44708eae9d2a7",
-	"consent_confirmation@2@en": "05485c736c4971864938a0a4100a69b0533b7f9792e1d75820299461c043233e",
-	"consent_confirmation@2@de": "78ed420da7fa53e0cbfc5f02996520e27f8ba0fbb84b1c435b52abbe0da30054",
-	"consent_confirmation@2@vi": "e224aa3f581bf8b2fccb3468364abe52f0f6467e3dd045c9e2b056a96fd4b7b3",
+	"privacy_notice@1@de": "f22fd4fc7fe4e266bd6f19566cf1c168d9981106ee8bfe64d7d43758b1bd8b3a",
+	"privacy_notice@1@en": "9bcfa68cac9cece7974e57c71472434f4baf865a4a0c8e12970fe0b3f1212dd4",
+	"privacy_notice@1@vi": "5fc479c528b31e79df080e9f07cbfedd15e6e67373ed73776b29b7513da9bef2",
+
+	"optout_acknowledgement@1@de": "64facabebf95a1aee0040714c4c9a931b747d49477ebc2c50e7c739c0d5c57c1",
+	"optout_acknowledgement@1@en": "b1e875b839add1d0adc02499a2569c4fa7a59ee9f185f44bbd9952482934b76a",
+	"optout_acknowledgement@1@vi": "cf3c6f5faab5c2ea7b736607f0486f121fbea2466280734fee4b017680fd0e49",
+	"record_confirmation@2@en":    "ae6261f551d0f39945b720db03b9ef2f51a36516b88eeff0b1afae80808e0c28",
+	"record_confirmation@2@de":    "3ba76e0c75f2dd619ad4666d3452607b87a638ea1183e3188ace7bd7d4ac6b06",
+	"record_confirmation@2@vi":    "28894b02130d640779a9fd4550a2f987a4925c04aaf2749679d44708eae9d2a7",
+	"consent_confirmation@2@en":   "05485c736c4971864938a0a4100a69b0533b7f9792e1d75820299461c043233e",
+	"consent_confirmation@2@de":   "78ed420da7fa53e0cbfc5f02996520e27f8ba0fbb84b1c435b52abbe0da30054",
+	"consent_confirmation@2@vi":   "e224aa3f581bf8b2fccb3468364abe52f0f6467e3dd045c9e2b056a96fd4b7b3",
 }
 
 // TestEveryControllerTemplateIsPinnedToItsWording fails when a registered
@@ -269,6 +284,12 @@ func checkPin(t *testing.T, seen map[string]bool, key, locale string, rendered R
 func TestTheExpiryDateReadsTheSameInEveryLanguage(t *testing.T) {
 	expires := time.Date(2026, time.March, 9, 12, 0, 0, 0, time.UTC)
 	for key := range controllerTemplates {
+		// A LINKLESS TEMPLATE HAS NO EXPIRY TO READ. The acknowledgement carries
+		// nothing to click, so a date about when that nothing stops working
+		// would be a sentence about a link the reader does not have.
+		if controllerTemplates[key].linkless {
+			continue
+		}
 		for _, language := range mailcopy.Languages() {
 			rendered, _, err := RenderControllerTemplate(key, expires, string(language))
 			if err != nil {
@@ -311,4 +332,23 @@ func TestTheExpiryLineTakesExactlyOneDate(t *testing.T) {
 				language, got, line)
 		}
 	}
+}
+
+// evidencedCategory reports whether some validator can support this category.
+//
+// TWO SHAPES OF EVIDENCE, which is why this is not confirmKindFor. The three
+// link-carrying categories are evidenced by a live confirm_token, and
+// confirmKindFor names which. The opt-out acknowledgement carries nothing to
+// click and is evidenced by the standing stop it acknowledges, so asking only
+// the first question would call a sendable template unsendable.
+//
+// It mirrors decideResolved's dispatch (authorizevalidators.go) and must move
+// with it: a category that gains a validator there and not here reads as
+// unsendable, and one that loses its arm there reads as fine until a message
+// from it is denied.
+func evidencedCategory(category commsauthz.Category) bool {
+	if _, linked := confirmKindFor(category); linked {
+		return true
+	}
+	return category == commsauthz.CategoryOptoutConfirmation
 }

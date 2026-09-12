@@ -320,6 +320,21 @@ func confirmLines(line writeLine) {
 		"You do not need to reply or do anything. This is not a request.",
 		"Sie müssen nicht antworten und nichts tun. Dies ist keine Aufforderung.",
 		"Quý vị không cần trả lời hay làm gì cả. Đây không phải là một yêu cầu.")
+	line(func(c *Copy) *string { return &c.OptOutAckSubject },
+		"We have stopped sending you advertising",
+		"Wir senden Ihnen keine Werbung mehr",
+		"Chúng tôi đã ngừng gửi quảng cáo cho quý vị")
+	line(func(c *Copy) *string { return &c.OptOutAckBody },
+		"You asked us to stop sending you advertising, and we have. It may take a\n"+
+			"short time for anything already on its way to stop arriving.",
+		"Sie haben uns gebeten, Ihnen keine Werbung mehr zu senden, und das haben wir\n"+
+			"getan. Bereits versendete Nachrichten können noch kurz ankommen.",
+		"Quý vị đã yêu cầu chúng tôi ngừng gửi quảng cáo, và chúng tôi đã ngừng.\n"+
+			"Những thư đã gửi đi có thể còn đến trong một thời gian ngắn.")
+	line(func(c *Copy) *string { return &c.OptOutAckIgnore },
+		"You do not need to reply. We are telling you because the law requires it.",
+		"Sie müssen nicht antworten. Wir teilen es Ihnen mit, weil das Gesetz es verlangt.",
+		"Quý vị không cần trả lời. Chúng tôi thông báo vì pháp luật yêu cầu.")
 	line(func(c *Copy) *string { return &c.ConfirmConsentSubject },
 		"Please confirm you want to hear from us",
 		"Bitte bestätigen Sie, dass Sie von uns hören möchten",

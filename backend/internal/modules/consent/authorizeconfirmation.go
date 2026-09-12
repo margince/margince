@@ -99,3 +99,47 @@ func confirmKindFor(category commsauthz.Category) (string, bool) {
 		return "", false
 	}
 }
+
+// validateOptOutAcknowledgement answers whether this contact is owed a
+// confirmation that their refusal of advertising was received.
+//
+// THE EVIDENCE IS THE STOP ITSELF, which is what makes this validator a
+// different shape from the confirmation one above. Those messages carry a link
+// and the live link IS the evidence. An acknowledgement carries nothing to
+// click, so what it must show is the thing it acknowledges: a standing
+// suppression that refused advertising.
+//
+// WITHOUT THIS the message could never be sent. Its category falls through to
+// the legacy verdict and is denied — the defect
+// TestEveryControllerTemplateResolvesToASubjectServingCategory exists to catch,
+// and which shipped once already on the privacy notice.
+//
+// A LIFTED STOP EVIDENCES NOTHING. Somebody whose objection was withdrawn is
+// not owed an acknowledgement of it, and sending one would tell them their
+// advertising is stopped when it is not.
+func validateOptOutAcknowledgement(
+	ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category,
+) (resolution, error) {
+	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
+	if subject.Kind != entityContact {
+		return unsupported, nil
+	}
+	var standing bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		    SELECT 1 FROM communication_suppression
+		    WHERE contact_id = $1
+		      AND kind = ANY($2)
+		      AND revoked_at IS NULL
+		)`, subject.ID, acknowledgeableKinds()).Scan(&standing); err != nil {
+		return resolution{}, fmt.Errorf("consent: reading the stop this would acknowledge: %w", err)
+	}
+	if !standing {
+		return unsupported, nil
+	}
+	return resolution{
+		Category:  category,
+		Basis:     commsauthz.BasisLegalObligation,
+		Supported: true,
+	}, nil
+}
