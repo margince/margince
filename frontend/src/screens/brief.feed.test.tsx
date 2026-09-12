@@ -21,18 +21,21 @@ afterEach(() => {
 function item(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
     id: "i1",
-    source: "waiting_customer",
+    source: "customer_waiting",
+    level: 1,
     category: "customer_waiting",
     title: "Aster Handel",
     because: [],
+    consequence: "buyer_waits",
     actions: ["open"],
-    dispositions: [],
-    overdue: false,
     ...over,
-  } as unknown as WorklistItem;
+  };
 }
 
-function day(queue: WorklistItem[]): Worklist {
+function day(
+  queue: WorklistItem[],
+  summary: Partial<Worklist["summary"]> = {},
+): Worklist {
   return {
     as_of: "2026-06-10T06:00:00Z",
     scope: "mine",
@@ -41,8 +44,22 @@ function day(queue: WorklistItem[]): Worklist {
     counts: [],
     reach: [],
     sources_unavailable: [],
-    summary: { total: queue.length, urgent: 0 },
-  } as unknown as Worklist;
+    summary: {
+      total: queue.length,
+      urgent: 0,
+      due: 0,
+      lower_priority: 0,
+      ...summary,
+    },
+    readings: {
+      changed_since_brief: 0,
+      revenue_at_risk_minor: null,
+      buyer_replies: 0,
+      prospecting: 0,
+      review: 0,
+      more_available: false,
+    },
+  };
 }
 
 function titles(container: HTMLElement): string[] {
@@ -185,12 +202,7 @@ describe("the morning feed", () => {
   it("says how much is waiting and how much of it is urgent", () => {
     render(
       <BriefFeed
-        day={
-          {
-            ...day([item({ id: "a" }), item({ id: "b" })]),
-            summary: { total: 2, urgent: 1 },
-          } as unknown as Worklist
-        }
+        day={day([item({ id: "a" }), item({ id: "b" })], { urgent: 1 })}
         state="ready"
       />,
     );
