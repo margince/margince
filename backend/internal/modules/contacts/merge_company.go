@@ -354,7 +354,8 @@ func relinkCompanyEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 		      AND b.company_id IS NOT DISTINCT FROM
 		            (CASE WHEN a.company_id = $1 THEN $2::uuid ELSE a.company_id END)
 		      AND b.counterparty_company_id IS NOT DISTINCT FROM
-		            (CASE WHEN a.counterparty_company_id = $1 THEN $2::uuid ELSE a.counterparty_company_id END))`,
+		            (CASE WHEN a.counterparty_company_id = $1 THEN $2::uuid ELSE a.counterparty_company_id END)
+		      AND `+roleKeyedDuplicateSQL+`)`,
 		sourceID, targetID, now); err != nil {
 		return err
 	}

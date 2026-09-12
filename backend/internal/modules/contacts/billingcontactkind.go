@@ -52,3 +52,28 @@ func validBillingContactRole(kind string, role *string) error {
 	}
 	return &BillingContactRoleError{Role: *role}
 }
+
+// roleKeyedDuplicateSQL is what makes two edges "the same" during a merge, for
+// the kinds whose uniqueness is keyed on the role as well as the endpoints.
+//
+// A deal stakeholder and a billing contact are keyed on (parent, contact,
+// role): Acme's invoice recipient and Acme's approver are two edges, and
+// merging the contacts who held them says one contact holds both. Without
+// this the merge archives one, and SILENTLY — archiving takes the row out of
+// the partial unique index before the relink runs, so nothing conflicts and the
+// merge reports success over an account that just lost its recipient.
+//
+// Every other kind keeps the coarser rule: there the role is a label on one
+// edge rather than part of its identity, and two employments at one company are
+// a duplicate whether or not the titles match.
+//
+// Both merge paths ask it of the same index, so it is written here rather than
+// spelled in each — the half that drifted would be the one nobody noticed
+// dropping rows.
+//
+// Held by: TestMergingTwoBillingContactsKeepsBothTheirRoles and
+// TestMergingTwoCompaniesKeepsBothBillingRolesOfOneContact
+// (backend/internal/compose/integration/mergerolededupe_integration_test.go),
+// which fail if either path stops applying it.
+const roleKeyedDuplicateSQL = `(a.kind NOT IN ('deal_stakeholder', '` + BillingContactKind + `')
+		         OR b.role IS NOT DISTINCT FROM a.role)`
