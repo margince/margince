@@ -234,3 +234,50 @@ func TestEveryUncasedAcquisitionGetsItsDuty(t *testing.T) {
 			"scheduled to look at it again", cases)
 	}
 }
+
+// TestADutyAcquiredLastYearIsAlreadyLate is the reason
+// contacts/acquiredwhen.go exists, proved end to end.
+//
+// The clock runs from the acquisition. A mailbox connected today carrying a
+// year of history creates contacts today from messages that arrived months ago,
+// and every one of those duties has been running since the message. Dating them
+// from the row's own write would restart a clock that expired long ago — and
+// would do it invisibly, because the case would then show a deadline a month
+// away rather than one already missed.
+//
+// This is the failure the product must not have: a compliance deadline that is
+// wrong in the direction of looking fine.
+func TestADutyAcquiredLastYearIsAlreadyLate(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	contact := contactAcquiredAs(t, e, "Long Ago Contact", "purchased_or_imported")
+
+	acquired := time.Now().Add(-300 * 24 * time.Hour).UTC()
+	tag, err := e.Owner.Exec(context.Background(), `
+		UPDATE contact_acquisition_evidence SET occurred_at = $2 WHERE contact_id = $1`,
+		contact, acquired)
+	if err != nil {
+		t.Fatalf("dating the acquisition: %v", err)
+	}
+	if tag.RowsAffected() != 1 {
+		t.Fatalf("dated %d acquisition rows, want 1", tag.RowsAffected())
+	}
+
+	driveNoticeCase(t, e, contact)
+
+	_, _, due, found := noticeCaseFor(t, e, contact)
+	if !found {
+		t.Fatal("no duty was recorded for a bought contact")
+	}
+	if due.After(time.Now()) {
+		t.Errorf("a contact acquired on %v is owed a disclosure due %v, which is still in "+
+			"the future: the deadline runs one month from the ACQUISITION, so a duty this old "+
+			"has been overdue for months and a case showing time left is the one wrong answer "+
+			"a compliance control must not give", acquired, due)
+	}
+	// And it is dated from the acquisition rather than from some other past
+	// moment: one month after, clamped to the month's own length.
+	if gap := due.Sub(acquired); gap < 27*24*time.Hour || gap > 32*24*time.Hour {
+		t.Errorf("the deadline falls %v after the acquisition, want about one month", gap)
+	}
+}

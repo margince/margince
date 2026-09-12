@@ -20,6 +20,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -53,17 +54,33 @@ const (
 	AcquiredUnknownLegacy = "unknown_legacy"
 )
 
-// Acquisition is what a creation door says about why this contact exists.
+// Acquisition is what a creation door says about why this contact exists, and
+// when.
 //
-// Only the kind, for now. The table carries columns for the source entity, the
-// purpose a surface claimed and when the act happened — they are additive and
-// cost nothing empty — but no door populates them yet, and a Go field with no
-// writer is a shape callers can pass that nothing produces. They arrive with
-// the door that has something to put in them.
+// The table also carries columns for the source entity and the purpose a
+// surface claimed. No door populates those yet, and a Go field with no writer
+// is a shape callers can pass that nothing produces, so they arrive with the
+// door that has something to put in them.
 type Acquisition struct {
 	// Kind is one of the constants above. Empty means the door did not say,
 	// and recordAcquisition writes unknown_legacy rather than nothing.
 	Kind string
+	// OccurredAt is when the ACT happened, which is not when this row was
+	// written. A message captured on Tuesday may have arrived on Friday, and a
+	// contact created when a human finally answers a triage question was
+	// acquired when the message came in, not when somebody got round to it.
+	//
+	// This is not bookkeeping. The Art. 14 disclosure deadline runs one month
+	// from the ACQUISITION, and compose/noticecaseopen.go dates the duty from
+	// `coalesce(occurred_at, captured_at)` — so a door that leaves this empty
+	// gives every contact it makes a deadline starting the day the row was
+	// written. For anything captured in arrears that deadline is late, and the
+	// lateness is invisible: the case looks perfectly on time.
+	//
+	// Nil means the door genuinely does not know, and captured_at then stands
+	// in. That is the honest fallback rather than a guess, and it is what every
+	// door did before this field existed.
+	OccurredAt *time.Time
 }
 
 // recordAcquisition writes one evidence row beside a contact that was just
@@ -79,9 +96,9 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 		kind = AcquiredUnknownLegacy
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO contact_acquisition_evidence (contact_id, kind, captured_by)
-		VALUES ($1, $2, $3)`,
-		contactID, kind, capturedBy); err != nil {
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by)
+		VALUES ($1, $2, $3, $4)`,
+		contactID, kind, in.OccurredAt, capturedBy); err != nil {
 		return fmt.Errorf("contacts: recording how this contact was acquired: %w", err)
 	}
 	return nil

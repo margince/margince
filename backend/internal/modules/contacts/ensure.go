@@ -250,7 +250,12 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		// recording that as subject_initiated would put the vocabulary's
 		// strongest claim on a cold prospect's file — the exact confusion this
 		// table exists to prevent, manufactured by the table itself.
-		Acquisition: Acquisition{Kind: acquiredFromCapture(in.Replied)},
+		//
+		// The TIME comes from the earliest message this counterparty is a party
+		// to, not from this write: the sink runs after the capture commits and
+		// the verdict path can run days later. See acquiredwhen.go.
+		Acquisition: acquisitionFromCapture(ctx, tx,
+			acquiredFromCapture(in.Replied), in.Email, in.ActivityID),
 	})
 	if err != nil {
 		return err
