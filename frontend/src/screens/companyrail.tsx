@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
@@ -92,6 +93,11 @@ export function CompanyRail({
   onTab: (tab: "deals" | "contacts" | "profile") => void;
 }>) {
   const t = useT();
+  // The same per-row answer the company's other verbs read: an archived
+  // company, or one this seat may read but not write, takes no new
+  // responsibilities.
+  const canWriteCompany =
+    useCanWriteRecord("company", company) && !company?.archived_at;
   if (composerOpen) {
     return null;
   }
@@ -125,7 +131,11 @@ export function CompanyRail({
             </Button>
           </div>
         </Disclosure>
-        <RecordTeam recordType="company" recordId={companyId} />
+        <RecordTeam
+          recordType="company"
+          recordId={companyId}
+          readOnly={!canWriteCompany}
+        />
         {/* Both summaries stand on EVERY tab, the open one included: the
             column is the reader's anchor while they move between tabs, and
             each shows only the top RAIL_ROW_LIMIT rows — a summary beside a

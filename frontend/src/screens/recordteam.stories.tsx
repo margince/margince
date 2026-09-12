@@ -133,3 +133,18 @@ export const Empty: Story = {
     </Served>
   ),
 };
+
+/**
+ * A record this reader may not write: an archived deal, or somebody else's.
+ *
+ * Who is responsible still renders — that is a fact a read-only reader is
+ * entitled to, and hiding it would read as nobody being assigned. What goes is
+ * every verb, so nothing offers a write the save would refuse.
+ */
+export const ReadOnly: Story = {
+  render: () => (
+    <Served rows={[row({})]}>
+      <RecordTeam recordType="deal" recordId={RECORD_ID} readOnly />
+    </Served>
+  ),
+};

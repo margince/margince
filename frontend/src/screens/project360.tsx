@@ -160,7 +160,11 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
               companies={project.companies}
               readOnly={readOnly}
             />
-            <RecordTeam recordType="project" recordId={project.id} />
+            <RecordTeam
+              recordType="project"
+              recordId={project.id}
+              readOnly={readOnly}
+            />
             <StakeholdersCard
               view={view}
               projectId={project.id}

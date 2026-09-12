@@ -1417,3 +1417,38 @@
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
+
+/* One responsibility row in the Responsible panel (screens/recordteam.tsx).
+ *
+ * The row is the reader's unit: a role label over the colleague or team that
+ * holds it, with the verbs for that one responsibility beside the pair. So the
+ * li is a row, and the labelled pair inside it is a column — the same anatomy
+ * .firmo's own div children already have, which is why the pair carries no
+ * class of its own.
+ *
+ * Scoped to this list rather than to .firmo, which every firmographics block
+ * in the product uses and none of which has row verbs. */
+.assignments {
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.assignments > li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+.assignments .assignrow-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* Pushed to the end of the row and never shrunk: a long team name wraps, and
+ * Change/Remove keep their hit targets whatever the name does. */
+.assignrow-verbs {
+  display: flex;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
