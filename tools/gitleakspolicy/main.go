@@ -107,7 +107,12 @@ func main() {
 	// failure. A truncated stream is the one outcome this tool must never
 	// produce quietly — the suite would plant against the entries it received
 	// and report full coverage of a policy it read half of.
-	if _, err := os.Stdout.WriteString(render(&p)); err != nil {
+	records, err := render(&p)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "gitleakspolicy: %s: %v\n", os.Args[1], err)
+		os.Exit(1)
+	}
+	if _, err := os.Stdout.WriteString(records); err != nil {
 		fmt.Fprintf(os.Stderr, "gitleakspolicy: writing the record stream: %v\n", err)
 		os.Exit(1)
 	}
@@ -126,28 +131,34 @@ func unmarshalPolicy(raw []byte, p *policyDoc) error {
 // allowlists can merge into one record set. That was the awk's own failure
 // mode: a `[[rules]]` header reset its counter, and one planted token then
 // vouched for two exemptions.
-func render(p *policyDoc) string {
+func render(p *policyDoc) (string, error) {
 	var out strings.Builder
+	var refusal error
+	write := func(index int, kind, value string) {
+		if err := writeRecord(&out, index, kind, value); err != nil && refusal == nil {
+			refusal = err
+		}
+	}
 	// INDEX ZERO is the file itself, and allowlists count from one. These are
 	// the exemption channels that belong to no allowlist and that no planted
 	// token can prove narrow, so the script refuses them rather than planting
 	// against them — and it now refuses what the DECODER saw rather than what a
 	// line matcher found, which is the same correction this tool is.
-	write(&out, 0, "use_default", strconv.FormatBool(p.Extend.UseDefault))
-	write(&out, 0, "disabled_rules", strconv.Itoa(len(p.Extend.DisabledRules)))
-	write(&out, 0, "stopwords", strconv.Itoa(stopwordCount(p)))
+	write(0, "use_default", strconv.FormatBool(p.Extend.UseDefault))
+	write(0, "disabled_rules", strconv.Itoa(len(p.Extend.DisabledRules)))
+	write(0, "stopwords", strconv.Itoa(stopwordCount(p)))
 	index := 0
 	emit := func(a allowlist) {
 		index++
-		write(&out, index, "desc", a.Description)
+		write(index, "desc", a.Description)
 		for _, r := range a.TargetRules {
-			write(&out, index, "rule", r)
+			write(index, "rule", r)
 		}
 		for _, path := range a.Paths {
-			write(&out, index, "path", path)
+			write(index, "path", path)
 		}
 		for _, re := range a.Regexes {
-			write(&out, index, "regex", re)
+			write(index, "regex", re)
 		}
 	}
 	for _, a := range p.Allowlists {
@@ -158,7 +169,10 @@ func render(p *policyDoc) string {
 			emit(a)
 		}
 	}
-	return out.String()
+	if refusal != nil {
+		return "", refusal
+	}
+	return out.String(), nil
 }
 
 // stopwordCount adds up the stopwords a policy declares, across the three
@@ -179,18 +193,32 @@ func stopwordCount(p *policyDoc) int {
 	return n
 }
 
-// write emits one record, refusing a value carrying the separator. Such a
-// value would split into fields the consumer reads as a different record, and
-// a path or regex read wrong is an entry planted against wrong.
-func write(out *strings.Builder, index int, kind, value string) {
+// writeRecord emits one record, REFUSING a value carrying the separator or a
+// newline. Such a value would split into fields the consumer reads as a
+// different record, and a path or regex read wrong is an entry planted against
+// wrong — so the tool stops rather than emitting a stream that reads as a
+// policy nobody wrote.
+//
+// TOML can express both: `"""…"""` spans lines and `"\u001f"` is a legal
+// escape. Encoding them instead was considered and is the wrong trade here. The
+// consumer is an awk script splitting on newlines, so an encoding costs a
+// decoder on the shell side — the half most likely to be got wrong — to carry a
+// shape `.gitleaks.toml` has never held. What matters is that the refusal is
+// LOUD, because the failure this whole tool exists to prevent is a stream that
+// reads fine and describes half a policy.
+//
+// An error rather than os.Exit for the same reason: a refusal nothing can call
+// is a refusal nothing can test, and TestAPolicyTheRecordStreamCannotExpressIsRefused
+// is what proves this one fires.
+func writeRecord(out *strings.Builder, index int, kind, value string) error {
 	if value == "" {
-		return
+		return nil
 	}
 	if strings.ContainsAny(value, fieldSep+"\n") {
-		fmt.Fprintf(os.Stderr,
-			"gitleakspolicy: allowlist %d's %s carries a separator or a newline, which the record stream cannot express: %q\n",
+		return fmt.Errorf(
+			"allowlist %d's %s carries a separator or a newline, which the record stream cannot express: %q",
 			index, kind, value)
-		os.Exit(1)
 	}
 	fmt.Fprintf(out, "%d%s%s%s%s\n", index, fieldSep, kind, fieldSep, value)
+	return nil
 }

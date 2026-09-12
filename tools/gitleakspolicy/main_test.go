@@ -24,7 +24,10 @@ func decode(t *testing.T, policy string) []string {
 	if err := unmarshalPolicy([]byte(policy), &p); err != nil {
 		t.Fatalf("decoding the policy: %v", err)
 	}
-	out := render(&p)
+	out, err := render(&p)
+	if err != nil {
+		t.Fatalf("rendering the policy: %v", err)
+	}
 	if out == "" {
 		return nil
 	}
@@ -173,5 +176,49 @@ func TestAMalformedPolicyIsRefused(t *testing.T) {
 	var p policyDoc
 	if err := unmarshalPolicy([]byte("[[allowlists]\ndescription = "), &p); err == nil {
 		t.Error("a malformed policy decoded without complaint")
+	}
+}
+
+// A value the record stream cannot express must be refused, not encoded into
+// something the consumer reads as a different record.
+//
+// TOML can carry both a newline and the separator — `"""…"""` spans lines and
+// `"\u001f"` is a legal escape — and the consuming awk splits on newlines. A
+// path smuggling one would arrive as an allowlist nobody wrote, and the suite
+// would plant against it and report full coverage of a policy it read wrong.
+// Refusing is the only reading that cannot be silently wrong, and this is what
+// proves the refusal fires rather than the stream carrying on short.
+func TestAPolicyTheRecordStreamCannotExpressIsRefused(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		policy string
+	}{
+		{
+			name:   "a path spanning two lines",
+			policy: "[[allowlists]]\ndescription = \"multiline\"\npaths = [\"\"\"docs/\nnotes/\"\"\"]\n",
+		},
+		{
+			name:   "a regex carrying the record separator",
+			policy: "[[allowlists]]\ndescription = \"separator\"\nregexes = [\"AKIA\\u001fSECRET\"]\n",
+		},
+		{
+			name:   "a nested allowlist's path spanning two lines",
+			policy: "[[rules]]\nid = \"r\"\n[[rules.allowlists]]\ndescription = \"nested\"\npaths = [\"\"\"a\nb\"\"\"]\n",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			var p policyDoc
+			if err := unmarshalPolicy([]byte(c.policy), &p); err != nil {
+				t.Fatalf("this case must be legal TOML, or it proves nothing about the render: %v", err)
+			}
+			out, err := render(&p)
+			if err == nil {
+				t.Fatalf("the record stream accepted a value it cannot express, and answered:\n%q", out)
+			}
+			if out != "" {
+				t.Errorf("a refused render answered %q as well as an error — a consumer reading both "+
+					"would plant against a truncated policy", out)
+			}
+		})
 	}
 }
