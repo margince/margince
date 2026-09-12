@@ -4405,11 +4405,19 @@ function DealContext({
   overlay: boolean;
   acquisitionSources?: AcquisitionSource[];
 }>) {
+  // The same per-row answer the deal's other verbs read. An archived deal
+  // takes no new responsibilities, and neither does one this seat may read
+  // but not write.
+  const canWrite = useCanWriteRecord("deal", deal) && !deal.archived_at;
   return (
     <>
       {/* Before the seats: what the deal IS commercially, then who is on it. */}
       <DealCommercial deal={deal} sources={acquisitionSources} />
-      <RecordTeam recordType="deal" recordId={deal.id} />
+      <RecordTeam
+        recordType="deal"
+        recordId={deal.id}
+        readOnly={overlay || !canWrite}
+      />
       <DealSeats
         coverage={coverage.coverage}
         withheld={coverage.withheld}
