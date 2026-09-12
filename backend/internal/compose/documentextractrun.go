@@ -21,12 +21,14 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/pdftext"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/extraction"
@@ -53,6 +55,13 @@ const maxDocumentBytes = 8 << 20
 // much prose one call can hold steadily, asked of the same models.
 const maxDocumentTextChars = activities.MaxReadableTranscriptChars
 
+// documentPDFMIME is the one media type the extraction lane below turns into
+// text. Written here rather than imported from the ai module: this is the
+// DOCUMENT side's question — what this reading can convert — and the wire side's
+// list of what an adapter carries is a different question that happens to spell
+// one entry the same way.
+const documentPDFMIME = "application/pdf"
+
 // documentTextMIMEs are the media types whose bytes ARE their text, so no
 // parser stands between the file and the model.
 //
@@ -61,6 +70,9 @@ const maxDocumentTextChars = activities.MaxReadableTranscriptChars
 // is already text needs no OCR engine, no document-intelligence service and no
 // vision-capable binding, and its quotes can be checked against the document
 // verbatim (RD-AC-N-4) — which the bytes lane can never do.
+//
+// A PDF is NOT here and must not be added: its bytes are not its text, and the
+// extraction lane reaches the same place by a route that says so.
 var documentTextMIMEs = []string{
 	"text/plain", "text/csv", "text/markdown", "text/html", "application/json", "message/rfc822",
 }
@@ -69,6 +81,7 @@ var documentTextMIMEs = []string{
 type DocumentExtractor struct {
 	pool  *pgxpool.Pool
 	brain documentCompleter
+	pdf   *pdftext.Reader
 	log   *slog.Logger
 }
 
@@ -89,8 +102,16 @@ type documentCompleter interface {
 }
 
 // NewDocumentExtractor builds the engine over the pool and one model lane.
+//
+// The PDF reader is built here and kept, because it owns a compiled WebAssembly
+// module: one per extractor, compiled on the first PDF this installation is
+// asked to read and never again.
+// The engine is not closed, and that is the whole lifecycle: it is compiled on
+// the first PDF and lives as long as the worker that reads them, which is as
+// long as the process. A Close here would need a shutdown seam the job runtime
+// does not have, for a resource whose release coincides with exit.
 func NewDocumentExtractor(pool *pgxpool.Pool, brain documentCompleter, log *slog.Logger) *DocumentExtractor {
-	return &DocumentExtractor{pool: pool, brain: brain, log: log}
+	return &DocumentExtractor{pool: pool, brain: brain, pdf: pdftext.New(), log: log}
 }
 
 // documentReadStore is the slice of the activities store one reading drives.
@@ -233,7 +254,7 @@ func (d *DocumentExtractor) sourceFor(
 	// product will send, never what the bytes are.
 	mime := ""
 	if meta.ContentType != nil {
-		mime = strings.ToLower(strings.TrimSpace(*meta.ContentType))
+		mime = mediaTypeOf(*meta.ContentType)
 	}
 	// One byte past the bound is what distinguishes "exactly at the limit" from
 	// "truncated to the limit"; without it a document of exactly maxDocumentBytes
@@ -247,22 +268,93 @@ func (d *DocumentExtractor) sourceFor(
 			"this document is larger than the %d MB one reading carries; a reading of part of it could not say which part it saw",
 			maxDocumentBytes>>20), nil
 	}
+	src, detail := d.laneFor(ctx, meta, mime, bytes)
+	return src, detail, nil
+}
+
+// laneFor picks which of the lanes this document takes, or the reason none of
+// them can have it. Split from sourceFor so the choice reads as one ordered list
+// rather than trailing the reading of the bytes.
+//
+// The order is the contract. Native carriage is tried BEFORE extraction because
+// a vendor that opens the document itself sees its layout — a table, a stamp, a
+// signature block — where extraction sees only the characters; extraction is the
+// answer for a wire that cannot be handed the file at all, not an improvement on
+// one that can.
+func (d *DocumentExtractor) laneFor(
+	ctx context.Context, meta crmcontracts.Attachment, mime string, bytes []byte,
+) (documentSource, string) {
 	if model.CarriesMIME(documentTextMIMEs, mime) {
-		src, detail := d.textSource(meta, bytes)
-		return src, detail, nil
+		return d.textSource(meta, bytes)
 	}
 	if model.CarriesMIME(d.brain.AttachmentMIMEs(), mime) {
 		return documentSource{
 			Part:     model.Attachment{MIME: mime, Bytes: bytes, Name: meta.Filename},
 			Filename: meta.Filename,
-		}, "", nil
+		}, ""
+	}
+	if mime == documentPDFMIME {
+		return d.extractedSource(ctx, meta, bytes)
 	}
 	if mime == "" {
-		return documentSource{}, "this document declares no content type, so nothing can say how to read it", nil
+		return documentSource{}, "this document declares no content type, so nothing can say how to read it"
 	}
 	return documentSource{}, fmt.Sprintf(
 		"this installation's model cannot read a %s document; a file whose text can be read directly, or a model bound to carry documents, would be read",
-		mime), nil
+		mime)
+}
+
+// extractedSource takes the lane that exists because no wire agrees about a PDF.
+//
+// A PDF rides a proprietary request-body extension on one gateway and nothing at
+// all on a self-hosted endpoint, so this product never sends one there. It reads
+// the text the document already carries and sends THAT, which every wire spells
+// the same way — the model is handed characters, and was not asked to understand
+// a file format.
+func (d *DocumentExtractor) extractedSource(
+	ctx context.Context, meta crmcontracts.Attachment, raw []byte,
+) (documentSource, string) {
+	text, err := d.pdf.Read(ctx, raw, maxDocumentTextChars)
+	switch {
+	case errors.Is(err, pdftext.ErrNoTextLayer):
+		// A scan. Its pages are pictures, so there is no text to read and this
+		// product has no engine that invents one. Named as the specific thing it
+		// is, because "cannot read a PDF" would send an operator to their model
+		// config when the answer is a different copy of the document.
+		return documentSource{}, "this PDF holds no text, which is what a scanned or photographed document looks like; a PDF exported from the system that produced it can be read"
+	case err != nil:
+		return documentSource{}, "this PDF could not be opened to read its text"
+	}
+	// Held to the SAME bound the text lane holds, by the same words. Extract
+	// answers one rune past the budget precisely so this can tell a document
+	// that fits from one that was cut off, and a reading of the first 60,000
+	// characters of a contract reported as `done` is the outcome maxDocumentBytes'
+	// own comment refuses: nothing on the panel would say which part it saw.
+	if chars := utf8.RuneCountInString(text); chars > maxDocumentTextChars {
+		// Counted and REPORTED in the same unit. The comparison was always
+		// runes; a byte count in the sentence would tell a rep a German
+		// document was half again as long as it is.
+		return documentSource{}, fmt.Sprintf(
+			"this document is %d characters, and one reading addresses at most %d",
+			chars, maxDocumentTextChars)
+	}
+	return documentSource{Text: text, Filename: meta.Filename, ExtractedFrom: documentPDFMIME}, ""
+}
+
+// mediaTypeOf reduces a stored Content-Type to the media type alone.
+//
+// What ingress recorded is a HEADER, and a header carries parameters: an upload
+// declaring `application/pdf; charset=binary` is declaring a PDF, and every lane
+// below compares against bare media types. Without this the parameter decides
+// the lane — the same document read or refused depending on which client sent
+// it — which is the sort of difference nobody can see from the panel.
+//
+// Not mime.ParseMediaType: that returns an error for a malformed header, and a
+// caller-chosen string being malformed is not an outcome worth distinguishing
+// here. Everything up to the first `;`, folded, is the whole answer.
+func mediaTypeOf(contentType string) string {
+	media, _, _ := strings.Cut(contentType, ";")
+	return strings.ToLower(strings.TrimSpace(media))
 }
 
 // textSource takes the text lane, where the document's bytes are its text.
@@ -271,7 +363,7 @@ func (d *DocumentExtractor) textSource(meta crmcontracts.Attachment, raw []byte)
 	if text == "" {
 		return documentSource{}, "this document carries no text to read"
 	}
-	if len(text) > maxDocumentTextChars {
+	if utf8.RuneCountInString(text) > maxDocumentTextChars {
 		return documentSource{}, fmt.Sprintf(
 			"this document is %d characters, and one reading addresses at most %d",
 			len(text), maxDocumentTextChars)

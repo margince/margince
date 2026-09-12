@@ -44,6 +44,12 @@ vendors:
   river:  { in: github.com/riverqueue/** }
   minio:  { in: github.com/minio/** }
   fpdf:   { in: github.com/go-pdf/** }
+  # pdftext's engine: pdfium (the PDF implementation in Chrome) compiled to
+  # WebAssembly, plus the instance pool it is driven through. It runs under
+  # wazero, so an upload is parsed inside a sandbox rather than in the host heap.
+  # No cgo — the WASM build is what makes that true.
+  pdfium:  { in: github.com/klippa-app/** }
+  gopool:  { in: github.com/jolestar/** }
   # unicode transforms for the PO-PARAM-JW-2 dedupe preprocessing (casefold+unaccent)
   xtext:  { in: golang.org/x/text/** }
   # webread's crawl mechanics: the html tokenizer (link harvest from raw HTML)
@@ -136,7 +142,11 @@ deps:
     # wazero + brotli: licensecheck's runtime for the bundled validation
     # module, and the compression it is published in.
     # xsyswindows: ownedfile's DACL, the Windows half of an owner-only file.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus]
+    # pdfium + gopool: pdftext reads a PDF's text layer through a sandboxed
+    # pdfium; fpdf is its TESTS building the fixtures they then read.
+    # xtext: pdftext NFKC-folds a PDF's typographic ligatures back to the
+    # characters the word is made of — a Unicode normal form the stdlib lacks.
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus, pdfium, gopool, fpdf, xtext]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:
@@ -268,7 +278,10 @@ deps:
     # platform already owns, so it needs the same parser platform does.
     # emersion: the in-memory IMAP server the standing-connect transport
     # test drives; production compose reaches IMAP only through capture.
-    canUse: [pgx, chi, oapi, river, xtext, yaml, emersion, kinopenapi]
+    # fpdf: the document lane's TESTS build the PDF they then read, so the
+    # fixture is a real file rather than a string somebody believed was one.
+    # Production compose writes no PDF and reads one only via platform/pdftext.
+    canUse: [pgx, chi, oapi, river, xtext, yaml, emersion, kinopenapi, fpdf]
   # migrations depends on itself, which no production file can express: Go
   # forbids a package importing itself. It is reachable only from the external
   # test package this directory's tagged suites live in (package

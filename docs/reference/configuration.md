@@ -1387,7 +1387,11 @@ about what the endpoint you chose does with what it receives.
   silently disable the feature it was meant to enable. `pdf` is deliberately not
   accepted: a PDF rides a vendor-proprietary request extension on one gateway
   and nothing at all on a self-hosted endpoint, so the word would mean different
-  things per vendor. Scanned PDFs take the text-extraction lane.
+  things per vendor. A PDF does not need the word — on a binding whose wire has
+  no document part, the document lane reads the text the PDF already carries and
+  sends that instead, which every wire spells the same way. A SCAN is the case
+  that cannot be helped: its pages are pictures, there is no text to read, and
+  the reading says so rather than guessing.
 - **The `embeddings:` binding does not take it** — that lane sends no
   attachments.
 - **A declaration is a claim, not a checked fact.** A binding that claims more

@@ -67,11 +67,14 @@ var openAICarries = []string{mimeJPEG, mimePNG, mimeGIF, mimeWebP, mimePDF}
 var geminiCarries = []string{mimeJPEG, mimePNG, mimeWebP, mimeHEIC, mimeHEIF, mimePDF}
 
 // carriesImagesAndPDF is the widest document carriage any adapter in this build
-// has, and belongs to the adapters whose endpoint is the operator's choice: the
-// injected fake, which stands in for whichever binding named it. What the
-// endpoint behind it decodes is not knowable here, so this stays a claim about
-// the WIRE's shape — it has image parts and document parts — rather than about
-// a decoder.
+// has, and belongs to the injected fake, which stands in for whichever binding
+// named it. What the endpoint behind it decodes is not knowable here, so this
+// stays a claim about the WIRE's shape — it has image parts and document parts —
+// rather than about a decoder.
+//
+// The real operator-pointed wires do NOT share it. They used to, on the reasoning
+// that an operator-chosen endpoint might accept anything; but this adapter is
+// what puts bytes on that wire, and it has only ever built image parts.
 var carriesImagesAndPDF = []string{mimeAnyImage, mimePDF}
 
 // carriesImages is the declaration of an adapter whose wire takes images and
@@ -124,14 +127,24 @@ func DocumentMIMEs() []string {
 // word that selects it. The census and DocumentMIMEs both read it, so neither
 // can go looking at a set of adapters the other does not.
 //
-// Held by: TestOnlyAnOperatorPointedWireDeclaresAWildcard (backend/internal/modules/ai/carriage_test.go)
+// A row here is a claim about what its ADAPTER can put on the wire, and it is
+// held against the adapter rather than against another declaration: two
+// declarations agreeing prove only that somebody wrote the same thing twice.
+//
+// Held by: TestTheOpenAICompatibleWireHasNoDocumentPart (backend/internal/modules/ai/carriage_test.go)
 func wireCarriage() map[string][]string {
 	return map[string][]string{
-		ProviderFake:             carriesImagesAndPDF,
-		providerAnthropic:        anthropicCarries,
-		providerOllama:           carriesImages,
-		providerVLLM:             carriesImagesAndPDF,
-		providerOpenAICompatible: carriesImagesAndPDF,
+		ProviderFake:      carriesImagesAndPDF,
+		providerAnthropic: anthropicCarries,
+		providerOllama:    carriesImages,
+		// vllm and openai_compatible are ONE adapter, and it has no document
+		// part: openAICompatMessages builds `image_url` parts and nothing else.
+		// Both rows said `application/pdf` until the claim was checked against a
+		// binding — no client either word selects has ever carried one, in any
+		// configuration. The wire's shape is not the ambition of the wire's
+		// vendor: it is what this adapter can put on it.
+		providerVLLM:             carriesImages,
+		providerOpenAICompatible: carriesImages,
 		providerOpenAI:           openAICarries,
 		providerGemini:           geminiCarries,
 	}
