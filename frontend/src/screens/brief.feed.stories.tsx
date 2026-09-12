@@ -59,6 +59,7 @@ function day(queue: FeedItem[], urgent: number): Worklist {
     reach: [],
     counts: [],
     readings: {
+      changed_since_brief: 0,
       revenue_at_risk_minor: null,
       buyer_replies: 1,
       prospecting: 1,

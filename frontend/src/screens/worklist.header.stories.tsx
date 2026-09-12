@@ -50,6 +50,7 @@ function day(scopes: readonly WorklistScope[]): Worklist {
     reach: [],
     counts: [],
     readings: {
+      changed_since_brief: 0,
       revenue_at_risk_minor: 0,
       revenue_currency: "EUR",
       buyer_replies: 0,

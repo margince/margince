@@ -67,6 +67,20 @@ func readingsOf(
 	// the deal, and it is the only field the two lanes' rows share.
 	countedDeals := map[openapi_types.UUID]bool{}
 	for _, row := range considered {
+		// The freshness figure, and it is counted HERE rather than in the
+		// browser for the reason the set makes obvious: a client counts the
+		// flag over the rows it received, which is one page of an unfiltered
+		// read, while the door beside the number opens every row past that cut.
+		// The two then disagree by whatever ranked below the page, and only ever
+		// in the direction that makes a busy morning look quiet.
+		//
+		// keepsRow, not a second spelling of its rule. The filter already
+		// excludes a row a decisions-drawing surface answers — a card on screen
+		// is not also news — and that exclusion is exactly the kind of detail a
+		// reimplementation here would drop.
+		if keepsRow(row, filterChangedSinceBrief) {
+			out.ChangedSinceBrief++
+		}
 		switch row.item.Category {
 		case crmcontracts.WorklistItemCategoryCustomerWaiting:
 			out.BuyerReplies++

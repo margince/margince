@@ -34548,6 +34548,28 @@ export interface components {
          */
         WorklistReadings: {
             /**
+             * @description How many of the rows this page is answerable for report something the overnight
+             *     run did not see, counted over the same set the four figures above describe —
+             *     after the scope narrowing, BEFORE the category filter, the fold and the page cut.
+             *
+             *     The set is the point. A client counting the flag over the rows it received
+             *     counts one PAGE of an unfiltered read, while `?filter=changed_since_brief`
+             *     opens every row past that cut — so the number and the door it labels disagree
+             *     by however many ranked below position 25, and only ever in the direction that
+             *     makes a busy morning look quiet.
+             *
+             *     It runs the SAME predicate the filter runs, including the exclusion of rows a
+             *     decisions-drawing surface already answers: a row on screen as a card is not
+             *     also news. Two spellings of that rule is the defect one layer down, which is
+             *     why this is counted where the filter lives rather than beside it.
+             *
+             *     Zero is a real answer and means the night saw everything. A day with no
+             *     overnight run leaves every row's `changed_since_brief` absent, so this counts
+             *     zero for the same reason — and a client must read the flags, not this figure,
+             *     to tell "nothing changed" from "there was no night".
+             */
+            changed_since_brief: number;
+            /**
              * Format: int64
              * @description What the drifting deals are worth, summed over the deals this read PRICED, in
              *     the currency `revenue_currency` names.

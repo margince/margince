@@ -39458,6 +39458,27 @@ type WorklistReadings struct {
 	// BuyerReplies How many customers have written and are waiting on an answer.
 	BuyerReplies int `json:"buyer_replies"`
 
+	// ChangedSinceBrief How many of the rows this page is answerable for report something the overnight
+	// run did not see, counted over the same set the four figures above describe —
+	// after the scope narrowing, BEFORE the category filter, the fold and the page cut.
+	//
+	// The set is the point. A client counting the flag over the rows it received
+	// counts one PAGE of an unfiltered read, while `?filter=changed_since_brief`
+	// opens every row past that cut — so the number and the door it labels disagree
+	// by however many ranked below position 25, and only ever in the direction that
+	// makes a busy morning look quiet.
+	//
+	// It runs the SAME predicate the filter runs, including the exclusion of rows a
+	// decisions-drawing surface already answers: a row on screen as a card is not
+	// also news. Two spellings of that rule is the defect one layer down, which is
+	// why this is counted where the filter lives rather than beside it.
+	//
+	// Zero is a real answer and means the night saw everything. A day with no
+	// overnight run leaves every row's `changed_since_brief` absent, so this counts
+	// zero for the same reason — and a client must read the flags, not this figure,
+	// to tell "nothing changed" from "there was no night".
+	ChangedSinceBrief int `json:"changed_since_brief"`
+
 	// MoreAvailable True when any source behind any figure here was read to its work bound, so
 	// every number above is a floor. Set once for the strip rather than per reading:
 	// the four are read as one row, and a reader who cannot trust one of them cannot

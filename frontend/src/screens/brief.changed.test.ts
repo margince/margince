@@ -1,92 +1,66 @@
 import { describe, expect, it } from "vitest";
 import { changedSinceBrief } from "./brief.changed";
-import type { Worklist, WorklistItem } from "./worklist.queries";
+import type { Worklist } from "./worklist.queries";
 
 // What has happened since the night looked.
 //
-// The cases are all about the difference between three states the wire keeps
-// apart and a careless client would not: changed, not changed, and no run to
-// compare against. The helper is pure, so they are asked of it directly — the
-// count is rendered by the Today panel's own head, and a render test here would
-// be asserting that panel's copy from the wrong file.
+// THREE OF THESE CASES USED TO LIVE HERE AND NOW LIVE IN GO, and that is the
+// change rather than a loss of coverage: which rows count as new, whether an
+// absent flag means "unchanged" or "there was no night", and whether a row the
+// Decisions deck already draws is also news — the browser answered all three by
+// walking the queue it received, which is one page of an unfiltered read. It now
+// reads a figure taken over every candidate weighed, so those rules are asserted
+// where they are decided (attention/linkedfilter_test.go:
+// TestTheChangedCountMatchesWhatTheLaneOpens and its sibling).
+//
+// What is left is what this function still decides: read the figure, stay quiet
+// when there is nothing to say, and point at the same lane the figure was taken
+// over.
 
-function item(over: Partial<WorklistItem> = {}): WorklistItem {
+function day(changed?: number): Worklist {
   return {
-    id: "i1",
-    source: "waiting_customer",
-    category: "customer_waiting",
-    title: "Aster Handel",
-    because: [],
-    actions: ["open"],
-    ...over,
-  } as unknown as WorklistItem;
-}
-
-function day(queue: WorklistItem[]): Worklist {
-  return { queue, as_of: "2026-09-03T06:42:00Z" } as unknown as Worklist;
+    queue: [],
+    as_of: "2026-09-03T06:42:00Z",
+    readings:
+      changed === undefined ? undefined : { changed_since_brief: changed },
+  } as unknown as Worklist;
 }
 
 describe("changedSinceBrief", () => {
-  it("counts the rows the server marked as new, and only those", () => {
-    const changed = changedSinceBrief(
-      day([
-        item({ id: "a", changed_since_brief: true }),
-        item({ id: "b", changed_since_brief: true }),
-        item({ id: "c", changed_since_brief: false }),
-      ]),
-    );
-
-    expect(changed?.count).toBe(2);
+  it("reports the server's own count", () => {
+    expect(changedSinceBrief(day(7))?.count).toBe(7);
   });
 
-  // ABSENT IS NOT FALSE. A row carries no flag at all when there was no run to
-  // compare against, and a morning with no night is not a morning where nothing
-  // changed. Counting an absent flag as "unchanged" is harmless; counting it as
-  // changed would report movement nobody observed.
-  it("ignores a row the night never saw, and a row it saw standing still", () => {
-    expect(
-      changedSinceBrief(
-        day([item({ id: "a" }), item({ id: "b", changed_since_brief: false })]),
-      ),
-    ).toBeUndefined();
+  // The number the strip prints is NOT the number of rows this page holds. A
+  // reader's first page carries twenty-five, and the figure is taken over every
+  // candidate the read weighed — so a morning with more news than fits still
+  // says how much there is.
+  it("reports a count larger than any page it could have drawn", () => {
+    expect(changedSinceBrief(day(40))?.count).toBe(40);
   });
 
-  // The DECK above answers approvals, and it draws them as cards at the same
-  // moment. Counting them here reported the same work twice on one page — which
-  // is why this reads `waitingRows` rather than the raw queue.
-  it("leaves out the approvals the decisions deck already answers", () => {
-    const changed = changedSinceBrief(
-      day([
-        item({ id: "a", source: "approval", changed_since_brief: true }),
-        item({ id: "b", changed_since_brief: true }),
-      ]),
-    );
-
-    expect(changed?.count).toBe(1);
-  });
-
-  // Nothing moved, so there is nothing to say. A head that reported "0 changed"
+  // Nothing moved, so there is nothing to say. A head reporting "0 changed"
   // every morning would teach a reader to stop reading it.
   it("says nothing at all on a morning where nothing moved", () => {
-    expect(changedSinceBrief(day([]))).toBeUndefined();
+    expect(changedSinceBrief(day(0))).toBeUndefined();
   });
 
-  // A payload with no queue at all answers nothing rather than throwing: a page
-  // that throws is a worse answer than one that draws nothing.
-  it("answers nothing rather than throwing on a payload with no queue", () => {
+  // A payload with no readings answers nothing rather than throwing, and the
+  // same for no payload at all: a page that throws is a worse answer than one
+  // that draws nothing.
+  it("answers nothing rather than throwing on a payload it cannot read", () => {
+    expect(changedSinceBrief(day())).toBeUndefined();
     expect(changedSinceBrief({} as unknown as Worklist)).toBeUndefined();
     expect(changedSinceBrief(undefined)).toBeUndefined();
   });
 
-  // The door carries the SAME narrowing the count was taken over. A bare
+  // The door carries the SAME narrowing the figure was taken over. A bare
   // `#/worklist` named three rows and opened a queue of forty, so the count and
-  // its door shared nothing at all — which is the whole reason the server grew
-  // this filter.
+  // its door shared nothing at all — which is why the server grew this filter,
+  // and why the count is now taken by running it.
   it("points at exactly the rows it counted", () => {
-    const changed = changedSinceBrief(
-      day([item({ id: "a", changed_since_brief: true })]),
+    expect(changedSinceBrief(day(1))?.href).toBe(
+      "#/worklist?filter=changed_since_brief",
     );
-
-    expect(changed?.href).toBe("#/worklist?filter=changed_since_brief");
   });
 });
