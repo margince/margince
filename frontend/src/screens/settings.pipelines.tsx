@@ -21,7 +21,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { ArchiveAction } from "./archive";
-import { QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
 import { StageCreate, StageRow, str } from "./settings.stages";
@@ -101,13 +101,32 @@ function PipelineRetirement({
       return null;
     }
     return (
-      <Button
-        small
-        onClick={() => restore.mutate()}
-        disabled={restore.isPending}
-      >
-        {t("pipeline.restore")}
-      </Button>
+      <>
+        <Button
+          small
+          onClick={() => restore.mutate()}
+          // `pending`, not `disabled`: the design system's Button keeps a
+          // control focusable while its write is out and blocks the repeat
+          // press itself. A natively disabled button drops focus to <body>
+          // mid-press, which is exactly where a keyboard reader loses the row.
+          pending={restore.isPending}
+        >
+          {t("pipeline.restore")}
+        </Button>
+        {restore.isError && (
+          // role="alert" so a refused restore is announced, the same treatment
+          // ArchiveAction gives a refused retire. Without it the button simply
+          // comes back and the admin cannot tell a failure from a success —
+          // and the row they are looking at still says Retired either way.
+          <span
+            className="t-caption"
+            role="alert"
+            style={{ color: "var(--dangerText)" }}
+          >
+            {problemMessageOf(restore.error, t)}
+          </span>
+        )}
+      </>
     );
   }
   if (!canRetire) {

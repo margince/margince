@@ -195,7 +195,16 @@ function StageRemove({
   });
   // A refusal is about the workspace's state, not the dialog's: reopening
   // must ask again rather than reprint what the last attempt was told.
+  //
+  // REFUSED WHILE THE DELETE IS OUT, and that is not tidiness. ConfirmModal
+  // hands Escape and a backdrop press to this, and reset() clears isPending
+  // without cancelling the request already in flight — so a reader who pressed
+  // Escape could reopen and confirm again, and the stage would be deleted
+  // twice. The second one answers 404 against a row the first already took.
   const close = () => {
+    if (remove.isPending) {
+      return;
+    }
     remove.reset();
     setOpen(false);
   };

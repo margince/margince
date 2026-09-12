@@ -36,7 +36,7 @@ function settingsStub(opts: {
   stageDeleteRefusal?: { status: number; body: unknown };
   onPipelineWrite?: (call: { method: string; body: unknown }) => void;
   onPipelineArchive?: (call: { url: string; ifMatch: string | null }) => void;
-  onPipelineRestore?: (url: string) => void;
+  onPipelineRestore?: (call: { url: string; method: string }) => void;
   onPipelineList?: (url: string) => void;
 }) {
   return vi.fn(async (input: RequestInfo | URL) => {
@@ -48,7 +48,7 @@ function settingsStub(opts: {
       );
     }
     if (url.includes("/pipelines/") && url.endsWith("/restore")) {
-      opts.onPipelineRestore?.(url);
+      opts.onPipelineRestore?.({ url, method });
       return jsonResponse({
         id: "pl-old",
         name: "Retired line",
@@ -393,12 +393,12 @@ describe("PipelinesCard", () => {
 
   it("puts a retired pipeline back through restore", async () => {
     const user = userEvent.setup();
-    const restored: string[] = [];
+    const restored: { url: string; method: string }[] = [];
     vi.stubGlobal(
       "fetch",
       settingsStub({
         roles: ["admin"],
-        onPipelineRestore: (url) => restored.push(url),
+        onPipelineRestore: (call) => restored.push(call),
       }),
     );
     render(<PipelinesCard />);
@@ -406,7 +406,11 @@ describe("PipelinesCard", () => {
       await screen.findByRole("button", { name: "Put back in use" }),
     );
     await waitFor(() => expect(restored).toHaveLength(1));
-    expect(restored[0]).toContain("/pipelines/pl-old/restore");
+    expect(restored[0].url).toContain("/pipelines/pl-old/restore");
+    // The VERB as well as the address. Restoring is a POST — the contract's
+    // own undo half — and a stub matching on the path alone would let a
+    // regression to GET or DELETE pass while still hitting the right row.
+    expect(restored[0].method).toBe("POST");
   });
   // Each stage says what it MEANS, not just what it is called. A ladder whose
   // ends are drawn like its middle leaves a reader to infer from the name
