@@ -346,7 +346,7 @@ func TestFieldTypes_AgreesWithThePortsClosedSet(t *testing.T) {
 // its cf_* columns and a contract shape that carries them — is derived in
 // fieldobjects_test.go rather than restated here.
 func TestFieldObjects_IsTheExplicitTargetSet(t *testing.T) {
-	want := []string{"contact", "company", "deal", "lead", "project"}
+	want := []string{"contact", "company", "deal", "lead", "project", "contract"}
 	if len(FieldObjects) != len(want) {
 		t.Fatalf("FieldObjects = %v, want %v — activity and relationship are excluded for want of "+
 			"wire carriage and store wiring; see the engine's own comment", FieldObjects, want)

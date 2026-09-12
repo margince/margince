@@ -31728,6 +31728,8 @@ components:
     # ---- Project ----
     Contract:
       type: object
+      additionalProperties: true
+      x-extension: true
       description: |
         An agreement between the installation and one company. Mirrors the
         `contract` table. Carries no owner: visibility is inherited from the linked
@@ -31798,6 +31800,12 @@ components:
           type: [integer, 'null']
           minimum: 0
           description: Drives the renewal warning, which fires against the notice deadline rather than the renewal date (CONTRACT-FORM-3).
+        payment_term_days:
+          type: [integer, 'null']
+          minimum: 0
+          description: >-
+            How many days the customer has to pay. Zero is a real value and means due on
+            receipt; absent means nobody has recorded terms, which is not the same thing.
         status:
           type: string
           enum: [draft, active, expired, cancelled, superseded]
@@ -31848,6 +31856,8 @@ components:
 
     CreateContractRequest:
       type: object
+      additionalProperties: true
+      x-extension: true
       required: [company_id, title]
       properties:
         company_id: { type: string, format: uuid }
@@ -31863,10 +31873,13 @@ components:
         renewal_on: { type: [string, 'null'], format: date }
         auto_renew: { type: boolean, default: false }
         notice_period_days: { type: [integer, 'null'], minimum: 0 }
+        payment_term_days: { type: [integer, 'null'], minimum: 0 }
         signed_on: { type: [string, 'null'], format: date }
 
     UpdateContractRequest:
       type: object
+      additionalProperties: true
+      x-extension: true
       description: 'Partial. Status is absent by design — it moves through changeContractStatus.'
       properties:
         deal_id: { type: [string, 'null'], format: uuid }
@@ -31881,6 +31894,7 @@ components:
         renewal_on: { type: [string, 'null'], format: date }
         auto_renew: { type: boolean }
         notice_period_days: { type: [integer, 'null'], minimum: 0 }
+        payment_term_days: { type: [integer, 'null'], minimum: 0 }
         signed_on: { type: [string, 'null'], format: date }
 
     ChangeContractStatusRequest:
@@ -31904,6 +31918,8 @@ components:
 
     RenewContractRequest:
       type: object
+      additionalProperties: true
+      x-extension: true
       required: [title, value_basis]
       description: |
         The successor's terms. It freezes its own rate and inherits none — the counterparty
@@ -31930,6 +31946,7 @@ components:
         renewal_on: { type: [string, 'null'], format: date }
         auto_renew: { type: boolean, default: false }
         notice_period_days: { type: [integer, 'null'], minimum: 0 }
+        payment_term_days: { type: [integer, 'null'], minimum: 0 }
         signed_on: { type: [string, 'null'], format: date }
 
     Project:

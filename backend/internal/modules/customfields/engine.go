@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // The closed type/object sets (CUSTOM-FIELDS-PARAM-1/PARAM-2). No cap,
@@ -80,6 +81,15 @@ var FieldObjects = []string{
 	string(datasource.EntityDeal),
 	string(datasource.EntityLead),
 	string(datasource.EntityProject),
+	// Contract comes from the field-catalog TARGET vocabulary rather than from
+	// datasource.EntityType, and the difference is the whole reason that
+	// vocabulary exists. EntityType is what a record PROVIDER can be asked
+	// about: a member there owes native provider routing, agent record shapes
+	// and the embedding and provenance consumers that enumerate it, and
+	// TestTheRecordProviderServesExactlyTheSeamVocabulary fails the moment one
+	// answers UnsupportedEntityError. A contract carries typed extra fields
+	// without any of that being true of it.
+	string(fieldcatalog.TargetContract),
 }
 
 var allowedObjects = func() map[string]bool {

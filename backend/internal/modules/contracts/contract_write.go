@@ -40,6 +40,7 @@ type CreateContractInput struct {
 	RenewalOn        *time.Time
 	AutoRenew        bool
 	NoticePeriodDays *int
+	PaymentTermDays  *int
 	SignedOn         *time.Time
 	Source           string
 }
@@ -82,11 +83,12 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	_, err := tx.Exec(ctx,
 		`INSERT INTO contract (id, company_id, deal_id, project_id, contract_number, title,
 		                       value_minor, currency, value_basis, starts_on, ends_on, renewal_on,
-		                       auto_renew, notice_period_days, signed_on, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+		                       auto_renew, notice_period_days, payment_term_days, signed_on,
+		                       source, captured_by)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
 		id, in.CompanyID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
 		in.ValueMinor, in.Currency, in.ValueBasis, in.StartsOn, in.EndsOn, in.RenewalOn,
-		in.AutoRenew, in.NoticePeriodDays, in.SignedOn, in.Source, by)
+		in.AutoRenew, in.NoticePeriodDays, in.PaymentTermDays, in.SignedOn, in.Source, by)
 	if err != nil {
 		if storekit.IsForeignKeyViolation(err) {
 			return crmcontracts.Contract{}, apperrors.ErrNotFound
@@ -317,6 +319,9 @@ func contractPatch(existing crmcontracts.Contract, in crmcontracts.UpdateContrac
 	}
 	if in.NoticePeriodDays != nil {
 		patch.Set("notice_period_days", existing.NoticePeriodDays, *in.NoticePeriodDays)
+	}
+	if in.PaymentTermDays != nil {
+		patch.Set("payment_term_days", existing.PaymentTermDays, *in.PaymentTermDays)
 	}
 	if in.SignedOn != nil {
 		patch.Set("signed_on", existing.SignedOn, in.SignedOn.Time)

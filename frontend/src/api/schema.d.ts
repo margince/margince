@@ -22684,6 +22684,8 @@ export interface components {
             auto_renew: boolean;
             /** @description Drives the renewal warning, which fires against the notice deadline rather than the renewal date (CONTRACT-FORM-3). */
             notice_period_days?: number | null;
+            /** @description How many days the customer has to pay. Zero is a real value and means due on receipt; absent means nobody has recorded terms, which is not the same thing. */
+            payment_term_days?: number | null;
             /**
              * @description Read-only here — asserted through changeContractStatus so the transition, its event and any proposal are written from one transaction.
              * @default draft
@@ -22725,6 +22727,8 @@ export interface components {
             readonly updated_at: string;
             /** Format: date-time */
             readonly archived_at?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         ContractListResponse: {
             data: components["schemas"]["Contract"][];
@@ -22756,8 +22760,11 @@ export interface components {
             /** @default false */
             auto_renew: boolean;
             notice_period_days?: number | null;
+            payment_term_days?: number | null;
             /** Format: date */
             signed_on?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /** @description Partial. Status is absent by design — it moves through changeContractStatus. */
         UpdateContractRequest: {
@@ -22780,8 +22787,11 @@ export interface components {
             renewal_on?: string | null;
             auto_renew?: boolean;
             notice_period_days?: number | null;
+            payment_term_days?: number | null;
             /** Format: date */
             signed_on?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         ChangeContractStatusRequest: {
             /**
@@ -22833,8 +22843,11 @@ export interface components {
             /** @default false */
             auto_renew: boolean;
             notice_period_days?: number | null;
+            payment_term_days?: number | null;
             /** Format: date */
             signed_on?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /** @description A project — the body of work a client relationship is made of. Mirrors the `project` table. */
         Project: {

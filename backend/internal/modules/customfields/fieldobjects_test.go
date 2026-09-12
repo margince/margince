@@ -23,6 +23,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // carriageShapes binds each object to the contract types a cf_* value has to
@@ -44,6 +45,9 @@ var carriageShapes = map[string]struct{ create, read reflect.Type }{
 	},
 	string(datasource.EntityProject): {
 		reflect.TypeFor[crmcontracts.CreateProjectRequest](), reflect.TypeFor[crmcontracts.Project](),
+	},
+	string(fieldcatalog.TargetContract): {
+		reflect.TypeFor[crmcontracts.CreateContractRequest](), reflect.TypeFor[crmcontracts.Contract](),
 	},
 	// The two exclusions, carried here so the assertion below can state WHY
 	// each is excluded rather than assert an absence from FieldObjects.
@@ -114,11 +118,16 @@ func TestTheExcludedObjectsStillLackTheCarriageThatWouldAdmitThem(t *testing.T) 
 // cleanly, while one wider than the CHECK would fail at INSERT with a
 // constraint violation no caller can act on.
 func TestEveryFieldObjectIsSpelledTheWayTheCatalogCheckSpellsIt(t *testing.T) {
-	// The CHECK's vocabulary is the entity vocabulary; membership in it is what
-	// makes a spelling insertable at all.
+	// The CHECK's vocabulary is the field-catalog TARGET set, which is wider
+	// than datasource.EntityType and deliberately separate from it: a target is
+	// something a field may hang off, while an EntityType is something a record
+	// provider can be asked about, and Contract is the first member that is the
+	// former without being the latter. Asking EntityType here would refuse a
+	// spelling the CHECK admits, which is the wrong direction — the safety this
+	// test holds is that the allowlist never exceeds what the database accepts.
 	vocabulary := map[string]bool{}
-	for _, entity := range datasource.EntityTypes() {
-		vocabulary[string(entity)] = true
+	for _, target := range fieldcatalog.Targets() {
+		vocabulary[string(target)] = true
 	}
 	for _, object := range FieldObjects {
 		if !vocabulary[object] {
