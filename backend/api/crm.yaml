@@ -14182,6 +14182,90 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+  /confirm-submissions:
+    get:
+      tags: [Compliance]
+      operationId: listConfirmSubmissions
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: List what subjects sent through their own confirm links.
+      description: |
+        What a contact typed into the link we mailed them: a correction to a field we hold, or a
+        request to be removed. Nothing here has touched the CRM — the subject holds a bearer token
+        and sits outside every row-scope probe, so a submission is EVIDENCE OF WHAT THEY ASKED FOR
+        and never a write. This is the queue where somebody decides.
+
+        Unresolved first by default, oldest first within that: a correction somebody sent three
+        weeks ago is the one still waiting.
+      parameters:
+        - { name: contact_id, in: query, required: false, schema: { type: string, format: uuid },
+            description: Only this contact's submissions. Omit for the whole queue. }
+        - { name: resolved, in: query, required: false, schema: { type: boolean },
+            description: "false for the queue, true for what has been decided. Omit for both." }
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: |
+            The submissions, bounded by the limit. NO CURSOR: this is a queue somebody works
+            through rather than an archive to page, and a cursor the handler did not read would
+            answer a wider page than the one that was asked for. When the queue grows past one
+            screen, the paging lands with the reader that needs it.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/ConfirmSubmission' } }
+  /confirm-submissions/{id}/resolve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Compliance]
+      operationId: resolveConfirmSubmission
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Accept or decline what a subject proposed.
+      description: |
+        Records the decision, and for an ACCEPTED correction writes the proposed value onto the
+        contact through the ordinary update path — so the same row scope, audit row and event that
+        govern any other edit to that field govern this one. A correction accepted by a route of
+        its own would be a second way to change a contact, answerable to nothing the first one is.
+
+        Rejecting records that somebody looked and said no. The proposal stays on the record: the
+        subject asked, and an export that showed the request without its answer would be telling
+        half of it.
+
+        Idempotent WITHOUT a key, which is why it declares none: the submission itself is the
+        identity, and a second decision on one already resolved returns the stored one unchanged.
+        A key would promise replay protection that the row's own state already gives, and the
+        replay machinery would then be keeping records for a promise nobody needed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolution]
+              properties:
+                resolution:
+                  type: string
+                  enum: [accepted, rejected]
+                note:
+                  type: string
+                  maxLength: 500
+                  description: |
+                    Why, for whoever reads this later. Required by nothing and worth writing on a
+                    decline, where "we did not change it" is the whole of what the record says
+                    otherwise.
+      responses:
+        '200':
+          description: Resolved (idempotent).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConfirmSubmission' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /data-subject-requests/{id}/package:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -41429,6 +41513,61 @@ components:
             The tick. Refused when false — the acknowledgement is the act, and an instruction written
             without one would record a decision nobody made.
 
+    ConfirmSubmission:
+      type: object
+      description: |
+        What a subject typed into the confirm link we mailed them, and what somebody decided about
+        it. Nothing here has changed the CRM: the subject holds a bearer token and sits outside
+        every row-scope probe, so a submission records what they ASKED FOR.
+      required: [id, contact_id, kind, submitted_at]
+      properties:
+        id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        kind:
+          type: string
+          description: |
+            `correction` proposes a new value for one field; `removal` asks to be taken off the
+            record entirely. A removal names no field.
+        field:
+          type: string
+          nullable: true
+          description: Which field a correction is about. Null on a removal request.
+        proposed_value:
+          type: string
+          nullable: true
+          description: |
+            The subject's own words. Shown beside what the record currently holds, because a
+            correction is only reviewable as a comparison — "she says Schmidt, we hold Schmitt" is
+            the decision, and either half alone is not.
+        contact_name:
+          type: string
+          nullable: true
+          description: |
+            Who proposed it. A queue spanning every contact is unusable without it: two contacts
+            proposing the same title on the same day are indistinguishable, and accepting either
+            one changes a different record.
+        current_value:
+          type: string
+          nullable: true
+          description: |
+            What the record holds for that field right now. A correction is only reviewable as a
+            COMPARISON — "she says Schmidt, we hold Schmitt" is the decision, and either half
+            alone is not. Null for a removal request, which names no field.
+        submitted_at: { type: string, format: date-time }
+        resolution:
+          type: string
+          nullable: true
+          enum: [accepted, rejected]
+          description: Null while it waits for somebody to decide.
+        resolved_at: { type: string, format: date-time, nullable: true }
+        resolved_by:
+          type: string
+          nullable: true
+          description: Who decided, as the audit trail spells a principal.
+        note:
+          type: string
+          nullable: true
+          description: Why they decided that, when they said.
     DataSubjectRequest:
       type: object
       description: A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).

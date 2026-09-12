@@ -92,6 +92,17 @@ func (h Handlers) WithEraser(e Eraser) Handlers {
 	return h
 }
 
+// WithCorrectionApplier returns a copy whose store can write an accepted
+// correction onto the contact record.
+//
+// On the STORE, because that is where the decision is made: the handler only
+// decodes. A copy of Handlers carries a pointer to the same store, so this
+// wires the one every door shares.
+func (h Handlers) WithCorrectionApplier(a CorrectionApplier) Handlers {
+	h.store = h.store.WithCorrectionApplier(a)
+	return h
+}
+
 // WithSubjectAccessAssembler returns a copy wired to the Art. 15 export.
 func (h Handlers) WithSubjectAccessAssembler(a SubjectAccessAssembler) Handlers {
 	h.assembler = a

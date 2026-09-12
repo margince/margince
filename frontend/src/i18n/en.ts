@@ -4594,6 +4594,19 @@ export const en = {
   "settings.due": "due {date}",
 
   "privacy.addPurpose": "Add purpose",
+  "privacy.corrections": "What contacts told us to change",
+  "privacy.correctionsSub":
+    "A contact typed these into the link we mailed them. Nothing here has changed the record yet — a correction is a request until somebody accepts it.",
+  "privacy.correctionsEmpty": "Nothing waiting",
+  "privacy.correctionsEmptySub":
+    "Corrections a contact sends through their own link land here for somebody to answer.",
+  "privacy.correctionRemoval": "Asked to be removed",
+  "privacy.correctionDecide": "Decide",
+  "privacy.correctionUnnamed": "Unnamed contact",
+  "privacy.correctionAcknowledge": "Mark as read",
+  "privacy.correctionNote": "Why (the contact may ask)",
+  "privacy.correctionAccept": "Accept and update",
+  "privacy.correctionReject": "Leave as it is",
   "privacy.purposesRegistry": "Registered purposes",
   "privacy.purposesReadOnly":
     "Read-only view — adding a purpose needs permission your seat does not hold.",

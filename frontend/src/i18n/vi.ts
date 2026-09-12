@@ -4386,6 +4386,19 @@ export const vi = {
   "privacy.purposesReadOnly":
     "Chế độ chỉ đọc — thêm mục đích cần quyền mà ghế của bạn không có.",
   "privacy.addPurpose": "Thêm mục đích",
+  "privacy.corrections": "Những gì liên hệ muốn sửa",
+  "privacy.correctionsSub":
+    "Một liên hệ đã nhập những nội dung này vào liên kết chúng ta gửi cho họ. Hồ sơ chưa thay đổi gì — một yêu cầu sửa vẫn chỉ là yêu cầu cho tới khi được chấp nhận.",
+  "privacy.correctionsEmpty": "Không có gì chờ xử lý",
+  "privacy.correctionsEmptySub":
+    "Những yêu cầu sửa mà liên hệ gửi qua liên kết riêng của họ sẽ hiện ở đây để được trả lời.",
+  "privacy.correctionRemoval": "Yêu cầu được xóa",
+  "privacy.correctionDecide": "Quyết định",
+  "privacy.correctionUnnamed": "Liên hệ chưa có tên",
+  "privacy.correctionAcknowledge": "Đánh dấu đã đọc",
+  "privacy.correctionNote": "Lý do (liên hệ có thể hỏi lại)",
+  "privacy.correctionAccept": "Chấp nhận và cập nhật",
+  "privacy.correctionReject": "Giữ nguyên",
   "privacy.purposesRegistry": "Mục đích đã đăng ký",
   "privacy.purposeKey": "Khoá",
   "privacy.purposeLabel": "Nhãn",

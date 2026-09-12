@@ -4454,6 +4454,19 @@ export const de = {
   "privacy.purposesReadOnly":
     "Nur-Lese-Ansicht — zum Anlegen eines Zwecks fehlt Ihrem Sitzplatz die Berechtigung.",
   "privacy.addPurpose": "Zweck hinzufügen",
+  "privacy.corrections": "Was Kontakte korrigiert haben wollen",
+  "privacy.correctionsSub":
+    "Das hat jemand in den Link getippt, den wir ihm geschickt haben. Am Datensatz hat sich noch nichts geändert — eine Korrektur ist eine Bitte, bis jemand sie annimmt.",
+  "privacy.correctionsEmpty": "Nichts offen",
+  "privacy.correctionsEmptySub":
+    "Korrekturen, die ein Kontakt über seinen eigenen Link schickt, landen hier zur Beantwortung.",
+  "privacy.correctionRemoval": "Bittet um Löschung",
+  "privacy.correctionDecide": "Entscheiden",
+  "privacy.correctionUnnamed": "Kontakt ohne Namen",
+  "privacy.correctionAcknowledge": "Als gelesen markieren",
+  "privacy.correctionNote": "Warum (der Kontakt kann nachfragen)",
+  "privacy.correctionAccept": "Annehmen und ändern",
+  "privacy.correctionReject": "So lassen",
   "privacy.purposesRegistry": "Erfasste Zwecke",
   "privacy.purposeKey": "Schlüssel",
   "privacy.purposeLabel": "Bezeichnung",
