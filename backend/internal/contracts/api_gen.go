@@ -40417,9 +40417,12 @@ type BookMeetingJSONBody struct {
 	End        time.Time           `json:"end"`
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
 
-	// Links Entities to associate the resulting meeting activity with. Each one is
-	// row-scope probed and written as its own row, so the list is bounded at 25 —
-	// the same bound the `book_meeting` tool applies before it stages.
+	// Links Entities to associate the resulting meeting activity with. At least one is
+	// required: a meeting belonging to no record appears on no timeline and is one
+	// nobody will find again, which is the same reason `SendAccountEmailRequest`
+	// carries the bound. Each one is row-scope probed and written as its own row,
+	// so the list is bounded at 25 — the same bound the `book_meeting` tool applies
+	// before it stages.
 	Links []struct {
 		EntityId   openapi_types.UUID                 `json:"entity_id"`
 		EntityType BookMeetingJSONBodyLinksEntityType `json:"entity_type"`

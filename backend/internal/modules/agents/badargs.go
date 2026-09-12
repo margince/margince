@@ -140,6 +140,15 @@ type BadArgsError struct {
 	// branching on the structured list got nothing to branch on, and the
 	// coverage gate had to match a substring instead of a field code.
 	Field string
+	// Code is the per-field machine code, empty for the validation_error every
+	// BadArgsError answers by default.
+	//
+	// It exists for the refusals a REST door answers more precisely. `links`
+	// missing is `required` on activities' own store, and a client branching on
+	// details.errors must not have to know which door refused it to recognise
+	// the same mistake — which is the property ADR-0055 is about, arriving at
+	// the field level rather than the status one.
+	Code string
 	// Guidance is server-authored text appended after the echo, and it is NOT
 	// bounded. Bounding it with the echo is what made the accepted-field list
 	// truncate mid-word on a long unknown key — cutting away the list the
@@ -184,11 +193,18 @@ func (e *BadArgsError) FieldFaults() []apperrors.FieldRefusal {
 	if e.Field == "" {
 		return nil
 	}
-	// The code REUSES validation_error rather than minting one: crm.yaml
+	// The default REUSES validation_error rather than minting one: crm.yaml
 	// already declares it for exactly this class of caller mistake, and
 	// inventing a second would put an undocumented code in front of a client
-	// that branches on the documented one (P3 — the contract wins).
-	return []apperrors.FieldRefusal{{Field: e.Field, Code: "validation_error", Message: e.Error()}}
+	// that branches on the documented one (P3 — the contract wins). A refusal
+	// that names a MORE precise code says so through Code, and those are
+	// codes crm.yaml already declares too — `required` is what every REST door
+	// answers for a value that was absent.
+	code := e.Code
+	if code == "" {
+		code = "validation_error"
+	}
+	return []apperrors.FieldRefusal{{Field: e.Field, Code: code, Message: e.Error()}}
 }
 
 // boundDetail caps a message at n bytes, cutting on a rune boundary so the
