@@ -75,16 +75,26 @@ func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, ca
 // confirmKindFor maps a category to the confirm_token kind that evidences it.
 //
 // It is deliberately NOT total over the five subject-serving categories. A
-// security notice and a privacy notice carry no link and are not answered here;
-// an opt-out acknowledgement is sent when a token has just been spent, so no
-// live one remains to find. Those stay unsupported until each has evidence of
-// its own, which is the fail-closed default this package keeps.
+// security notice carries no link and is not answered here; an opt-out
+// acknowledgement is sent when a token has just been spent, so no live one
+// remains to find. Those stay unsupported until each has evidence of its own,
+// which is the fail-closed default this package keeps.
+//
+// A PRIVACY NOTICE used to be in that list, on the ground that it carries no
+// link. It does now: the notice mail is a one-time link to a page showing what
+// is held, where it came from and the rights over it, minted by
+// IssuePrivacyNotice and stored in the same confirm_token table. The evidence
+// is therefore the same evidence — a live unspent token of that kind — and
+// leaving it out meant every notice the installation sent was refused for
+// having none.
 func confirmKindFor(category commsauthz.Category) (string, bool) {
 	switch category {
 	case commsauthz.CategoryRecordConfirmation:
 		return LinkRecordConfirmation, true
 	case commsauthz.CategoryConsentConfirmation:
 		return LinkConsentConfirmation, true
+	case commsauthz.CategoryPrivacyNotice:
+		return LinkPrivacyNotice, true
 	default:
 		return "", false
 	}

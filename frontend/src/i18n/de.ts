@@ -4429,6 +4429,40 @@ export const de = {
     "Diese Pflichten nennen Kontakte und wie wir sie erhalten haben. Sie werden nur im Datenschutz-Eingang gezeigt.",
   "notice.dueAt": "Fällig am {date}",
   "notice.overdue": "Überfällig",
+  "privacynotice.title": "Was wir über Sie gespeichert haben",
+  "privacynotice.intro":
+    "Wir teilen Ihnen das mit, weil das Gesetz es verlangt. Sie müssen nicht antworten und nichts tun.",
+  "privacynotice.source.title": "Woher Ihre Daten stammen",
+  "privacynotice.source.when": "Erhalten am {date}",
+  "privacynotice.source.subjectInitiated": "Sie haben uns zuerst geschrieben.",
+  "privacynotice.source.customerContract":
+    "Sie sind Ansprechpartner einer Geschäftsbeziehung mit uns.",
+  "privacynotice.source.requested":
+    "Sie haben uns um ein Angebot oder einen Termin gebeten.",
+  "privacynotice.source.inPerson":
+    "Jemand hat ein Gespräch mit Ihnen festgehalten.",
+  "privacynotice.source.referral": "Jemand anderes hat uns Ihre Daten gegeben.",
+  "privacynotice.source.eventOrForm":
+    "Sie haben ein Formular ausgefüllt oder sich für etwas angemeldet.",
+  "privacynotice.source.publicSource":
+    "Wir haben Ihre Daten in einer öffentlichen oder geschäftlichen Quelle gefunden, etwa einem Verzeichnis oder einer Unternehmenswebsite.",
+  "privacynotice.source.purchasedOrImported":
+    "Ihre Daten stammen aus einer gekauften oder importierten Liste.",
+  "privacynotice.source.unknown":
+    "Wir können nicht sagen, wie Ihre Daten zu uns gelangt sind.",
+  "privacynotice.purposes.title": "Wofür wir sie nutzen",
+  "privacynotice.rights.title": "Ihre Rechte daran",
+  "privacynotice.rights.how":
+    "Um eines dieser Rechte zu nutzen, antworten Sie auf die Nachricht, die Sie hierher geführt hat, oder wenden Sie sich an die Adresse auf unserer Website.",
+  "privacynotice.right.access":
+    "Eine Kopie dessen verlangen, was wir über Sie gespeichert haben.",
+  "privacynotice.right.rectification": "Uns bitten, Falsches zu korrigieren.",
+  "privacynotice.right.erasure": "Uns bitten, die Daten zu löschen.",
+  "privacynotice.right.restriction":
+    "Uns bitten, die Nutzung auszusetzen, solange etwas strittig ist.",
+  "privacynotice.right.objection": "Der Nutzung widersprechen.",
+  "privacynotice.right.complain":
+    "Sich bei Ihrer Datenschutzbehörde beschweren.",
   "notice.claimed": "Übernommen",
   "notice.unclaimed": "Nicht übernommen",
   "notice.excuse": "Ohne Versand beenden",

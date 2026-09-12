@@ -49,6 +49,20 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 		httperr.WriteJSON(w, http.StatusOK, wireSubscriptionCard(card))
 		return
 	}
+	// A privacy notice is answered with the disclosure and nothing else: how
+	// this contact was obtained, what their data is used for, and the rights
+	// they hold. No name, no employer, no address, no provenance trail — the
+	// mail said we hold information about you and here is what and why, and it
+	// did not offer to show somebody their file.
+	if ref.Kind == LinkPrivacyNotice {
+		info, err := h.store.PrivacyInformationFor(r.Context(), ref)
+		if err != nil {
+			writeConsentErr(w, r, err)
+			return
+		}
+		httperr.WriteJSON(w, http.StatusOK, wirePrivacyInformation(info))
+		return
+	}
 	// EVERY OTHER KIND IS REFUSED, rather than falling through to the record.
 	//
 	// The record card is the widest thing this endpoint can disclose — name,
@@ -127,6 +141,34 @@ func submissionFromWire(req crmcontracts.SubmitConfirmDetailsJSONRequestBody) Co
 		in.MarketingWording = *req.MarketingWording
 	}
 	return in
+}
+
+// wirePrivacyInformation renders the Art. 14 disclosure.
+//
+// Purposes and rights are always LISTS rather than omitted when empty: a page
+// distinguishing "no purposes" from "the field was absent" would be reading a
+// difference that means nothing, and an installation with no published purposes
+// still owes the rest of the disclosure.
+func wirePrivacyInformation(info PrivacyInformation) crmcontracts.PrivacyInformationPage {
+	rights := make([]crmcontracts.PrivacyInformationPageRights, 0, len(info.Rights))
+	for _, r := range info.Rights {
+		rights = append(rights, crmcontracts.PrivacyInformationPageRights(r))
+	}
+	purposes := info.Purposes
+	if purposes == nil {
+		purposes = []string{}
+	}
+	out := crmcontracts.PrivacyInformationPage{
+		Kind:       crmcontracts.PrivacyInformationPageKindPrivacyNotice,
+		AcquiredAs: info.AcquiredAs,
+		Purposes:   &purposes,
+		Rights:     rights,
+	}
+	if info.AcquiredAt != nil {
+		at := *info.AcquiredAt
+		out.AcquiredAt = &at
+	}
+	return out
 }
 
 // wireConfirmCard renders the card. marketing_state is spelled 'unknown' rather

@@ -11,6 +11,7 @@ import {
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import { PrivacyNotice } from "./confirmprivacy";
 import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
 import { SubscriptionConfirm } from "./confirmsubscription";
 import {
@@ -196,6 +197,13 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   // subscription, and rendering a refusal nowhere.
   if (card.kind === "subscription_confirmation") {
     return <SubscriptionConfirm token={token} card={card} />;
+  }
+  // A privacy notice has its own page and NO form. It discharges a duty to tell
+  // somebody something, so it takes no answer — and falling through to the
+  // record page below would show them their file and offer a subscription box,
+  // neither of which the mail that carried this link described.
+  if (card.kind === "privacy_notice") {
+    return <PrivacyNotice card={card} />;
   }
   if (done) {
     return (

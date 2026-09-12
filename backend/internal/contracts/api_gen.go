@@ -10612,6 +10612,51 @@ func (e PreferenceCenterRefusedReason) Valid() bool {
 	}
 }
 
+// Defines values for PrivacyInformationPageKind.
+const (
+	PrivacyInformationPageKindPrivacyNotice PrivacyInformationPageKind = "privacy_notice"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPageKind enum.
+func (e PrivacyInformationPageKind) Valid() bool {
+	switch e {
+	case PrivacyInformationPageKindPrivacyNotice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrivacyInformationPageRights.
+const (
+	PrivacyInformationPageRightsAccess              PrivacyInformationPageRights = "access"
+	PrivacyInformationPageRightsComplainToAuthority PrivacyInformationPageRights = "complain_to_authority"
+	PrivacyInformationPageRightsErasure             PrivacyInformationPageRights = "erasure"
+	PrivacyInformationPageRightsObjection           PrivacyInformationPageRights = "objection"
+	PrivacyInformationPageRightsRectification       PrivacyInformationPageRights = "rectification"
+	PrivacyInformationPageRightsRestriction         PrivacyInformationPageRights = "restriction"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPageRights enum.
+func (e PrivacyInformationPageRights) Valid() bool {
+	switch e {
+	case PrivacyInformationPageRightsAccess:
+		return true
+	case PrivacyInformationPageRightsComplainToAuthority:
+		return true
+	case PrivacyInformationPageRightsErasure:
+		return true
+	case PrivacyInformationPageRightsObjection:
+		return true
+	case PrivacyInformationPageRightsRectification:
+		return true
+	case PrivacyInformationPageRightsRestriction:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProductBillingIntervalMonths.
 const (
 	ProductBillingIntervalMonthsN1  ProductBillingIntervalMonths = 1
@@ -32245,6 +32290,44 @@ type PreviewSendRequest struct {
 	// engine — so a composer previewing a message with copies passes them all here.
 	To []openapi_types.Email `json:"to"`
 }
+
+// PrivacyInformationPage The answer for a privacy-notice link: what the installation holds about this contact, where
+// it came from, what it is used for, and the rights the contact has over it.
+//
+// It TAKES NO ANSWER. The mail that carried this link asks nothing and says so, and the submit
+// path refuses any correction, erasure request or marketing choice arriving on it. A reader
+// who wants to exercise a right has the doors this page names.
+//
+// That strictness is the point rather than caution. This is the one link a contact who asked
+// us to stop still receives — the disclosure duty survives their stop — so it must not become
+// the re-engagement surface the stop exists to prevent.
+//
+// It carries LESS than the record page: the acquisition and the purposes, not the contact's
+// employer, phone, address or provenance trail. Telling somebody what is held is a different
+// act from showing them their file, and this message promised the first.
+type PrivacyInformationPage struct {
+	// AcquiredAs How this contact was obtained, in the closed vocabulary
+	// `contact_acquisition_evidence.kind` uses. It is what Art. 14(2)(f) requires: the source
+	// the data came from.
+	AcquiredAs string `json:"acquired_as"`
+
+	// AcquiredAt When the acquisition happened, absent where the door could not say.
+	AcquiredAt *time.Time                 `json:"acquired_at,omitempty"`
+	Kind       PrivacyInformationPageKind `json:"kind"`
+
+	// Purposes What the installation uses this contact's data for, by published name.
+	Purposes *[]string `json:"purposes,omitempty"`
+
+	// Rights The rights the contact holds over this data, as codes a page renders in its own
+	// language. Art. 14(2)(c)-(e) requires naming them.
+	Rights []PrivacyInformationPageRights `json:"rights"`
+}
+
+// PrivacyInformationPageKind defines model for PrivacyInformationPage.Kind.
+type PrivacyInformationPageKind string
+
+// PrivacyInformationPageRights defines model for PrivacyInformationPage.Rights.
+type PrivacyInformationPageRights string
 
 // Problem RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Problem struct {
@@ -54877,6 +54960,34 @@ func (t *ConfirmPage) MergeSubscriptionConfirmationPage(v SubscriptionConfirmati
 	return err
 }
 
+// AsPrivacyInformationPage returns the union data inside the ConfirmPage as a PrivacyInformationPage
+func (t ConfirmPage) AsPrivacyInformationPage() (PrivacyInformationPage, error) {
+	var body PrivacyInformationPage
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPrivacyInformationPage overwrites any union data inside the ConfirmPage as the provided PrivacyInformationPage
+func (t *ConfirmPage) FromPrivacyInformationPage(v PrivacyInformationPage) error {
+	v.Kind = "privacy_notice"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePrivacyInformationPage performs a merge with any union data inside the ConfirmPage, using the provided PrivacyInformationPage
+func (t *ConfirmPage) MergePrivacyInformationPage(v PrivacyInformationPage) error {
+	v.Kind = "privacy_notice"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t ConfirmPage) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"kind"`
@@ -54891,6 +55002,8 @@ func (t ConfirmPage) ValueByDiscriminator() (interface{}, error) {
 		return nil, err
 	}
 	switch discriminator {
+	case "privacy_notice":
+		return t.AsPrivacyInformationPage()
 	case "record_confirmation":
 		return t.AsRecordConfirmationPage()
 	case "subscription_confirmation":
@@ -55629,6 +55742,9 @@ type ServerInterface interface {
 	// May we write to this contact right now — per purpose and channel, with the reason.
 	// (GET /contacts/{id}/consent/guard)
 	GetContactConsentGuard(w http.ResponseWriter, r *http.Request, id Id)
+	// Mail this contact the Art. 14 disclosure, which asks them for nothing.
+	// (POST /contacts/{id}/consent/privacy-notice)
+	SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id)
 	// Record the exchange that makes business correspondence lawful.
 	// (POST /contacts/{id}/consent/qualifying-events)
 	RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id)
@@ -58281,6 +58397,12 @@ func (_ Unimplemented) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, 
 // May we write to this contact right now — per purpose and channel, with the reason.
 // (GET /contacts/{id}/consent/guard)
 func (_ Unimplemented) GetContactConsentGuard(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mail this contact the Art. 14 disclosure, which asks them for nothing.
+// (POST /contacts/{id}/consent/privacy-notice)
+func (_ Unimplemented) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -70484,6 +70606,38 @@ func (siw *ServerInterfaceWrapper) GetContactConsentGuard(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetContactConsentGuard(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendPrivacyNotice operation middleware
+func (siw *ServerInterfaceWrapper) SendPrivacyNotice(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendPrivacyNotice(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -88985,6 +89139,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/consent/guard", wrapper.GetContactConsentGuard)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/consent/privacy-notice", wrapper.SendPrivacyNotice)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/qualifying-events", wrapper.RecordQualifyingEvent)

@@ -167,6 +167,9 @@ func TestTheRenderedBodyNeverCarriesTheLink(t *testing.T) {
 //
 // gatekit:fixture the sha256 of each registered template's rendered wording
 var pinnedWording = map[string]string{
+	"privacy_notice@1@de":       "f22fd4fc7fe4e266bd6f19566cf1c168d9981106ee8bfe64d7d43758b1bd8b3a",
+	"privacy_notice@1@en":       "9bcfa68cac9cece7974e57c71472434f4baf865a4a0c8e12970fe0b3f1212dd4",
+	"privacy_notice@1@vi":       "5fc479c528b31e79df080e9f07cbfedd15e6e67373ed73776b29b7513da9bef2",
 	"record_confirmation@2@en":  "ae6261f551d0f39945b720db03b9ef2f51a36516b88eeff0b1afae80808e0c28",
 	"record_confirmation@2@de":  "3ba76e0c75f2dd619ad4666d3452607b87a638ea1183e3188ace7bd7d4ac6b06",
 	"record_confirmation@2@vi":  "28894b02130d640779a9fd4550a2f987a4925c04aaf2749679d44708eae9d2a7",

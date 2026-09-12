@@ -15311,6 +15311,44 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /contacts/{id}/consent/privacy-notice:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Compliance]
+      operationId: sendPrivacyNotice
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Mail this contact the Art. 14 disclosure, which asks them for nothing.
+      description: |
+        Tells a contact that the installation holds data about them, where it came from, what it is
+        used for, and the rights they have over it. It asks for no answer, and the page the link
+        opens accepts none.
+
+        It is a DIFFERENT message from `confirm-request` beside it, and the difference is the point.
+        That one discharges the same duty and also asks whether the contact wants to hear from us —
+        a marketing question inside a legal obligation, which is the arrangement a supervisory
+        authority reads as consent obtained under pressure. It also shows the contact their whole
+        file: name, employer, address, phone, provenance. This shows the source, the purposes and
+        the rights, because that is what the duty asks for.
+
+        THIS IS THE ROUTE THAT REACHES SOMEBODY WHO ASKED US TO STOP. The disclosure duty survives
+        a subject request, and only the `privacy_notice` category survives it in the send engine —
+        so before this door existed, the duty was owed to exactly those contacts and undeliverable
+        to them. A hard-bounced address still refuses it, because a dead mailbox receives nothing.
+
+        The address is derived from the contact's own live primary email, never taken from the
+        caller, and the token is never returned. Both properties are the same ones
+        `confirm-request` rests on and for the same reasons.
+      responses:
+        '201':
+          description: Notice issued, and what became of the delivery.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConfirmRequestIssued' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /contacts/{id}/consent/confirm-request:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -41275,11 +41313,58 @@ components:
       oneOf:
         - $ref: '#/components/schemas/RecordConfirmationPage'
         - $ref: '#/components/schemas/SubscriptionConfirmationPage'
+        - $ref: '#/components/schemas/PrivacyInformationPage'
       discriminator:
         propertyName: kind
         mapping:
           record_confirmation: '#/components/schemas/RecordConfirmationPage'
           subscription_confirmation: '#/components/schemas/SubscriptionConfirmationPage'
+          privacy_notice: '#/components/schemas/PrivacyInformationPage'
+
+    PrivacyInformationPage:
+      type: object
+      description: |
+        The answer for a privacy-notice link: what the installation holds about this contact, where
+        it came from, what it is used for, and the rights the contact has over it.
+
+        It TAKES NO ANSWER. The mail that carried this link asks nothing and says so, and the submit
+        path refuses any correction, erasure request or marketing choice arriving on it. A reader
+        who wants to exercise a right has the doors this page names.
+
+        That strictness is the point rather than caution. This is the one link a contact who asked
+        us to stop still receives — the disclosure duty survives their stop — so it must not become
+        the re-engagement surface the stop exists to prevent.
+
+        It carries LESS than the record page: the acquisition and the purposes, not the contact's
+        employer, phone, address or provenance trail. Telling somebody what is held is a different
+        act from showing them their file, and this message promised the first.
+      required: [kind, acquired_as, rights]
+      properties:
+        kind:
+          type: string
+          enum: [privacy_notice]
+        acquired_as:
+          type: string
+          description: |
+            How this contact was obtained, in the closed vocabulary
+            `contact_acquisition_evidence.kind` uses. It is what Art. 14(2)(f) requires: the source
+            the data came from.
+        acquired_at:
+          type: [string, 'null']
+          format: date-time
+          description: 'When the acquisition happened, absent where the door could not say.'
+        purposes:
+          type: array
+          description: 'What the installation uses this contact''s data for, by published name.'
+          items: { type: string }
+        rights:
+          type: array
+          description: |
+            The rights the contact holds over this data, as codes a page renders in its own
+            language. Art. 14(2)(c)-(e) requires naming them.
+          items:
+            type: string
+            enum: [access, rectification, erasure, restriction, objection, complain_to_authority]
 
     SubscriptionConfirmationPage:
       type: object

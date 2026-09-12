@@ -4572,6 +4572,36 @@ export const en = {
     "These duties name contacts and how we obtained them, so they are shown to the privacy inbox only.",
   "notice.dueAt": "Due {date}",
   "notice.overdue": "Overdue",
+  "privacynotice.title": "What we hold about you",
+  "privacynotice.intro":
+    "We are telling you this because the law requires it. You do not need to reply or do anything.",
+  "privacynotice.source.title": "Where your details came from",
+  "privacynotice.source.when": "Obtained on {date}",
+  "privacynotice.source.subjectInitiated": "You wrote to us first.",
+  "privacynotice.source.customerContract":
+    "You are a contact on a business relationship with us.",
+  "privacynotice.source.requested": "You asked us for a quote or a meeting.",
+  "privacynotice.source.inPerson": "Somebody recorded a conversation with you.",
+  "privacynotice.source.referral": "Somebody else gave us your details.",
+  "privacynotice.source.eventOrForm":
+    "You filled in a form or registered for something.",
+  "privacynotice.source.publicSource":
+    "We found your details in a public or business source, such as a directory or a company website.",
+  "privacynotice.source.purchasedOrImported":
+    "Your details came from a list that was bought or imported.",
+  "privacynotice.source.unknown": "We cannot say how your details reached us.",
+  "privacynotice.purposes.title": "What we use it for",
+  "privacynotice.rights.title": "Your rights over this",
+  "privacynotice.rights.how":
+    "To use any of these, reply to the message that brought you here, or contact us through the address on our website.",
+  "privacynotice.right.access": "Ask for a copy of what we hold about you.",
+  "privacynotice.right.rectification":
+    "Ask us to correct anything that is wrong.",
+  "privacynotice.right.erasure": "Ask us to delete it.",
+  "privacynotice.right.restriction":
+    "Ask us to stop using it while something is disputed.",
+  "privacynotice.right.objection": "Object to how we use it.",
+  "privacynotice.right.complain": "Complain to your data protection authority.",
   "notice.claimed": "Claimed",
   "notice.unclaimed": "Unclaimed",
   "notice.excuse": "End without sending",

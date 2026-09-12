@@ -979,6 +979,10 @@ func (stubs) GetContactConsentGuard(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "GetContactConsentGuard")
 }
 
+func (stubs) SendPrivacyNotice(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SendPrivacyNotice")
+}
+
 func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RecordQualifyingEvent")
 }

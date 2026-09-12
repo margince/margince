@@ -302,6 +302,24 @@ func confirmLines(line writeLine) {
 			"und uns sagen, ob Sie von uns hören möchten.",
 		"Quý vị có thể xem chúng tôi lưu giữ thông tin gì về mình, sửa những gì chưa đúng,\n"+
 			"và cho chúng tôi biết quý vị có muốn nhận tin từ chúng tôi hay không.")
+	line(func(c *Copy) *string { return &c.NoticeSubject },
+		"What we hold about you, and where it came from",
+		"Was wir über Sie gespeichert haben, und woher es stammt",
+		"Chúng tôi lưu giữ thông tin gì về quý vị, và từ đâu")
+	line(func(c *Copy) *string { return &c.NoticeBody },
+		"We hold some information about you and we are telling you so, as the law\n"+
+			"requires. The link below shows what we hold, where we got it, what we use it\n"+
+			"for, and the rights you have over it.",
+		"Wir haben Informationen über Sie gespeichert und teilen Ihnen das mit, wie es\n"+
+			"das Gesetz verlangt. Der Link unten zeigt, was wir gespeichert haben, woher\n"+
+			"wir es haben, wofür wir es nutzen und welche Rechte Sie daran haben.",
+		"Chúng tôi có lưu giữ một số thông tin về quý vị và xin thông báo điều đó,\n"+
+			"theo quy định của pháp luật. Liên kết bên dưới cho thấy chúng tôi lưu giữ gì,\n"+
+			"lấy từ đâu, dùng để làm gì, và quý vị có những quyền nào đối với nó.")
+	line(func(c *Copy) *string { return &c.NoticeIgnore },
+		"You do not need to reply or do anything. This is not a request.",
+		"Sie müssen nicht antworten und nichts tun. Dies ist keine Aufforderung.",
+		"Quý vị không cần trả lời hay làm gì cả. Đây không phải là một yêu cầu.")
 	line(func(c *Copy) *string { return &c.ConfirmConsentSubject },
 		"Please confirm you want to hear from us",
 		"Bitte bestätigen Sie, dass Sie von uns hören möchten",
