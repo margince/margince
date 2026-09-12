@@ -301,7 +301,10 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 	// through, so an overnight reply and an automation's draft are one drafting
 	// engine. The zero SendPath matches that surface: nothing here sends, the
 	// held-draft release does, through the fully wired path it builds itself.
-	drafter := newCommsAdapter(pool, nil, SendPath{})
+	// No system-of-record seam: this adapter is built for DraftEmail alone and
+	// its empty SendPath reaches no send, so the guard that would need one is
+	// unreachable from here. It refuses rather than passes if that ever changes.
+	drafter := newCommsAdapter(pool, nil, SendPath{}, nil)
 	stager := followUpStager{
 		svc:   approvals.NewService(db),
 		draft: drafter,

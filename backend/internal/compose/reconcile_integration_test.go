@@ -72,7 +72,7 @@ func setupReconcile(t *testing.T) *reconcileEnv {
 	// in production reached it.
 	stager := followUpStager{
 		svc:   e.svc,
-		draft: newCommsAdapter(e.Pool, nil, SendPath{}),
+		draft: newCommsAdapter(e.Pool, nil, SendPath{}, nativeSoR),
 		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
 	}
 	e.reconciler = deals.NewFollowUpReconciler(e.DB(), stager, quiet)
