@@ -297,7 +297,7 @@ describe("the morning feed", () => {
     );
 
     const link = screen.getByText(
-      en["brief.feed.rest"].replace("{count}", "6"),
+      en["brief.feed.rest_other"].replace("{count}", "6"),
     );
     // The door narrows to the same population the count was taken over. The
     // test below proves the count drops approvals; a bare `#/worklist` would
@@ -328,10 +328,56 @@ describe("the morning feed", () => {
     );
 
     // Six drawable rows, five shown: ONE remains, not the two a count over the
-    // whole seven-row queue would report.
-    expect(
-      screen.getByText(en["brief.feed.rest"].replace("{count}", "1")),
-    ).toBeTruthy();
+    // whole seven-row queue would report. The SINGULAR form, which spells the
+    // one out rather than carrying a placeholder.
+    expect(screen.getByText(en["brief.feed.rest_one"])).toBeTruthy();
+  });
+
+  // A COUNT OF ROWS IS NOT A DESCRIPTION OF WORK. "14 more" is the same number
+  // whether it is an afternoon of customer replies or a minute of system
+  // notices, and the reader deciding whether to open the worklist is deciding
+  // exactly that.
+  it("says what the remainder is made of when it is not all one kind", () => {
+    const { container } = render(
+      <BriefFeed
+        day={day([
+          ...Array.from({ length: 5 }, (_, at) => item({ id: `shown-${at}` })),
+          ...Array.from({ length: 3 }, (_, at) =>
+            item({ id: `wait-${at}`, category: "customer_waiting" }),
+          ),
+          ...Array.from({ length: 2 }, (_, at) =>
+            item({ id: `sys-${at}`, category: "system" }),
+          ),
+        ])}
+        state="ready"
+      />,
+    );
+
+    // Queried by its own class, not by text: the drawn rows carry the same
+    // category words in their eyebrow badges, so a text query matches six
+    // elements and proves nothing about which one it read.
+    //
+    // The kinds of the FIVE rows past the fold, not of the whole queue: the
+    // five drawn rows are customer_waiting too, and counting them here would
+    // report eight where the reader can see five.
+    expect(container.querySelector(".brief-feed-rest-kinds")?.textContent).toBe(
+      "Customer waiting · System",
+    );
+  });
+
+  // Over a remainder that is all one thing this would name what the count line
+  // above just said. The plan's own rule: omit it if it repeats the cards.
+  it("says nothing about kinds when the remainder is all one kind", () => {
+    const { container } = render(
+      <BriefFeed
+        day={day(
+          Array.from({ length: 11 }, (_, at) => item({ id: `row-${at}` })),
+        )}
+        state="ready"
+      />,
+    );
+
+    expect(container.querySelector(".brief-feed-rest-kinds")).toBeNull();
   });
 
   it("says nothing about a remainder when it is showing everything", () => {
