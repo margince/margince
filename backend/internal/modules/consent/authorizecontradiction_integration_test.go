@@ -46,8 +46,8 @@ func TestAClaimContradictedByItsPurposeIsRefused(t *testing.T) {
 		t.Fatalf("verdict = %q, want deny — a request that claims one category and names a "+
 			"purpose meaning another asks two things at once", d.Verdict)
 	}
-	if d.ReasonCode != commsauthz.ReasonPurposeContradictsClaim {
-		t.Errorf("reason = %q, want %q", d.ReasonCode, commsauthz.ReasonPurposeContradictsClaim)
+	if d.ReasonCode != commsauthz.ReasonClaimContradictsResolution {
+		t.Errorf("reason = %q, want %q", d.ReasonCode, commsauthz.ReasonClaimContradictsResolution)
 	}
 	// The row says BOTH things. Requested is what the caller asked for, so an
 	// auditor can see that promotional content was claimed; Resolved stays the
@@ -101,7 +101,7 @@ func TestAClaimItsPurposeAgreesWithIsStillDecidedByTheLegacyLane(t *testing.T) {
 		LegacyPurposeKey: "newsletter",
 	})
 
-	if d.ReasonCode == commsauthz.ReasonPurposeContradictsClaim {
+	if d.ReasonCode == commsauthz.ReasonClaimContradictsResolution {
 		t.Fatalf("a marketing claim under a marketing purpose was called a contradiction")
 	}
 	if d.Resolved != commsauthz.CategoryMarketing {
@@ -117,7 +117,7 @@ func TestAPurposeWithNoClaimStillSpeaksForTheMessage(t *testing.T) {
 
 	d := e.decide(t, commsauthz.Request{LegacyPurposeKey: "business_correspondence"})
 
-	if d.ReasonCode == commsauthz.ReasonPurposeContradictsClaim {
+	if d.ReasonCode == commsauthz.ReasonClaimContradictsResolution {
 		t.Fatalf("a request that claimed nothing was called a contradiction — the legacy path " +
 			"names only a purpose, and refusing it would refuse every message that has not " +
 			"moved to the category vocabulary")
@@ -125,5 +125,76 @@ func TestAPurposeWithNoClaimStillSpeaksForTheMessage(t *testing.T) {
 	if d.Resolved != commsauthz.CategoryReplyToInbound {
 		t.Errorf("resolved = %q, want %q — the purpose's own class speaks when nobody else does",
 			d.Resolved, commsauthz.CategoryReplyToInbound)
+	}
+}
+
+// The path the first fix here missed, and the one an evidence-supported record
+// makes easiest to reach.
+//
+// The guard lived on the legacy purpose path alone. A reply in the thread and a
+// live deal on the links each resolve a category from EVIDENCE and return
+// before that path is entered, so a caller claiming marketing about a
+// conversation the subject started was allowed — resolved as reply_to_inbound,
+// with the subject's objection to direct marketing asked about a category it
+// does not bind. The claim was never put to anything at all.
+func TestAClaimContradictedByTheThreadIsRefused(t *testing.T) {
+	e := setupResolve(t)
+	// A reply from the subject: the arm that answers before the purpose is
+	// ever consulted.
+	e.inboundFrom(t, "thread-contradiction", e.address, time.Now().Add(-time.Hour))
+
+	d := e.decide(t, commsauthz.Request{
+		Context:   commsauthz.CategoryMarketing,
+		ThreadKey: "thread-contradiction",
+	})
+
+	if d.Verdict != commsauthz.VerdictDeny {
+		t.Fatalf("verdict = %q, want deny — a sender calling their own message marketing has "+
+			"named a category the thread does not bear out, and the thread answering first is "+
+			"not a reason to stop asking", d.Verdict)
+	}
+	if d.ReasonCode != commsauthz.ReasonClaimContradictsResolution {
+		t.Errorf("reason = %q, want %q", d.ReasonCode, commsauthz.ReasonClaimContradictsResolution)
+	}
+	if d.Resolved != commsauthz.CategoryReplyToInbound {
+		t.Errorf("resolved = %q, want %q — the record's own reading, never the claim",
+			d.Resolved, commsauthz.CategoryReplyToInbound)
+	}
+	if d.Requested != commsauthz.CategoryMarketing {
+		t.Errorf("requested = %q, want %q — the claim has to survive into the row",
+			d.Requested, commsauthz.CategoryMarketing)
+	}
+}
+
+// And the half that makes the above a privacy defect: with the claim ignored,
+// the objection was asked about the wrong category and the mail went out.
+func TestAMarketingObjectionIsNotWalkedPastByAThread(t *testing.T) {
+	e := setupResolve(t)
+	e.inboundFrom(t, "thread-objection", e.address, time.Now().Add(-time.Hour))
+	e.suppress(t, commsauthz.ReasonObjection)
+
+	d := e.decide(t, commsauthz.Request{
+		Context:   commsauthz.CategoryMarketing,
+		ThreadKey: "thread-objection",
+	})
+
+	if d.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("a message its own sender called marketing reached a subject who objected to "+
+			"direct marketing, because the thread resolved it as correspondence: %+v", d)
+	}
+}
+
+// A caller naming nothing is not contradicting anything. Without this the guard
+// reads as "any evidence-resolved send is refused", which would stop every
+// ordinary reply in the product.
+func TestAnUnclaimedThreadReplyIsStillAllowed(t *testing.T) {
+	e := setupResolve(t)
+	e.inboundFrom(t, "thread-unclaimed", e.address, time.Now().Add(-time.Hour))
+
+	d := e.decide(t, commsauthz.Request{ThreadKey: "thread-unclaimed"})
+
+	if d.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("verdict = %q, want allow — naming no category is how a caller says the record "+
+			"should decide, and the record said reply_to_inbound", d.Verdict)
 	}
 }

@@ -178,7 +178,7 @@ func TestEveryAbsoluteReasonIsClassifiedDeliberately(t *testing.T) {
 		// A request the engine cannot answer, corrected by asking again with a
 		// purpose that means what the caller claimed — nothing about the
 		// recipient refuses it.
-		ReasonPurposeContradictsClaim: LevelMachine,
+		ReasonClaimContradictsResolution: LevelMachine,
 	}
 
 	for reason := range absoluteDenials {
