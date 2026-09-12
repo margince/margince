@@ -55813,6 +55813,9 @@ type ServerInterface interface {
 	// Disclosure duties this installation owes, soonest deadline first.
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
+	// One disclosure duty.
+	// (GET /privacy/notice-cases/{id})
+	GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Give a disclosure duty an owner.
 	// (POST /privacy/notice-cases/{id}/assign)
 	AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -59143,6 +59146,12 @@ func (_ Unimplemented) RestorePipeline(w http.ResponseWriter, r *http.Request, i
 // Disclosure duties this installation owes, soonest deadline first.
 // (GET /privacy/notice-cases)
 func (_ Unimplemented) ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One disclosure duty.
+// (GET /privacy/notice-cases/{id})
+func (_ Unimplemented) GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -79434,6 +79443,38 @@ func (siw *ServerInterfaceWrapper) ListNoticeCases(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetNoticeCase operation middleware
+func (siw *ServerInterfaceWrapper) GetNoticeCase(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNoticeCase(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AssignNoticeCase operation middleware
 func (siw *ServerInterfaceWrapper) AssignNoticeCase(w http.ResponseWriter, r *http.Request) {
 
@@ -89128,6 +89169,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/privacy/notice-cases", wrapper.ListNoticeCases)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/notice-cases/{id}", wrapper.GetNoticeCase)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/privacy/notice-cases/{id}/assign", wrapper.AssignNoticeCase)

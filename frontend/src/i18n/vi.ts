@@ -4344,6 +4344,27 @@ export const vi = {
   "privacy.purposeCreate": "Tạo mục đích",
   "privacy.purposeAppendOnly":
     "Một mục đích đã tạo thì không đổi tên hay xoá được — danh mục chỉ thêm mới. Hãy chọn khoá thật cẩn thận.",
+  "notice.title": "Nghĩa vụ thông báo",
+  "notice.sub":
+    "Những liên hệ chúng ta có được mà họ không yêu cầu, và liệu chúng ta đã báo cho họ chưa.",
+  "notice.facetLabel": "Hiển thị nghĩa vụ nào",
+  "notice.facetOwed": "Còn nợ",
+  "notice.facetAll": "Tất cả",
+  "notice.emptyOwed":
+    "Không còn nghĩa vụ nào. Mọi liên hệ đã được báo, hoặc nghĩa vụ đã được miễn có lý do.",
+  "notice.readOnlyForPrivacy":
+    "Những nghĩa vụ này nêu tên liên hệ và cách chúng ta có được họ, nên chỉ hiển thị trong hộp thư quyền riêng tư.",
+  "notice.dueAt": "Đến hạn {date}",
+  "notice.overdue": "Quá hạn",
+  "notice.claimed": "Đã nhận",
+  "notice.unclaimed": "Chưa ai nhận",
+  "notice.excuse": "Kết thúc mà không gửi",
+  "notice.excuseTitle": "Kết thúc nghĩa vụ này mà không gửi thông báo",
+  "notice.excuseWhich": "Bạn đang ghi nhận điều gì?",
+  "notice.excuseProvided": "Họ đã được báo ở nơi khác",
+  "notice.excuseExempt": "Nghĩa vụ không áp dụng",
+  "notice.excuseGround": "Vì sao, theo lời của bạn",
+  "notice.excuseConfirm": "Ghi nhận",
   "privacy.facetAll": "Tất cả",
   "privacy.inboxAdminOnly":
     "Xem yêu cầu của chủ thể dữ liệu cần quyền mà ghế của bạn không có. Danh sách nêu tên người đã yêu cầu, nên không mở cho tất cả mọi người.",

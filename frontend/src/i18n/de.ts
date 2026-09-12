@@ -4409,6 +4409,27 @@ export const de = {
   "privacy.purposeCreate": "Zweck anlegen",
   "privacy.purposeAppendOnly":
     "Ein Zweck kann nach dem Anlegen nicht umbenannt oder entfernt werden — der Katalog ist append-only. Wähle den Schlüssel sorgfältig.",
+  "notice.title": "Informationspflichten",
+  "notice.sub":
+    "Kontakte, die wir ohne ihr Zutun erhalten haben, und ob wir sie informiert haben.",
+  "notice.facetLabel": "Welche Pflichten anzeigen",
+  "notice.facetOwed": "Noch offen",
+  "notice.facetAll": "Alle",
+  "notice.emptyOwed":
+    "Nichts ist offen. Jeder erhaltene Kontakt wurde informiert, oder die Pflicht wurde begründet beendet.",
+  "notice.readOnlyForPrivacy":
+    "Diese Pflichten nennen Kontakte und wie wir sie erhalten haben. Sie werden nur im Datenschutz-Eingang gezeigt.",
+  "notice.dueAt": "Fällig am {date}",
+  "notice.overdue": "Überfällig",
+  "notice.claimed": "Übernommen",
+  "notice.unclaimed": "Nicht übernommen",
+  "notice.excuse": "Ohne Versand beenden",
+  "notice.excuseTitle": "Diese Pflicht ohne Information beenden",
+  "notice.excuseWhich": "Was halten Sie fest?",
+  "notice.excuseProvided": "Sie wurden anderweitig informiert",
+  "notice.excuseExempt": "Die Pflicht gilt nicht",
+  "notice.excuseGround": "Warum, in Ihren eigenen Worten",
+  "notice.excuseConfirm": "Festhalten",
   "privacy.facetAll": "Alle",
   "privacy.inboxAdminOnly":
     "Für Betroffenenanfragen fehlt Ihrem Sitzplatz die Berechtigung. Sie nennen die Personen, die angefragt haben — deshalb steht die Liste nicht allen offen.",

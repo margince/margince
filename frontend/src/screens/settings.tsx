@@ -112,6 +112,7 @@ import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
+import { NoticeCasesCard } from "./noticecases";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OverlayCard } from "./overlay";
@@ -358,6 +359,11 @@ export function tabContent(id: SettingsPageId): ReactNode {
               to be able to see that without opening the audit trail. */}
           <RestrictedRecordsCard />
           <PrivacyInboxCard />
+          {/* The disclosure duties last, under the requests somebody sent us:
+              a subject-request queue is work that was asked for, and this is
+              the work nobody asked for because they do not yet know we hold
+              their data. Same grant, same officer, different question. */}
+          <NoticeCasesCard />
         </>
       );
     case "audit":

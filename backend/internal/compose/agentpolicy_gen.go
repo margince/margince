@@ -305,6 +305,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/partners":                                                      {Op: "listPartners", Access: "tool", Tool: "search_records", RecordType: "partner", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/passports":                                                     {Op: "listPassports", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/privacy/notice-cases":                                          {Op: "listNoticeCases", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/privacy/notice-cases/{id}":                                     {Op: "getNoticeCase", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/products":                                                      {Op: "listProducts", Access: "tool", Tool: "search_records", RecordType: "product", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/products/{id}":                                                 {Op: "getProduct", Access: "tool", Tool: "read_record", RecordType: "product", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/projects":                                                      {Op: "listProjects", Access: "tool", Tool: "list_records", RecordType: "project", Tier: "auto_execute", Scope: "read"},

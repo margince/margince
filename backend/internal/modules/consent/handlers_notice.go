@@ -128,3 +128,14 @@ func wireNoticeCase(c NoticeCase) crmcontracts.NoticeCase {
 	}
 	return out
 }
+
+// GetNoticeCase answers one disclosure duty, for a surface that opens a single
+// case rather than working the queue.
+func (h Handlers) GetNoticeCase(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	found, err := h.store.GetNoticeCase(r.Context(), ids.UUID(id))
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(found))
+}
