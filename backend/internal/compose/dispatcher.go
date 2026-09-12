@@ -110,12 +110,22 @@ var _ datasource.SystemOfRecordProvider = (*Dispatcher)(nil)
 // IsExternalSoR answers whether this workspace's records are held outside the
 // installation, as the externalSoR seam comms.go takes.
 //
-// Exported for that seam alone, and it is the SAME cached read every dispatched
-// verb already makes — the point of passing it rather than letting a caller
-// query the mode itself, which would be a second spelling of the question and
-// free to answer differently.
+// Exported for that seam alone, so the question has ONE definition rather than
+// a second query beside it that is free to answer differently.
+//
+// UNCACHED, for the reason isOverlayUncached states below and this caller is an
+// instance of: its seam guards MUTATIONS — a send, a message, a booking. The
+// cache is per-process and Invalidate reaches only the process that committed
+// the flip, so a second api replica can hold 'native' for the rest of the TTL
+// after a workspace connects. A cached answer there is not a stale screen the
+// next request corrects; it is a message leaving on the authority of an
+// ownership that has already moved.
+//
+// One workspace-row read per guarded call, which is what the guard's own design
+// argument costs and no more: the alternative it exists to avoid is a provider
+// round trip PER LINK, not a single mode read.
 func (d *Dispatcher) IsExternalSoR(ctx context.Context) (bool, error) {
-	return d.isOverlay(ctx)
+	return d.isOverlayUncached(ctx)
 }
 
 func (d *Dispatcher) isOverlay(ctx context.Context) (bool, error) {
