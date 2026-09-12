@@ -1,18 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
-import {
-  Button,
-  Card,
-  Checkbox,
-  EmptyState,
-  Skeleton,
-} from "../design-system/atoms";
+import { Button, Card, EmptyState, Skeleton } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 import { problemMessageOf, throwProblem } from "./common";
+import { PreferenceRow } from "./preferencerow";
 import {
   type Draft,
   dirtyKeys,
@@ -20,9 +14,10 @@ import {
   labelOf,
   type PurposeView,
   rowIsOn,
-  stateLineKey,
+  subjectMayGrant,
   toChoices,
 } from "./preferences.logic";
+import { type ChoiceOutcome, PendingConfirmations } from "./preferencespending";
 import { PublicPage } from "./publicpage";
 import "./preferences.css";
 
@@ -111,6 +106,8 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
   });
 
   const purposes: PurposeView[] = center.data?.purposes ?? [];
+  // Whether this subject may take a grant at all — see subjectMayGrant.
+  const mayGrant = subjectMayGrant(purposes);
 
   // The wording rendered at each toggle IS the wording submitted for it —
   // one map, computed once per data load, read both for display and for the
@@ -129,6 +126,15 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [partialSave, setPartialSave] = useState(false);
+  // The purposes whose subscribe is waiting on a link the subject has still to
+  // click, from the save that asked for them. Held as names rather than a
+  // count: somebody who ticked two boxes needs to know which two are pending,
+  // and the page cannot derive it from the purpose rows because nothing about
+  // them changed — that is the whole point of the outcome.
+  // What the server said about the choices in the last save that did not
+  // simply take effect. Every one of them is a different sentence to the
+  // subject, and none of them is an error — see PendingConfirmations.
+  const [outcomes, setOutcomes] = useState<ChoiceOutcome[]>([]);
   // The one-click unsubscribe's own reply (G-7): the exact keys it just
   // withdrew, authoritative straight from the server — never re-derived by
   // guessing which purposes must have been granted before the call.
@@ -173,6 +179,18 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
       // prompted the save.
       queryClient.setQueryData(queryKey, data);
       setPartialSave(false);
+      // A SUBSCRIBE THAT NEEDS A ROUND TRIP IS NOT A FAILURE, and it is not a
+      // plain success either. The purpose rows come back unchanged — nothing is
+      // granted until the link is clicked — so a page that said nothing here
+      // would show the subject their tick vanishing with no explanation.
+      //
+      // It rides the `refused` list because that is the list the server uses
+      // for every outcome a choice did not simply take, and reading it as
+      // "these failed" is what this branch exists to prevent.
+      // ALWAYS REPLACED, never merged. A save that returns no pending outcome
+      // has none: leaving an earlier "check your email" on screen would tell
+      // the subject a link is coming for a choice they have since changed.
+      setOutcomes(data?.refused ?? []);
       // A granular save supersedes any pending one-click notice — the
       // subject just recorded their own explicit choice.
       setLastUnsubscribed(null);
@@ -184,6 +202,10 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
       // committed — re-read rather than let the local draft masquerade as
       // what actually applied.
       setPartialSave(true);
+      // A failed save says nothing about the last one's outcomes, and a
+      // "check your email" beside "something went wrong part-way" is two
+      // contradictory claims about the same press.
+      setOutcomes([]);
       queryClient.invalidateQueries({ queryKey });
     },
   });
@@ -211,6 +233,10 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
     },
     onSuccess: (data) => {
       setLastUnsubscribed(data.unsubscribed);
+      // The subject just stopped everything. A standing "check your email to
+      // confirm" would be telling them to finish subscribing to something they
+      // have this moment asked to be rid of.
+      setOutcomes([]);
       setUndoStaged(false);
       if (data.unsubscribed.length === 0) {
         return;
@@ -319,6 +345,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
             wording={wordingByKey[purpose.key]}
             t={t}
             disabled={writePending}
+            mayGrant={mayGrant}
             onToggle={() =>
               setDraft((prev) =>
                 prev ? { ...prev, [purpose.key]: !prev[purpose.key] } : prev,
@@ -364,6 +391,8 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
         </Card>
       )}
 
+      <PendingConfirmations outcomes={outcomes} purposes={purposes} />
+
       {dirty.length > 0 && (
         <div className="pref-save-bar">
           <p className="pref-not-saved">{t("prefs.notSaved")}</p>
@@ -400,75 +429,5 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
         </div>
       )}
     </PublicPage>
-  );
-}
-
-function PreferenceRow({
-  purpose,
-  on,
-  wording,
-  t,
-  onToggle,
-  disabled,
-}: Readonly<{
-  purpose: PurposeView;
-  on: boolean;
-  wording: string;
-  t: ReturnType<typeof useT>;
-  onToggle: () => void;
-  // True while a write this row's toggle could race with is in flight — a
-  // locked purpose is already disabled for its own reason, so the two
-  // conditions just combine below rather than this prop overriding that one.
-  disabled: boolean;
-}>) {
-  // A double-opt-in purpose can be turned OFF here but never ON: the write
-  // refuses the grant, because this page's token is reusable and long-lived,
-  // so it cannot evidence one deliberate choice the way a confirmation
-  // round-trip does. Offering a switch that always fails is worse than not
-  // offering it, so the grant is withheld while the withdrawal stays.
-  const grantBlocked = purpose.grant_needs_confirmation && !on;
-  return (
-    <li className="pref-row">
-      <div className="pref-row-main">
-        <div className="pref-row-head">
-          {purpose.locked && <Lock className="pref-lock-icon" aria-hidden />}
-          <span className="pref-label">{labelOf(t, purpose)}</span>
-          {purpose.locked && (
-            <span className="pref-lock-badge">{t("prefs.alwaysOn")}</span>
-          )}
-        </div>
-        <p className="t-caption" data-testid={`wording-${purpose.key}`}>
-          {wording}
-        </p>
-        <p className="t-caption pref-state">{t(stateLineKey(purpose, on))}</p>
-        {purpose.locked && (
-          <p className="t-caption pref-locked-why">{t("prefs.lockedWhy")}</p>
-        )}
-        {grantBlocked && (
-          <p className="t-caption pref-locked-why">
-            {t("prefs.confirmationNeededWhy")}
-          </p>
-        )}
-      </div>
-      {/* A Checkbox, not a Switch, and the difference is not cosmetic: a
-          Switch IS the write, while a Checkbox states an intent something
-          later submits (design-system/README.md). This page stages every
-          change and commits them from the save bar below, so announcing
-          role="switch" would tell a screen-reader user their choice had
-          already taken effect when it has not. The visible label is
-          hidden because the row draws its own richer heading above. */}
-      <Checkbox
-        checked={on}
-        aria-label={labelOf(t, purpose)}
-        disabled={purpose.locked || grantBlocked || disabled}
-        className="pref-check"
-        // Empty, because aria-label above already names the control: a
-        // second copy of the purpose name would put the same words on the
-        // page twice for a sighted reader and read them twice to everyone
-        // else.
-        label=""
-        onChange={onToggle}
-      />
-    </li>
   );
 }

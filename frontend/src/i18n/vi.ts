@@ -6216,6 +6216,16 @@ export const vi = {
     "Chúng tôi ghi lại đúng nội dung bạn đã đọc kèm dấu thời gian làm bằng chứng — rồi nó áp dụng cho mọi lần gửi về sau.",
   "prefs.save": "Lưu tuỳ chọn",
   "prefs.discard": "Bỏ thay đổi",
+  "prefs.cannotGrant":
+    "Ch\u00fang t\u00f4i kh\u00f4ng th\u1ec3 b\u1eaft \u0111\u1ea7u {purposes} cho h\u1ed3 s\u01a1 n\u00e0y. N\u1ebfu b\u1ea1n cho r\u1eb1ng \u0111i\u1ec1u n\u00e0y kh\u00f4ng \u0111\u00fang, h\u00e3y tr\u1ea3 l\u1eddi b\u1ea5t k\u1ef3 email n\u00e0o c\u1ee7a ch\u00fang t\u00f4i.",
+  "prefs.cannotGrantWhy":
+    "Kh\u00f4ng th\u1ec3 b\u1eadt cho h\u1ed3 s\u01a1 n\u00e0y.",
+  "prefs.choiceNotApplied":
+    "M\u1ed9t trong c\u00e1c l\u1ef1a ch\u1ecdn c\u1ee7a b\u1ea1n ch\u01b0a c\u00f3 hi\u1ec7u l\u1ef1c. C\u00e0i \u0111\u1eb7t hi\u1ec7n t\u1ea1i \u0111\u01b0\u1ee3c hi\u1ec3n th\u1ecb \u1edf tr\u00ean.",
+  "prefs.confirmationSent":
+    "S\u1eafp xong: Vui l\u00f2ng ki\u1ec3m tra email v\u00e0 nh\u1ea5p v\u00e0o li\u00ean k\u1ebft \u0111\u1ec3 x\u00e1c nh\u1eadn {purposes}. \u0110\u0103ng k\u00fd \u0111\u00f3 ch\u01b0a b\u1eaft \u0111\u1ea7u cho \u0111\u1ebfn khi b\u1ea1n l\u00e0m v\u1eady.",
+  "prefs.confirmationUnavailable":
+    "Ch\u00fang t\u00f4i kh\u00f4ng g\u1eedi \u0111\u01b0\u1ee3c email x\u00e1c nh\u1eadn cho {purposes}, n\u00ean n\u00f3 ch\u01b0a b\u1eaft \u0111\u1ea7u. Vui l\u00f2ng th\u1eed l\u1ea1i sau.",
   "prefs.partialSave":
     "Có gì đó hỏng giữa chừng. Một phần lựa chọn của bạn có thể đã được lưu — chúng tôi đã tải lại thiết lập hiện tại để bạn thấy đúng mình đang ở đâu.",
   "prefs.wording.business_correspondence":
