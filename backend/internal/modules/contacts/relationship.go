@@ -286,34 +286,8 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		if err != nil {
 			return err
 		}
-		// A kind is only checked on CREATE, and this path names an existing row
-		// — so the exclusion has to be re-stated here or the generic surface
-		// becomes the side door the vocabulary closed.
-		if err := refuseGenericProjectCompany(current.Kind); err != nil {
+		if err := refusePatch(ctx, tx, current, in); err != nil {
 			return err
-		}
-		// Same rule as create: editing an edge is editing its anchor, so it
-		// takes both halves of the anchor's authority — the object grant, and
-		// the row.
-		anchorObject, _ := relationshipAnchor(current.Kind)
-		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
-			return err
-		}
-		if err := ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints()); err != nil {
-			return err
-		}
-		// A patch cannot move an edge's endpoints or its kind, but it CAN move
-		// the role — and for a billing contact the role is what the row means.
-		// Without this, the generic patch surface is the way to turn a stated
-		// capacity into a word the create path refuses. Asked on the PATCHED
-		// value: a patch that leaves role alone keeps whatever already passed.
-		if in.Role != nil {
-			if err := validBillingContactRole(current.Kind, in.Role); err != nil {
-				return err
-			}
-		}
-		if in.IfVersion != nil && *in.IfVersion != current.Version {
-			return apperrors.ErrVersionSkew
 		}
 		// The incumbent is demoted only when the patched row will actually HOLD
 		// the flag, so this statement asks the SAME question as the UPDATE below
