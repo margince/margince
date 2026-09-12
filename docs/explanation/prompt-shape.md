@@ -74,7 +74,8 @@ along with what it costs: the model is shown the marker and could put it in a
 tool argument, so a run whose tools reach an outsider can leak its own boundary.
 
 **What it promises is exact, and narrow:** a stranger cannot *close* the wrapper
-and escape. It does **not** promise that text inside the wrapper is harmless —
+and escape. It says nothing about WHO wrote what is inside — it is a boundary,
+not an identity check. It does **not** promise that text inside the wrapper is harmless —
 see §4.
 
 ## The other protections we use
@@ -103,8 +104,10 @@ see §4.
 
 ## 2. Prompt caching — capped, not impossible
 
-AI providers will reuse part of a previous question if the new one *starts with
-exactly the same text*. The password limits how much of ours can ever qualify:
+AI providers MAY reuse part of a previous question if the new one *starts with
+exactly the same text*. "May" is the honest word: where it happens
+automatically it is best-effort, and one provider does not do it at all unless
+the request asks. The password limits how much of ours can ever qualify:
 
 ```
   [ the rules ][ password ][ the email ]
@@ -117,7 +120,9 @@ choice, not a law — and one prompt had it in the worst possible place.
 
 ### What we measured
 
-Over 7 days on staging:
+Over 7 days on staging — `margince-staging`, every task on its configured
+binding, which at the time meant Gemini on `gemini-3.1-flash-lite` for the
+background lanes:
 
 ```
   text we sent .................. 32,150,000 units
@@ -258,9 +263,14 @@ handles ten per call. Six other tasks put several items in one prompt.
                                       treated as data. Data can still argue.
 ```
 
-The password proves **where text came from**. It cannot stop text *about the
-neighbours* from swaying the answer — and no check can catch it, because the
-neighbour's ID was legitimately in the question.
+The password marks **where the data region starts and stops**. It does not
+authenticate anybody: the sender's name and address are themselves
+sender-supplied, and nothing here checks them. What it guarantees is only that
+text inside the region cannot escape it.
+
+So it cannot stop text *about the neighbours* from swaying the answer — and no
+check can catch that, because the neighbour's ID was legitimately in the
+question.
 
 ```
   escape the wrapper .............. BLOCKED  (random password)
@@ -371,7 +381,8 @@ which is exactly what the objection is about.
 ## The short version
 
 ```
-  the password    stops escape, not persuasion
+  the password    marks a boundary. Stops escape, not persuasion,
+                  and identifies nobody
   the answer list stops a weird answer, not a wrong one
   ONE PER CALL    is the only thing that removes the neighbour entirely
 ```

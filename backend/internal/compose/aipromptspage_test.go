@@ -172,17 +172,20 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading the corpus: %v", err)
 	}
-	first := map[string]aicert.Scenario{}
+	// EVERY scenario, not the first per site. A site's instruction can differ
+	// between scenarios — agent_loop's 24 carry different tool surfaces, and
+	// the surface is IN the system prompt — so publishing one scenario's prompt
+	// would leave the others unpublished and their drift unnoticed. That is the
+	// same fail-short this page exists to refuse.
+	bySite := map[string][]aicert.Scenario{}
 	for _, sc := range scenarios {
 		key := sc.Task + "/" + sc.Site
-		if _, seen := first[key]; !seen {
-			first[key] = sc
-		}
+		bySite[key] = append(bySite[key], sc)
 	}
 	var prompts []sitePrompt
 	for _, site := range census.All() {
 		key := string(site.Task) + "/" + site.Variant
-		sc, ok := first[key]
+		runs, ok := bySite[key]
 		if !ok {
 			// Skipping would write a page missing this site and still report
 			// success — the page would be short and nothing would say so.
@@ -192,14 +195,39 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 				"the page would be short and would not say so", key)
 			continue
 		}
-		got, refused, readErr := readSitePrompt(census, sc)
-		if readErr != nil {
-			t.Errorf("%s: %v", key, readErr)
-			continue
+		var got sitePrompt
+		seenSystem := map[string]bool{}
+		failed := false
+		for _, sc := range runs {
+			one, refused, readErr := readSitePrompt(census, sc)
+			if readErr != nil {
+				t.Errorf("%s (%s): %v", key, sc.Name, readErr)
+				failed = true
+				break
+			}
+			if refused != nil {
+				t.Logf("%s (%s): the case refused the stand-in reply (%v); publishing the %d request(s) it had already issued",
+					key, sc.Name, refused, one.requests)
+			}
+			if got.task == "" {
+				// The first scenario sets the measured figures; the rest
+				// contribute any instruction the first did not carry.
+				got = one
+				for _, system := range one.systems {
+					seenSystem[system] = true
+				}
+				continue
+			}
+			for _, system := range one.systems {
+				if seenSystem[system] {
+					continue
+				}
+				seenSystem[system] = true
+				got.systems = append(got.systems, system)
+			}
 		}
-		if refused != nil {
-			t.Logf("%s: the case refused the stand-in reply (%v); publishing the %d request(s) it had already issued",
-				key, refused, got.requests)
+		if failed {
+			continue
 		}
 		switch declared, isDeclared := declaredIsolation[key]; {
 		case isDeclared:
@@ -254,6 +282,12 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 	// describe, and nothing would catch it.
 	rendered := renderAIPromptsPage(doc)
 
+	if t.Failed() {
+		// Something above could not be read. Writing now would publish a
+		// SHORTER document and report success, which is the one way a
+		// regenerate can quietly delete a site.
+		t.Fatal("prompts could not be collected for every site; refusing to rewrite the artifacts from a partial pass")
+	}
 	if *updateAIPrompts {
 		for path, body := range map[string][]byte{aiPromptsDoc: encoded, aiPromptsPage: []byte(rendered)} {
 			if writeErr := os.WriteFile(path, body, 0o600); writeErr != nil {
