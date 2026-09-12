@@ -96,6 +96,21 @@ var erasureColumnBaseline = map[string][]string{
 		// accountability half Art. 5(2) requires the erasure to keep.
 		"ruleset_codes",
 	},
+	// A rights case's own vocabulary: what kind of request arrived, how it
+	// reached us, where it stands, and the minted code somebody quotes when
+	// asking after it. Every value is drawn from a closed set this repository
+	// defines or is a code with no subject in it — none of it is anything the
+	// subject wrote or anything written about them.
+	//
+	// The two columns that DID carry the subject are cleared by the redaction:
+	// subject_ref is tombstoned and resolution is replaced, because that one is
+	// prose a colleague typed and can name or quote the subject.
+	"data_subject_request": {
+		"channel",
+		"kind",
+		"receipt_reference",
+		"status",
+	},
 	"activity": {
 		"audience",
 		// Both are a CLASS this repository defines, not a sentence anybody wrote.

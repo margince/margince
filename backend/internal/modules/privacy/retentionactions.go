@@ -449,6 +449,10 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	if _, err := tx.Exec(ctx, `DELETE FROM privacy_notice_case WHERE contact_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the contact's notice cases: %w", err)
 	}
+	// Excluding no case: a sweep is nobody's fulfilment.
+	if err := retireRightsCases(ctx, tx, id, ids.UUID{}); err != nil {
+		return err
+	}
 	// The same writer the eraser runs, for the reason the acquisition evidence
 	// above carries: both acts must clear the same tables, and a review left
 	// holding an anonymized subject's addresses is the record still naming

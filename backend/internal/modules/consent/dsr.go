@@ -57,7 +57,7 @@ func illegalTransition(from, to string) *ValidationError {
 	}
 }
 
-const dsrColumns = `id, kind, status, subject_ref, assignee_id, due_at, resolution, created_at`
+const dsrColumns = `id, kind, status, subject_ref, assignee_id, due_at, resolution, created_at, contact_id`
 
 // dsrSelectByID is the single-row fetch shared by GetDSR and UpdateDSR — one
 // spelling so the projected columns cannot drift between the two paths.
@@ -80,11 +80,16 @@ type dsrRow struct {
 	DueAt      time.Time
 	Resolution *string
 	CreatedAt  time.Time
+	// ContactID is the link a case opened through the subject's own confirm
+	// link carries. NIL on one an officer opened by hand, which is why
+	// resolveDSRSubject reads the reference as well.
+	ContactID *ids.UUID
 }
 
 func scanDSR(r pgx.Row) (dsrRow, error) {
 	var d dsrRow
-	err := r.Scan(&d.ID, &d.Kind, &d.Status, &d.SubjectRef, &d.AssigneeID, &d.DueAt, &d.Resolution, &d.CreatedAt)
+	err := r.Scan(&d.ID, &d.Kind, &d.Status, &d.SubjectRef, &d.AssigneeID, &d.DueAt, &d.Resolution,
+		&d.CreatedAt, &d.ContactID)
 	return d, err
 }
 
@@ -342,98 +347,6 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 		return err
 	})
 	return out, err
-}
-
-// FulfilErasure fulfils an erasure request atomically with respect to every
-// other officer touching the same row. It locks the request FOR UPDATE and
-// HOLDS that lock across the injected erase, so a concurrent UpdateDSR on this
-// same request blocks on the lock (then loses the transition as illegal) rather
-// than slipping a reject/fulfil in between the read that proved this fulfil
-// legal and the scrub that acts on it — the race that would otherwise leave a
-// subject erased on a request the queue still shows open or rejected.
-//
-// erase is the privacy engine's cross-store scrub (compose injects it via the
-// Eraser seam); it commits in its OWN transaction — consent owns
-// data_subject_request, privacy owns the contact/capture/retrieval erase, and no
-// single transaction may legally span both. Ordering carries the guarantee: the
-// scrub MUST land before the status flips to fulfilled. A finalize that fails
-// after the scrub committed leaves an already-erased subject on a still-open
-// request, which a retry re-fulfils harmlessly (EraseContact anonymizes in place
-// and is idempotent) — never a request certified fulfilled over an erase that
-// never ran. Because we hold the request lock (not the contact rows) while erase
-// checks out a second pooled connection for its own transaction, the two never
-// contend: this nests one connection deep, well within the pool on the
-// human-driven, admin-only DSR surface.
-func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInput,
-	erase func(ctx context.Context, contactID ids.UUID, reason string) error,
-) (dsrRow, error) {
-	if err := requireDSRAdmin(ctx, principal.ActionUpdate); err != nil {
-		return dsrRow{}, err
-	}
-	// ids.Parse proves syntax only; a subject_ref that fails even that names
-	// no contact at all. Both doors — unparseable, and syntactically valid but
-	// naming nobody (the erase's ErrNotFound) — converge on this one refusal.
-	unresolvedSubject := &ValidationError{
-		Field:  fieldSubjectRef,
-		Reason: "an erasure request must name a contact id before it can be fulfilled",
-	}
-	var out dsrRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		current, err := scanDSR(tx.QueryRow(ctx, dsrSelectForUpdate, id))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
-		if err != nil {
-			return err
-		}
-		if verr := validateDSRUpdate(current, in); verr != nil {
-			return verr
-		}
-		contactID, parseErr := ids.Parse(current.SubjectRef)
-		if parseErr != nil {
-			return unresolvedSubject
-		}
-		if err := erase(ctx, contactID, "dsr:"+current.ID.String()); err != nil {
-			if errors.Is(err, apperrors.ErrNotFound) {
-				return unresolvedSubject
-			}
-			return err
-		}
-		out, err = finalizeErasureFulfil(ctx, tx, id, in, current)
-		return err
-	})
-	return out, err
-}
-
-// finalizeErasureFulfil flips the FOR UPDATE-locked request to fulfilled and
-// appends the audit row, run inside the caller's held-lock transaction (never
-// on its own). The AND status guard mirrors UpdateDSR's finalize as defense in
-// depth — with the lock held it can only match, but a miss still maps to the
-// honest illegal-transition error rather than a silent no-op.
-func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateDSRInput, current dsrRow) (dsrRow, error) {
-	row := tx.QueryRow(ctx, `
-			UPDATE data_subject_request SET
-			  status = 'fulfilled',
-			  assignee_id = coalesce($2, assignee_id),
-			  resolution = coalesce($3, resolution)
-			WHERE id = $1 AND status = $4
-			RETURNING `+dsrColumns,
-		id, in.AssigneeID, in.Resolution, current.Status)
-	out, err := scanDSR(row)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return dsrRow{}, illegalTransition(current.Status, "fulfilled")
-		}
-		return dsrRow{}, err
-	}
-	if _, err := storekit.Audit(ctx, tx, "update", "data_subject_request", id, map[string]any{
-		fieldStatus: current.Status,
-	}, map[string]any{
-		fieldStatus: out.Status, fieldResolution: in.Resolution != nil,
-	}); err != nil {
-		return dsrRow{}, err
-	}
-	return out, nil
 }
 
 func wireDSR(d dsrRow) crmcontracts.DataSubjectRequest {

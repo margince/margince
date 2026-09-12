@@ -239,6 +239,39 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		{&pkg.ConfirmSubmissions, `SELECT kind, field, proposed_value, submitted_at, resolution, resolved_at
 		   FROM contact_confirm_submission
 		   WHERE contact_id = $1`, nil},
+		// THE SUBJECT'S OWN REQUESTS, and what became of them.
+		//
+		// A controller holding the record of somebody's erasure request holds
+		// something about them, so Art. 15 reaches it. Withholding it meant a
+		// subject who asked to be erased and was refused could not see that the
+		// refusal existed, which is the one thing they need to appeal it.
+		//
+		// assignee_id is withheld: which colleague was given the work is a fact
+		// about the workspace, not about the subject, and a bare id would name
+		// a seat the subject has no way to resolve and no business resolving.
+		// BOTH KEYS, for the reason the erasure gives: a case opened through the
+		// subject's own link carries contact_id, one an officer opened by hand
+		// carries only the reference, and an export keyed on the link alone
+		// would show the subject the requests they made online and hide the
+		// ones somebody recorded for them.
+		{&pkg.RightsRequests, `SELECT kind, status, received_at, due_at, channel, receipt_reference,
+		          resolution
+		   FROM data_subject_request
+		   WHERE contact_id = $1 OR subject_ref = $1::text`, nil},
+		// THE LINKS THAT CAN STOP OUR MAIL, minted for this subject.
+		//
+		// token_hash is withheld and that is not a judgement call: the row holds
+		// a hash precisely so the plaintext exists only in the mail that carried
+		// it, and exporting the hash would hand back a value that proves
+		// nothing to the subject and narrows the search for anybody else.
+		//
+		// What the export answers is the question somebody actually asks after
+		// finding an old message: does the link in it still work, what would it
+		// stop, and has anybody used it.
+		{&pkg.WithdrawalCredentials, `SELECT address, scope, issued_at, expires_at,
+		          last_used_at, revoked_at, revoked_reason
+		   FROM withdrawal_credential
+		   WHERE contact_id = $1`, nil},
 	}
 }
 
