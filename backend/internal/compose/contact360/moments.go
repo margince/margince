@@ -208,12 +208,19 @@ func deriveMomentPast(
 // at all - which is how three dead buttons sat on untested rungs while a test
 // claiming to be a general rule covered two.
 var momentLadder = []func(context.Context, time.Time, *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool){
-	meetingPrepMoment,      // 1. a meeting within 72 hours
-	reEngagedMoment,        // 2. new inbound after a material quiet period
-	overduePromiseMoment,   // 4. a promise of ours is past its date, from mail or the task list
-	goneQuietMoment,        // 5. outbound unanswered past the configured rule
-	openPromiseMoment,      // 5b. an open task we owe them, undated or ahead
-	roleChangeMoment,       // 6. a new deal role or material relationship change
+	meetingPrepMoment,    // 1. a meeting within 72 hours
+	reEngagedMoment,      // 2. new inbound after a material quiet period
+	overduePromiseMoment, // 4. a promise of ours is past its date, from mail or the task list
+	goneQuietMoment,      // 5. outbound unanswered past the configured rule
+	openPromiseMoment,    // 5b. an open task we owe them, undated or ahead
+	// 6 is absent, and deliberately. It was role_change, and the only signal it
+	// read was relstrength's replied_after_gap — which is not a role change, and
+	// nothing in the system emits one. So it reached rung 2's conclusion from
+	// rung 2's evidence while reporting a different rule and a different claim
+	// key: two re-engagement rungs, one of them named for something it had not
+	// observed. Noticing that somebody's seat on a deal has moved is worth
+	// building; it needs a producer on the deal-stakeholder read, and the slot
+	// comes back when that exists rather than being held warm by a stand-in.
 	missingNextStepMoment,  // 8. an open deal with no next step involving them
 	thinRelationshipMoment, // 9. no captured interaction or network
 }
@@ -228,7 +235,6 @@ var momentLadderNames = []string{
 	"overdue_promise",
 	"gone_quiet",
 	"open_promise",
-	"role_change",
 	"missing_next_step",
 	"thin_relationship",
 }

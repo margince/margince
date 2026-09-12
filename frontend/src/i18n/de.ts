@@ -8409,7 +8409,6 @@ export const de = {
   "contact.moment.rule.overdue_promise": "Zusage überfällig",
   "contact.moment.rule.gone_quiet": "Still geworden",
   "contact.moment.rule.open_promise": "Offenes Versprechen",
-  "contact.moment.rule.role_change": "Rolle geändert",
   "contact.moment.rule.public_signal": "Öffentlich gesagt",
   "contact.moment.rule.missing_next_step": "Nichts geplant",
   "contact.moment.rule.thin_relationship": "Nur ein Draht",

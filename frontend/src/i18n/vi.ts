@@ -8294,7 +8294,6 @@ export const vi = {
   "contact.moment.rule.overdue_promise": "Lời hứa quá hạn",
   "contact.moment.rule.gone_quiet": "Đã im lặng",
   "contact.moment.rule.open_promise": "Lời hứa còn mở",
-  "contact.moment.rule.role_change": "Đã đổi vai trò",
   "contact.moment.rule.public_signal": "Nói công khai",
   "contact.moment.rule.missing_next_step": "Chưa có lịch",
   "contact.moment.rule.thin_relationship": "Chỉ một đầu mối",

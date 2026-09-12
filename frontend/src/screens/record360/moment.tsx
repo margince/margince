@@ -46,7 +46,6 @@ export const MOMENT_RULE_LABEL = {
   overdue_promise: "contact.moment.rule.overdue_promise",
   gone_quiet: "contact.moment.rule.gone_quiet",
   open_promise: "contact.moment.rule.open_promise",
-  role_change: "contact.moment.rule.role_change",
   public_signal: "contact.moment.rule.public_signal",
   missing_next_step: "contact.moment.rule.missing_next_step",
   thin_relationship: "contact.moment.rule.thin_relationship",
