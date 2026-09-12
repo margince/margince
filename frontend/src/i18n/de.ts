@@ -2996,6 +2996,11 @@ export const de = {
   "brief.readings.floorTip":
     "Eine Quelle wurde bis zur Grenze gelesen, diese Zahl ist also ein Mindestwert.",
   "brief.readings.urgent": "Dringend",
+  "brief.readings.openUrgent": "Dringendes prüfen",
+  "brief.readings.openMeetings": "Heutige Termine ansehen",
+  "brief.readings.openLeads": "Offene Leads prüfen",
+  "brief.readings.openPipeline": "Pipeline ansehen",
+  "brief.readings.openDecisions": "Entscheidungen prüfen",
   "brief.readings.urgentBasis": "jemand wartet oder eine Zusage bricht",
   "brief.readings.decisions": "Offene Entscheidungen",
   "brief.readings.decisionsBasis":

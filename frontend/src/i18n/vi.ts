@@ -2965,6 +2965,11 @@ export const vi = {
   "brief.readings.floorTip":
     "Một nguồn đã được đọc đến giới hạn, nên con số này là mức tối thiểu.",
   "brief.readings.urgent": "Việc gấp",
+  "brief.readings.openUrgent": "Xem việc gấp",
+  "brief.readings.openMeetings": "Xem lịch họp hôm nay",
+  "brief.readings.openLeads": "Xem lead cần trả lời",
+  "brief.readings.openPipeline": "Xem pipeline",
+  "brief.readings.openDecisions": "Xem quyết định",
   "brief.readings.urgentBasis": "có người đang chờ hoặc một cam kết sắp lỡ",
   "brief.readings.decisions": "Quyết định đang chờ",
   "brief.readings.decisionsBasis":

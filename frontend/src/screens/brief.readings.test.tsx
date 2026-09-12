@@ -20,6 +20,7 @@ import {
   wholeMeetings,
 } from "./brief.fixtures";
 import { BriefReadingsStrip } from "./brief.readings";
+import { WORKLIST_FILTER_PARAM } from "./worklist";
 
 // The Brief's readings strip, and the one claim it makes that the Worklist's
 // own strip does not: the row is FIVE slots on every morning, quiet or busy, so
@@ -368,7 +369,7 @@ describe("the brief readings strip", () => {
     // wrapper the tip hangs off — a pointer tip waits on hover intent, and a
     // reader who tabbed here has said what they want outright.
     const door = await screen.findByRole("button", {
-      name: en["stat.open"],
+      name: en["brief.readings.openPipeline"],
       description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
     });
     door.focus();
@@ -525,7 +526,7 @@ describe("the brief readings strip", () => {
     // and a focus event bubbles to the wrapper carrying the tip.
     screen
       .getByRole("button", {
-        name: en["stat.open"],
+        name: en["brief.readings.openUrgent"],
         description: en["brief.readings.urgent"],
       })
       .focus();
@@ -670,7 +671,7 @@ describe("the pipeline period", () => {
     async function rangeSaid(zone: string): Promise<string> {
       drawInZone(zone);
       const door = await screen.findByRole("button", {
-        name: en["stat.open"],
+        name: en["brief.readings.openPipeline"],
         description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
       });
       door.focus();
@@ -686,34 +687,74 @@ describe("the pipeline period", () => {
       "1 Jul 2026 – 30 Sept 2026",
     );
   });
-  // ONE WORD, ONE DOOR PER READING. Every door on this strip is named "Open"
-  // and nothing more. Sighted, the card above each one says open WHAT — a
-  // screen reader tabbing the strip hears the same word over and over and
-  // cannot tell the lanes apart, unless each door's DESCRIPTION carries its own
-  // reading's label.
+  // EVERY DOOR NAMES ITS OWN ACTION. The strip's doors all read "Open" once,
+  // which is one entry repeated in a screen reader's control list: the card
+  // above each says open WHAT, and a reader tabbing the strip never sees it.
   //
-  // Asserted as a SET rather than card by card: the defect is duplication, and
-  // a per-card check passes on four doors described identically.
-  it("describes every reading's door by its own reading", async () => {
+  // Both halves are asserted, because each covers the other's blind spot. The
+  // NAMES must be distinct — that is the defect. The DESCRIPTIONS must still
+  // carry each reading's label — that is what the generic word relied on, and a
+  // named door that dropped it would read as an action over no subject.
+  //
+  // Asserted as a SET: a per-card check passes on four doors named identically.
+  it("names every reading's door for its own action", async () => {
     drawInZone("Europe/Berlin");
 
     await screen.findByText(en["brief.readings.urgent"]);
-    const doors = screen.getAllByRole("button", { name: en["stat.open"] });
+    // Four of the five lanes come from the worklist answer and each has a door.
+    // The pipeline slot's read has not landed under this stub, and an unread
+    // figure is offered no way out.
+    const doors = [
+      en["brief.readings.openUrgent"],
+      en["brief.readings.openMeetings"],
+      en["brief.readings.openLeads"],
+      en["brief.readings.openDecisions"],
+    ].map((name) => screen.getByRole("button", { name }));
+
+    expect(new Set(doors).size).toBe(4);
+    // Not one of them still says the generic word.
+    expect(
+      screen.queryAllByRole("button", { name: en["stat.open"] }),
+    ).toHaveLength(0);
+
     const descriptions = doors.map((door) =>
       (door.getAttribute("aria-describedby") ?? "")
         .split(/\s+/)
         .map((id) => document.getElementById(id)?.textContent?.trim() ?? "")
         .join(" "),
     );
-
-    // Four of the five lanes come from the worklist answer and each has a door,
-    // so the role query must find exactly four here — the pipeline slot's read
-    // has not landed under this stub, and an unread figure is offered no way
-    // out. Asserting only distinctness would pass on a strip where two doors
-    // gained a longer name and fell out of the set entirely.
-    expect(doors).toHaveLength(4);
     expect(descriptions.every((text) => text.length > 0)).toBe(true);
     expect(new Set(descriptions).size).toBe(4);
+  });
+
+  // A NAMED DOOR HAS TO GO WHERE ITS NAME SAYS. Distinct names and distinct
+  // destinations are two properties, and the test above only holds the first:
+  // it never presses anything, so swapping two labels — or wiring the meetings
+  // door to the leads lane — passes it. This one presses each door and reads
+  // where it landed.
+  it.each([
+    { door: "openUrgent", filter: "all" },
+    { door: "openMeetings", filter: "meetings" },
+    { door: "openLeads", filter: "leads" },
+    { door: "openDecisions", filter: "decisions" },
+  ] as const)("opens the $filter lane from its own door", async (each) => {
+    draw();
+    const user = userEvent.setup();
+
+    try {
+      await user.click(
+        screen.getByRole("button", {
+          name: en[`brief.readings.${each.door}`],
+        }),
+      );
+
+      expect(window.location.hash).toContain("/worklist");
+      expect(window.location.hash).toContain(
+        `${WORKLIST_FILTER_PARAM}=${each.filter}`,
+      );
+    } finally {
+      window.location.hash = "";
+    }
   });
 
   // The fifth reading's door, and the two states it must tell apart. The
@@ -746,7 +787,7 @@ describe("the pipeline period", () => {
     await screen.findByText(/420k|420,000/i);
 
     const door = screen.getByRole("button", {
-      name: en["stat.open"],
+      name: en["brief.readings.openPipeline"],
       description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
     });
     try {
@@ -766,7 +807,7 @@ describe("the pipeline period", () => {
     await screen.findByText(en["brief.readings.pipelineNoRead"]);
     expect(
       screen.queryByRole("button", {
-        name: en["stat.open"],
+        name: en["brief.readings.openPipeline"],
         description: en["brief.readings.pipelinePlain"],
       }),
     ).toBeNull();

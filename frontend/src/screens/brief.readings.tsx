@@ -46,26 +46,20 @@ import type {
 // query key Analytics uses — one answer to "what is the pipeline worth",
 // wherever it is asked.
 //
-// THE WHOLE CELL IS THE DOOR. It used to be a word: every slot drew an
-// "Open →" line in its foot, which is a decorative row on a plate whose whole
-// argument is that five readings are taken in at one glance — and five doors
-// all reading "Open" were five identical rows in a screen reader's list. The
-// cell is now the control, so what a reader presses is the reading they are
-// looking at and what a screen reader announces is that reading's own words.
+// THE WHOLE CELL IS THE DOOR, AND EACH DOOR SAYS WHAT IT DOES. The cell is the
+// control, so what a reader presses is the reading they are looking at. Its
+// foot said "Open" on all five, which is one entry repeated five times in a
+// screen reader's control list. Each now names its own action — REPLACING the
+// generic word, never appending, which produced "Open Open pipeline".
 //
-// A BOUNDED READ IS A `+`, NOT A SENTENCE. The row used to carry a line saying
-// a source had been read to its limit, so every figure above it was a floor.
-// The fact belongs ON the figures: `8+` says it where the number is, and the
-// cell's hover line says why.
-//
-// AND THE `+` GOES ON THE FIGURES IT IS TRUE OF. This file used to mark all
-// four from `WorklistReadings.more_available`, arguing that one flag is what
-// the contract states. That was right about the flag and wrong about the page:
-// it put a `+` on a calendar read whole because an unrelated lane stopped at
-// its bound, and a mark on the figures that are exact is one a reader learns
-// to discount. Placing it per slot is not guesswork — `counts` already carries
-// `more_available` PER CATEGORY, seeded from the bounded SOURCES through
-// `categoryOfSource` (reach.go), so each slot asks the lanes it is summed from.
+// A BOUNDED READ IS A `+` ON THE FIGURES IT IS TRUE OF. The row used to carry a
+// sentence saying a source hit its limit; the fact belongs on the number, and
+// the cell's hover line says why. All four used to be marked from
+// `WorklistReadings.more_available`, which is one flag for the whole answer —
+// so a calendar read whole showed `3+` because an unrelated lane stopped, and a
+// mark on the exact figures is one a reader learns to discount. Per slot is not
+// guesswork: `counts` carries `more_available` PER CATEGORY, seeded from the
+// bounded SOURCES through `categoryOfSource` (reach.go).
 
 const MEETINGS = "meetings";
 const LEADS = "leads";
@@ -119,6 +113,8 @@ type Reading = Readonly<{
   floor?: boolean;
   /** The lane this reading counted, which is where its cell leads. */
   lane: WorklistFilter;
+  /** What this reading's door says, so five doors are not five "Open"s. */
+  openLabel: string;
 }>;
 
 /**
@@ -134,7 +130,15 @@ type Reading = Readonly<{
  * ignores the query half — so this narrows the view without remounting the
  * screen, and leaves an address somebody can paste.
  */
-function LaneReading({ label, count, basis, warn, floor, lane }: Reading) {
+function LaneReading({
+  label,
+  count,
+  basis,
+  warn,
+  floor,
+  lane,
+  openLabel,
+}: Reading) {
   const t = useT();
   const { locale } = useLocale();
   // A FLOOR OF NONE IS NOT A FLOOR. `0+` says "at least nothing", which is
@@ -160,6 +164,7 @@ function LaneReading({ label, count, basis, warn, floor, lane }: Reading) {
       // the fold on a laptop.
       density="compact"
       onOpen={() => openLane(lane)}
+      openLabel={openLabel}
     />
   );
   // A plain SPAN and nothing more where the figure is a floor: it carries the
@@ -184,25 +189,11 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const readings = day.readings;
   const meetings = meetingsReading(day);
   const soonest = soonestLeadDeadline(day);
-  // Each figure carries its OWN categories' honesty, not the strip's.
-  //
-  // `readings.more_available` is one flag for the whole answer, and marking
-  // every slot from it said "3+" over a calendar that was read whole because an
-  // unrelated notice source stopped at its bound. A `+` a reader learns to
-  // discount is worse than none: it is on the exact figures that are exact.
-  //
-  // This is not the browser splitting one flag by guesswork. `counts` already
-  // carries `more_available` PER CATEGORY, seeded server-side from the bounded
-  // sources themselves (categoryOfSource, reach.go) so a bounded lane that left
-  // no surviving row still marks its category.
-  //
-  // A lane that never answered is the case this does NOT narrow. It travels in
-  // `sources_unavailable`, which names a SOURCE, and the source-to-category
-  // mapping is the server's (categoryOfSource) — re-deriving it here would be a
-  // second copy of it, drifting the first time a producer changes lane. So an
-  // unavailable lane keeps marking the whole strip through `unread`, which is
-  // the safe direction: it over-marks rather than calling a figure exact over
-  // work nobody could see.
+  // A lane that never ANSWERED is the case the per-category narrowing does not
+  // reach: it travels in `sources_unavailable`, which names a source, and only
+  // the server maps a source to its lane. Re-deriving that here would be a
+  // second copy of it, so an unavailable lane marks the whole strip — which
+  // over-marks rather than calling a figure exact over work nobody could see.
   const bounded = boundedCategories(day);
   const unread = day.sources_unavailable.length > 0;
   const floorOf = (category: string): boolean =>
@@ -225,6 +216,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // already reads as "none"; a line repeating that says the same thing
           // twice and drops the one fact it could add.
           basis={t("brief.readings.urgentBasis")}
+          openLabel={t("brief.readings.openUrgent")}
           lane="all"
         />
         <LaneReading
@@ -236,6 +228,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           warn={meetings.unready !== null && meetings.unready > 0}
           floor={floorOf(MEETINGS)}
           basis={meetingsDetail(meetings, locale, t, plural)}
+          openLabel={t("brief.readings.openMeetings")}
           lane="meetings"
         />
         <LaneReading
@@ -252,6 +245,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
                   value: formatDateTime(soonest, locale, viewerZone()),
                 })
           }
+          openLabel={t("brief.readings.openLeads")}
           lane="leads"
         />
         <PipelineOutlook />
@@ -260,6 +254,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           count={readings.review}
           floor={floorOf(DECISIONS)}
           basis={t("brief.readings.decisionsBasis")}
+          openLabel={t("brief.readings.openDecisions")}
           lane="decisions"
         />
       </StatStrip>
@@ -476,6 +471,7 @@ function PipelineOutlook() {
         // that move, shared with the tab strip, so a second address built here
         // could not disagree with it.
         onOpen={() => openAnalyticsSection("forecast")}
+        openLabel={t("brief.readings.openPipeline")}
         // The weighted figure and how much of the population carries a price,
         // because they are read together: a weighted number over a partly
         // priced population is a floor, and a reader who cannot see the second
