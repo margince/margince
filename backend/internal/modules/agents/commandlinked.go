@@ -316,10 +316,12 @@ func requireBookingLinks(links []RecordLink) error {
 	return &BadArgsError{
 		Cause: errors.New("`links` needs at least one entry: a booking names who and what it is " +
 			"about, and one attached to nothing cannot be approved against a record"),
-		// Named, so the 422 this becomes carries the same machine field the
-		// store's own refusal does. A caller that branches on `details.errors`
-		// must not have to tell which door answered it.
+		// Named, and coded, so the 422 this becomes carries the same machine
+		// field AND the same code the store's own refusal does. A caller that
+		// branches on `details.errors` must not have to tell which door
+		// answered it.
 		Field:    "links",
+		Code:     "required",
 		Guidance: "name the contact, company, deal, lead or project the meeting is about",
 	}
 }

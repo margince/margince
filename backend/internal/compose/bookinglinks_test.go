@@ -61,11 +61,20 @@ func TestABookingAttachedToNothingIsRefusedTheSameWayAtBothDoors(t *testing.T) {
 		t.Errorf("both doors answer %d, want %d — the body was well formed and one required value "+
 			"was absent", rest.Status, http.StatusUnprocessableEntity)
 	}
-	if restField, toolField := soleFaultField(t, rest), soleFaultField(t, tool); restField != toolField {
-		t.Errorf("the REST door names %q and the tool door %q: a client branching on `details.errors` "+
-			"has to know which door answered it", restField, toolField)
-	} else if restField != "links" {
+	restField, restCode := soleFault(t, rest)
+	toolField, toolCode := soleFault(t, tool)
+	if restField != toolField || restCode != toolCode {
+		t.Errorf("the REST door answers %q/%q and the tool door %q/%q: a client branching on "+
+			"`details.errors` has to know which door answered it",
+			restField, restCode, toolField, toolCode)
+	}
+	if restField != "links" {
 		t.Errorf("both doors name %q, want links — that is the argument the caller must supply", restField)
+	}
+	// `required` and not `validation_error`: the value was ABSENT, and a caller
+	// acting on the weaker code re-sends a field it never sent.
+	if restCode != "required" {
+		t.Errorf("both doors code this %q, want required — the value was absent, not inconsistent", restCode)
 	}
 }
 
@@ -87,12 +96,12 @@ func classifyBookingRefusal(t *testing.T, door string, err error) httperr.Fault 
 	return fault
 }
 
-func soleFaultField(t *testing.T, fault httperr.Fault) string {
+func soleFault(t *testing.T, fault httperr.Fault) (field, code string) {
 	t.Helper()
 	if len(fault.Fields) != 1 {
 		t.Fatalf("the refusal carries %d field entries, want exactly 1: %+v", len(fault.Fields), fault.Fields)
 	}
-	return fault.Fields[0].Field
+	return fault.Fields[0].Field, fault.Fields[0].Code
 }
 
 // bookingDoorCtx is one principal both doors accept: a human who may create
