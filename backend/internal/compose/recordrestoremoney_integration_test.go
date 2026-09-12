@@ -50,10 +50,15 @@ func TestAnAmountRestoreIsRefusedWhenTheCurrencyMovedUnderIt(t *testing.T) {
 	}
 	entry := latestAuditRowID(t, e, "deal", id, "update")
 
-	// The currency alone, afterwards. 225000 minor units meant euro cents when
-	// it was written; it does not mean the same thing now.
+	// The currency, moved to JPY. A currency move must resend every
+	// populated figure (currencyRestatementError), so the amount is resent
+	// alongside it — the caller is saying 225000 is still the price, now in
+	// yen, which is the deliberate reprice this test needs: 225000 minor
+	// units meant euro cents when it was written, and does not mean the same
+	// thing now.
 	moved := "JPY"
-	if _, err := e.Deals.UpdateDeal(ctx, dealID, deals.UpdateDealInput{Currency: &moved}); err != nil {
+	if _, err := e.Deals.UpdateDeal(ctx, dealID,
+		deals.UpdateDealInput{Currency: &moved, AmountMinor: &raised}); err != nil {
 		t.Fatalf("move the currency: %v", err)
 	}
 

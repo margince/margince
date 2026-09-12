@@ -45,10 +45,16 @@ func seedRate(t *testing.T, e *Env, from, to string, rate string, on time.Time) 
 	}
 }
 
+// draftValueMinor is the value every draftInCurrency fixture carries, shared
+// with the callers that restate it: a hand-copied literal would keep passing
+// if the fixture's value ever changed, silently testing a re-price instead of
+// the restatement it names.
+const draftValueMinor = int64(250_000)
+
 // draftInCurrency stages a contract carrying a value in the named currency.
 func draftInCurrency(t *testing.T, e *Env, company ids.UUID, currency string) ids.ContractID {
 	t.Helper()
-	value := int64(250_000)
+	value := draftValueMinor
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
 		CompanyID:  ids.From[ids.CompanyKind](company),
 		Title:      "A foreign-currency agreement",
@@ -179,9 +185,14 @@ func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 		t.Fatalf("pricing an active contract that froze no rate answered %v, want a refusal on currency", err)
 	}
 
-	// A draft has frozen nothing, so its currency is still the human's to fix.
+	// A draft has frozen nothing, so its currency is still the human's to
+	// fix — but a currency move must resend every populated figure
+	// (refuseARedenominatedDraft). This draft's price is unchanged in the
+	// new code, so the same numeral is resent on purpose.
 	draft := draftInCurrency(t, e, company, "USD")
-	moved, err := e.Contracts.UpdateContract(e.Admin(), draft, crmcontracts.UpdateContractRequest{Currency: &eur}, nil)
+	restated := draftValueMinor
+	moved, err := e.Contracts.UpdateContract(e.Admin(), draft,
+		crmcontracts.UpdateContractRequest{Currency: &eur, ValueMinor: &restated}, nil)
 	if err != nil {
 		t.Fatalf("correcting a draft's currency: %v", err)
 	}

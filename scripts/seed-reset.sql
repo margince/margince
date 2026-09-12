@@ -52,6 +52,7 @@ DECLARE
     'lead_source',
     'overlay_mode',
     'passport',
+    'project_health_assessment',
     'role',
     'role_assignment',
     'session',
@@ -126,6 +127,15 @@ BEGIN
   -- on its own.
   DELETE FROM communication_instruction ci
    WHERE NOT EXISTS (SELECT 1 FROM communication_review cr WHERE cr.id = ci.review_id);
+
+  -- project_health_assessment is the SAME shape as activity_retention_evidence
+  -- above: its own trigger refuses a direct DELETE while the project it
+  -- judged still exists, and this script's replica mode suppresses both that
+  -- trigger and project's ON DELETE CASCADE into it. Without this statement,
+  -- sweeping `project` above would leave every assessment behind, now naming
+  -- a project that no longer exists.
+  DELETE FROM project_health_assessment pha
+   WHERE NOT EXISTS (SELECT 1 FROM project p WHERE p.id = pha.project_id);
 
   -- event_outbox is preserved the same way: "not a target" of the generic
   -- sweep, never "kept" outright. Clearing it here removes only the DATABASE
