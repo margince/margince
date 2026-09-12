@@ -15,6 +15,7 @@ package privacy
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -213,8 +214,17 @@ func eraseCapabilities(
 	if err != nil {
 		t.Fatalf("opening the erasure: %v", err)
 	}
+	// Released here rather than on each failure path, so every exit closes it —
+	// including the t.Fatalf below, which returns through no line of this
+	// function. ErrTxClosed is expected rather than tolerated: whatever failed
+	// may have closed the transaction on its way out, and reporting that as a
+	// second failure would print noise ahead of the cause.
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("releasing the erasure transaction: %v", err)
+		}
+	})
 	if err := deleteConsentCapabilities(ctx, tx, contact, nil, "test"); err != nil {
-		_ = tx.Rollback(ctx)
 		t.Fatalf("erasing the subject's capabilities: %v", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
