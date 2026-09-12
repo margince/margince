@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/pdftext"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/extraction"
@@ -53,6 +54,13 @@ const maxDocumentBytes = 8 << 20
 // much prose one call can hold steadily, asked of the same models.
 const maxDocumentTextChars = activities.MaxReadableTranscriptChars
 
+// documentPDFMIME is the one media type the extraction lane below turns into
+// text. Written here rather than imported from the ai module: this is the
+// DOCUMENT side's question — what this reading can convert — and the wire side's
+// list of what an adapter carries is a different question that happens to spell
+// one entry the same way.
+const documentPDFMIME = "application/pdf"
+
 // documentTextMIMEs are the media types whose bytes ARE their text, so no
 // parser stands between the file and the model.
 //
@@ -61,6 +69,9 @@ const maxDocumentTextChars = activities.MaxReadableTranscriptChars
 // is already text needs no OCR engine, no document-intelligence service and no
 // vision-capable binding, and its quotes can be checked against the document
 // verbatim (RD-AC-N-4) — which the bytes lane can never do.
+//
+// A PDF is NOT here and must not be added: its bytes are not its text, and the
+// extraction lane reaches the same place by a route that says so.
 var documentTextMIMEs = []string{
 	"text/plain", "text/csv", "text/markdown", "text/html", "application/json", "message/rfc822",
 }
@@ -86,6 +97,10 @@ type documentCompleter interface {
 	// AttachmentMIMEs is what a caller may hand this lane, in
 	// model.CarriesMIME's spelling. Empty means documents cannot go to it.
 	AttachmentMIMEs() []string
+	// WithheldByBinding distinguishes the two reasons a media type is absent
+	// from that set: an operator closed the lane with `input:`, or no wire on
+	// the ladder ever had one. Only the second may be converted around.
+	WithheldByBinding(mime string) bool
 }
 
 // NewDocumentExtractor builds the engine over the pool and one model lane.
@@ -247,22 +262,75 @@ func (d *DocumentExtractor) sourceFor(
 			"this document is larger than the %d MB one reading carries; a reading of part of it could not say which part it saw",
 			maxDocumentBytes>>20), nil
 	}
+	src, detail := d.laneFor(meta, mime, bytes)
+	return src, detail, nil
+}
+
+// laneFor picks which of the lanes this document takes, or the reason none of
+// them can have it. Split from sourceFor so the choice reads as one ordered list
+// rather than trailing the reading of the bytes.
+//
+// The order is the contract. Native carriage is tried BEFORE extraction because
+// a vendor that opens the document itself sees its layout — a table, a stamp, a
+// signature block — where extraction sees only the characters; extraction is the
+// answer for a wire that cannot be handed the file at all, not an improvement on
+// one that can.
+func (d *DocumentExtractor) laneFor(
+	meta crmcontracts.Attachment, mime string, bytes []byte,
+) (documentSource, string) {
 	if model.CarriesMIME(documentTextMIMEs, mime) {
-		src, detail := d.textSource(meta, bytes)
-		return src, detail, nil
+		return d.textSource(meta, bytes)
 	}
 	if model.CarriesMIME(d.brain.AttachmentMIMEs(), mime) {
 		return documentSource{
 			Part:     model.Attachment{MIME: mime, Bytes: bytes, Name: meta.Filename},
 			Filename: meta.Filename,
-		}, "", nil
+		}, ""
+	}
+	// Before converting anything: a lane an OPERATOR closed is not a lane this
+	// code may route around. `input:` on a tier whose wire does carry this type
+	// is a standing instruction that documents of this kind do not go to that
+	// model, and extracting the text and sending that instead delivers the
+	// contents they withheld. The refusal names the line, because unlike a wire
+	// that never had the lane, this one is an edit away from reading the file.
+	if d.brain.WithheldByBinding(mime) {
+		return documentSource{}, fmt.Sprintf(
+			"this installation is configured not to give %s documents to its model; the `input:` line on the tier serving this reading is what withholds them",
+			mime)
+	}
+	if mime == documentPDFMIME {
+		return d.extractedSource(meta, bytes)
 	}
 	if mime == "" {
-		return documentSource{}, "this document declares no content type, so nothing can say how to read it", nil
+		return documentSource{}, "this document declares no content type, so nothing can say how to read it"
 	}
 	return documentSource{}, fmt.Sprintf(
 		"this installation's model cannot read a %s document; a file whose text can be read directly, or a model bound to carry documents, would be read",
-		mime), nil
+		mime)
+}
+
+// extractedSource takes the lane that exists because no wire agrees about a PDF.
+//
+// A PDF rides a proprietary request-body extension on one gateway and nothing at
+// all on a self-hosted endpoint, so this product never sends one there. It reads
+// the text the document already carries and sends THAT, which every wire spells
+// the same way — the model is handed characters, and was not asked to understand
+// a file format.
+func (d *DocumentExtractor) extractedSource(
+	meta crmcontracts.Attachment, raw []byte,
+) (documentSource, string) {
+	text, err := pdftext.Extract(raw, maxDocumentTextChars)
+	switch {
+	case errors.Is(err, pdftext.ErrNoTextLayer):
+		// A scan. Its pages are pictures, so there is no text to read and this
+		// product has no engine that invents one. Named as the specific thing it
+		// is, because "cannot read a PDF" would send an operator to their model
+		// config when the answer is a different copy of the document.
+		return documentSource{}, "this PDF holds no text, which is what a scanned or photographed document looks like; a PDF exported from the system that produced it can be read"
+	case err != nil:
+		return documentSource{}, "this PDF could not be opened to read its text"
+	}
+	return documentSource{Text: text, Filename: meta.Filename, ExtractedFrom: documentPDFMIME}, ""
 }
 
 // textSource takes the text lane, where the document's bytes are its text.

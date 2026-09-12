@@ -191,7 +191,11 @@ func (c *openaiClient) Embed(ctx context.Context, req model.EmbedRequest) (model
 }
 
 func (c *openaiClient) Caps() model.Capabilities {
-	return model.Capabilities{Streaming: true, EmbedDims: 0, LocalOnly: false, AttachmentMIMEs: c.attachmentMIMEs}
+	return model.Capabilities{
+		Streaming: true, EmbedDims: 0, LocalOnly: false,
+		AttachmentMIMEs:     c.attachmentMIMEs,
+		WireAttachmentMIMEs: openAICarries,
+	}
 }
 
 func (c *openaiClient) post(ctx context.Context, path string, req model.Request, stream bool) (io.ReadCloser, error) {
