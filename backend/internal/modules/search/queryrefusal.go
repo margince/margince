@@ -19,9 +19,9 @@ import (
 	"errors"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -190,10 +190,28 @@ func unknownPlanMember(member string) *PlanRefusal {
 			"; read margince://schema/query for the plan grammar")
 }
 
-// quote renders a caller-supplied token for a message.
+// quote renders a caller-supplied token for a message: escaped, quoted, and
+// BOUNDED.
 //
-// It ESCAPES rather than merely wrapping in quotes. The token is the caller's
-// own text, and a token carrying a quote or a newline concatenated bare would
-// end the quoted run early or split the message across lines — a refusal an
-// agent parses as two, or as one it cannot tell the boundaries of.
-func quote(s string) string { return strconv.Quote(s) }
+// It escapes rather than merely wrapping in quotes. The token is the caller's
+// own text, and one carrying a quote or a newline concatenated bare would end
+// the quoted run early or split the message across lines — a refusal an agent
+// parses as two, or as one it cannot tell the boundaries of.
+//
+// The bound is httperr's, and it is what stops a caller choosing how much of
+// the answer they receive. Every refusal here puts the token first and the
+// remedy after it, and httperr cuts the whole message at MaxFaultText — so an
+// invented field name long enough ate the sentence saying what to do about it,
+// and the operator refusal below, which names the field's whole operator SET,
+// lost the set. The caller kept their own mistake and lost the answer.
+//
+// Bounding the caller's contribution rather than the sentence around it is the
+// rule the rest of this tree already applies (httperr.QuoteCaller's own doc,
+// agents.echoSafe, BadArgsError.Guidance), and TheClosedSetSurvivesAFlood is
+// what holds it here.
+//
+// The few SERVER-side names rendered through this — the plan version, a
+// target, a relation — are bounded too, which is a no-op the census beside it
+// proves rather than assumes: a vocabulary member that did not fit would be
+// quoted back truncated and match nothing in the set printed next to it.
+func quote(s string) string { return httperr.QuoteCaller(s) }
