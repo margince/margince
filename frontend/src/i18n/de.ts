@@ -1244,6 +1244,9 @@ export const de = {
   "contracts.form.noticeDays": "K\u00fcndigungsfrist (Tage)",
   "contracts.form.noticeDaysHint":
     "Wie viel Vorlauf eine K\u00fcndigung braucht. Die Verl\u00e4ngerungswarnung kommt vor dieser Frist, nicht erst vor dem Verl\u00e4ngerungsdatum.",
+  "contracts.form.paymentTerms": "Zahlungsziel (Tage)",
+  "contracts.form.paymentTermsHint":
+    "Wie lange der Kunde Zeit hat zu zahlen. 0 bedeutet sofort f\u00e4llig; leer lassen, wenn nichts vereinbart wurde.",
   "contracts.form.signedOn": "Unterschrieben",
   "contracts.form.signedOnHint":
     "Nur wenn bekannt ist, dass unterschrieben wurde \u2014 nie aus dem Abschlussdatum eines Deals \u00fcbernommen.",

@@ -173,7 +173,8 @@ func (s *Server) wireProject360(pool *pgxpool.Pool) {
 		deals.NewStore(InstallationDB(pool), DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		ProjectsStore(pool),
 		s.contactsStore,
-		contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool)),
+		contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool)).
+			WithFieldCatalog(customfields.NewService(pool, nil)),
 		activities.NewStore(InstallationDB(pool)),
 		time.Now,
 	)

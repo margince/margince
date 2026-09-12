@@ -6486,11 +6486,12 @@ func (e CreateContractRequestValueBasis) Valid() bool {
 
 // Defines values for CreateCustomFieldRequestObject.
 const (
-	CreateCustomFieldRequestObjectCompany CreateCustomFieldRequestObject = "company"
-	CreateCustomFieldRequestObjectContact CreateCustomFieldRequestObject = "contact"
-	CreateCustomFieldRequestObjectDeal    CreateCustomFieldRequestObject = "deal"
-	CreateCustomFieldRequestObjectLead    CreateCustomFieldRequestObject = "lead"
-	CreateCustomFieldRequestObjectProject CreateCustomFieldRequestObject = "project"
+	CreateCustomFieldRequestObjectCompany  CreateCustomFieldRequestObject = "company"
+	CreateCustomFieldRequestObjectContact  CreateCustomFieldRequestObject = "contact"
+	CreateCustomFieldRequestObjectContract CreateCustomFieldRequestObject = "contract"
+	CreateCustomFieldRequestObjectDeal     CreateCustomFieldRequestObject = "deal"
+	CreateCustomFieldRequestObjectLead     CreateCustomFieldRequestObject = "lead"
+	CreateCustomFieldRequestObjectProject  CreateCustomFieldRequestObject = "project"
 )
 
 // Valid indicates whether the value is a known member of the CreateCustomFieldRequestObject enum.
@@ -6499,6 +6500,8 @@ func (e CreateCustomFieldRequestObject) Valid() bool {
 	case CreateCustomFieldRequestObjectCompany:
 		return true
 	case CreateCustomFieldRequestObjectContact:
+		return true
+	case CreateCustomFieldRequestObjectContract:
 		return true
 	case CreateCustomFieldRequestObjectDeal:
 		return true
@@ -6975,11 +6978,12 @@ func (e CreateVoiceBuildRequestReason) Valid() bool {
 
 // Defines values for CustomFieldObject.
 const (
-	CustomFieldObjectCompany CustomFieldObject = "company"
-	CustomFieldObjectContact CustomFieldObject = "contact"
-	CustomFieldObjectDeal    CustomFieldObject = "deal"
-	CustomFieldObjectLead    CustomFieldObject = "lead"
-	CustomFieldObjectProject CustomFieldObject = "project"
+	CustomFieldObjectCompany  CustomFieldObject = "company"
+	CustomFieldObjectContact  CustomFieldObject = "contact"
+	CustomFieldObjectContract CustomFieldObject = "contract"
+	CustomFieldObjectDeal     CustomFieldObject = "deal"
+	CustomFieldObjectLead     CustomFieldObject = "lead"
+	CustomFieldObjectProject  CustomFieldObject = "project"
 )
 
 // Valid indicates whether the value is a known member of the CustomFieldObject enum.
@@ -6988,6 +6992,8 @@ func (e CustomFieldObject) Valid() bool {
 	case CustomFieldObjectCompany:
 		return true
 	case CustomFieldObjectContact:
+		return true
+	case CustomFieldObjectContract:
 		return true
 	case CustomFieldObjectDeal:
 		return true
@@ -16257,11 +16263,12 @@ func (e SuppressContactJSONBodyKind) Valid() bool {
 
 // Defines values for ListCustomFieldsParamsObject.
 const (
-	ListCustomFieldsParamsObjectCompany ListCustomFieldsParamsObject = "company"
-	ListCustomFieldsParamsObjectContact ListCustomFieldsParamsObject = "contact"
-	ListCustomFieldsParamsObjectDeal    ListCustomFieldsParamsObject = "deal"
-	ListCustomFieldsParamsObjectLead    ListCustomFieldsParamsObject = "lead"
-	ListCustomFieldsParamsObjectProject ListCustomFieldsParamsObject = "project"
+	ListCustomFieldsParamsObjectCompany  ListCustomFieldsParamsObject = "company"
+	ListCustomFieldsParamsObjectContact  ListCustomFieldsParamsObject = "contact"
+	ListCustomFieldsParamsObjectContract ListCustomFieldsParamsObject = "contract"
+	ListCustomFieldsParamsObjectDeal     ListCustomFieldsParamsObject = "deal"
+	ListCustomFieldsParamsObjectLead     ListCustomFieldsParamsObject = "lead"
+	ListCustomFieldsParamsObjectProject  ListCustomFieldsParamsObject = "project"
 )
 
 // Valid indicates whether the value is a known member of the ListCustomFieldsParamsObject enum.
@@ -16270,6 +16277,8 @@ func (e ListCustomFieldsParamsObject) Valid() bool {
 	case ListCustomFieldsParamsObjectCompany:
 		return true
 	case ListCustomFieldsParamsObjectContact:
+		return true
+	case ListCustomFieldsParamsObjectContract:
 		return true
 	case ListCustomFieldsParamsObjectDeal:
 		return true
@@ -25219,6 +25228,9 @@ type Contract struct {
 	// NoticePeriodDays Drives the renewal warning, which fires against the notice deadline rather than the renewal date (CONTRACT-FORM-3).
 	NoticePeriodDays *int `json:"notice_period_days,omitempty"`
 
+	// PaymentTermDays How many days the customer has to pay. Zero is a real value and means due on receipt; absent means nobody has recorded terms, which is not the same thing.
+	PaymentTermDays *int `json:"payment_term_days,omitempty"`
+
 	// ProjectId The delivery this agreement funds, when one is attached. Null for no project and for a project the reader may not open; `masked_fields` names it only in the second case.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 	RenewalOn *openapi_types.Date `json:"renewal_on,omitempty"`
@@ -25249,8 +25261,9 @@ type Contract struct {
 	ValueBasis ContractValueBasis `json:"value_basis"`
 
 	// ValueMinor Total contract value in minor units, or twelve months of billing when `value_basis` is `annualized_12m`. Present exactly when `currency` is.
-	ValueMinor *int64 `json:"value_minor,omitempty"`
-	Version    *int64 `json:"version,omitempty"`
+	ValueMinor           *int64                 `json:"value_minor,omitempty"`
+	Version              *int64                 `json:"version,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // ContractStatus Read-only here — asserted through changeContractStatus so the transition, its event and any proposal are written from one transaction.
@@ -25545,20 +25558,22 @@ type CreateContactRequest struct {
 
 // CreateContractRequest defines model for CreateContractRequest.
 type CreateContractRequest struct {
-	AutoRenew        *bool                            `json:"auto_renew,omitempty"`
-	CompanyId        openapi_types.UUID               `json:"company_id"`
-	ContractNumber   *string                          `json:"contract_number,omitempty"`
-	Currency         *string                          `json:"currency,omitempty"`
-	DealId           *openapi_types.UUID              `json:"deal_id,omitempty"`
-	EndsOn           *openapi_types.Date              `json:"ends_on,omitempty"`
-	NoticePeriodDays *int                             `json:"notice_period_days,omitempty"`
-	ProjectId        *openapi_types.UUID              `json:"project_id,omitempty"`
-	RenewalOn        *openapi_types.Date              `json:"renewal_on,omitempty"`
-	SignedOn         *openapi_types.Date              `json:"signed_on,omitempty"`
-	StartsOn         *openapi_types.Date              `json:"starts_on,omitempty"`
-	Title            string                           `json:"title"`
-	ValueBasis       *CreateContractRequestValueBasis `json:"value_basis,omitempty"`
-	ValueMinor       *int64                           `json:"value_minor,omitempty"`
+	AutoRenew            *bool                            `json:"auto_renew,omitempty"`
+	CompanyId            openapi_types.UUID               `json:"company_id"`
+	ContractNumber       *string                          `json:"contract_number,omitempty"`
+	Currency             *string                          `json:"currency,omitempty"`
+	DealId               *openapi_types.UUID              `json:"deal_id,omitempty"`
+	EndsOn               *openapi_types.Date              `json:"ends_on,omitempty"`
+	NoticePeriodDays     *int                             `json:"notice_period_days,omitempty"`
+	PaymentTermDays      *int                             `json:"payment_term_days,omitempty"`
+	ProjectId            *openapi_types.UUID              `json:"project_id,omitempty"`
+	RenewalOn            *openapi_types.Date              `json:"renewal_on,omitempty"`
+	SignedOn             *openapi_types.Date              `json:"signed_on,omitempty"`
+	StartsOn             *openapi_types.Date              `json:"starts_on,omitempty"`
+	Title                string                           `json:"title"`
+	ValueBasis           *CreateContractRequestValueBasis `json:"value_basis,omitempty"`
+	ValueMinor           *int64                           `json:"value_minor,omitempty"`
+	AdditionalProperties map[string]interface{}           `json:"-"`
 }
 
 // CreateContractRequestValueBasis defines model for CreateContractRequest.ValueBasis.
@@ -33179,6 +33194,7 @@ type RenewContractRequest struct {
 	DealId           *openapi_types.UUID `json:"deal_id,omitempty"`
 	EndsOn           *openapi_types.Date `json:"ends_on,omitempty"`
 	NoticePeriodDays *int                `json:"notice_period_days,omitempty"`
+	PaymentTermDays  *int                `json:"payment_term_days,omitempty"`
 	ProjectId        *openapi_types.UUID `json:"project_id,omitempty"`
 	RenewalOn        *openapi_types.Date `json:"renewal_on,omitempty"`
 	SignedOn         *openapi_types.Date `json:"signed_on,omitempty"`
@@ -33186,8 +33202,9 @@ type RenewContractRequest struct {
 	Title            string              `json:"title"`
 
 	// ValueBasis Stated explicitly rather than inherited: an open-ended agreement becoming a fixed term changes what its value measures.
-	ValueBasis RenewContractRequestValueBasis `json:"value_basis"`
-	ValueMinor *int64                         `json:"value_minor,omitempty"`
+	ValueBasis           RenewContractRequestValueBasis `json:"value_basis"`
+	ValueMinor           *int64                         `json:"value_minor,omitempty"`
+	AdditionalProperties map[string]interface{}         `json:"-"`
 }
 
 // RenewContractRequestValueBasis Stated explicitly rather than inherited: an open-ended agreement becoming a fixed term changes what its value measures.
@@ -36033,19 +36050,21 @@ type UpdateContactRequestVisibility string
 
 // UpdateContractRequest Partial. Status is absent by design — it moves through changeContractStatus.
 type UpdateContractRequest struct {
-	AutoRenew        *bool                            `json:"auto_renew,omitempty"`
-	ContractNumber   *string                          `json:"contract_number,omitempty"`
-	Currency         *string                          `json:"currency,omitempty"`
-	DealId           *openapi_types.UUID              `json:"deal_id,omitempty"`
-	EndsOn           *openapi_types.Date              `json:"ends_on,omitempty"`
-	NoticePeriodDays *int                             `json:"notice_period_days,omitempty"`
-	ProjectId        *openapi_types.UUID              `json:"project_id,omitempty"`
-	RenewalOn        *openapi_types.Date              `json:"renewal_on,omitempty"`
-	SignedOn         *openapi_types.Date              `json:"signed_on,omitempty"`
-	StartsOn         *openapi_types.Date              `json:"starts_on,omitempty"`
-	Title            *string                          `json:"title,omitempty"`
-	ValueBasis       *UpdateContractRequestValueBasis `json:"value_basis,omitempty"`
-	ValueMinor       *int64                           `json:"value_minor,omitempty"`
+	AutoRenew            *bool                            `json:"auto_renew,omitempty"`
+	ContractNumber       *string                          `json:"contract_number,omitempty"`
+	Currency             *string                          `json:"currency,omitempty"`
+	DealId               *openapi_types.UUID              `json:"deal_id,omitempty"`
+	EndsOn               *openapi_types.Date              `json:"ends_on,omitempty"`
+	NoticePeriodDays     *int                             `json:"notice_period_days,omitempty"`
+	PaymentTermDays      *int                             `json:"payment_term_days,omitempty"`
+	ProjectId            *openapi_types.UUID              `json:"project_id,omitempty"`
+	RenewalOn            *openapi_types.Date              `json:"renewal_on,omitempty"`
+	SignedOn             *openapi_types.Date              `json:"signed_on,omitempty"`
+	StartsOn             *openapi_types.Date              `json:"starts_on,omitempty"`
+	Title                *string                          `json:"title,omitempty"`
+	ValueBasis           *UpdateContractRequestValueBasis `json:"value_basis,omitempty"`
+	ValueMinor           *int64                           `json:"value_minor,omitempty"`
+	AdditionalProperties map[string]interface{}           `json:"-"`
 }
 
 // UpdateContractRequestValueBasis defines model for UpdateContractRequest.ValueBasis.
@@ -45991,6 +46010,489 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// Getter for additional properties for Contract. Returns the specified
+// element and whether it was found
+func (a Contract) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for Contract
+func (a *Contract) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for Contract to handle AdditionalProperties
+func (a *Contract) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["archived_at"]; found {
+		err = json.Unmarshal(raw, &a.ArchivedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'archived_at': %w", err)
+		}
+		delete(object, "archived_at")
+	}
+
+	if raw, found := object["auto_renew"]; found {
+		err = json.Unmarshal(raw, &a.AutoRenew)
+		if err != nil {
+			return fmt.Errorf("error reading 'auto_renew': %w", err)
+		}
+		delete(object, "auto_renew")
+	}
+
+	if raw, found := object["cancellation_effective_on"]; found {
+		err = json.Unmarshal(raw, &a.CancellationEffectiveOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'cancellation_effective_on': %w", err)
+		}
+		delete(object, "cancellation_effective_on")
+	}
+
+	if raw, found := object["cancellation_notice_on"]; found {
+		err = json.Unmarshal(raw, &a.CancellationNoticeOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'cancellation_notice_on': %w", err)
+		}
+		delete(object, "cancellation_notice_on")
+	}
+
+	if raw, found := object["captured_by"]; found {
+		err = json.Unmarshal(raw, &a.CapturedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'captured_by': %w", err)
+		}
+		delete(object, "captured_by")
+	}
+
+	if raw, found := object["company_id"]; found {
+		err = json.Unmarshal(raw, &a.CompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_id': %w", err)
+		}
+		delete(object, "company_id")
+	}
+
+	if raw, found := object["contract_number"]; found {
+		err = json.Unmarshal(raw, &a.ContractNumber)
+		if err != nil {
+			return fmt.Errorf("error reading 'contract_number': %w", err)
+		}
+		delete(object, "contract_number")
+	}
+
+	if raw, found := object["created_at"]; found {
+		err = json.Unmarshal(raw, &a.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_at': %w", err)
+		}
+		delete(object, "created_at")
+	}
+
+	if raw, found := object["currency"]; found {
+		err = json.Unmarshal(raw, &a.Currency)
+		if err != nil {
+			return fmt.Errorf("error reading 'currency': %w", err)
+		}
+		delete(object, "currency")
+	}
+
+	if raw, found := object["deal_id"]; found {
+		err = json.Unmarshal(raw, &a.DealId)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_id': %w", err)
+		}
+		delete(object, "deal_id")
+	}
+
+	if raw, found := object["ends_on"]; found {
+		err = json.Unmarshal(raw, &a.EndsOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'ends_on': %w", err)
+		}
+		delete(object, "ends_on")
+	}
+
+	if raw, found := object["fx_rate_date"]; found {
+		err = json.Unmarshal(raw, &a.FxRateDate)
+		if err != nil {
+			return fmt.Errorf("error reading 'fx_rate_date': %w", err)
+		}
+		delete(object, "fx_rate_date")
+	}
+
+	if raw, found := object["fx_rate_to_base"]; found {
+		err = json.Unmarshal(raw, &a.FxRateToBase)
+		if err != nil {
+			return fmt.Errorf("error reading 'fx_rate_to_base': %w", err)
+		}
+		delete(object, "fx_rate_to_base")
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["masked_fields"]; found {
+		err = json.Unmarshal(raw, &a.MaskedFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'masked_fields': %w", err)
+		}
+		delete(object, "masked_fields")
+	}
+
+	if raw, found := object["notice_period_days"]; found {
+		err = json.Unmarshal(raw, &a.NoticePeriodDays)
+		if err != nil {
+			return fmt.Errorf("error reading 'notice_period_days': %w", err)
+		}
+		delete(object, "notice_period_days")
+	}
+
+	if raw, found := object["payment_term_days"]; found {
+		err = json.Unmarshal(raw, &a.PaymentTermDays)
+		if err != nil {
+			return fmt.Errorf("error reading 'payment_term_days': %w", err)
+		}
+		delete(object, "payment_term_days")
+	}
+
+	if raw, found := object["project_id"]; found {
+		err = json.Unmarshal(raw, &a.ProjectId)
+		if err != nil {
+			return fmt.Errorf("error reading 'project_id': %w", err)
+		}
+		delete(object, "project_id")
+	}
+
+	if raw, found := object["renewal_on"]; found {
+		err = json.Unmarshal(raw, &a.RenewalOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'renewal_on': %w", err)
+		}
+		delete(object, "renewal_on")
+	}
+
+	if raw, found := object["signed_on"]; found {
+		err = json.Unmarshal(raw, &a.SignedOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'signed_on': %w", err)
+		}
+		delete(object, "signed_on")
+	}
+
+	if raw, found := object["source"]; found {
+		err = json.Unmarshal(raw, &a.Source)
+		if err != nil {
+			return fmt.Errorf("error reading 'source': %w", err)
+		}
+		delete(object, "source")
+	}
+
+	if raw, found := object["starts_on"]; found {
+		err = json.Unmarshal(raw, &a.StartsOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'starts_on': %w", err)
+		}
+		delete(object, "starts_on")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["superseded_by_id"]; found {
+		err = json.Unmarshal(raw, &a.SupersededById)
+		if err != nil {
+			return fmt.Errorf("error reading 'superseded_by_id': %w", err)
+		}
+		delete(object, "superseded_by_id")
+	}
+
+	if raw, found := object["title"]; found {
+		err = json.Unmarshal(raw, &a.Title)
+		if err != nil {
+			return fmt.Errorf("error reading 'title': %w", err)
+		}
+		delete(object, "title")
+	}
+
+	if raw, found := object["under_contract"]; found {
+		err = json.Unmarshal(raw, &a.UnderContract)
+		if err != nil {
+			return fmt.Errorf("error reading 'under_contract': %w", err)
+		}
+		delete(object, "under_contract")
+	}
+
+	if raw, found := object["updated_at"]; found {
+		err = json.Unmarshal(raw, &a.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'updated_at': %w", err)
+		}
+		delete(object, "updated_at")
+	}
+
+	if raw, found := object["value_basis"]; found {
+		err = json.Unmarshal(raw, &a.ValueBasis)
+		if err != nil {
+			return fmt.Errorf("error reading 'value_basis': %w", err)
+		}
+		delete(object, "value_basis")
+	}
+
+	if raw, found := object["value_minor"]; found {
+		err = json.Unmarshal(raw, &a.ValueMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'value_minor': %w", err)
+		}
+		delete(object, "value_minor")
+	}
+
+	if raw, found := object["version"]; found {
+		err = json.Unmarshal(raw, &a.Version)
+		if err != nil {
+			return fmt.Errorf("error reading 'version': %w", err)
+		}
+		delete(object, "version")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for Contract to handle AdditionalProperties
+func (a Contract) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.ArchivedAt != nil {
+		object["archived_at"], err = json.Marshal(a.ArchivedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.AutoRenew != nil {
+		object["auto_renew"], err = json.Marshal(a.AutoRenew)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'auto_renew': %w", err)
+		}
+	}
+
+	if a.CancellationEffectiveOn != nil {
+		object["cancellation_effective_on"], err = json.Marshal(a.CancellationEffectiveOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'cancellation_effective_on': %w", err)
+		}
+	}
+
+	if a.CancellationNoticeOn != nil {
+		object["cancellation_notice_on"], err = json.Marshal(a.CancellationNoticeOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'cancellation_notice_on': %w", err)
+		}
+	}
+
+	object["captured_by"], err = json.Marshal(a.CapturedBy)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
+	}
+
+	if a.CompanyId != nil {
+		object["company_id"], err = json.Marshal(a.CompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
+		}
+	}
+
+	if a.ContractNumber != nil {
+		object["contract_number"], err = json.Marshal(a.ContractNumber)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'contract_number': %w", err)
+		}
+	}
+
+	object["created_at"], err = json.Marshal(a.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.Currency != nil {
+		object["currency"], err = json.Marshal(a.Currency)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'currency': %w", err)
+		}
+	}
+
+	if a.DealId != nil {
+		object["deal_id"], err = json.Marshal(a.DealId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_id': %w", err)
+		}
+	}
+
+	if a.EndsOn != nil {
+		object["ends_on"], err = json.Marshal(a.EndsOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ends_on': %w", err)
+		}
+	}
+
+	if a.FxRateDate != nil {
+		object["fx_rate_date"], err = json.Marshal(a.FxRateDate)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'fx_rate_date': %w", err)
+		}
+	}
+
+	if a.FxRateToBase != nil {
+		object["fx_rate_to_base"], err = json.Marshal(a.FxRateToBase)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'fx_rate_to_base': %w", err)
+		}
+	}
+
+	object["id"], err = json.Marshal(a.Id)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.MaskedFields != nil {
+		object["masked_fields"], err = json.Marshal(a.MaskedFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'masked_fields': %w", err)
+		}
+	}
+
+	if a.NoticePeriodDays != nil {
+		object["notice_period_days"], err = json.Marshal(a.NoticePeriodDays)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'notice_period_days': %w", err)
+		}
+	}
+
+	if a.PaymentTermDays != nil {
+		object["payment_term_days"], err = json.Marshal(a.PaymentTermDays)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'payment_term_days': %w", err)
+		}
+	}
+
+	if a.ProjectId != nil {
+		object["project_id"], err = json.Marshal(a.ProjectId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'project_id': %w", err)
+		}
+	}
+
+	if a.RenewalOn != nil {
+		object["renewal_on"], err = json.Marshal(a.RenewalOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'renewal_on': %w", err)
+		}
+	}
+
+	if a.SignedOn != nil {
+		object["signed_on"], err = json.Marshal(a.SignedOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'signed_on': %w", err)
+		}
+	}
+
+	object["source"], err = json.Marshal(a.Source)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.StartsOn != nil {
+		object["starts_on"], err = json.Marshal(a.StartsOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'starts_on': %w", err)
+		}
+	}
+
+	object["status"], err = json.Marshal(a.Status)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'status': %w", err)
+	}
+
+	if a.SupersededById != nil {
+		object["superseded_by_id"], err = json.Marshal(a.SupersededById)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'superseded_by_id': %w", err)
+		}
+	}
+
+	object["title"], err = json.Marshal(a.Title)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'title': %w", err)
+	}
+
+	object["under_contract"], err = json.Marshal(a.UnderContract)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'under_contract': %w", err)
+	}
+
+	object["updated_at"], err = json.Marshal(a.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
+	}
+
+	object["value_basis"], err = json.Marshal(a.ValueBasis)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'value_basis': %w", err)
+	}
+
+	if a.ValueMinor != nil {
+		object["value_minor"], err = json.Marshal(a.ValueMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'value_minor': %w", err)
+		}
+	}
+
+	object["version"], err = json.Marshal(a.Version)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'version': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
 // Getter for additional properties for CreateCompanyRequest. Returns the specified
 // element and whether it was found
 func (a CreateCompanyRequest) Get(fieldName string) (value interface{}, found bool) {
@@ -46377,6 +46879,280 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["title"], err = json.Marshal(a.Title)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'title': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for CreateContractRequest. Returns the specified
+// element and whether it was found
+func (a CreateContractRequest) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for CreateContractRequest
+func (a *CreateContractRequest) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for CreateContractRequest to handle AdditionalProperties
+func (a *CreateContractRequest) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["auto_renew"]; found {
+		err = json.Unmarshal(raw, &a.AutoRenew)
+		if err != nil {
+			return fmt.Errorf("error reading 'auto_renew': %w", err)
+		}
+		delete(object, "auto_renew")
+	}
+
+	if raw, found := object["company_id"]; found {
+		err = json.Unmarshal(raw, &a.CompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_id': %w", err)
+		}
+		delete(object, "company_id")
+	}
+
+	if raw, found := object["contract_number"]; found {
+		err = json.Unmarshal(raw, &a.ContractNumber)
+		if err != nil {
+			return fmt.Errorf("error reading 'contract_number': %w", err)
+		}
+		delete(object, "contract_number")
+	}
+
+	if raw, found := object["currency"]; found {
+		err = json.Unmarshal(raw, &a.Currency)
+		if err != nil {
+			return fmt.Errorf("error reading 'currency': %w", err)
+		}
+		delete(object, "currency")
+	}
+
+	if raw, found := object["deal_id"]; found {
+		err = json.Unmarshal(raw, &a.DealId)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_id': %w", err)
+		}
+		delete(object, "deal_id")
+	}
+
+	if raw, found := object["ends_on"]; found {
+		err = json.Unmarshal(raw, &a.EndsOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'ends_on': %w", err)
+		}
+		delete(object, "ends_on")
+	}
+
+	if raw, found := object["notice_period_days"]; found {
+		err = json.Unmarshal(raw, &a.NoticePeriodDays)
+		if err != nil {
+			return fmt.Errorf("error reading 'notice_period_days': %w", err)
+		}
+		delete(object, "notice_period_days")
+	}
+
+	if raw, found := object["payment_term_days"]; found {
+		err = json.Unmarshal(raw, &a.PaymentTermDays)
+		if err != nil {
+			return fmt.Errorf("error reading 'payment_term_days': %w", err)
+		}
+		delete(object, "payment_term_days")
+	}
+
+	if raw, found := object["project_id"]; found {
+		err = json.Unmarshal(raw, &a.ProjectId)
+		if err != nil {
+			return fmt.Errorf("error reading 'project_id': %w", err)
+		}
+		delete(object, "project_id")
+	}
+
+	if raw, found := object["renewal_on"]; found {
+		err = json.Unmarshal(raw, &a.RenewalOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'renewal_on': %w", err)
+		}
+		delete(object, "renewal_on")
+	}
+
+	if raw, found := object["signed_on"]; found {
+		err = json.Unmarshal(raw, &a.SignedOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'signed_on': %w", err)
+		}
+		delete(object, "signed_on")
+	}
+
+	if raw, found := object["starts_on"]; found {
+		err = json.Unmarshal(raw, &a.StartsOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'starts_on': %w", err)
+		}
+		delete(object, "starts_on")
+	}
+
+	if raw, found := object["title"]; found {
+		err = json.Unmarshal(raw, &a.Title)
+		if err != nil {
+			return fmt.Errorf("error reading 'title': %w", err)
+		}
+		delete(object, "title")
+	}
+
+	if raw, found := object["value_basis"]; found {
+		err = json.Unmarshal(raw, &a.ValueBasis)
+		if err != nil {
+			return fmt.Errorf("error reading 'value_basis': %w", err)
+		}
+		delete(object, "value_basis")
+	}
+
+	if raw, found := object["value_minor"]; found {
+		err = json.Unmarshal(raw, &a.ValueMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'value_minor': %w", err)
+		}
+		delete(object, "value_minor")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for CreateContractRequest to handle AdditionalProperties
+func (a CreateContractRequest) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AutoRenew != nil {
+		object["auto_renew"], err = json.Marshal(a.AutoRenew)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'auto_renew': %w", err)
+		}
+	}
+
+	object["company_id"], err = json.Marshal(a.CompanyId)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
+	}
+
+	if a.ContractNumber != nil {
+		object["contract_number"], err = json.Marshal(a.ContractNumber)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'contract_number': %w", err)
+		}
+	}
+
+	if a.Currency != nil {
+		object["currency"], err = json.Marshal(a.Currency)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'currency': %w", err)
+		}
+	}
+
+	if a.DealId != nil {
+		object["deal_id"], err = json.Marshal(a.DealId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_id': %w", err)
+		}
+	}
+
+	if a.EndsOn != nil {
+		object["ends_on"], err = json.Marshal(a.EndsOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ends_on': %w", err)
+		}
+	}
+
+	if a.NoticePeriodDays != nil {
+		object["notice_period_days"], err = json.Marshal(a.NoticePeriodDays)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'notice_period_days': %w", err)
+		}
+	}
+
+	if a.PaymentTermDays != nil {
+		object["payment_term_days"], err = json.Marshal(a.PaymentTermDays)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'payment_term_days': %w", err)
+		}
+	}
+
+	if a.ProjectId != nil {
+		object["project_id"], err = json.Marshal(a.ProjectId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'project_id': %w", err)
+		}
+	}
+
+	if a.RenewalOn != nil {
+		object["renewal_on"], err = json.Marshal(a.RenewalOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'renewal_on': %w", err)
+		}
+	}
+
+	if a.SignedOn != nil {
+		object["signed_on"], err = json.Marshal(a.SignedOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'signed_on': %w", err)
+		}
+	}
+
+	if a.StartsOn != nil {
+		object["starts_on"], err = json.Marshal(a.StartsOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'starts_on': %w", err)
+		}
+	}
+
+	object["title"], err = json.Marshal(a.Title)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'title': %w", err)
+	}
+
+	if a.ValueBasis != nil {
+		object["value_basis"], err = json.Marshal(a.ValueBasis)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'value_basis': %w", err)
+		}
+	}
+
+	if a.ValueMinor != nil {
+		object["value_minor"], err = json.Marshal(a.ValueMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'value_minor': %w", err)
 		}
 	}
 
@@ -50847,6 +51623,265 @@ func (a Project) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// Getter for additional properties for RenewContractRequest. Returns the specified
+// element and whether it was found
+func (a RenewContractRequest) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RenewContractRequest
+func (a *RenewContractRequest) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RenewContractRequest to handle AdditionalProperties
+func (a *RenewContractRequest) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["auto_renew"]; found {
+		err = json.Unmarshal(raw, &a.AutoRenew)
+		if err != nil {
+			return fmt.Errorf("error reading 'auto_renew': %w", err)
+		}
+		delete(object, "auto_renew")
+	}
+
+	if raw, found := object["contract_number"]; found {
+		err = json.Unmarshal(raw, &a.ContractNumber)
+		if err != nil {
+			return fmt.Errorf("error reading 'contract_number': %w", err)
+		}
+		delete(object, "contract_number")
+	}
+
+	if raw, found := object["currency"]; found {
+		err = json.Unmarshal(raw, &a.Currency)
+		if err != nil {
+			return fmt.Errorf("error reading 'currency': %w", err)
+		}
+		delete(object, "currency")
+	}
+
+	if raw, found := object["deal_id"]; found {
+		err = json.Unmarshal(raw, &a.DealId)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_id': %w", err)
+		}
+		delete(object, "deal_id")
+	}
+
+	if raw, found := object["ends_on"]; found {
+		err = json.Unmarshal(raw, &a.EndsOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'ends_on': %w", err)
+		}
+		delete(object, "ends_on")
+	}
+
+	if raw, found := object["notice_period_days"]; found {
+		err = json.Unmarshal(raw, &a.NoticePeriodDays)
+		if err != nil {
+			return fmt.Errorf("error reading 'notice_period_days': %w", err)
+		}
+		delete(object, "notice_period_days")
+	}
+
+	if raw, found := object["payment_term_days"]; found {
+		err = json.Unmarshal(raw, &a.PaymentTermDays)
+		if err != nil {
+			return fmt.Errorf("error reading 'payment_term_days': %w", err)
+		}
+		delete(object, "payment_term_days")
+	}
+
+	if raw, found := object["project_id"]; found {
+		err = json.Unmarshal(raw, &a.ProjectId)
+		if err != nil {
+			return fmt.Errorf("error reading 'project_id': %w", err)
+		}
+		delete(object, "project_id")
+	}
+
+	if raw, found := object["renewal_on"]; found {
+		err = json.Unmarshal(raw, &a.RenewalOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'renewal_on': %w", err)
+		}
+		delete(object, "renewal_on")
+	}
+
+	if raw, found := object["signed_on"]; found {
+		err = json.Unmarshal(raw, &a.SignedOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'signed_on': %w", err)
+		}
+		delete(object, "signed_on")
+	}
+
+	if raw, found := object["starts_on"]; found {
+		err = json.Unmarshal(raw, &a.StartsOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'starts_on': %w", err)
+		}
+		delete(object, "starts_on")
+	}
+
+	if raw, found := object["title"]; found {
+		err = json.Unmarshal(raw, &a.Title)
+		if err != nil {
+			return fmt.Errorf("error reading 'title': %w", err)
+		}
+		delete(object, "title")
+	}
+
+	if raw, found := object["value_basis"]; found {
+		err = json.Unmarshal(raw, &a.ValueBasis)
+		if err != nil {
+			return fmt.Errorf("error reading 'value_basis': %w", err)
+		}
+		delete(object, "value_basis")
+	}
+
+	if raw, found := object["value_minor"]; found {
+		err = json.Unmarshal(raw, &a.ValueMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'value_minor': %w", err)
+		}
+		delete(object, "value_minor")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RenewContractRequest to handle AdditionalProperties
+func (a RenewContractRequest) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AutoRenew != nil {
+		object["auto_renew"], err = json.Marshal(a.AutoRenew)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'auto_renew': %w", err)
+		}
+	}
+
+	if a.ContractNumber != nil {
+		object["contract_number"], err = json.Marshal(a.ContractNumber)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'contract_number': %w", err)
+		}
+	}
+
+	if a.Currency != nil {
+		object["currency"], err = json.Marshal(a.Currency)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'currency': %w", err)
+		}
+	}
+
+	if a.DealId != nil {
+		object["deal_id"], err = json.Marshal(a.DealId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_id': %w", err)
+		}
+	}
+
+	if a.EndsOn != nil {
+		object["ends_on"], err = json.Marshal(a.EndsOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ends_on': %w", err)
+		}
+	}
+
+	if a.NoticePeriodDays != nil {
+		object["notice_period_days"], err = json.Marshal(a.NoticePeriodDays)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'notice_period_days': %w", err)
+		}
+	}
+
+	if a.PaymentTermDays != nil {
+		object["payment_term_days"], err = json.Marshal(a.PaymentTermDays)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'payment_term_days': %w", err)
+		}
+	}
+
+	if a.ProjectId != nil {
+		object["project_id"], err = json.Marshal(a.ProjectId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'project_id': %w", err)
+		}
+	}
+
+	if a.RenewalOn != nil {
+		object["renewal_on"], err = json.Marshal(a.RenewalOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'renewal_on': %w", err)
+		}
+	}
+
+	if a.SignedOn != nil {
+		object["signed_on"], err = json.Marshal(a.SignedOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'signed_on': %w", err)
+		}
+	}
+
+	if a.StartsOn != nil {
+		object["starts_on"], err = json.Marshal(a.StartsOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'starts_on': %w", err)
+		}
+	}
+
+	object["title"], err = json.Marshal(a.Title)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'title': %w", err)
+	}
+
+	object["value_basis"], err = json.Marshal(a.ValueBasis)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'value_basis': %w", err)
+	}
+
+	if a.ValueMinor != nil {
+		object["value_minor"], err = json.Marshal(a.ValueMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'value_minor': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
 // Getter for additional properties for UpdateCompanyRequest. Returns the specified
 // element and whether it was found
 func (a UpdateCompanyRequest) Get(fieldName string) (value interface{}, found bool) {
@@ -51271,6 +52306,269 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["visibility"], err = json.Marshal(a.Visibility)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for UpdateContractRequest. Returns the specified
+// element and whether it was found
+func (a UpdateContractRequest) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for UpdateContractRequest
+func (a *UpdateContractRequest) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for UpdateContractRequest to handle AdditionalProperties
+func (a *UpdateContractRequest) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["auto_renew"]; found {
+		err = json.Unmarshal(raw, &a.AutoRenew)
+		if err != nil {
+			return fmt.Errorf("error reading 'auto_renew': %w", err)
+		}
+		delete(object, "auto_renew")
+	}
+
+	if raw, found := object["contract_number"]; found {
+		err = json.Unmarshal(raw, &a.ContractNumber)
+		if err != nil {
+			return fmt.Errorf("error reading 'contract_number': %w", err)
+		}
+		delete(object, "contract_number")
+	}
+
+	if raw, found := object["currency"]; found {
+		err = json.Unmarshal(raw, &a.Currency)
+		if err != nil {
+			return fmt.Errorf("error reading 'currency': %w", err)
+		}
+		delete(object, "currency")
+	}
+
+	if raw, found := object["deal_id"]; found {
+		err = json.Unmarshal(raw, &a.DealId)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_id': %w", err)
+		}
+		delete(object, "deal_id")
+	}
+
+	if raw, found := object["ends_on"]; found {
+		err = json.Unmarshal(raw, &a.EndsOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'ends_on': %w", err)
+		}
+		delete(object, "ends_on")
+	}
+
+	if raw, found := object["notice_period_days"]; found {
+		err = json.Unmarshal(raw, &a.NoticePeriodDays)
+		if err != nil {
+			return fmt.Errorf("error reading 'notice_period_days': %w", err)
+		}
+		delete(object, "notice_period_days")
+	}
+
+	if raw, found := object["payment_term_days"]; found {
+		err = json.Unmarshal(raw, &a.PaymentTermDays)
+		if err != nil {
+			return fmt.Errorf("error reading 'payment_term_days': %w", err)
+		}
+		delete(object, "payment_term_days")
+	}
+
+	if raw, found := object["project_id"]; found {
+		err = json.Unmarshal(raw, &a.ProjectId)
+		if err != nil {
+			return fmt.Errorf("error reading 'project_id': %w", err)
+		}
+		delete(object, "project_id")
+	}
+
+	if raw, found := object["renewal_on"]; found {
+		err = json.Unmarshal(raw, &a.RenewalOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'renewal_on': %w", err)
+		}
+		delete(object, "renewal_on")
+	}
+
+	if raw, found := object["signed_on"]; found {
+		err = json.Unmarshal(raw, &a.SignedOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'signed_on': %w", err)
+		}
+		delete(object, "signed_on")
+	}
+
+	if raw, found := object["starts_on"]; found {
+		err = json.Unmarshal(raw, &a.StartsOn)
+		if err != nil {
+			return fmt.Errorf("error reading 'starts_on': %w", err)
+		}
+		delete(object, "starts_on")
+	}
+
+	if raw, found := object["title"]; found {
+		err = json.Unmarshal(raw, &a.Title)
+		if err != nil {
+			return fmt.Errorf("error reading 'title': %w", err)
+		}
+		delete(object, "title")
+	}
+
+	if raw, found := object["value_basis"]; found {
+		err = json.Unmarshal(raw, &a.ValueBasis)
+		if err != nil {
+			return fmt.Errorf("error reading 'value_basis': %w", err)
+		}
+		delete(object, "value_basis")
+	}
+
+	if raw, found := object["value_minor"]; found {
+		err = json.Unmarshal(raw, &a.ValueMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'value_minor': %w", err)
+		}
+		delete(object, "value_minor")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for UpdateContractRequest to handle AdditionalProperties
+func (a UpdateContractRequest) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AutoRenew != nil {
+		object["auto_renew"], err = json.Marshal(a.AutoRenew)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'auto_renew': %w", err)
+		}
+	}
+
+	if a.ContractNumber != nil {
+		object["contract_number"], err = json.Marshal(a.ContractNumber)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'contract_number': %w", err)
+		}
+	}
+
+	if a.Currency != nil {
+		object["currency"], err = json.Marshal(a.Currency)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'currency': %w", err)
+		}
+	}
+
+	if a.DealId != nil {
+		object["deal_id"], err = json.Marshal(a.DealId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_id': %w", err)
+		}
+	}
+
+	if a.EndsOn != nil {
+		object["ends_on"], err = json.Marshal(a.EndsOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ends_on': %w", err)
+		}
+	}
+
+	if a.NoticePeriodDays != nil {
+		object["notice_period_days"], err = json.Marshal(a.NoticePeriodDays)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'notice_period_days': %w", err)
+		}
+	}
+
+	if a.PaymentTermDays != nil {
+		object["payment_term_days"], err = json.Marshal(a.PaymentTermDays)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'payment_term_days': %w", err)
+		}
+	}
+
+	if a.ProjectId != nil {
+		object["project_id"], err = json.Marshal(a.ProjectId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'project_id': %w", err)
+		}
+	}
+
+	if a.RenewalOn != nil {
+		object["renewal_on"], err = json.Marshal(a.RenewalOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'renewal_on': %w", err)
+		}
+	}
+
+	if a.SignedOn != nil {
+		object["signed_on"], err = json.Marshal(a.SignedOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'signed_on': %w", err)
+		}
+	}
+
+	if a.StartsOn != nil {
+		object["starts_on"], err = json.Marshal(a.StartsOn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'starts_on': %w", err)
+		}
+	}
+
+	if a.Title != nil {
+		object["title"], err = json.Marshal(a.Title)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'title': %w", err)
+		}
+	}
+
+	if a.ValueBasis != nil {
+		object["value_basis"], err = json.Marshal(a.ValueBasis)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'value_basis': %w", err)
+		}
+	}
+
+	if a.ValueMinor != nil {
+		object["value_minor"], err = json.Marshal(a.ValueMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'value_minor': %w", err)
 		}
 	}
 

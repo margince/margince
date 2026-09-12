@@ -14,7 +14,6 @@ package compose
 // their own cross-module vocabularies).
 
 import (
-	"sort"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -24,16 +23,44 @@ import (
 func TestRenewalReminderObjectsMatchesFieldObjectsExactly(t *testing.T) {
 	renewal := append([]string(nil), automation.RenewalReminderObjects()...)
 	fields := append([]string(nil), customfields.FieldObjects...)
-	sort.Strings(renewal)
-	sort.Strings(fields)
 
-	if len(renewal) != len(fields) {
-		t.Fatalf("automation.RenewalReminderObjects() has %d entries, customfields.FieldObjects has %d — they must name the identical closed set",
-			len(renewal), len(fields))
+	// The two sets were identical until Contract, which takes custom fields
+	// without being anything an automation can fire on: the record provider
+	// refuses it and the preview's scope clause does not know its table. So the
+	// relation is SUBSET, not equality, and every difference is named here —
+	// an unnamed one is the drift this test exists to catch.
+	notAutomatable := map[string]string{
+		"contract": "a custom-field target that no automation can fire on: " +
+			"taskeffect's owner read answers UnsupportedEntityError for it, and " +
+			"automations_preview's auth.ScopeClauseFor does not know the table",
 	}
-	for i := range renewal {
-		if renewal[i] != fields[i] {
-			t.Fatalf("automation.RenewalReminderObjects() and customfields.FieldObjects diverge: %v vs %v", renewal, fields)
+
+	inFields := map[string]bool{}
+	for _, object := range fields {
+		inFields[object] = true
+	}
+	for _, object := range renewal {
+		if !inFields[object] {
+			t.Errorf("automation.RenewalReminderObjects() names %q, which is not a custom-field object — "+
+				"a reminder on a date field nobody can create", object)
+		}
+	}
+	inRenewal := map[string]bool{}
+	for _, object := range renewal {
+		inRenewal[object] = true
+	}
+	for _, object := range fields {
+		if inRenewal[object] {
+			continue
+		}
+		if _, named := notAutomatable[object]; !named {
+			t.Errorf("customfields.FieldObjects names %q and automation does not, with no reason given — "+
+				"either add it to RenewalReminderObjects or name it in notAutomatable with what refuses it", object)
+		}
+	}
+	for object := range notAutomatable {
+		if !inFields[object] {
+			t.Errorf("notAutomatable names %q, which is not a custom-field object at all — the exception outlived its subject", object)
 		}
 	}
 }

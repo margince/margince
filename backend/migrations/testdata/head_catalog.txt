@@ -2733,6 +2733,7 @@ public.contract.contract_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) 
 public.contract.contract_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))
 public.contract.contract_notice_period_days_check CHECK (((notice_period_days IS NULL) OR (notice_period_days >= 0)))
 public.contract.contract_number text gen=- def=-
+public.contract.contract_payment_term_days_nonnegative CHECK (((payment_term_days IS NULL) OR (payment_term_days >= 0)))
 public.contract.contract_pkey PRIMARY KEY (id)
 public.contract.contract_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL
 public.contract.contract_set_updated_at CREATE TRIGGER contract_set_updated_at BEFORE UPDATE ON public.contract FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -2751,6 +2752,7 @@ public.contract.fx_rate_date date gen=- def=-
 public.contract.fx_rate_to_base numeric(20,10) gen=- def=-
 public.contract.id uuid NOT NULL gen=- def=uuidv7()
 public.contract.notice_period_days integer gen=- def=-
+public.contract.payment_term_days integer gen=- def=-
 public.contract.project_id uuid gen=- def=-
 public.contract.renewal_on date gen=- def=-
 public.contract.signed_on date gen=- def=-
@@ -2812,7 +2814,7 @@ public.custom_field.created_by uuid NOT NULL gen=- def=-
 public.custom_field.currency character(3) gen=- def=-
 public.custom_field.custom_field_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.custom_field.custom_field_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
-public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text])))
+public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
 public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'boolean'::text])))

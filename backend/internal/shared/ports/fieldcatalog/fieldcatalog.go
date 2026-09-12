@@ -108,3 +108,56 @@ type Reader interface {
 type FilterableReader interface {
 	FilterableColumns(ctx context.Context, object string) ([]Column, error)
 }
+
+// Target is what a custom field may be ATTACHED to.
+//
+// Deliberately its own vocabulary rather than datasource.EntityType, which it
+// otherwise resembles. EntityType is what a record PROVIDER can be asked
+// about: declaring a member there obliges native provider routing, agent
+// record-shape generation and the embedding/provenance consumers that
+// enumerate it, and TestTheRecordProviderServesExactlyTheSeamVocabulary fails
+// the moment a member answers UnsupportedEntityError. A contract can carry a
+// typed extra field without any of that being true of it, and widening
+// EntityType to say so would promise five capabilities to buy one.
+//
+// Every value the custom_field.object CHECK already admits is here, including
+// the ones no active target list offers: a catalog row written under an older
+// vocabulary must stay readable, or the fields an installation already
+// configured stop rendering.
+type Target string
+
+// The targets themselves. Every value the custom_field.object CHECK admits,
+// including the ones no active target list offers today.
+const (
+	TargetContact      Target = "contact"
+	TargetCompany      Target = "company"
+	TargetDeal         Target = "deal"
+	TargetLead         Target = "lead"
+	TargetProject      Target = "project"
+	TargetContract     Target = "contract"
+	TargetActivity     Target = "activity"
+	TargetRelationship Target = "relationship"
+	TargetPartner      Target = "partner"
+)
+
+// Targets is the closed set, in the order the CHECK constraint spells it so a
+// reader comparing the two reads them the same way.
+func Targets() []Target {
+	return []Target{
+		TargetContact, TargetCompany, TargetDeal, TargetLead,
+		TargetActivity, TargetProject, TargetRelationship, TargetPartner,
+		TargetContract,
+	}
+}
+
+// Valid reports whether a stored value is one this vocabulary knows. A row
+// carrying anything else is a row written by a version this binary cannot
+// reason about, and the catalog refuses rather than guesses.
+func (t Target) Valid() bool {
+	for _, known := range Targets() {
+		if t == known {
+			return true
+		}
+	}
+	return false
+}

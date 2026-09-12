@@ -28,6 +28,12 @@ import (
 // catalog_triggers.go's own event-type constants are: "kept as constants
 // here because more than one automation surface... references the same
 // string" — this validator is that surface for the object vocabulary.
+// Contract is deliberately ABSENT, and it is the first custom-field target
+// that is. A renewal reminder fires an effect, and both halves of that effect
+// refuse a contract: the record provider answers UnsupportedEntityError for it
+// (taskeffect.go's owner read), and the preview's auth.ScopeClauseFor does not
+// know the table. Listing it here would offer an administrator a reminder that
+// silently never fires and a preview that errors — worse than not offering it.
 var renewalReminderObjects = []string{
 	string(datasource.EntityContact),
 	string(datasource.EntityCompany),

@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
 // The installation read every form shares: one query, one key, so the currency
 // this form writes is the same fact the settings screen shows.
@@ -12,8 +11,9 @@ import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { uploadAttachment } from "./attachmentupload";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf } from "./common";
 import { paperState, useContractPaper } from "./contractpaper";
+import { createContract, patchContract } from "./contractwrites";
 
 // Recording an agreement.
 //
@@ -48,6 +48,7 @@ export type ContractDraft = {
   endsOn: string;
   renewalOn: string;
   noticePeriodDays: string;
+  paymentTermDays: string;
   signedOn: string;
 };
 
@@ -65,6 +66,7 @@ const EMPTY_DRAFT: ContractDraft = {
   endsOn: "",
   renewalOn: "",
   noticePeriodDays: "",
+  paymentTermDays: "",
   signedOn: "",
 };
 
@@ -227,6 +229,10 @@ function draftOf(contract: Contract | undefined): ContractDraft {
       contract.notice_period_days == null
         ? ""
         : String(contract.notice_period_days),
+    paymentTermDays:
+      contract.payment_term_days == null
+        ? ""
+        : String(contract.payment_term_days),
     signedOn: contract.signed_on ?? "",
   };
 }
@@ -394,6 +400,23 @@ export function ContractTermsFields({
       </Field>
 
       <Field
+        label={t("contracts.form.paymentTerms")}
+        hint={t("contracts.form.paymentTermsHint")}
+      >
+        {(props) => (
+          <TextInput
+            {...props}
+            type="number"
+            min={0}
+            value={draft.paymentTermDays}
+            onChange={(e) =>
+              setDraft({ ...draft, paymentTermDays: e.target.value })
+            }
+          />
+        )}
+      </Field>
+
+      <Field
         label={t("contracts.form.signedOn")}
         hint={t("contracts.form.signedOnHint")}
       >
@@ -532,54 +555,6 @@ export function SignedFileField({
   );
 }
 
-async function createContract(
-  companyId: string,
-  draft: ContractDraft,
-): Promise<string> {
-  const { data, error } = await api.POST("/contracts", {
-    body: contractBody(companyId, draft),
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data?.id ?? "";
-}
-
-// A correction sends nulls for the fields a human cleared: once somebody has
-// removed a value, "I typed this by mistake" and "we never agreed one" are the
-// same answer, and leaving the old value in place would keep asserting the
-// mistake.
-async function patchContract(
-  contract: Contract,
-  draft: ContractDraft,
-): Promise<string> {
-  const { error } = await api.PATCH("/contracts/{id}", {
-    params: { path: { id: contract.id } },
-    body: {
-      title: draft.title.trim(),
-      contract_number: draft.contractNumber.trim() || null,
-      value_minor: draft.valueMinor > 0 ? draft.valueMinor : null,
-      // Same pairing as a create, and the same refusal to complete it with a
-      // guess: an amount whose currency the form does not hold goes out as the
-      // half it is, for the server to refuse in the open.
-      currency:
-        draft.valueMinor > 0 && draft.currency !== "" ? draft.currency : null,
-      value_basis: draft.valueBasis,
-      starts_on: draft.startsOn || null,
-      ends_on: draft.endsOn || null,
-      renewal_on: draft.renewalOn || null,
-      notice_period_days: draft.noticePeriodDays
-        ? Number(draft.noticePeriodDays)
-        : null,
-      signed_on: draft.signedOn || null,
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return contract.id;
-}
-
 // What the form refuses before the server has to.
 //
 // These mirror the database's own constraints rather than adding rules of their
@@ -622,6 +597,7 @@ export type ContractTermsFragment = Pick<
   | "ends_on"
   | "renewal_on"
   | "notice_period_days"
+  | "payment_term_days"
   | "signed_on"
 >;
 
@@ -647,6 +623,12 @@ export function contractTermsBody(draft: ContractDraft): ContractTermsFragment {
   }
   if (draft.noticePeriodDays !== "") {
     body.notice_period_days = Number(draft.noticePeriodDays);
+  }
+  // Emptiness, not falsiness: 0 is a real answer here and means due on
+  // receipt, so a truthiness check would silently drop the one term a
+  // reader is most likely to have typed deliberately.
+  if (draft.paymentTermDays !== "") {
+    body.payment_term_days = Number(draft.paymentTermDays);
   }
   if (draft.signedOn !== "") {
     body.signed_on = draft.signedOn;

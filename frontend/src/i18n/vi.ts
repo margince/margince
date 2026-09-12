@@ -1230,6 +1230,10 @@ export const vi = {
     "Th\u1eddi h\u1ea1n b\u00e1o tr\u01b0\u1edbc (ng\u00e0y)",
   "contracts.form.noticeDaysHint":
     "C\u1ea7n b\u00e1o tr\u01b0\u1edbc bao l\u00e2u \u0111\u1ec3 h\u1ee7y. C\u1ea3nh b\u00e1o gia h\u1ea1n xu\u1ea5t hi\u1ec7n tr\u01b0\u1edbc h\u1ea1n n\u00e0y, kh\u00f4ng ph\u1ea3i tr\u01b0\u1edbc ng\u00e0y gia h\u1ea1n.",
+  "contracts.form.paymentTerms":
+    "Th\u1eddi h\u1ea1n thanh to\u00e1n (ng\u00e0y)",
+  "contracts.form.paymentTermsHint":
+    "Kh\u00e1ch h\u00e0ng c\u00f3 bao nhi\u00eau ng\u00e0y \u0111\u1ec3 thanh to\u00e1n. 0 ngh\u0129a l\u00e0 thanh to\u00e1n ngay; \u0111\u1ec3 tr\u1ed1ng n\u1ebfu ch\u01b0a th\u1ecfa thu\u1eadn.",
   "contracts.form.signedOn": "\u0110\u00e3 k\u00fd",
   "contracts.form.signedOnHint":
     "Ch\u1ec9 khi bi\u1ebft ch\u1eafc \u0111\u00e3 k\u00fd \u2014 kh\u00f4ng l\u1ea5y t\u1eeb ng\u00e0y ch\u1ed1t c\u1ee7a deal.",

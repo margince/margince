@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // CreateContractInput is one agreement as a human recorded it. Status is
@@ -40,8 +41,11 @@ type CreateContractInput struct {
 	RenewalOn        *time.Time
 	AutoRenew        bool
 	NoticePeriodDays *int
-	SignedOn         *time.Time
-	Source           string
+	PaymentTermDays  *int
+	// CustomFields are the cf_* values a create carries, as the wire sent them.
+	CustomFields map[string]any
+	SignedOn     *time.Time
+	Source       string
 }
 
 // CreateContract records an agreement.
@@ -53,17 +57,21 @@ func (s *Store) CreateContract(ctx context.Context, in CreateContractInput) (crm
 	if err != nil {
 		return crmcontracts.Contract{}, err
 	}
+	active, err := s.catalogColumns(ctx)
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
 
 	var out crmcontracts.Contract
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = createContractTx(ctx, tx, in, by, s.today())
+		out, err = createContractTx(ctx, tx, in, by, s.today(), active)
 		return err
 	})
 	return out, err
 }
 
-func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time) (crmcontracts.Contract, error) {
+func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
 	// Naming the counterparty is a read of it, and naming a deal is a read of
 	// that deal — both are client-supplied references to row-scoped records, so
 	// a caller may not hang an agreement off something it cannot see.
@@ -79,14 +87,18 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	}
 
 	id := ids.New[ids.ContractKind]()
+	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
+		id, in.CompanyID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
+		in.ValueMinor, in.Currency, in.ValueBasis, in.StartsOn, in.EndsOn, in.RenewalOn,
+		in.AutoRenew, in.NoticePeriodDays, in.PaymentTermDays, in.SignedOn, in.Source, by,
+	})
 	_, err := tx.Exec(ctx,
 		`INSERT INTO contract (id, company_id, deal_id, project_id, contract_number, title,
 		                       value_minor, currency, value_basis, starts_on, ends_on, renewal_on,
-		                       auto_renew, notice_period_days, signed_on, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
-		id, in.CompanyID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
-		in.ValueMinor, in.Currency, in.ValueBasis, in.StartsOn, in.EndsOn, in.RenewalOn,
-		in.AutoRenew, in.NoticePeriodDays, in.SignedOn, in.Source, by)
+		                       auto_renew, notice_period_days, payment_term_days, signed_on,
+		                       source, captured_by`+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18`+cfHolders+`)`,
+		args...)
 	if err != nil {
 		if storekit.IsForeignKeyViolation(err) {
 			return crmcontracts.Contract{}, apperrors.ErrNotFound
@@ -116,19 +128,23 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, created); err != nil {
 		return crmcontracts.Contract{}, fmt.Errorf("emit contract.created: %w", err)
 	}
-	return readContractForCaller(ctx, tx, id, asOf)
+	return readContractForCaller(ctx, tx, id, asOf, active)
 }
 
 // UpdateContract applies a partial patch. Status is absent by design: it moves
 // through ChangeStatus, so a correction to a term can never silently activate
 // an agreement.
 func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcontracts.UpdateContractRequest, ifVersion *int64) (crmcontracts.Contract, error) {
+	active, err := s.catalogColumns(ctx)
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
 	if err := auth.Require(ctx, contractObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 
 	var out crmcontracts.Contract
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		// The patch is a write, so the row must first be visible as a read —
 		// otherwise a caller learns a contract exists by patching it.
 		existing, err := writableContract(ctx, tx, id, s.today())
@@ -155,16 +171,27 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 			return err
 		}
 		patch := contractPatch(existing, in)
+		// The cf_* values travel in the request's extension bag, so they are
+		// patched from it rather than from a named field. Without this a PATCH
+		// carrying custom fields succeeds and changes nothing.
+		storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties)
 		if patch.Empty() {
 			// The unchanged row still leaves the store, so it is masked like
-			// any other answer — `existing` is the write path's pre-image.
-			out, err = maskContractForCaller(ctx, tx, existing)
-			return err
+			// any other answer. It is re-read WITH the catalog rather than
+			// reusing the pre-image: writableContract reads with nil columns,
+			// so `existing` carries no custom values and answering with it
+			// would strip every one from the response.
+			unchanged, readErr := readContractForCaller(ctx, tx, id, s.today(), active)
+			if readErr != nil {
+				return readErr
+			}
+			out = unchanged
+			return nil
 		}
 		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract update"); err != nil {
 			return err
 		}
-		out, err = readContractForCaller(ctx, tx, id, s.today())
+		out, err = readContractForCaller(ctx, tx, id, s.today(), active)
 		return err
 	})
 	return out, err
@@ -317,6 +344,9 @@ func contractPatch(existing crmcontracts.Contract, in crmcontracts.UpdateContrac
 	}
 	if in.NoticePeriodDays != nil {
 		patch.Set("notice_period_days", existing.NoticePeriodDays, *in.NoticePeriodDays)
+	}
+	if in.PaymentTermDays != nil {
+		patch.Set("payment_term_days", existing.PaymentTermDays, *in.PaymentTermDays)
 	}
 	if in.SignedOn != nil {
 		patch.Set("signed_on", existing.SignedOn, in.SignedOn.Time)

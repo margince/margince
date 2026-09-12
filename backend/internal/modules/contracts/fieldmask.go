@@ -33,6 +33,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // The masked_fields names for the three references. They are the wire members'
@@ -81,8 +82,9 @@ var maskedReferences = []maskedReference{
 // comes through it.
 func readContractForCaller(
 	ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.Time,
+	active []fieldcatalog.Column,
 ) (crmcontracts.Contract, error) {
-	out, err := readContract(ctx, tx, id, asOf)
+	out, err := readContract(ctx, tx, id, asOf, active)
 	if err != nil {
 		return crmcontracts.Contract{}, err
 	}
